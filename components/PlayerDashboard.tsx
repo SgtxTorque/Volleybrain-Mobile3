@@ -442,7 +442,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   loadingText: { color: colors.textMuted, marginTop: 12, fontSize: 14 },
 
   // Hero
-  heroSection: { borderRadius: 20, borderWidth: 1, overflow: 'hidden', marginBottom: 16 },
+  heroSection: { borderRadius: 20, borderWidth: 1, overflow: 'hidden', marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   heroGradient: { padding: 24, alignItems: 'center' },
   levelBadge: { position: 'absolute', top: 16, left: 16, width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center' },
   levelNumber: { fontSize: 18, fontWeight: '900', color: '#000' },
@@ -465,7 +465,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   // Sections
   section: { backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
-  sectionTitle: { fontSize: 14, fontWeight: '800', color: colors.text, letterSpacing: 1.5 },
+  sectionTitle: { fontSize: 13, fontWeight: '800', color: colors.textMuted, letterSpacing: 1.5, textTransform: 'uppercase' as const },
 
   // Stats
   statGrid: { gap: 12 },
@@ -479,13 +479,13 @@ const createStyles = (colors: any) => StyleSheet.create({
   gamesPlayedText: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
 
   // Trophy
-  trophyCard: { width: 100, padding: 12, borderRadius: 12, borderWidth: 1, backgroundColor: colors.background, alignItems: 'center', marginRight: 10 },
+  trophyCard: { width: 100, padding: 12, borderRadius: 16, borderWidth: 1, backgroundColor: colors.glassCard, alignItems: 'center', marginRight: 10 },
   trophyIcon: { fontSize: 28, marginBottom: 6 },
   trophyName: { fontSize: 11, fontWeight: '700', textAlign: 'center' },
   trophyRarity: { fontSize: 9, fontWeight: '600', color: colors.textMuted, textTransform: 'uppercase', marginTop: 4, letterSpacing: 0.5 },
 
   // Events
-  eventCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.glassCard, borderRadius: 12, padding: 12, marginBottom: 8, borderLeftWidth: 4 },
+  eventCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.glassCard, borderRadius: 16, padding: 12, marginBottom: 8, borderLeftWidth: 4 },
   eventDate: { alignItems: 'center', width: 44, marginRight: 12 },
   eventDay: { fontSize: 22, fontWeight: '900' },
   eventMonth: { fontSize: 10, fontWeight: '700', color: colors.textMuted },

@@ -761,11 +761,11 @@ const createStyles = (colors: any) => StyleSheet.create({
   alertMore: { color: colors.textSecondary, fontSize: 12, marginTop: 8, textAlign: 'center' },
 
   statsRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  statCard: { flex: 1, backgroundColor: colors.card, borderRadius: 12, padding: 16, alignItems: 'center' },
+  statCard: { flex: 1, backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   statNumber: { fontSize: 28, fontWeight: 'bold', color: colors.text },
   statLabel: { fontSize: 12, color: colors.textSecondary, marginTop: 4 },
 
-  toggleCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.card, borderRadius: 12, padding: 16, marginBottom: 16 },
+  toggleCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   toggleInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   toggleText: { marginLeft: 12 },
   toggleTitle: { fontSize: 16, fontWeight: '600', color: colors.text },
@@ -777,9 +777,9 @@ const createStyles = (colors: any) => StyleSheet.create({
 
   section: { marginBottom: 24 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  sectionTitle: { fontSize: 16, fontWeight: '600', color: colors.text, marginBottom: 12 },
+  sectionTitle: { fontSize: 13, fontWeight: '700', color: colors.textMuted, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1.2 },
   sectionSubtitle: { fontSize: 14, color: colors.primary, fontWeight: '600' },
-  card: { backgroundColor: colors.card, borderRadius: 12, overflow: 'hidden' },
+  card: { backgroundColor: colors.glassCard, borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   divider: { height: 1, backgroundColor: colors.border, marginHorizontal: 16 },
 
   settingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 },
@@ -806,14 +806,14 @@ const createStyles = (colors: any) => StyleSheet.create({
 
   addButton: { flexDirection: 'row', alignItems: 'center' },
   addButtonText: { fontSize: 14, color: colors.primary, fontWeight: '600' },
-  emptyCard: { backgroundColor: colors.card, borderRadius: 12, padding: 24, alignItems: 'center' },
+  emptyCard: { backgroundColor: colors.glassCard, borderRadius: 16, padding: 24, alignItems: 'center', borderWidth: 1, borderColor: colors.glassBorder },
   emptyCardText: { color: colors.textSecondary, fontSize: 14 },
   emptyCardButton: { marginTop: 12, paddingHorizontal: 16, paddingVertical: 8, backgroundColor: colors.primary + '20', borderRadius: 8 },
   emptyCardButtonText: { color: colors.primary, fontWeight: '600' },
 
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', padding: 24 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 24 },
   
-  datePickerModal: { backgroundColor: colors.card, borderRadius: 16, padding: 24, width: '100%', maxWidth: 350 },
+  datePickerModal: { backgroundColor: colors.card, borderRadius: 24, padding: 24, width: '100%', maxWidth: 350 },
   datePickerTitle: { fontSize: 18, fontWeight: '600', color: colors.text, marginBottom: 16, textAlign: 'center' },
   datePickerButtons: { flexDirection: 'row', gap: 12, marginTop: 16 },
   datePickerCancel: { flex: 1, padding: 14, borderRadius: 12, backgroundColor: colors.background, alignItems: 'center' },
@@ -821,7 +821,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   datePickerConfirm: { flex: 1, padding: 14, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center' },
   datePickerConfirmText: { color: colors.background, fontWeight: '600' },
 
-  editModal: { backgroundColor: colors.card, borderRadius: 16, padding: 24, width: '100%', maxWidth: 350 },
+  editModal: { backgroundColor: colors.card, borderRadius: 24, padding: 24, width: '100%', maxWidth: 350 },
   editModalTitle: { fontSize: 18, fontWeight: '600', color: colors.text, marginBottom: 16, textAlign: 'center' },
   editInput: { backgroundColor: colors.background, borderRadius: 12, padding: 16, fontSize: 18, color: colors.text, borderWidth: 1, borderColor: colors.border, textAlign: 'center' },
   editModalButtons: { flexDirection: 'row', gap: 12, marginTop: 16 },
@@ -862,6 +862,6 @@ const createStyles = (colors: any) => StyleSheet.create({
   previewLabel: { fontSize: 12, color: colors.textSecondary, marginBottom: 4 },
   previewName: { fontSize: 18, fontWeight: 'bold', color: colors.primary },
 
-  createBtn: { backgroundColor: colors.primary, padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 24, marginBottom: 20 },
+  createBtn: { backgroundColor: colors.primary, paddingVertical: 14, borderRadius: 12, alignItems: 'center', marginTop: 24, marginBottom: 20 },
   createBtnText: { color: colors.background, fontSize: 16, fontWeight: 'bold' },
 });

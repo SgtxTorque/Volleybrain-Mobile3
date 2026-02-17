@@ -522,7 +522,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   greeting: { fontSize: 16, color: colors.textMuted },
-  name: { fontSize: 28, fontWeight: 'bold', color: colors.text },
+  name: { fontSize: 28, fontWeight: '800', color: colors.text },
 
   statsRow: { backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', marginBottom: 24, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   statItem: { flex: 1, alignItems: 'center' },
@@ -530,11 +530,11 @@ const createStyles = (colors: any) => StyleSheet.create({
   statNum: { fontSize: 24, fontWeight: 'bold', color: colors.text },
   statLabel: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
 
-  sectionTitle: { fontSize: 18, fontWeight: '600', color: colors.text, marginBottom: 12, textTransform: 'uppercase' as const, letterSpacing: 1 },
+  sectionTitle: { fontSize: 13, fontWeight: '700', color: colors.textMuted, marginBottom: 12, textTransform: 'uppercase' as const, letterSpacing: 1 },
 
   emptyCard: { backgroundColor: colors.glassCard, borderRadius: 16, padding: 32, alignItems: 'center', marginBottom: 24, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   emptyText: { fontSize: 14, color: colors.textMuted, marginTop: 8, marginBottom: 16 },
-  emptyBtn: { backgroundColor: colors.primary, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 },
+  emptyBtn: { backgroundColor: colors.primary, paddingHorizontal: 20, paddingVertical: 14, borderRadius: 12 },
   emptyBtnText: { color: '#000', fontWeight: '600' },
 
   childCard: {
@@ -614,7 +614,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   viewAllBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12 },
   viewAllText: { fontSize: 14, color: colors.primary, fontWeight: '500' },
 
-  paymentAlert: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.warning + '15', borderRadius: 12, padding: 16, marginTop: 8, borderWidth: 1, borderColor: colors.warning + '40' },
+  paymentAlert: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.warning + '15', borderRadius: 16, padding: 16, marginTop: 8, borderWidth: 1, borderColor: colors.warning + '40', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   paymentAlertContent: { flex: 1, marginLeft: 12 },
   paymentAlertTitle: { fontSize: 14, fontWeight: '600', color: colors.warning },
   paymentAlertText: { fontSize: 12, color: colors.textMuted, marginTop: 2 },

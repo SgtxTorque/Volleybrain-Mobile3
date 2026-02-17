@@ -93,11 +93,13 @@ export default function EventCard({ event, onPress, compact = false }: EventCard
           flexDirection: 'row',
           alignItems: 'center',
           padding: 12,
-          backgroundColor: colors.card,
-          borderRadius: 8,
+          backgroundColor: colors.glassCard,
+          borderRadius: 12,
           borderLeftWidth: 4,
           borderLeftColor: typeConfig.color,
           marginBottom: 8,
+          borderWidth: 1,
+          borderColor: colors.glassBorder,
         }}
       >
         <View style={{ marginRight: 12 }}>
@@ -146,12 +148,17 @@ export default function EventCard({ event, onPress, compact = false }: EventCard
       onPress={onPress}
       activeOpacity={0.7}
       style={{
-        backgroundColor: colors.card,
-        borderRadius: 12,
+        backgroundColor: colors.glassCard,
+        borderRadius: 16,
         overflow: 'hidden',
         borderWidth: 1,
-        borderColor: colors.border,
+        borderColor: colors.glassBorder,
         marginBottom: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+        elevation: 6,
       }}
     >
       {/* Header with type and location */}

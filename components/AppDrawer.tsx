@@ -112,6 +112,14 @@ export default function AppDrawer({ visible, onClose }: AppDrawerProps) {
       ],
     });
 
+    // PERSONALIZE section (always visible)
+    sections.push({
+      title: 'Personalize',
+      items: [
+        { id: 'background', label: 'Background', icon: 'color-palette', route: '/background-picker' },
+      ],
+    });
+
     // SETTINGS section (always visible)
     sections.push({
       title: 'Settings',
@@ -310,10 +318,10 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
     color: colors.textMuted,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 1.2,
     paddingHorizontal: 20,
     marginBottom: 8,
   },

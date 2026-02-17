@@ -650,7 +650,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
           borderBottomWidth: 1,
           borderBottomColor: colors.border,
         }}>
-          <Text style={{ fontSize: 24, fontWeight: '700', color: colors.text }}>
+          <Text style={{ fontSize: 28, fontWeight: '800', color: colors.text }}>
             Payments
           </Text>
           {workingSeason && (
@@ -680,8 +680,10 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
         <View style={{
           flex: 1,
           backgroundColor: '#FF3B3020',
-          borderRadius: 12,
+          borderRadius: 16,
           padding: 12,
+          borderWidth: 1,
+          borderColor: 'rgba(255,59,48,0.15)',
         }}>
           <Text style={{ fontSize: 11, color: '#FF3B30', fontWeight: '600' }}>UNPAID</Text>
           <Text style={{ fontSize: 18, fontWeight: '700', color: '#FF3B30', marginTop: 2 }}>
@@ -691,8 +693,10 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
         <View style={{
           flex: 1,
           backgroundColor: '#FF950020',
-          borderRadius: 12,
+          borderRadius: 16,
           padding: 12,
+          borderWidth: 1,
+          borderColor: 'rgba(255,149,0,0.15)',
         }}>
           <Text style={{ fontSize: 11, color: '#FF9500', fontWeight: '600' }}>PENDING</Text>
           <Text style={{ fontSize: 18, fontWeight: '700', color: '#FF9500', marginTop: 2 }}>
@@ -705,8 +709,10 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
         <View style={{
           flex: 1,
           backgroundColor: '#34C75920',
-          borderRadius: 12,
+          borderRadius: 16,
           padding: 12,
+          borderWidth: 1,
+          borderColor: 'rgba(52,199,89,0.15)',
         }}>
           <Text style={{ fontSize: 11, color: '#34C759', fontWeight: '600' }}>PAID</Text>
           <Text style={{ fontSize: 18, fontWeight: '700', color: '#34C759', marginTop: 2 }}>
@@ -720,7 +726,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
         flexDirection: 'row',
         marginHorizontal: 16,
         backgroundColor: colors.card,
-        borderRadius: 10,
+        borderRadius: 20,
         padding: 4,
         marginBottom: 12,
       }}>
@@ -779,7 +785,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
           flexDirection: 'row',
           alignItems: 'center',
           backgroundColor: colors.card,
-          borderRadius: 10,
+          borderRadius: 12,
           paddingHorizontal: 12,
         }}>
           <Ionicons name="search" size={18} color={colors.textSecondary} />
@@ -811,10 +817,12 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
       >
         {filteredGroups.length === 0 ? (
           <View style={{
-            backgroundColor: colors.card,
-            borderRadius: 12,
+            backgroundColor: colors.glassCard,
+            borderRadius: 16,
             padding: 32,
             alignItems: 'center',
+            borderWidth: 1,
+            borderColor: colors.glassBorder,
           }}>
             <Ionicons
               name={activeTab === 'verification' ? 'checkmark-circle' : 'receipt-outline'}
@@ -850,12 +858,17 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
               <View
                 key={group.player_id}
                 style={{
-                  backgroundColor: colors.card,
-                  borderRadius: 12,
+                  backgroundColor: colors.glassCard,
+                  borderRadius: 16,
                   marginBottom: 12,
                   overflow: 'hidden',
-                  borderWidth: isFullySelected || isPartiallySelected ? 2 : 0,
-                  borderColor: colors.primary,
+                  borderWidth: isFullySelected || isPartiallySelected ? 2 : 1,
+                  borderColor: isFullySelected || isPartiallySelected ? colors.primary : colors.glassBorder,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 12,
+                  elevation: 6,
                 }}
               >
                 {/* Player Header */}
@@ -1163,14 +1176,14 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
       >
         <View style={{
           flex: 1,
-          backgroundColor: 'rgba(0,0,0,0.5)',
+          backgroundColor: 'rgba(0,0,0,0.6)',
           justifyContent: 'flex-end',
         }}>
           <View style={{
             backgroundColor: colors.card,
             borderTopLeftRadius: 24,
             borderTopRightRadius: 24,
-            padding: 20,
+            padding: 24,
             paddingBottom: Platform.OS === 'ios' ? 40 : 24,
           }}>
             <View style={{ alignItems: 'center', marginBottom: 20 }}>
@@ -1191,7 +1204,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
               )}
             </View>
 
-            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textSecondary, marginBottom: 10 }}>
+            <Text style={{ fontSize: 12, fontWeight: '700', color: colors.textSecondary, marginBottom: 10, letterSpacing: 1 }}>
               PAYMENT METHOD
             </Text>
             <View style={{
@@ -1207,7 +1220,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
                   style={{
                     paddingHorizontal: 14,
                     paddingVertical: 10,
-                    borderRadius: 10,
+                    borderRadius: 12,
                     backgroundColor: recordMethod === method ? getMethodColor(method) : colors.background,
                     borderWidth: recordMethod === method ? 0 : 1,
                     borderColor: colors.border,
@@ -1224,7 +1237,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
               ))}
             </View>
 
-            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textSecondary, marginBottom: 10 }}>
+            <Text style={{ fontSize: 12, fontWeight: '700', color: colors.textSecondary, marginBottom: 10, letterSpacing: 1 }}>
               NOTE (OPTIONAL)
             </Text>
             <TextInput
@@ -1234,11 +1247,14 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
               placeholderTextColor={colors.textSecondary}
               style={{
                 backgroundColor: colors.background,
-                borderRadius: 10,
-                padding: 14,
+                borderRadius: 12,
+                paddingHorizontal: 16,
+                paddingVertical: 14,
                 fontSize: 15,
                 color: colors.text,
                 marginBottom: 20,
+                borderWidth: 1,
+                borderColor: colors.border,
               }}
             />
 

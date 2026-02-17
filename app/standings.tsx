@@ -691,7 +691,7 @@ const createStyles = (colors: any) =>
       alignItems: 'center',
     },
     headerTitle: {
-      fontSize: 20,
+      fontSize: 28,
       fontWeight: '800',
       color: colors.text,
       letterSpacing: 2,
@@ -810,7 +810,7 @@ const createStyles = (colors: any) =>
       fontWeight: '700',
       color: colors.textMuted,
       textTransform: 'uppercase',
-      letterSpacing: 0.5,
+      letterSpacing: 1,
       textAlign: 'center',
     },
     tableRow: {
@@ -891,7 +891,7 @@ const createStyles = (colors: any) =>
     statTab: {
       paddingHorizontal: 18,
       paddingVertical: 10,
-      borderRadius: 24,
+      borderRadius: 20,
       borderWidth: 1,
       borderColor: colors.border,
       backgroundColor: colors.glassCard,

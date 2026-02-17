@@ -897,14 +897,14 @@ export default function ParentPaymentsScreen({ hideHeader = false }: Props) {
       >
         <View style={{
           flex: 1,
-          backgroundColor: 'rgba(0,0,0,0.5)',
+          backgroundColor: 'rgba(0,0,0,0.6)',
           justifyContent: 'flex-end',
         }}>
           <View style={{
             backgroundColor: colors.bgSecondary,
             borderTopLeftRadius: 24,
             borderTopRightRadius: 24,
-            padding: 20,
+            padding: 24,
             paddingBottom: Platform.OS === 'ios' ? 40 : 24,
             borderWidth: 1,
             borderBottomWidth: 0,
@@ -1048,14 +1048,14 @@ export default function ParentPaymentsScreen({ hideHeader = false }: Props) {
       >
         <View style={{
           flex: 1,
-          backgroundColor: 'rgba(0,0,0,0.5)',
+          backgroundColor: 'rgba(0,0,0,0.6)',
           justifyContent: 'flex-end',
         }}>
           <View style={{
             backgroundColor: colors.card,
             borderTopLeftRadius: 24,
             borderTopRightRadius: 24,
-            padding: 20,
+            padding: 24,
             paddingBottom: Platform.OS === 'ios' ? 40 : 24,
           }}>
             <View style={{ alignItems: 'center', marginBottom: 20 }}>
@@ -1095,11 +1095,14 @@ export default function ParentPaymentsScreen({ hideHeader = false }: Props) {
               placeholderTextColor={colors.textSecondary}
               style={{
                 backgroundColor: colors.background,
-                borderRadius: 10,
-                padding: 14,
+                borderRadius: 12,
+                paddingHorizontal: 16,
+                paddingVertical: 14,
                 fontSize: 16,
                 color: colors.text,
                 marginBottom: 20,
+                borderWidth: 1,
+                borderColor: colors.border,
               }}
             />
 

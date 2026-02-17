@@ -135,8 +135,8 @@ export default function WelcomeScreen() {
               <Text style={{ fontSize: 44 }}>🏐</Text>
             </View>
             <Text style={{
-              fontSize: 28,
-              fontWeight: '700',
+              fontSize: 32,
+              fontWeight: '800',
               color: colors.text,
             }}>
               VolleyBrain
@@ -158,15 +158,20 @@ export default function WelcomeScreen() {
               onPress={handleGoogleSignIn}
               disabled={oauthLoading !== null}
               style={{
-                backgroundColor: colors.card,
+                backgroundColor: colors.glassCard,
                 borderRadius: 12,
                 padding: 14,
                 flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'center',
                 borderWidth: 1,
-                borderColor: colors.border,
+                borderColor: colors.glassBorder,
                 opacity: oauthLoading !== null ? 0.7 : 1,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.15,
+                shadowRadius: 12,
+                elevation: 6,
               }}
             >
               {oauthLoading === 'google' ? (
@@ -242,12 +247,14 @@ export default function WelcomeScreen() {
           <View style={{ marginBottom: 20 }}>
             {/* Email Input */}
             <View style={{
-              backgroundColor: colors.card,
+              backgroundColor: colors.glassCard,
               borderRadius: 12,
               flexDirection: 'row',
               alignItems: 'center',
               paddingHorizontal: 14,
               marginBottom: 10,
+              borderWidth: 1,
+              borderColor: colors.glassBorder,
             }}>
               <Ionicons name="mail-outline" size={20} color={colors.textSecondary} />
               <TextInput
@@ -269,12 +276,14 @@ export default function WelcomeScreen() {
 
             {/* Password Input */}
             <View style={{
-              backgroundColor: colors.card,
+              backgroundColor: colors.glassCard,
               borderRadius: 12,
               flexDirection: 'row',
               alignItems: 'center',
               paddingHorizontal: 14,
               marginBottom: 10,
+              borderWidth: 1,
+              borderColor: colors.glassBorder,
             }}>
               <Ionicons name="lock-closed-outline" size={20} color={colors.textSecondary} />
               <TextInput
@@ -316,7 +325,7 @@ export default function WelcomeScreen() {
               style={{
                 backgroundColor: colors.primary,
                 borderRadius: 12,
-                padding: 15,
+                paddingVertical: 16,
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexDirection: 'row',
@@ -364,11 +373,18 @@ export default function WelcomeScreen() {
             <TouchableOpacity
               onPress={() => router.push('/(auth)/league-setup')}
               style={{
-                backgroundColor: colors.card,
-                borderRadius: 12,
+                backgroundColor: colors.glassCard,
+                borderRadius: 16,
                 padding: 14,
                 flexDirection: 'row',
                 alignItems: 'center',
+                borderWidth: 1,
+                borderColor: colors.glassBorder,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.15,
+                shadowRadius: 12,
+                elevation: 6,
               }}
             >
               <View style={{
@@ -405,11 +421,18 @@ export default function WelcomeScreen() {
             <TouchableOpacity
               onPress={() => router.push('/(auth)/parent-register')}
               style={{
-                backgroundColor: colors.card,
-                borderRadius: 12,
+                backgroundColor: colors.glassCard,
+                borderRadius: 16,
                 padding: 14,
                 flexDirection: 'row',
                 alignItems: 'center',
+                borderWidth: 1,
+                borderColor: colors.glassBorder,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.15,
+                shadowRadius: 12,
+                elevation: 6,
               }}
             >
               <View style={{
@@ -446,11 +469,18 @@ export default function WelcomeScreen() {
             <TouchableOpacity
               onPress={() => router.push('/(auth)/coach-register')}
               style={{
-                backgroundColor: colors.card,
-                borderRadius: 12,
+                backgroundColor: colors.glassCard,
+                borderRadius: 16,
                 padding: 14,
                 flexDirection: 'row',
                 alignItems: 'center',
+                borderWidth: 1,
+                borderColor: colors.glassBorder,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.15,
+                shadowRadius: 12,
+                elevation: 6,
               }}
             >
               <View style={{

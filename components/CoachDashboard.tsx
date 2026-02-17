@@ -417,7 +417,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
   greeting: { fontSize: 16, color: colors.textMuted },
-  name: { fontSize: 28, fontWeight: 'bold', color: colors.text },
+  name: { fontSize: 28, fontWeight: '800', color: colors.text },
   subtitle: { fontSize: 15, color: colors.textMuted, marginBottom: 20 },
 
   statsRow: { backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', marginBottom: 24, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
@@ -426,7 +426,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   statNum: { fontSize: 24, fontWeight: 'bold', color: colors.text },
   statLabel: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
 
-  sectionTitle: { fontSize: 18, fontWeight: '600', color: colors.text, marginBottom: 12, textTransform: 'uppercase' as const, letterSpacing: 1 },
+  sectionTitle: { fontSize: 13, fontWeight: '700', color: colors.textMuted, marginBottom: 12, textTransform: 'uppercase' as const, letterSpacing: 1 },
 
   emptyCard: { backgroundColor: colors.glassCard, borderRadius: 16, padding: 32, alignItems: 'center', marginBottom: 24, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   emptyText: { fontSize: 14, color: colors.textMuted, marginTop: 8 },

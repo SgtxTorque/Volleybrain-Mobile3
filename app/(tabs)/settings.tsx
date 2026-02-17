@@ -432,13 +432,13 @@ export default function SettingsScreen() {
 const createStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   scroll: { flex: 1, padding: 16 },
-  title: { fontSize: 32, fontWeight: 'bold', color: colors.text, marginBottom: 20 },
+  title: { fontSize: 28, fontWeight: '800', color: colors.text, marginBottom: 20 },
 
   devBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f59e0b', padding: 12, borderRadius: 12, marginBottom: 16, gap: 8 },
   devBannerText: { flex: 1, color: '#fff', fontWeight: '600' },
   devBannerReset: { color: '#fff', fontWeight: 'bold', textDecorationLine: 'underline' },
 
-  card: { backgroundColor: colors.card, borderRadius: 16, padding: 16, marginBottom: 16 },
+  card: { backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   cardHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   cardTitle: { fontSize: 18, fontWeight: '600', color: colors.text, marginBottom: 12 },
@@ -453,7 +453,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   themeOptionText: { marginTop: 8, fontSize: 14, color: colors.textMuted },
   themeOptionTextActive: { color: colors.primary, fontWeight: '600' },
 
-  devCard: { borderWidth: 2, borderColor: colors.warning, borderStyle: 'dashed' },
+  devCard: { borderWidth: 2, borderColor: colors.warning, borderStyle: 'dashed', backgroundColor: colors.glassCard },
   devHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
   devTitle: { fontSize: 16, fontWeight: 'bold', color: colors.warning },
   devSubtitle: { fontSize: 12, color: colors.textMuted, marginBottom: 12 },
@@ -473,7 +473,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   settingValue: { fontSize: 14, fontWeight: '500' },
 
   userCount: { fontSize: 14, color: colors.textMuted },
-  searchBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.background, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12, gap: 8 },
+  searchBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.background, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12, gap: 8 },
   searchInput: { flex: 1, fontSize: 16, color: colors.text },
 
   userRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
@@ -493,10 +493,10 @@ const createStyles = (colors: any) => StyleSheet.create({
   roleChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 },
   roleChipText: { fontSize: 13, fontWeight: '600' },
 
-  signOutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.card, borderRadius: 12, padding: 16, marginTop: 8 },
+  signOutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginTop: 8, borderWidth: 1, borderColor: colors.glassBorder },
   signOutText: { fontSize: 16, color: colors.danger, fontWeight: '600' },
 
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   modal: { backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '80%' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   modalTitle: { fontSize: 20, fontWeight: 'bold', color: colors.text },

@@ -1019,7 +1019,7 @@ const createStyles = (colors: any, sportColors: any) => StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   greeting: { fontSize: 16, color: colors.textMuted },
-  userName: { fontSize: 28, fontWeight: 'bold', color: colors.text },
+  userName: { fontSize: 28, fontWeight: '800', color: colors.text },
   logoBox: { width: 50, height: 50, borderRadius: 25, backgroundColor: sportColors.primary + '20', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: sportColors.primary },
   logoIcon: { fontSize: 24 },
   
@@ -1041,7 +1041,7 @@ const createStyles = (colors: any, sportColors: any) => StyleSheet.create({
   statNum: { fontSize: 20, fontWeight: 'bold', color: colors.text },
   statLabel: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
   
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: colors.text, marginBottom: 12, textTransform: 'uppercase' as const, letterSpacing: 1 },
+  sectionTitle: { fontSize: 13, fontWeight: '700', color: colors.textMuted, marginBottom: 12, textTransform: 'uppercase' as const, letterSpacing: 1 },
   
   actionsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
   actionBtn: { backgroundColor: colors.glassCard, borderRadius: 16, padding: 14, alignItems: 'center', width: '23%', borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
@@ -1067,13 +1067,13 @@ const createStyles = (colors: any, sportColors: any) => StyleSheet.create({
   alertDot: { width: 8, height: 8, borderRadius: 4, marginRight: 12 },
   alertText: { fontSize: 14, color: colors.text, flex: 1 },
   
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   
   inviteModal: { backgroundColor: colors.glassCard, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '80%', borderWidth: 1, borderColor: colors.glassBorder },
   inviteModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: colors.border },
   inviteModalTitle: { fontSize: 20, fontWeight: 'bold', color: colors.text },
   inviteOptions: { padding: 16 },
-  inviteOption: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.background, borderRadius: 12, padding: 16, marginBottom: 12 },
+  inviteOption: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: colors.glassBorder },
   inviteOptionIcon: { width: 56, height: 56, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 16 },
   inviteOptionContent: { flex: 1 },
   inviteOptionTitle: { fontSize: 16, fontWeight: '600', color: colors.text, marginBottom: 2 },
@@ -1105,7 +1105,7 @@ const createStyles = (colors: any, sportColors: any) => StyleSheet.create({
   emptyPending: { alignItems: 'center', padding: 40 },
   emptyPendingText: { fontSize: 18, fontWeight: 'bold', color: colors.text, marginTop: 16 },
   emptyPendingSubtext: { fontSize: 14, color: colors.textMuted, marginTop: 4 },
-  pendingItem: { backgroundColor: colors.background, borderRadius: 12, padding: 16, marginBottom: 12 },
+  pendingItem: { backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   pendingItemHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   inviteTypeBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
   inviteTypeBadgeText: { fontSize: 12, fontWeight: '600' },
@@ -1122,7 +1122,7 @@ const createStyles = (colors: any, sportColors: any) => StyleSheet.create({
   pickerScroll: { padding: 16 },
   pickerSectionLabel: { fontSize: 11, color: colors.textMuted, fontWeight: '600', letterSpacing: 1, marginTop: 16, marginBottom: 8 },
   
-  seasonCard: { backgroundColor: colors.background, borderRadius: 12, marginBottom: 8, overflow: 'hidden' },
+  seasonCard: { backgroundColor: colors.glassCard, borderRadius: 16, marginBottom: 8, overflow: 'hidden', borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   seasonCardSelected: { borderWidth: 1, borderColor: sportColors.primary },
   seasonCardCompleted: { opacity: 0.7 },
   seasonCardMain: { padding: 16 },
@@ -1159,11 +1159,11 @@ const createStyles = (colors: any, sportColors: any) => StyleSheet.create({
   infoBox: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.info + '15', borderRadius: 10, padding: 12, marginBottom: 16 },
   infoBoxText: { flex: 1, fontSize: 13, color: colors.info },
   
-  feeBox: { backgroundColor: colors.background, borderRadius: 12, padding: 16, marginBottom: 24 },
+  feeBox: { backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginBottom: 24, borderWidth: 1, borderColor: colors.glassBorder },
   feeTitle: { fontSize: 14, fontWeight: 'bold', color: colors.text, marginBottom: 8 },
   feeItem: { fontSize: 14, color: colors.textMuted, marginBottom: 4 },
   feeTotal: { fontSize: 14, fontWeight: 'bold', color: sportColors.primary, marginTop: 8 },
-  createBtn: { backgroundColor: sportColors.primary, borderRadius: 12, padding: 16, alignItems: 'center' },
+  createBtn: { backgroundColor: sportColors.primary, borderRadius: 12, paddingVertical: 14, paddingHorizontal: 16, alignItems: 'center' },
   disabled: { opacity: 0.7 },
   createTxt: { fontSize: 18, fontWeight: 'bold', color: colors.background },
 });

@@ -335,7 +335,7 @@ export default function ParentMyTeamsScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text }}>My Teams</Text>
+        <Text style={{ fontSize: 18, fontWeight: '800', color: colors.text }}>My Teams</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -346,10 +346,12 @@ export default function ParentMyTeamsScreen() {
       >
         {teams.length === 0 ? (
           <View style={{
-            backgroundColor: colors.card,
-            borderRadius: 12,
+            backgroundColor: colors.glassCard,
+            borderRadius: 16,
             padding: 32,
             alignItems: 'center',
+            borderWidth: 1,
+            borderColor: colors.glassBorder,
           }}>
             <Ionicons name="people-outline" size={48} color={colors.textSecondary} />
             <Text style={{ color: colors.textSecondary, marginTop: 12, fontSize: 16, textAlign: 'center' }}>
@@ -367,10 +369,17 @@ export default function ParentMyTeamsScreen() {
               <View
                 key={team.id}
                 style={{
-                  backgroundColor: colors.card,
-                  borderRadius: 12,
-                  marginBottom: 16,
+                  backgroundColor: colors.glassCard,
+                  borderRadius: 16,
+                  marginBottom: 12,
                   overflow: 'hidden',
+                  borderWidth: 1,
+                  borderColor: colors.glassBorder,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 12,
+                  elevation: 6,
                 }}
               >
                 {/* Team Header */}
@@ -423,11 +432,11 @@ export default function ParentMyTeamsScreen() {
                       <View style={{ marginBottom: 16 }}>
                         <Text style={{
                           fontSize: 12,
-                          fontWeight: '600',
+                          fontWeight: '700',
                           color: colors.textSecondary,
                           marginBottom: 8,
                           textTransform: 'uppercase',
-                          letterSpacing: 0.5,
+                          letterSpacing: 1.5,
                         }}>
                           Coaches
                         </Text>
@@ -473,11 +482,11 @@ export default function ParentMyTeamsScreen() {
                     {/* Roster Section */}
                     <Text style={{
                       fontSize: 12,
-                      fontWeight: '600',
+                      fontWeight: '700',
                       color: colors.textSecondary,
                       marginBottom: 8,
                       textTransform: 'uppercase',
-                      letterSpacing: 0.5,
+                      letterSpacing: 1.5,
                     }}>
                       Roster ({team.teammates.length})
                     </Text>
@@ -573,14 +582,14 @@ export default function ParentMyTeamsScreen() {
       >
         <View style={{
           flex: 1,
-          backgroundColor: 'rgba(0,0,0,0.5)',
+          backgroundColor: 'rgba(0,0,0,0.6)',
           justifyContent: 'flex-end',
         }}>
           <View style={{
             backgroundColor: colors.card,
-            borderTopLeftRadius: 20,
-            borderTopRightRadius: 20,
-            padding: 20,
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
+            padding: 24,
             paddingBottom: 40,
           }}>
             <View style={{ alignItems: 'center', marginBottom: 20 }}>

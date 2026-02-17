@@ -276,7 +276,18 @@ export default function LeagueSetupScreen() {
   // =============================================================================
 
   const renderStep1 = () => (
-    <>
+    <View style={{
+      backgroundColor: colors.glassCard,
+      borderWidth: 1,
+      borderColor: colors.glassBorder,
+      borderRadius: 24,
+      padding: 24,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 12,
+      elevation: 6,
+    }}>
       <View style={{ alignItems: 'center', marginBottom: 24 }}>
         <View style={{
           width: 70,
@@ -299,11 +310,13 @@ export default function LeagueSetupScreen() {
 
       <View style={{ gap: 12 }}>
         <View style={{
-          backgroundColor: colors.card,
+          backgroundColor: colors.background,
           borderRadius: 12,
           flexDirection: 'row',
           alignItems: 'center',
           paddingHorizontal: 14,
+          borderWidth: 1,
+          borderColor: colors.border,
         }}>
           <Ionicons name="person-outline" size={20} color={colors.textSecondary} />
           <TextInput
@@ -322,11 +335,13 @@ export default function LeagueSetupScreen() {
         </View>
 
         <View style={{
-          backgroundColor: colors.card,
+          backgroundColor: colors.background,
           borderRadius: 12,
           flexDirection: 'row',
           alignItems: 'center',
           paddingHorizontal: 14,
+          borderWidth: 1,
+          borderColor: colors.border,
         }}>
           <Ionicons name="mail-outline" size={20} color={colors.textSecondary} />
           <TextInput
@@ -347,11 +362,13 @@ export default function LeagueSetupScreen() {
         </View>
 
         <View style={{
-          backgroundColor: colors.card,
+          backgroundColor: colors.background,
           borderRadius: 12,
           flexDirection: 'row',
           alignItems: 'center',
           paddingHorizontal: 14,
+          borderWidth: 1,
+          borderColor: colors.border,
         }}>
           <Ionicons name="lock-closed-outline" size={20} color={colors.textSecondary} />
           <TextInput
@@ -383,7 +400,7 @@ export default function LeagueSetupScreen() {
         style={{
           backgroundColor: colors.primary,
           borderRadius: 12,
-          padding: 16,
+          paddingVertical: 16,
           alignItems: 'center',
           marginTop: 24,
         }}
@@ -396,11 +413,22 @@ export default function LeagueSetupScreen() {
           </Text>
         )}
       </TouchableOpacity>
-    </>
+    </View>
   );
 
   const renderStep2 = () => (
-    <>
+    <View style={{
+      backgroundColor: colors.glassCard,
+      borderWidth: 1,
+      borderColor: colors.glassBorder,
+      borderRadius: 24,
+      padding: 24,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 12,
+      elevation: 6,
+    }}>
       <View style={{ alignItems: 'center', marginBottom: 24 }}>
         <View style={{
           width: 70,
@@ -423,11 +451,13 @@ export default function LeagueSetupScreen() {
 
       <View style={{ gap: 12 }}>
         <View style={{
-          backgroundColor: colors.card,
+          backgroundColor: colors.background,
           borderRadius: 12,
           flexDirection: 'row',
           alignItems: 'center',
           paddingHorizontal: 14,
+          borderWidth: 1,
+          borderColor: colors.border,
         }}>
           <Ionicons name="trophy-outline" size={20} color={colors.textSecondary} />
           <TextInput
@@ -446,10 +476,12 @@ export default function LeagueSetupScreen() {
         </View>
 
         <View style={{
-          backgroundColor: colors.card,
+          backgroundColor: colors.background,
           borderRadius: 12,
           paddingHorizontal: 14,
           paddingTop: 10,
+          borderWidth: 1,
+          borderColor: colors.border,
         }}>
           <Text style={{ fontSize: 12, color: colors.textSecondary }}>
             Description (optional)
@@ -478,7 +510,7 @@ export default function LeagueSetupScreen() {
         style={{
           backgroundColor: colors.primary,
           borderRadius: 12,
-          padding: 16,
+          paddingVertical: 16,
           alignItems: 'center',
           marginTop: 24,
         }}
@@ -491,11 +523,22 @@ export default function LeagueSetupScreen() {
           </Text>
         )}
       </TouchableOpacity>
-    </>
+    </View>
   );
 
   const renderStep3 = () => (
-    <>
+    <View style={{
+      backgroundColor: colors.glassCard,
+      borderWidth: 1,
+      borderColor: colors.glassBorder,
+      borderRadius: 24,
+      padding: 24,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 12,
+      elevation: 6,
+    }}>
       <View style={{ alignItems: 'center', marginBottom: 24 }}>
         <View style={{
           width: 70,
@@ -558,7 +601,7 @@ export default function LeagueSetupScreen() {
         style={{
           backgroundColor: selectedSports.length > 0 ? colors.primary : colors.border,
           borderRadius: 12,
-          padding: 16,
+          paddingVertical: 16,
           alignItems: 'center',
           marginTop: 24,
         }}
@@ -575,11 +618,22 @@ export default function LeagueSetupScreen() {
           </Text>
         )}
       </TouchableOpacity>
-    </>
+    </View>
   );
 
   const renderStep4 = () => (
-    <>
+    <View style={{
+      backgroundColor: colors.glassCard,
+      borderWidth: 1,
+      borderColor: colors.glassBorder,
+      borderRadius: 24,
+      padding: 24,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 12,
+      elevation: 6,
+    }}>
       <View style={{ alignItems: 'center', marginBottom: 24 }}>
         <View style={{
           width: 70,
@@ -602,11 +656,13 @@ export default function LeagueSetupScreen() {
 
       <View style={{ gap: 12 }}>
         <View style={{
-          backgroundColor: colors.card,
+          backgroundColor: colors.background,
           borderRadius: 12,
           flexDirection: 'row',
           alignItems: 'center',
           paddingHorizontal: 14,
+          borderWidth: 1,
+          borderColor: colors.border,
         }}>
           <Ionicons name="create-outline" size={20} color={colors.textSecondary} />
           <TextInput
@@ -665,7 +721,7 @@ export default function LeagueSetupScreen() {
         style={{
           backgroundColor: seasonName.trim() ? colors.primary : colors.border,
           borderRadius: 12,
-          padding: 16,
+          paddingVertical: 16,
           alignItems: 'center',
           marginTop: 24,
         }}
@@ -694,7 +750,7 @@ export default function LeagueSetupScreen() {
           Skip for now
         </Text>
       </TouchableOpacity>
-    </>
+    </View>
   );
 
   // =============================================================================

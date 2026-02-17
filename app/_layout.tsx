@@ -1,4 +1,6 @@
+import AppBackground from '@/components/AppBackground';
 import { AuthProvider, useAuth } from '@/lib/auth';
+import { BackgroundProvider } from '@/lib/background';
 import { PermissionsProvider } from '@/lib/permissions-context';
 import { SeasonProvider } from '@/lib/season';
 import { SportProvider } from '@/lib/sport';
@@ -7,7 +9,7 @@ import { DarkTheme, DefaultTheme, ThemeProvider as NavThemeProvider } from '@rea
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useRef } from 'react';
-import { useColorScheme } from 'react-native';
+import { useColorScheme, View } from 'react-native';
 
 function RootLayoutNav() {
   const { session, loading, profile, needsOnboarding } = useAuth();
@@ -58,10 +60,13 @@ function RootLayoutNav() {
 
   return (
     <NavThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(tabs)" />
-      </Stack>
+      <View style={{ flex: 1 }}>
+        <AppBackground />
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(tabs)" />
+        </Stack>
+      </View>
       <StatusBar style="auto" />
     </NavThemeProvider>
   );
@@ -71,13 +76,15 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <ThemeProvider>
-        <SportProvider>
-          <SeasonProvider>
-            <PermissionsProvider>
-              <RootLayoutNav />
-            </PermissionsProvider>
-          </SeasonProvider>
-        </SportProvider>
+        <BackgroundProvider>
+          <SportProvider>
+            <SeasonProvider>
+              <PermissionsProvider>
+                <RootLayoutNav />
+              </PermissionsProvider>
+            </SeasonProvider>
+          </SportProvider>
+        </BackgroundProvider>
       </ThemeProvider>
     </AuthProvider>
   );

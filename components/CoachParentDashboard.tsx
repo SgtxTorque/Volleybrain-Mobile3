@@ -425,10 +425,10 @@ const createStyles = (colors: any) => StyleSheet.create({
   
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   greeting: { fontSize: 16, color: colors.textMuted },
-  name: { fontSize: 28, fontWeight: 'bold', color: colors.text },
+  name: { fontSize: 28, fontWeight: '800', color: colors.text },
 
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16, marginBottom: 12, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: colors.border },
-  sectionHeaderText: { fontSize: 13, fontWeight: '700', color: colors.textMuted, letterSpacing: 1 },
+  sectionHeaderText: { fontSize: 13, fontWeight: '700', color: colors.textMuted, letterSpacing: 1, textTransform: 'uppercase' as const },
 
   teamCard: { backgroundColor: colors.glassCard, borderRadius: 16, marginBottom: 10, overflow: 'hidden', borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   teamHeader: { padding: 14 },
@@ -447,8 +447,8 @@ const createStyles = (colors: any) => StyleSheet.create({
   teamAction: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 10 },
   teamActionText: { fontSize: 11, color: colors.text, fontWeight: '500' },
 
-  quickActionsRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  quickActionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: colors.glassCard, paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.glassBorder },
+  quickActionsRow: { flexDirection: 'row', gap: 12, marginBottom: 16 },
+  quickActionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: colors.glassCard, paddingVertical: 12, borderRadius: 16, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   quickActionText: { fontSize: 12, fontWeight: '500', color: colors.text },
 
   childCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.glassCard, borderRadius: 16, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },

@@ -477,11 +477,18 @@ export default function EventDetailModal({
           {activeTab === 'details' && (
             <View>
               {/* Date & Time */}
-              <View style={{ 
-                backgroundColor: colors.card, 
-                borderRadius: 12, 
+              <View style={{
+                backgroundColor: colors.glassCard,
+                borderRadius: 16,
                 padding: 16,
                 marginBottom: 16,
+                borderWidth: 1,
+                borderColor: colors.glassBorder,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.15,
+                shadowRadius: 12,
+                elevation: 6,
               }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
                   <View style={{ 
@@ -529,11 +536,18 @@ export default function EventDetailModal({
 
               {/* Location */}
               {(event.venue_name || event.location) && (
-                <View style={{ 
-                  backgroundColor: colors.card, 
-                  borderRadius: 12, 
+                <View style={{
+                  backgroundColor: colors.glassCard,
+                  borderRadius: 16,
                   padding: 16,
                   marginBottom: 16,
+                  borderWidth: 1,
+                  borderColor: colors.glassBorder,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 12,
+                  elevation: 6,
                 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                     <Ionicons name="location" size={20} color={colors.primary} />
@@ -551,11 +565,18 @@ export default function EventDetailModal({
 
               {/* Opponent (games) */}
               {isGame && (event.opponent_name || event.opponent) && (
-                <View style={{ 
-                  backgroundColor: colors.card, 
-                  borderRadius: 12, 
+                <View style={{
+                  backgroundColor: colors.glassCard,
+                  borderRadius: 16,
                   padding: 16,
                   marginBottom: 16,
+                  borderWidth: 1,
+                  borderColor: colors.glassBorder,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 12,
+                  elevation: 6,
                 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <Ionicons name="shield" size={20} color="#FF6B6B" />
@@ -571,11 +592,18 @@ export default function EventDetailModal({
 
               {/* Notes */}
               {event.notes && (
-                <View style={{ 
-                  backgroundColor: colors.card, 
-                  borderRadius: 12, 
+                <View style={{
+                  backgroundColor: colors.glassCard,
+                  borderRadius: 16,
                   padding: 16,
                   marginBottom: 16,
+                  borderWidth: 1,
+                  borderColor: colors.glassBorder,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 12,
+                  elevation: 6,
                 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                     <Ionicons name="document-text" size={20} color={colors.primary} />
@@ -616,11 +644,18 @@ export default function EventDetailModal({
           {activeTab === 'rsvp' && (
             <View>
               {/* RSVP Summary */}
-              <View style={{ 
-                backgroundColor: colors.card, 
-                borderRadius: 12, 
+              <View style={{
+                backgroundColor: colors.glassCard,
+                borderRadius: 16,
                 padding: 16,
                 marginBottom: 16,
+                borderWidth: 1,
+                borderColor: colors.glassBorder,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.15,
+                shadowRadius: 12,
+                elevation: 6,
               }}>
                 <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600', marginBottom: 12 }}>
                   Responses
@@ -668,13 +703,15 @@ export default function EventDetailModal({
                   {myPlayers.map(player => {
                     const playerRsvp = getPlayerRSVP(player.id);
                     return (
-                      <View 
+                      <View
                         key={player.id}
-                        style={{ 
-                          backgroundColor: colors.card, 
-                          borderRadius: 12, 
+                        style={{
+                          backgroundColor: colors.glassCard,
+                          borderRadius: 16,
                           padding: 16,
                           marginBottom: 12,
+                          borderWidth: 1,
+                          borderColor: colors.glassBorder,
                         }}
                       >
                         <Text style={{ color: colors.text, fontSize: 15, fontWeight: '600', marginBottom: 12 }}>
@@ -703,7 +740,7 @@ export default function EventDetailModal({
                                   alignItems: 'center',
                                   justifyContent: 'center',
                                   padding: 10,
-                                  borderRadius: 8,
+                                  borderRadius: 12,
                                   backgroundColor: isSelected ? config.color + '20' : colors.background,
                                   borderWidth: 2,
                                   borderColor: isSelected ? config.color : colors.border,
@@ -727,8 +764,9 @@ export default function EventDetailModal({
                           placeholderTextColor={colors.textMuted}
                           style={{
                             backgroundColor: colors.background,
-                            borderRadius: 8,
-                            padding: 12,
+                            borderRadius: 12,
+                            paddingHorizontal: 16,
+                            paddingVertical: 14,
                             color: colors.text,
                             borderWidth: 1,
                             borderColor: colors.border,
@@ -741,14 +779,16 @@ export default function EventDetailModal({
               )}
 
               {myPlayers.length === 0 && (
-                <View style={{ 
-                  backgroundColor: colors.card, 
-                  borderRadius: 12, 
+                <View style={{
+                  backgroundColor: colors.glassCard,
+                  borderRadius: 16,
                   padding: 24,
                   alignItems: 'center',
+                  borderWidth: 1,
+                  borderColor: colors.glassBorder,
                 }}>
                   <Ionicons name="person-outline" size={48} color={colors.textMuted} />
-                  <Text style={{ color: colors.textMuted, fontSize: 15, marginTop: 12, textAlign: 'center' }}>
+                  <Text style={{ color: colors.textMuted, fontSize: 16, fontWeight: '600', marginTop: 12, textAlign: 'center' }}>
                     No players linked to your account on this team
                   </Text>
                 </View>
@@ -803,11 +843,18 @@ export default function EventDetailModal({
           {activeTab === 'volunteers' && isGame && (
             <View>
               {/* Line Judge Section */}
-              <View style={{ 
-                backgroundColor: colors.card, 
-                borderRadius: 12, 
+              <View style={{
+                backgroundColor: colors.glassCard,
+                borderRadius: 16,
                 padding: 16,
                 marginBottom: 16,
+                borderWidth: 1,
+                borderColor: colors.glassBorder,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.15,
+                shadowRadius: 12,
+                elevation: 6,
               }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
                   <Ionicons name="flag" size={24} color={colors.primary} />
@@ -878,11 +925,18 @@ export default function EventDetailModal({
               </View>
 
               {/* Scorekeeper Section */}
-              <View style={{ 
-                backgroundColor: colors.card, 
-                borderRadius: 12, 
+              <View style={{
+                backgroundColor: colors.glassCard,
+                borderRadius: 16,
                 padding: 16,
                 marginBottom: 16,
+                borderWidth: 1,
+                borderColor: colors.glassBorder,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.15,
+                shadowRadius: 12,
+                elevation: 6,
               }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
                   <Ionicons name="clipboard" size={24} color={colors.primary} />

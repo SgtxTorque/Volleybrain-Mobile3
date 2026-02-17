@@ -708,7 +708,7 @@ const gs = StyleSheet.create({
   // Header
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 60, paddingBottom: 12, backgroundColor: '#0D1117' },
   headerBtn: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { fontSize: 20, fontWeight: '900', color: '#fff', letterSpacing: 2 },
+  headerTitle: { fontSize: 28, fontWeight: '800', color: '#fff', letterSpacing: 2 },
 
   // Team Tabs
   teamTabs: { maxHeight: 50, backgroundColor: '#0D1117', borderBottomWidth: 1, borderBottomColor: '#1E293B' },
@@ -724,7 +724,7 @@ const gs = StyleSheet.create({
   emptySubtext: { fontSize: 14, color: '#64748B', marginTop: 4 },
 
   // Game Card
-  gameCard: { backgroundColor: '#131924', borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: '#1E293B' },
+  gameCard: { backgroundColor: 'rgba(30, 41, 59, 0.7)', borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.08)', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   gameCardToday: { borderColor: '#FF3B3B40', backgroundColor: '#1A0D0D' },
   gameCardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   gameCardDate: { flexDirection: 'row', alignItems: 'center', gap: 12 },
@@ -753,14 +753,14 @@ const gs = StyleSheet.create({
   liveHeaderCenter: { alignItems: 'center' },
   liveHeaderTitle: { fontSize: 16, fontWeight: '800', color: '#fff', letterSpacing: 1 },
   liveSetIndicator: { fontSize: 12, fontWeight: '700', color: '#F97316', letterSpacing: 1, marginTop: 2 },
-  endGameBtn: { backgroundColor: '#EF444430', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: '#EF444460' },
+  endGameBtn: { backgroundColor: '#EF444430', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: '#EF444460' },
   endGameBtnText: { fontSize: 14, fontWeight: '800', color: '#EF4444', letterSpacing: 1 },
 
   // Scoreboard
   scoreboard: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, backgroundColor: '#0D1117', borderBottomWidth: 1, borderBottomColor: '#1E293B' },
   scoreColumn: { flex: 1, alignItems: 'center' },
   teamLabel: { fontSize: 12, fontWeight: '700', color: '#64748B', letterSpacing: 2, marginBottom: 4 },
-  scoreTouchZone: { width: 110, height: 110, borderRadius: 20, backgroundColor: '#131924', borderWidth: 2, borderColor: '#1E293B', justifyContent: 'center', alignItems: 'center' },
+  scoreTouchZone: { width: 110, height: 110, borderRadius: 20, backgroundColor: 'rgba(30, 41, 59, 0.7)', borderWidth: 2, borderColor: 'rgba(255, 255, 255, 0.08)', justifyContent: 'center', alignItems: 'center' },
   bigScore: { fontSize: 56, fontWeight: '900', color: '#fff' },
   undoBtn: { marginTop: 8, padding: 8 },
   scoreCenter: { width: 100, alignItems: 'center' },
@@ -770,18 +770,18 @@ const gs = StyleSheet.create({
   setHistoryText: { fontSize: 10, color: '#94A3B8', fontWeight: '600' },
   setsWon: { fontSize: 24, fontWeight: '900', color: '#fff' },
   setsWonLabel: { fontSize: 10, fontWeight: '700', color: '#64748B', letterSpacing: 1, marginBottom: 8 },
-  endSetBtn: { backgroundColor: '#F9731620', borderWidth: 1, borderColor: '#F9731640', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 },
+  endSetBtn: { backgroundColor: '#F9731620', borderWidth: 1, borderColor: '#F9731640', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12 },
   endSetBtnText: { fontSize: 11, fontWeight: '800', color: '#F97316', letterSpacing: 0.5 },
 
   // Stat Buttons
   statButtonsRow: { flexDirection: 'row', paddingHorizontal: 8, paddingVertical: 10, gap: 6, backgroundColor: '#0D1117' },
-  statBtn: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 12, backgroundColor: '#131924', borderWidth: 1 },
+  statBtn: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 12, backgroundColor: 'rgba(30, 41, 59, 0.7)', borderWidth: 1 },
   statBtnDisabled: { opacity: 0.4 },
   statBtnLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 0.5, marginTop: 2 },
 
   // Roster
   rosterScroll: { flex: 1, backgroundColor: '#0A0E1A' },
-  rosterTitle: { fontSize: 11, fontWeight: '700', color: '#64748B', letterSpacing: 1.5, textAlign: 'center', paddingVertical: 10 },
+  rosterTitle: { fontSize: 12, fontWeight: '700', color: '#64748B', letterSpacing: 1.5, textTransform: 'uppercase', textAlign: 'center', paddingVertical: 10 },
   playerRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#1E293B10' },
   playerRowActive: { backgroundColor: '#F9731615' },
   playerJersey: { width: 44, height: 44, borderRadius: 10, backgroundColor: '#1E293B', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
@@ -794,8 +794,8 @@ const gs = StyleSheet.create({
   miniStat: { fontSize: 10, fontWeight: '700' },
 
   // End Game Modal
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-  endModal: { backgroundColor: '#131924', borderRadius: 20, padding: 24, width: '100%', maxWidth: 380, borderWidth: 1, borderColor: '#1E293B' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  endModal: { backgroundColor: 'rgba(30, 41, 59, 0.7)', borderRadius: 24, padding: 24, width: '100%', maxWidth: 380, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.08)', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   endModalTitle: { fontSize: 22, fontWeight: '900', color: '#fff', textAlign: 'center', letterSpacing: 2, marginBottom: 16 },
   endScoreWrap: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 16, marginBottom: 8 },
   endScoreUs: { fontSize: 48, fontWeight: '900', color: '#10B981' },
@@ -804,7 +804,7 @@ const gs = StyleSheet.create({
   endSetsText: { fontSize: 14, fontWeight: '700', color: '#94A3B8', textAlign: 'center', marginBottom: 16 },
   endSetLine: { fontSize: 13, color: '#64748B', textAlign: 'center', marginBottom: 4 },
   topPerformers: { marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#1E293B' },
-  topPerfTitle: { fontSize: 12, fontWeight: '700', color: '#F97316', letterSpacing: 1, marginBottom: 8 },
+  topPerfTitle: { fontSize: 12, fontWeight: '700', color: '#F97316', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 },
   topPerfRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
   topPerfName: { fontSize: 14, fontWeight: '700', color: '#CBD5E1' },
   topPerfStats: { fontSize: 12, fontWeight: '600', color: '#64748B' },

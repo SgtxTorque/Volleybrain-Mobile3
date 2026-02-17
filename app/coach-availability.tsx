@@ -468,13 +468,13 @@ const createStyles = (colors: any) => StyleSheet.create({
   legendDot: { width: 10, height: 10, borderRadius: 5 },
   legendText: { fontSize: 12, color: colors.textMuted },
 
-  calendarCard: { backgroundColor: colors.card, marginHorizontal: 16, borderRadius: 16, padding: 12, marginBottom: 16 },
+  calendarCard: { backgroundColor: colors.glassCard, marginHorizontal: 16, borderRadius: 16, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   dayHeaderRow: { flexDirection: 'row' },
   dayHeaderCell: { flex: 1, alignItems: 'center', paddingVertical: 8 },
   dayHeaderText: { fontSize: 12, fontWeight: '600', color: colors.textMuted },
   calendarGrid: { flexDirection: 'row', flexWrap: 'wrap' },
   dayCell: { width: '14.28%', aspectRatio: 1, justifyContent: 'center', alignItems: 'center' },
-  dayCellToday: { backgroundColor: colors.primary + '15', borderRadius: 20 },
+  dayCellToday: { backgroundColor: colors.primary + '15', borderRadius: 8 },
   dayCellMuted: { opacity: 0.3 },
   dayNumber: { fontSize: 14, fontWeight: '500', color: colors.text },
   dayNumberToday: { fontWeight: '800', color: colors.primary },
@@ -482,8 +482,8 @@ const createStyles = (colors: any) => StyleSheet.create({
   statusDot: { width: 6, height: 6, borderRadius: 3, marginTop: 2 },
 
   upcomingSection: { paddingHorizontal: 16, marginBottom: 16 },
-  upcomingSectionTitle: { fontSize: 16, fontWeight: '600', color: colors.text, marginBottom: 12 },
-  upcomingCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, borderRadius: 12, padding: 14, marginBottom: 8 },
+  upcomingSectionTitle: { fontSize: 13, fontWeight: '700', color: colors.textMuted, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1.2 },
+  upcomingCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.glassCard, borderRadius: 16, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   upcomingDot: { width: 10, height: 10, borderRadius: 5, marginRight: 12 },
   upcomingInfo: { flex: 1 },
   upcomingDate: { fontSize: 14, fontWeight: '600', color: colors.text },
@@ -491,8 +491,8 @@ const createStyles = (colors: any) => StyleSheet.create({
   upcomingNotes: { fontSize: 12, color: colors.textMuted, fontStyle: 'italic', marginTop: 2 },
 
   // Modal
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '80%' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '80%', padding: 0 },
   modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, borderBottomWidth: 1, borderBottomColor: colors.border },
   modalTitle: { fontSize: 20, fontWeight: 'bold', color: colors.text },
   modalScroll: { padding: 20 },
@@ -510,6 +510,6 @@ const createStyles = (colors: any) => StyleSheet.create({
   reasonLabel: { fontSize: 13, fontWeight: '500', color: colors.textMuted },
   notesInput: { backgroundColor: colors.background, borderRadius: 12, padding: 14, fontSize: 14, color: colors.text, borderWidth: 1, borderColor: colors.border, minHeight: 80 },
   modalFooter: { padding: 16, borderTopWidth: 1, borderTopColor: colors.border },
-  saveBtn: { backgroundColor: colors.primary, borderRadius: 12, padding: 16, alignItems: 'center' },
+  saveBtn: { backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
   saveBtnText: { fontSize: 16, fontWeight: '600', color: '#000' },
 });

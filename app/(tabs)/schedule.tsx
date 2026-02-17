@@ -594,7 +594,7 @@ export default function ScheduleScreen() {
             <View style={{ marginBottom: 16 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
                 <View style={{ backgroundColor: isToday ? colors.primary : colors.card, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}>
-                  <Text style={{ color: isToday ? '#fff' : colors.text, fontSize: 13, fontWeight: '600' }}>{isToday ? 'TODAY' : date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</Text>
+                  <Text style={{ color: isToday ? '#fff' : colors.text, fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 }}>{isToday ? 'TODAY' : date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</Text>
                 </View>
               </View>
               {dayEvents.map(event => (<TouchableOpacity key={event.id} onLongPress={() => deleteEvent(event)}><EventCard event={event} onPress={() => handleEventPress(event)} /></TouchableOpacity>))}
@@ -807,8 +807,8 @@ export default function ScheduleScreen() {
 
         {/* Location Picker Modal */}
         <Modal visible={showLocationPicker} transparent animationType="fade">
-          <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }} activeOpacity={1} onPress={() => setShowLocationPicker(false)}>
-            <View style={{ backgroundColor: colors.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, maxHeight: '60%' }}>
+          <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }} activeOpacity={1} onPress={() => setShowLocationPicker(false)}>
+            <View style={{ backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '60%' }}>
               <Text style={{ color: colors.text, fontSize: 18, fontWeight: 'bold', marginBottom: 16, textAlign: 'center' }}>Select Venue</Text>
               <ScrollView>
                 {venues.map(venue => (
@@ -987,7 +987,7 @@ export default function ScheduleScreen() {
 const createStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
-  title: { fontSize: 28, fontWeight: 'bold', color: colors.text },
+  title: { fontSize: 28, fontWeight: '800', color: colors.text },
   subtitle: { fontSize: 14, color: colors.primary, marginTop: 2 },
   addBtn: { backgroundColor: colors.primary, width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
   bulkBtn: { backgroundColor: colors.primary + '20', width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
@@ -997,17 +997,17 @@ const createStyles = (colors: any) => StyleSheet.create({
   viewBtnText: { color: colors.textMuted, fontSize: 13 },
   viewBtnTextActive: { color: colors.primary, fontWeight: '600' },
   filterRow: { marginBottom: 12, flexGrow: 0, flexShrink: 0 },
-  filterChip: { paddingHorizontal: 14, paddingVertical: 6, backgroundColor: colors.card, borderRadius: 16, borderWidth: 1, borderColor: colors.border },
+  filterChip: { paddingHorizontal: 14, paddingVertical: 6, backgroundColor: colors.card, borderRadius: 20, borderWidth: 1, borderColor: colors.border },
   filterActive: { backgroundColor: colors.primary + '20', borderColor: colors.primary },
   filterText: { color: colors.textMuted, fontSize: 13 },
   filterActiveText: { color: colors.primary, fontWeight: '600' },
   modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.card },
   modalTitle: { fontSize: 18, fontWeight: 'bold', color: colors.text },
-  label: { fontSize: 12, color: colors.textMuted, fontWeight: '600', marginBottom: 8, marginTop: 12 },
-  input: { backgroundColor: colors.card, borderRadius: 10, padding: 14, color: colors.text, fontSize: 16, borderWidth: 1, borderColor: colors.border, marginBottom: 16 },
-  pickerBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, borderRadius: 10, padding: 14, borderWidth: 1, borderColor: colors.border, marginBottom: 16, gap: 10 },
+  label: { fontSize: 12, color: colors.textMuted, fontWeight: '700', marginBottom: 8, marginTop: 12, textTransform: 'uppercase' as const, letterSpacing: 1 },
+  input: { backgroundColor: colors.card, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, color: colors.text, fontSize: 16, borderWidth: 1, borderColor: colors.border, marginBottom: 16 },
+  pickerBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, borderRadius: 12, padding: 14, borderWidth: 1, borderColor: colors.border, marginBottom: 16, gap: 10 },
   pickerBtnText: { flex: 1, color: colors.text, fontSize: 16 },
-  typeBtn: { flex: 1, padding: 14, backgroundColor: colors.card, borderRadius: 10, borderWidth: 2, borderColor: colors.border, alignItems: 'center' },
+  typeBtn: { flex: 1, padding: 14, backgroundColor: colors.card, borderRadius: 12, borderWidth: 2, borderColor: colors.border, alignItems: 'center' },
   teamChip: { paddingHorizontal: 16, paddingVertical: 10, backgroundColor: colors.card, borderRadius: 8, borderWidth: 2, borderColor: colors.border, marginRight: 10 },
   locBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 12, backgroundColor: colors.card, borderRadius: 8, borderWidth: 2, borderColor: colors.border, gap: 6 },
   bulkTypeBtn: { flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: colors.card, borderRadius: 12, borderWidth: 2, borderColor: colors.border },

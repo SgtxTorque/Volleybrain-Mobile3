@@ -642,13 +642,18 @@ export default function RegistrationHubScreen() {
     <TouchableOpacity
       style={{
         flex: 1,
-        backgroundColor: colors.card,
-        borderRadius: 12,
+        backgroundColor: colors.glassCard,
+        borderRadius: 16,
         padding: 12,
         alignItems: 'center',
-        borderWidth: activeFilter === filterKey ? 2 : 0,
-        borderColor: color,
+        borderWidth: activeFilter === filterKey ? 2 : 1,
+        borderColor: activeFilter === filterKey ? color : colors.glassBorder,
         minWidth: 70,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+        elevation: 6,
       }}
       onPress={onPress}
       disabled={!onPress}
@@ -672,12 +677,19 @@ export default function RegistrationHubScreen() {
       <TouchableOpacity
         key={registration.id}
         style={{
-          backgroundColor: colors.card,
-          borderRadius: 12,
+          backgroundColor: colors.glassCard,
+          borderRadius: 16,
           padding: 16,
           marginBottom: 12,
           borderLeftWidth: 4,
           borderLeftColor: config.color,
+          borderWidth: 1,
+          borderColor: colors.glassBorder,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.15,
+          shadowRadius: 12,
+          elevation: 6,
         }}
         onPress={() => {
           setSelectedRegistration(registration);
@@ -901,7 +913,7 @@ export default function RegistrationHubScreen() {
             )}
 
             {/* Player Info */}
-            <View style={{ backgroundColor: colors.card, borderRadius: 12, padding: 16, marginBottom: 16 }}>
+            <View style={{ backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.glassBorder }}>
               <Text style={{ fontSize: 14, fontWeight: '600', color: colors.primary, marginBottom: 12 }}>PLAYER INFORMATION</Text>
               <View style={{ gap: 8 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Text style={{ color: colors.textSecondary }}>Name</Text><Text style={{ color: colors.text, fontWeight: '500' }}>{player.first_name} {player.last_name}</Text></View>
@@ -912,7 +924,7 @@ export default function RegistrationHubScreen() {
             </View>
 
             {/* Parent/Guardian Info */}
-            <View style={{ backgroundColor: colors.card, borderRadius: 12, padding: 16, marginBottom: 16 }}>
+            <View style={{ backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.glassBorder }}>
               <Text style={{ fontSize: 14, fontWeight: '600', color: colors.primary, marginBottom: 12 }}>PARENT/GUARDIAN</Text>
               <View style={{ gap: 8 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Text style={{ color: colors.textSecondary }}>Name</Text><Text style={{ color: colors.text, fontWeight: '500' }}>{player.parent_name}</Text></View>
@@ -930,7 +942,7 @@ export default function RegistrationHubScreen() {
             </View>
 
             {/* Uniform & Jersey */}
-            <View style={{ backgroundColor: colors.card, borderRadius: 12, padding: 16, marginBottom: 16 }}>
+            <View style={{ backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.glassBorder }}>
               <Text style={{ fontSize: 14, fontWeight: '600', color: colors.primary, marginBottom: 12 }}>UNIFORM & JERSEY</Text>
               <View style={{ gap: 8 }}>
                 {player.uniform_size_jersey && <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Text style={{ color: colors.textSecondary }}>Jersey Size</Text><Text style={{ color: colors.text, fontWeight: '500' }}>{player.uniform_size_jersey}</Text></View>}
@@ -951,7 +963,7 @@ export default function RegistrationHubScreen() {
 
             {/* Siblings */}
             {siblings && siblings.length > 0 && (
-              <View style={{ backgroundColor: colors.card, borderRadius: 12, padding: 16, marginBottom: 16 }}>
+              <View style={{ backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.glassBorder }}>
                 <Text style={{ fontSize: 14, fontWeight: '600', color: colors.primary, marginBottom: 12 }}>SIBLINGS</Text>
                 <View style={{ gap: 8 }}>
                   {siblings.map((sibling) => (
@@ -968,7 +980,7 @@ export default function RegistrationHubScreen() {
             )}
 
             {/* Waivers */}
-            <View style={{ backgroundColor: colors.card, borderRadius: 12, padding: 16, marginBottom: 16 }}>
+            <View style={{ backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.glassBorder }}>
               <Text style={{ fontSize: 14, fontWeight: '600', color: colors.primary, marginBottom: 12 }}>WAIVERS</Text>
               <View style={{ gap: 8 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -988,7 +1000,7 @@ export default function RegistrationHubScreen() {
 
             {/* Payment Info */}
             {payments && payments.total_due > 0 && (
-              <View style={{ backgroundColor: colors.card, borderRadius: 12, padding: 16, marginBottom: 16 }}>
+              <View style={{ backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.glassBorder }}>
                 <Text style={{ fontSize: 14, fontWeight: '600', color: colors.primary, marginBottom: 12 }}>PAYMENT STATUS</Text>
                 <View style={{ gap: 8 }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Text style={{ color: colors.textSecondary }}>Total Due</Text><Text style={{ color: colors.text, fontWeight: '500' }}>{formatCurrency(payments.total_due)}</Text></View>
@@ -1000,7 +1012,7 @@ export default function RegistrationHubScreen() {
 
             {/* Team Assignment */}
             {team && (
-              <View style={{ backgroundColor: colors.card, borderRadius: 12, padding: 16, marginBottom: 16 }}>
+              <View style={{ backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.glassBorder }}>
                 <Text style={{ fontSize: 14, fontWeight: '600', color: colors.primary, marginBottom: 12 }}>TEAM ASSIGNMENT</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Ionicons name="people" size={20} color="#AF52DE" />
@@ -1153,7 +1165,7 @@ export default function RegistrationHubScreen() {
             </View>
 
             {/* Revenue Overview */}
-            <View style={{ backgroundColor: colors.card, borderRadius: 12, padding: 16, marginBottom: 16 }}>
+            <View style={{ backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                 <Ionicons name="wallet" size={18} color={colors.primary} />
                 <Text style={{ color: colors.textSecondary, marginLeft: 8 }}>Payment Overview</Text>
@@ -1173,9 +1185,9 @@ export default function RegistrationHubScreen() {
         )}
 
         {/* Search */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, borderRadius: 12, paddingHorizontal: 12, marginBottom: 16 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, borderRadius: 12, paddingHorizontal: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.border }}>
           <Ionicons name="search" size={20} color={colors.textSecondary} />
-          <TextInput style={{ flex: 1, padding: 12, color: colors.text, fontSize: 16 }} placeholder="Search players or parents..." placeholderTextColor={colors.textSecondary} value={searchQuery} onChangeText={setSearchQuery} />
+          <TextInput style={{ flex: 1, paddingVertical: 14, paddingHorizontal: 8, color: colors.text, fontSize: 16 }} placeholder="Search players or parents..." placeholderTextColor={colors.textSecondary} value={searchQuery} onChangeText={setSearchQuery} />
           {searchQuery ? <TouchableOpacity onPress={() => setSearchQuery('')}><Ionicons name="close-circle" size={20} color={colors.textSecondary} /></TouchableOpacity> : null}
         </View>
 
@@ -1209,8 +1221,8 @@ export default function RegistrationHubScreen() {
         {/* Empty State */}
         {filteredRegistrations.length === 0 && (
           <View style={{ alignItems: 'center', paddingVertical: 48 }}>
-            <Ionicons name="document-text-outline" size={64} color={colors.textSecondary} />
-            <Text style={{ color: colors.textSecondary, marginTop: 16, fontSize: 16 }}>No registrations found</Text>
+            <Ionicons name="document-text-outline" size={48} color={colors.textSecondary} />
+            <Text style={{ color: colors.textSecondary, marginTop: 16, fontSize: 16, fontWeight: '600' }}>No registrations found</Text>
             {seasons.length === 0 && (
               <Text style={{ color: colors.textSecondary, marginTop: 8, fontSize: 14, textAlign: 'center' }}>No seasons have registration open.{'\n'}Go to Season Settings to open registration.</Text>
             )}
