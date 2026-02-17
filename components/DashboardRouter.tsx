@@ -11,8 +11,9 @@ import AdminDashboard from './AdminDashboard';
 import CoachDashboard from './CoachDashboard';
 import CoachParentDashboard from './CoachParentDashboard';
 import ParentDashboard from './ParentDashboard';
+import PlayerDashboard from './PlayerDashboard';
 
-type DashboardType = 'admin' | 'coach' | 'parent' | 'coach_parent' | 'loading';
+type DashboardType = 'admin' | 'coach' | 'parent' | 'coach_parent' | 'player' | 'loading';
 
 export default function DashboardRouter() {
   const { colors } = useTheme();
@@ -24,6 +25,7 @@ export default function DashboardRouter() {
   const isAdmin = permissions.isAdmin ?? false;
   const isCoach = permissions.isCoach ?? false;
   const isParent = permissions.isParent ?? false;
+  const isPlayer = permissions.isPlayer ?? false;
   // Check if devModeRole exists in your context (it might be named differently)
   const devModeRole = (permissions as any).devModeRole ?? (permissions as any).devViewAs ?? null;
 
@@ -31,7 +33,7 @@ export default function DashboardRouter() {
 
   useEffect(() => {
     determineDashboard();
-  }, [user?.id, workingSeason?.id, isAdmin, isCoach, isParent, devModeRole]);
+  }, [user?.id, workingSeason?.id, isAdmin, isCoach, isParent, isPlayer, devModeRole]);
 
   const determineDashboard = async () => {
     if (!user?.id) {
@@ -52,6 +54,10 @@ export default function DashboardRouter() {
       }
       if (devModeRole === 'parent') {
         setDashboardType('parent');
+        return;
+      }
+      if (devModeRole === 'player') {
+        setDashboardType('player');
         return;
       }
     }
@@ -75,6 +81,8 @@ export default function DashboardRouter() {
       setDashboardType('coach');
     } else if (hasKids || isParent) {
       setDashboardType('parent');
+    } else if (isPlayer) {
+      setDashboardType('player');
     } else {
       // Default to parent dashboard for new users
       setDashboardType('parent');
@@ -130,6 +138,8 @@ export default function DashboardRouter() {
       return <ParentDashboard />;
     case 'coach_parent':
       return <CoachParentDashboard />;
+    case 'player':
+      return <PlayerDashboard />;
     default:
       return <ParentDashboard />;
   }

@@ -69,6 +69,7 @@ export default function AppDrawer({ visible, onClose }: AppDrawerProps) {
           { id: 'roster', label: 'Roster', icon: 'people', route: '/(tabs)/players' },
           { id: 'my-teams', label: 'My Teams', icon: 'shirt', route: '/(tabs)/my-teams' },
           { id: 'schedule', label: 'Schedule', icon: 'calendar', route: '/(tabs)/schedule' },
+          { id: 'availability', label: 'My Availability', icon: 'calendar-outline', route: '/coach-availability' },
         ],
       });
     }
@@ -89,8 +90,11 @@ export default function AppDrawer({ visible, onClose }: AppDrawerProps) {
     sections.push({
       title: 'Settings',
       items: [
+        { id: 'profile', label: 'My Profile', icon: 'person-circle', route: '/profile' },
         { id: 'settings', label: 'Settings', icon: 'settings', route: '/(tabs)/settings' },
         { id: 'season', label: 'Season Settings', icon: 'calendar', route: '/season-settings' },
+        { id: 'archives', label: 'Season History', icon: 'archive', route: '/season-archives' },
+        { id: 'org-directory', label: 'Find Organizations', icon: 'business', route: '/org-directory' },
         { id: 'help', label: 'Help & Support', icon: 'help-circle', route: '/help' },
       ],
     });

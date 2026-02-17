@@ -1,3 +1,4 @@
+import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,23 +17,16 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-// =============================================================================
-// WELCOME SCREEN
-// Sign in first, then 3 clear paths for new users
-// =============================================================================
-
 export default function WelcomeScreen() {
   const { colors } = useTheme();
+  const { signInWithGoogle, signInWithApple } = useAuth();
   const router = useRouter();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-
-  // =============================================================================
-  // SIGN IN
-  // =============================================================================
+  const [oauthLoading, setOauthLoading] = useState<'google' | 'apple' | null>(null);
 
   const handleSignIn = async () => {
     if (!email.trim() || !password.trim()) {
@@ -48,9 +42,6 @@ export default function WelcomeScreen() {
       });
 
       if (error) throw error;
-
-      // Session is handled automatically by auth context listener
-      // Navigation will happen via _layout.tsx when session changes
     } catch (error: any) {
       console.error('Sign in error:', error);
       Alert.alert(
@@ -59,6 +50,32 @@ export default function WelcomeScreen() {
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setOauthLoading('google');
+    try {
+      const { error } = await signInWithGoogle();
+      if (error) throw error;
+    } catch (error: any) {
+      console.error('Google sign in error:', error);
+      Alert.alert('Sign In Failed', error.message || 'Google sign-in failed. Please try again.');
+    } finally {
+      setOauthLoading(null);
+    }
+  };
+
+  const handleAppleSignIn = async () => {
+    setOauthLoading('apple');
+    try {
+      const { error } = await signInWithApple();
+      if (error) throw error;
+    } catch (error: any) {
+      console.error('Apple sign in error:', error);
+      Alert.alert('Sign In Failed', error.message || 'Apple sign-in failed. Please try again.');
+    } finally {
+      setOauthLoading(null);
     }
   };
 
@@ -89,10 +106,6 @@ export default function WelcomeScreen() {
     );
   };
 
-  // =============================================================================
-  // RENDER
-  // =============================================================================
-
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <KeyboardAvoidingView
@@ -107,7 +120,7 @@ export default function WelcomeScreen() {
           keyboardShouldPersistTaps="handled"
         >
           {/* Logo & Branding */}
-          <View style={{ alignItems: 'center', marginTop: 16, marginBottom: 28 }}>
+          <View style={{ alignItems: 'center', marginTop: 16, marginBottom: 24 }}>
             <View style={{
               width: 90,
               height: 90,
@@ -134,22 +147,99 @@ export default function WelcomeScreen() {
               fontWeight: '600',
               marginTop: 4,
             }}>
-              Black Hornets Volleyball
+              Youth Volleyball Management
             </Text>
           </View>
 
-          {/* Sign In Section */}
-          <View style={{ marginBottom: 20 }}>
-            <Text style={{
-              fontSize: 18,
-              fontWeight: '600',
-              color: colors.text,
-              marginBottom: 14,
-              textAlign: 'center',
-            }}>
-              Welcome back!
-            </Text>
+          {/* OAuth Buttons */}
+          <View style={{ gap: 10, marginBottom: 16 }}>
+            {/* Continue with Google */}
+            <TouchableOpacity
+              onPress={handleGoogleSignIn}
+              disabled={oauthLoading !== null}
+              style={{
+                backgroundColor: colors.card,
+                borderRadius: 12,
+                padding: 14,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderWidth: 1,
+                borderColor: colors.border,
+                opacity: oauthLoading !== null ? 0.7 : 1,
+              }}
+            >
+              {oauthLoading === 'google' ? (
+                <ActivityIndicator color={colors.text} size="small" />
+              ) : (
+                <>
+                  <Ionicons name="logo-google" size={20} color="#DB4437" />
+                  <Text style={{
+                    fontSize: 16,
+                    fontWeight: '600',
+                    color: colors.text,
+                    marginLeft: 10,
+                  }}>
+                    Continue with Google
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
 
+            {/* Continue with Apple */}
+            {Platform.OS === 'ios' && (
+              <TouchableOpacity
+                onPress={handleAppleSignIn}
+                disabled={oauthLoading !== null}
+                style={{
+                  backgroundColor: colors.text,
+                  borderRadius: 12,
+                  padding: 14,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  opacity: oauthLoading !== null ? 0.7 : 1,
+                }}
+              >
+                {oauthLoading === 'apple' ? (
+                  <ActivityIndicator color={colors.background} size="small" />
+                ) : (
+                  <>
+                    <Ionicons name="logo-apple" size={20} color={colors.background} />
+                    <Text style={{
+                      fontSize: 16,
+                      fontWeight: '600',
+                      color: colors.background,
+                      marginLeft: 10,
+                    }}>
+                      Continue with Apple
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Divider - "or" */}
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            marginBottom: 16,
+          }}>
+            <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
+            <Text style={{
+              fontSize: 13,
+              color: colors.textSecondary,
+              marginHorizontal: 14,
+              fontWeight: '500',
+            }}>
+              or sign in with email
+            </Text>
+            <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
+          </View>
+
+          {/* Email Sign In Section */}
+          <View style={{ marginBottom: 20 }}>
             {/* Email Input */}
             <View style={{
               backgroundColor: colors.card,
