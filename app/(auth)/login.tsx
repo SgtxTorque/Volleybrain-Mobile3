@@ -1,11 +1,14 @@
 import { useAuth } from '@/lib/auth';
+import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
+import { Ionicons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
 import React, { useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
     KeyboardAvoidingView,
+    Modal,
     Platform,
     StyleSheet,
     Text,
@@ -18,6 +21,9 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resettingPassword, setResettingPassword] = useState(false);
   const { signIn } = useAuth();
   const { colors } = useTheme();
 
@@ -33,6 +39,32 @@ export default function LoginScreen() {
 
     if (error) {
       Alert.alert('Error', error.message);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    const emailToReset = resetEmail.trim() || email.trim();
+    if (!emailToReset) {
+      Alert.alert('Error', 'Please enter your email address.');
+      return;
+    }
+
+    setResettingPassword(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(emailToReset);
+      if (error) {
+        Alert.alert('Error', error.message);
+      } else {
+        Alert.alert(
+          'Check Your Email',
+          'If an account exists with that email, you will receive a password reset link shortly.',
+          [{ text: 'OK', onPress: () => { setShowForgotPassword(false); setResetEmail(''); } }]
+        );
+      }
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to send reset email.');
+    } finally {
+      setResettingPassword(false);
     }
   };
 
@@ -83,6 +115,16 @@ export default function LoginScreen() {
             )}
           </TouchableOpacity>
 
+          <TouchableOpacity
+            style={s.forgotButton}
+            onPress={() => {
+              setResetEmail(email);
+              setShowForgotPassword(true);
+            }}
+          >
+            <Text style={s.forgotText}>Forgot Password?</Text>
+          </TouchableOpacity>
+
           <Link href="/(auth)/signup" asChild>
             <TouchableOpacity style={s.linkButton}>
               <Text style={s.linkText}>
@@ -92,6 +134,54 @@ export default function LoginScreen() {
           </Link>
         </View>
       </View>
+
+      {/* Forgot Password Modal */}
+      <Modal visible={showForgotPassword} animationType="fade" transparent>
+        <View style={s.modalOverlay}>
+          <View style={s.modalContent}>
+            <View style={s.modalHeader}>
+              <Text style={s.modalTitle}>Reset Password</Text>
+              <TouchableOpacity onPress={() => setShowForgotPassword(false)}>
+                <Ionicons name="close" size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={s.modalDescription}>
+              Enter your email address and we will send you a link to reset your password.
+            </Text>
+
+            <TextInput
+              style={s.input}
+              placeholder="Email address"
+              placeholderTextColor={colors.textMuted}
+              value={resetEmail}
+              onChangeText={setResetEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              autoFocus
+            />
+
+            <TouchableOpacity
+              style={[s.button, resettingPassword && s.buttonDisabled]}
+              onPress={handleForgotPassword}
+              disabled={resettingPassword}
+            >
+              {resettingPassword ? (
+                <ActivityIndicator color="#000" />
+              ) : (
+                <Text style={s.buttonText}>Send Reset Link</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={s.modalCancelBtn}
+              onPress={() => setShowForgotPassword(false)}
+            >
+              <Text style={s.modalCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -99,7 +189,7 @@ export default function LoginScreen() {
 const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
   content: {
     flex: 1,
@@ -162,6 +252,15 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontWeight: 'bold',
     color: '#000',
   },
+  forgotButton: {
+    alignItems: 'center',
+    padding: 8,
+  },
+  forgotText: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
   linkButton: {
     alignItems: 'center',
     padding: 16,
@@ -173,5 +272,51 @@ const createStyles = (colors: any) => StyleSheet.create({
   linkTextBold: {
     color: colors.primary,
     fontWeight: 'bold',
+  },
+  // Forgot Password Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalContent: {
+    width: '100%',
+    backgroundColor: colors.card,
+    borderRadius: 24,
+    padding: 24,
+    gap: 16,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.text,
+  },
+  modalDescription: {
+    fontSize: 14,
+    color: colors.textMuted,
+    lineHeight: 20,
+  },
+  modalCancelBtn: {
+    alignItems: 'center',
+    padding: 8,
+  },
+  modalCancelText: {
+    color: colors.textMuted,
+    fontSize: 14,
+    fontWeight: '500',
   },
 });

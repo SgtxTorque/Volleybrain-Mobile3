@@ -1,3 +1,4 @@
+import EmergencyContactModal from '@/components/EmergencyContactModal';
 import { useAuth } from '@/lib/auth';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
@@ -12,6 +13,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -44,6 +46,12 @@ type RosterPlayer = {
   jersey_number: string | null;
   position: string | null;
   photo_url: string | null;
+  medical_conditions: string | null;
+  allergies: string | null;
+  medications: string | null;
+  emergency_contact_name: string | null;
+  emergency_contact_phone: string | null;
+  emergency_contact_relation: string | null;
 };
 
 type PlayerStats = {
@@ -55,11 +63,23 @@ type PlayerStats = {
   errors: number;
 };
 
+type DetailedPlayerStats = {
+  kills: number;
+  aces: number;
+  digs: number;
+  blocks: number;
+  assists: number;
+  serves: number;
+  errors: number;
+};
+
 type SetScore = { our: number; their: number };
 
-type GameMode = 'list' | 'live';
+type GameMode = 'list' | 'live' | 'stats-entry';
 
 type StatKey = 'kills' | 'aces' | 'blocks' | 'digs' | 'assists' | 'errors';
+
+type DetailedStatKey = 'kills' | 'aces' | 'digs' | 'blocks' | 'assists' | 'serves' | 'errors';
 
 // ============================================================================
 // STAT CONFIG
@@ -72,6 +92,16 @@ const STAT_BUTTONS: { key: StatKey; label: string; icon: string; color: string; 
   { key: 'digs', label: 'DIG', icon: 'shield', color: '#3B82F6', points: 0 },
   { key: 'assists', label: 'AST', icon: 'people', color: '#10B981', points: 0 },
   { key: 'errors', label: 'ERR', icon: 'close-circle', color: '#6B7280', points: -1 },
+];
+
+const DETAILED_STAT_FIELDS: { key: DetailedStatKey; label: string; color: string }[] = [
+  { key: 'kills', label: 'Kills', color: '#FF3B3B' },
+  { key: 'aces', label: 'Aces', color: '#A855F7' },
+  { key: 'digs', label: 'Digs', color: '#3B82F6' },
+  { key: 'blocks', label: 'Blocks', color: '#F59E0B' },
+  { key: 'assists', label: 'Assists', color: '#10B981' },
+  { key: 'serves', label: 'Serves', color: '#06B6D4' },
+  { key: 'errors', label: 'Errors', color: '#6B7280' },
 ];
 
 // ============================================================================
@@ -100,6 +130,15 @@ export default function GamePrepScreen() {
   const [currentSet, setCurrentSet] = useState(0);
   const [saving, setSaving] = useState(false);
   const [showEndModal, setShowEndModal] = useState(false);
+
+  // Emergency contact modal state
+  const [emergencyPlayer, setEmergencyPlayer] = useState<RosterPlayer | null>(null);
+  const [showEmergencyModal, setShowEmergencyModal] = useState(false);
+
+  // Stats entry state (post-game)
+  const [statsEntryIndex, setStatsEntryIndex] = useState(0);
+  const [detailedStats, setDetailedStats] = useState<Record<string, DetailedPlayerStats>>({});
+  const [savingStats, setSavingStats] = useState(false);
 
   const scrollRef = useRef<ScrollView>(null);
 
@@ -177,7 +216,7 @@ export default function GamePrepScreen() {
   const loadRoster = async (teamId: string) => {
     const { data } = await supabase
       .from('team_players')
-      .select('*, players(id, first_name, last_name, jersey_number, position, photo_url)')
+      .select('*, players(id, first_name, last_name, jersey_number, position, photo_url, medical_conditions, allergies, medications, emergency_contact_name, emergency_contact_phone, emergency_contact_relation)')
       .eq('team_id', teamId);
 
     if (data) {
@@ -192,6 +231,12 @@ export default function GamePrepScreen() {
             jersey_number: (tp as any).team_jersey || p.jersey_number,
             position: (tp as any).team_position || p.position,
             photo_url: p.photo_url,
+            medical_conditions: p.medical_conditions || null,
+            allergies: p.allergies || null,
+            medications: p.medications || null,
+            emergency_contact_name: p.emergency_contact_name || null,
+            emergency_contact_phone: p.emergency_contact_phone || null,
+            emergency_contact_relation: p.emergency_contact_relation || null,
           };
         })
         .filter(Boolean) as RosterPlayer[];
@@ -327,7 +372,7 @@ export default function GamePrepScreen() {
         })
         .eq('id', activeGame.id);
 
-      // Save player stats
+      // Save player stats from live tracking
       const statRecords = Object.entries(playerStats)
         .filter(([_, stats]) => stats.kills + stats.aces + stats.blocks + stats.digs + stats.assists + stats.errors > 0)
         .map(([playerId, stats]) => ({
@@ -349,13 +394,147 @@ export default function GamePrepScreen() {
         await supabase.from('game_player_stats').insert(statRecords);
       }
 
-      Alert.alert('Game Saved!', `Final: ${ourTotal} - ${theirTotal} (${gameResult.toUpperCase()})`, [
-        { text: 'OK', onPress: () => { setMode('list'); setShowEndModal(false); loadGames(); } },
-      ]);
+      setShowEndModal(false);
+
+      // Prompt for detailed stats entry
+      Alert.alert(
+        'Game Saved!',
+        `Final: ${ourTotal} - ${theirTotal} (${gameResult.toUpperCase()})\n\nWould you like to enter detailed player stats?`,
+        [
+          {
+            text: 'Skip',
+            style: 'cancel',
+            onPress: () => { setMode('list'); loadGames(); },
+          },
+          {
+            text: 'Enter Stats',
+            onPress: () => {
+              // Initialize detailed stats from live stats or empty
+              const initial: Record<string, DetailedPlayerStats> = {};
+              for (const p of roster) {
+                const live = playerStats[p.id];
+                initial[p.id] = {
+                  kills: live?.kills || 0,
+                  aces: live?.aces || 0,
+                  digs: live?.digs || 0,
+                  blocks: live?.blocks || 0,
+                  assists: live?.assists || 0,
+                  serves: 0,
+                  errors: live?.errors || 0,
+                };
+              }
+              setDetailedStats(initial);
+              setStatsEntryIndex(0);
+              setMode('stats-entry');
+            },
+          },
+        ]
+      );
     } catch (error: any) {
       Alert.alert('Save Failed', error.message || 'Please try again.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  // ============================================================================
+  // STATS ENTRY ACTIONS
+  // ============================================================================
+
+  const currentStatsPlayer = roster[statsEntryIndex] || null;
+
+  const updateDetailedStat = (playerId: string, key: DetailedStatKey, value: string) => {
+    const num = parseInt(value) || 0;
+    setDetailedStats(prev => ({
+      ...prev,
+      [playerId]: {
+        ...(prev[playerId] || { kills: 0, aces: 0, digs: 0, blocks: 0, assists: 0, serves: 0, errors: 0 }),
+        [key]: num,
+      },
+    }));
+  };
+
+  const incrementDetailedStat = (playerId: string, key: DetailedStatKey) => {
+    setDetailedStats(prev => {
+      const existing = prev[playerId] || { kills: 0, aces: 0, digs: 0, blocks: 0, assists: 0, serves: 0, errors: 0 };
+      return {
+        ...prev,
+        [playerId]: { ...existing, [key]: existing[key] + 1 },
+      };
+    });
+  };
+
+  const decrementDetailedStat = (playerId: string, key: DetailedStatKey) => {
+    setDetailedStats(prev => {
+      const existing = prev[playerId] || { kills: 0, aces: 0, digs: 0, blocks: 0, assists: 0, serves: 0, errors: 0 };
+      return {
+        ...prev,
+        [playerId]: { ...existing, [key]: Math.max(0, existing[key] - 1) },
+      };
+    });
+  };
+
+  const goToNextPlayer = () => {
+    if (statsEntryIndex < roster.length - 1) {
+      setStatsEntryIndex(prev => prev + 1);
+    }
+  };
+
+  const goToPrevPlayer = () => {
+    if (statsEntryIndex > 0) {
+      setStatsEntryIndex(prev => prev - 1);
+    }
+  };
+
+  const skipPlayer = () => {
+    if (statsEntryIndex < roster.length - 1) {
+      setStatsEntryIndex(prev => prev + 1);
+    } else {
+      // Last player, prompt to save
+      saveAllDetailedStats();
+    }
+  };
+
+  const saveAllDetailedStats = async () => {
+    if (!activeGame || !user?.id || !workingSeason?.id) return;
+    setSavingStats(true);
+
+    try {
+      const statsArray = Object.entries(detailedStats)
+        .filter(([_, s]) => s.kills + s.aces + s.digs + s.blocks + s.assists + s.serves + s.errors > 0)
+        .map(([playerId, s]) => ({
+          schedule_event_id: activeGame.id,
+          player_id: playerId,
+          season_id: workingSeason!.id,
+          team_id: activeGame.team_id,
+          kills: s.kills,
+          aces: s.aces,
+          serves: s.serves,
+          service_errors: s.errors,
+          digs: s.digs,
+          blocks: s.blocks,
+          assists: s.assists,
+          attacks: s.kills + s.errors,
+          attack_errors: s.errors,
+          receptions: 0,
+          reception_errors: 0,
+          block_assists: 0,
+          points: s.kills + s.aces + s.blocks,
+        }));
+
+      if (statsArray.length > 0) {
+        // Delete any existing stats for this game
+        await supabase.from('game_player_stats').delete().eq('schedule_event_id', activeGame.id);
+        await supabase.from('game_player_stats').insert(statsArray);
+      }
+
+      Alert.alert('Stats Saved!', `Saved stats for ${statsArray.length} players.`, [
+        { text: 'OK', onPress: () => { setMode('list'); loadGames(); } },
+      ]);
+    } catch (error: any) {
+      Alert.alert('Save Failed', error.message || 'Please try again.');
+    } finally {
+      setSavingStats(false);
     }
   };
 
@@ -386,6 +565,10 @@ export default function GamePrepScreen() {
     return s.kills + s.aces + s.blocks + s.digs + s.assists;
   };
 
+  const hasMedicalAlert = (player: RosterPlayer): boolean => {
+    return !!(player.medical_conditions || player.allergies);
+  };
+
   const ourSetScore = setScores[currentSet]?.our || 0;
   const theirSetScore = setScores[currentSet]?.their || 0;
   const totalOur = setScores.reduce((s, set) => s + set.our, 0);
@@ -394,7 +577,130 @@ export default function GamePrepScreen() {
   const theirSetsWon = setScores.filter(s => s.their > s.our).length;
 
   // ============================================================================
-  // RENDER — GAME LIST
+  // RENDER -- STATS ENTRY MODE
+  // ============================================================================
+
+  if (mode === 'stats-entry') {
+    const player = currentStatsPlayer;
+    const pStats = player ? (detailedStats[player.id] || { kills: 0, aces: 0, digs: 0, blocks: 0, assists: 0, serves: 0, errors: 0 }) : null;
+    const isLastPlayer = statsEntryIndex === roster.length - 1;
+
+    return (
+      <View style={[gs.container, { backgroundColor: '#0A0E1A' }]}>
+        {/* Header */}
+        <View style={gs.header}>
+          <TouchableOpacity onPress={() => {
+            Alert.alert('Exit Stats Entry?', 'Unsaved stats will be lost.', [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Exit', style: 'destructive', onPress: () => { setMode('list'); loadGames(); } },
+            ]);
+          }} style={gs.headerBtn}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <Text style={gs.headerTitle}>PLAYER STATS</Text>
+          <View style={gs.headerBtn} />
+        </View>
+
+        {/* Progress bar */}
+        <View style={gs.seProgressBar}>
+          <View style={[gs.seProgressFill, { width: `${((statsEntryIndex + 1) / roster.length) * 100}%` }]} />
+        </View>
+        <Text style={gs.seProgressText}>
+          Player {statsEntryIndex + 1} of {roster.length}
+        </Text>
+
+        {player && pStats && (
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+            {/* Player Identity */}
+            <View style={gs.sePlayerHeader}>
+              <View style={gs.seJersey}>
+                <Text style={gs.seJerseyText}>{player.jersey_number || '—'}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={gs.sePlayerName}>
+                  {player.first_name} {player.last_name}
+                </Text>
+                {player.position && (
+                  <Text style={gs.sePlayerPos}>{player.position}</Text>
+                )}
+              </View>
+            </View>
+
+            {/* Stat Input Grid */}
+            <View style={gs.seStatGrid}>
+              {DETAILED_STAT_FIELDS.map(field => (
+                <View key={field.key} style={gs.seStatRow}>
+                  <Text style={[gs.seStatLabel, { color: field.color }]}>{field.label}</Text>
+                  <View style={gs.seStatControls}>
+                    <TouchableOpacity
+                      style={gs.seStatDecBtn}
+                      onPress={() => decrementDetailedStat(player.id, field.key)}
+                    >
+                      <Ionicons name="remove" size={20} color="#94A3B8" />
+                    </TouchableOpacity>
+                    <TextInput
+                      style={[gs.seStatInput, { color: field.color }]}
+                      value={String(pStats[field.key])}
+                      onChangeText={(v) => updateDetailedStat(player.id, field.key, v)}
+                      keyboardType="number-pad"
+                      selectTextOnFocus
+                    />
+                    <TouchableOpacity
+                      style={[gs.seStatIncBtn, { borderColor: field.color + '60' }]}
+                      onPress={() => incrementDetailedStat(player.id, field.key)}
+                    >
+                      <Ionicons name="add" size={20} color={field.color} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </View>
+
+            {/* Navigation Buttons */}
+            <View style={gs.seNavButtons}>
+              <TouchableOpacity
+                style={[gs.seNavBtn, gs.seNavBtnSecondary, statsEntryIndex === 0 && { opacity: 0.3 }]}
+                onPress={goToPrevPlayer}
+                disabled={statsEntryIndex === 0}
+              >
+                <Ionicons name="arrow-back" size={18} color="#94A3B8" />
+                <Text style={gs.seNavBtnSecondaryText}>Previous</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={gs.seSkipBtn} onPress={skipPlayer}>
+                <Text style={gs.seSkipBtnText}>Skip</Text>
+              </TouchableOpacity>
+
+              {!isLastPlayer ? (
+                <TouchableOpacity style={[gs.seNavBtn, gs.seNavBtnPrimary]} onPress={goToNextPlayer}>
+                  <Text style={gs.seNavBtnPrimaryText}>Next</Text>
+                  <Ionicons name="arrow-forward" size={18} color="#000" />
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={[gs.seNavBtn, gs.seNavBtnSave]}
+                  onPress={saveAllDetailedStats}
+                  disabled={savingStats}
+                >
+                  {savingStats ? (
+                    <ActivityIndicator color="#000" size="small" />
+                  ) : (
+                    <>
+                      <Ionicons name="checkmark-circle" size={18} color="#000" />
+                      <Text style={gs.seNavBtnPrimaryText}>Save All</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
+            </View>
+          </ScrollView>
+        )}
+      </View>
+    );
+  }
+
+  // ============================================================================
+  // RENDER -- GAME LIST
   // ============================================================================
 
   if (mode === 'list') {
@@ -512,7 +818,7 @@ export default function GamePrepScreen() {
   }
 
   // ============================================================================
-  // RENDER — GAME DAY LIVE MODE
+  // RENDER -- GAME DAY LIVE MODE
   // ============================================================================
 
   return (
@@ -596,6 +902,7 @@ export default function GamePrepScreen() {
           const isActive = selectedPlayerId === player.id;
           const pStats = playerStats[player.id];
           const statTotal = getPlayerStatTotal(player.id);
+          const hasMedical = hasMedicalAlert(player);
           return (
             <TouchableOpacity
               key={player.id}
@@ -608,9 +915,22 @@ export default function GamePrepScreen() {
                 </Text>
               </View>
               <View style={gs.playerInfo}>
-                <Text style={[gs.playerName, isActive && gs.playerNameActive]}>
-                  {player.first_name} {player.last_name}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={[gs.playerName, isActive && gs.playerNameActive]}>
+                    {player.first_name} {player.last_name}
+                  </Text>
+                  {hasMedical && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        setEmergencyPlayer(player);
+                        setShowEmergencyModal(true);
+                      }}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Ionicons name="alert-circle" size={16} color="#FF6B6B" />
+                    </TouchableOpacity>
+                  )}
+                </View>
                 {player.position && (
                   <Text style={gs.playerPos}>{player.position}</Text>
                 )}
@@ -635,6 +955,13 @@ export default function GamePrepScreen() {
           );
         })}
       </ScrollView>
+
+      {/* Emergency Contact Modal */}
+      <EmergencyContactModal
+        visible={showEmergencyModal}
+        onClose={() => setShowEmergencyModal(false)}
+        player={emergencyPlayer}
+      />
 
       {/* End Game Modal */}
       <Modal visible={showEndModal} transparent animationType="fade">
@@ -699,11 +1026,11 @@ export default function GamePrepScreen() {
 }
 
 // ============================================================================
-// STYLES — Dark courtside theme, BIG touch targets, neon accents
+// STYLES -- Dark courtside theme, BIG touch targets, neon accents
 // ============================================================================
 
 const gs = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0A0E1A' },
+  container: { flex: 1, backgroundColor: 'transparent' },
 
   // Header
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 60, paddingBottom: 12, backgroundColor: '#0D1117' },
@@ -813,4 +1140,33 @@ const gs = StyleSheet.create({
   endModalCancelText: { fontSize: 15, fontWeight: '600', color: '#94A3B8' },
   endModalSave: { padding: 16, borderRadius: 12, alignItems: 'center', backgroundColor: '#F97316' },
   endModalSaveText: { fontSize: 16, fontWeight: '800', color: '#000', letterSpacing: 1 },
+
+  // ====== STATS ENTRY MODE ======
+  seProgressBar: { height: 4, backgroundColor: '#1E293B', marginHorizontal: 16, borderRadius: 2, marginTop: 8 },
+  seProgressFill: { height: '100%', backgroundColor: '#F97316', borderRadius: 2 },
+  seProgressText: { fontSize: 12, fontWeight: '600', color: '#64748B', textAlign: 'center', marginTop: 6, marginBottom: 4 },
+
+  sePlayerHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 24, backgroundColor: 'rgba(30, 41, 59, 0.7)', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.08)' },
+  seJersey: { width: 56, height: 56, borderRadius: 14, backgroundColor: '#1E293B', justifyContent: 'center', alignItems: 'center', marginRight: 16 },
+  seJerseyText: { fontSize: 26, fontWeight: '900', color: '#F97316' },
+  sePlayerName: { fontSize: 22, fontWeight: '800', color: '#fff' },
+  sePlayerPos: { fontSize: 14, color: '#64748B', marginTop: 2 },
+
+  seStatGrid: { gap: 8 },
+  seStatRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(30, 41, 59, 0.5)', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.05)' },
+  seStatLabel: { fontSize: 16, fontWeight: '700', width: 80 },
+  seStatControls: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8 },
+  seStatDecBtn: { width: 40, height: 40, borderRadius: 10, backgroundColor: '#1E293B', justifyContent: 'center', alignItems: 'center' },
+  seStatInput: { width: 60, height: 44, fontSize: 28, fontWeight: '900', textAlign: 'center', backgroundColor: '#0D1117', borderRadius: 10, borderWidth: 1, borderColor: '#1E293B' },
+  seStatIncBtn: { width: 40, height: 40, borderRadius: 10, backgroundColor: 'rgba(30, 41, 59, 0.7)', justifyContent: 'center', alignItems: 'center', borderWidth: 1 },
+
+  seNavButtons: { flexDirection: 'row', gap: 10, marginTop: 24 },
+  seNavBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 16, borderRadius: 14 },
+  seNavBtnSecondary: { backgroundColor: '#1E293B' },
+  seNavBtnSecondaryText: { fontSize: 15, fontWeight: '600', color: '#94A3B8' },
+  seNavBtnPrimary: { backgroundColor: '#F97316' },
+  seNavBtnPrimaryText: { fontSize: 15, fontWeight: '800', color: '#000' },
+  seNavBtnSave: { backgroundColor: '#10B981' },
+  seSkipBtn: { paddingHorizontal: 16, paddingVertical: 16, justifyContent: 'center', alignItems: 'center' },
+  seSkipBtnText: { fontSize: 14, fontWeight: '600', color: '#64748B', textDecorationLine: 'underline' },
 });

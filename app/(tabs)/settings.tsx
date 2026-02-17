@@ -430,7 +430,7 @@ export default function SettingsScreen() {
 }
 
 const createStyles = (colors: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1, backgroundColor: 'transparent' },
   scroll: { flex: 1, padding: 16 },
   title: { fontSize: 28, fontWeight: '800', color: colors.text, marginBottom: 20 },
 

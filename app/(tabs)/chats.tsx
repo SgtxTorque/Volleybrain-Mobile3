@@ -533,7 +533,7 @@ export default function ChatsScreen() {
 }
 
 const createStyles = (colors: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1, backgroundColor: 'transparent' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
   title: { fontSize: 28, fontWeight: '800', color: colors.text },
   headerActions: { flexDirection: 'row', gap: 12 },

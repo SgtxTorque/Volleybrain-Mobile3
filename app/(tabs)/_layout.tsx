@@ -1,20 +1,106 @@
 import AppDrawer from '@/components/AppDrawer';
+import { useAuth } from '@/lib/auth';
 import { usePermissions } from '@/lib/permissions-context';
+import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function TabLayout() {
   const { colors } = useTheme();
   const { loading } = usePermissions();
+  const { user, profile } = useAuth();
   const [drawerVisible, setDrawerVisible] = useState(false);
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
+  const [unreadAlertCount, setUnreadAlertCount] = useState(0);
+
+  // Fetch unread counts
+  useEffect(() => {
+    if (!profile?.id) return;
+
+    const fetchUnreadCounts = async () => {
+      try {
+        // Unread chat messages: count messages in channels where user is a member
+        // and the message was created after the user's last_read_at
+        const { data: memberships } = await supabase
+          .from('channel_members')
+          .select('channel_id, last_read_at')
+          .eq('user_id', profile.id)
+          .is('left_at', null);
+
+        if (memberships && memberships.length > 0) {
+          let totalUnread = 0;
+          for (const m of memberships) {
+            const { count } = await supabase
+              .from('chat_messages')
+              .select('*', { count: 'exact', head: true })
+              .eq('channel_id', m.channel_id)
+              .eq('is_deleted', false)
+              .gt('created_at', m.last_read_at || '1970-01-01');
+            totalUnread += (count || 0);
+          }
+          setUnreadChatCount(totalUnread);
+        }
+
+        // Unread alerts: count message_recipients where read_at is null
+        const { count: alertCount } = await supabase
+          .from('message_recipients')
+          .select('*', { count: 'exact', head: true })
+          .eq('recipient_id', profile.id)
+          .is('read_at', null);
+
+        setUnreadAlertCount(alertCount || 0);
+      } catch (error) {
+        console.error('Error fetching unread counts:', error);
+      }
+    };
+
+    fetchUnreadCounts();
+
+    // Real-time subscription for new messages
+    const subscription = supabase
+      .channel('unread-badges')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'chat_messages',
+      }, () => {
+        fetchUnreadCounts();
+      })
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'message_recipients',
+      }, () => {
+        fetchUnreadCounts();
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'message_recipients',
+      }, () => {
+        fetchUnreadCounts();
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'channel_members',
+      }, () => {
+        fetchUnreadCounts();
+      })
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [profile?.id]);
 
   // Keep your existing loading state
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent' }}>
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
@@ -25,6 +111,7 @@ export default function TabLayout() {
       <Tabs
         screenOptions={{
           headerShown: false,
+          sceneStyle: { backgroundColor: 'transparent' },
           tabBarStyle: {
             backgroundColor: colors.bgSecondary,
             borderTopWidth: 0,
@@ -83,12 +170,14 @@ export default function TabLayout() {
           options={{
             title: 'Chat',
             tabBarIcon: ({ color, focused }) => (
-              <Ionicons 
-                name={focused ? 'chatbubbles' : 'chatbubbles-outline'} 
-                size={24} 
-                color={color} 
+              <Ionicons
+                name={focused ? 'chatbubbles' : 'chatbubbles-outline'}
+                size={24}
+                color={color}
               />
             ),
+            tabBarBadge: unreadChatCount > 0 ? unreadChatCount : undefined,
+            tabBarBadgeStyle: { backgroundColor: colors.danger, fontSize: 10 },
           }}
         />
 
@@ -98,12 +187,14 @@ export default function TabLayout() {
           options={{
             title: 'Alerts',
             tabBarIcon: ({ color, focused }) => (
-              <Ionicons 
-                name={focused ? 'megaphone' : 'megaphone-outline'} 
-                size={24} 
-                color={color} 
+              <Ionicons
+                name={focused ? 'megaphone' : 'megaphone-outline'}
+                size={24}
+                color={color}
               />
             ),
+            tabBarBadge: unreadAlertCount > 0 ? unreadAlertCount : undefined,
+            tabBarBadgeStyle: { backgroundColor: colors.danger, fontSize: 10 },
           }}
         />
 

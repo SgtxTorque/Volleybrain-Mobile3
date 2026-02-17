@@ -726,7 +726,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
       presentationStyle="pageSheet"
       onRequestClose={closeRecordModal}
     >
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
         {/* Modal Header */}
         <View style={{
           flexDirection: 'row',
@@ -1171,7 +1171,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
   if (loading) {
     const LoadingWrapper = hideHeader ? View : SafeAreaView;
     return (
-      <LoadingWrapper style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
+      <LoadingWrapper style={{ flex: 1, backgroundColor: 'transparent', justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color={colors.primary} />
       </LoadingWrapper>
     );
@@ -1181,7 +1181,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
   const wrapperProps = hideHeader ? {} : { edges: ['top'] as const };
 
   return (
-    <Wrapper style={{ flex: 1, backgroundColor: colors.background }} {...wrapperProps}>
+    <Wrapper style={{ flex: 1, backgroundColor: 'transparent' }} {...wrapperProps}>
       {/* Header - only show if not hidden */}
       {!hideHeader && (
         <View style={{

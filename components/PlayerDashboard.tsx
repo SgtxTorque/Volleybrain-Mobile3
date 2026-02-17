@@ -79,30 +79,23 @@ export default function PlayerDashboard() {
     if (user?.id && workingSeason?.id) fetchAll();
   }, [user?.id, workingSeason?.id]);
 
-  const fetchAll = async () => {
-    setLoading(true);
-    try {
-      await Promise.all([
-        fetchPlayer(),
-        fetchStats(),
-        fetchAchievements(),
-        fetchEvents(),
-      ]);
-    } finally {
-      setLoading(false);
+  // Helper: resolve the player ID for the current user via all lookup paths
+  const resolvePlayerId = async (): Promise<{ playerId: string | null; playerData: any }> => {
+    if (!user?.id || !workingSeason?.id) return { playerId: null, playerData: null };
+
+    // 1. Check user_account_id (player IS this user)
+    const { data: selfPlayers } = await supabase
+      .from('players')
+      .select('id, first_name, last_name, jersey_number, position, photo_url')
+      .eq('user_account_id', user.id)
+      .eq('season_id', workingSeason.id)
+      .limit(1);
+
+    if (selfPlayers && selfPlayers.length > 0) {
+      return { playerId: selfPlayers[0].id, playerData: selfPlayers[0] };
     }
-  };
 
-  const fetchPlayer = async () => {
-    if (!user?.id || !workingSeason?.id) return;
-
-    // Find the player linked to this user
-    const { data: guardianLinks } = await supabase
-      .from('player_guardians')
-      .select('player_id')
-      .eq('guardian_id', user.id);
-
-    // Also check parent_account_id
+    // 2. Check parent_account_id
     const { data: directPlayers } = await supabase
       .from('players')
       .select('id, first_name, last_name, jersey_number, position, photo_url')
@@ -110,13 +103,17 @@ export default function PlayerDashboard() {
       .eq('season_id', workingSeason.id)
       .limit(1);
 
-    let playerId: string | null = null;
-    let playerData: any = null;
-
     if (directPlayers && directPlayers.length > 0) {
-      playerData = directPlayers[0];
-      playerId = playerData.id;
-    } else if (guardianLinks && guardianLinks.length > 0) {
+      return { playerId: directPlayers[0].id, playerData: directPlayers[0] };
+    }
+
+    // 3. Check player_guardians
+    const { data: guardianLinks } = await supabase
+      .from('player_guardians')
+      .select('player_id')
+      .eq('guardian_id', user.id);
+
+    if (guardianLinks && guardianLinks.length > 0) {
       const playerIds = guardianLinks.map(g => g.player_id);
       const { data } = await supabase
         .from('players')
@@ -126,78 +123,83 @@ export default function PlayerDashboard() {
         .limit(1);
 
       if (data && data.length > 0) {
-        playerData = data[0];
-        playerId = playerData.id;
+        return { playerId: data[0].id, playerData: data[0] };
       }
     }
 
-    if (!playerId || !playerData) return;
-
-    // Get team info
-    const { data: teamLink } = await supabase
-      .from('team_players')
-      .select('teams(name, color)')
-      .eq('player_id', playerId)
-      .limit(1)
-      .maybeSingle();
-
-    const team = (teamLink as any)?.teams;
-    setPlayer({
-      ...playerData,
-      team_name: team?.name || null,
-      team_color: team?.color || null,
-    });
+    return { playerId: null, playerData: null };
   };
 
-  const fetchStats = async () => {
-    if (!player?.id && !user?.id) return;
+  const fetchAll = async () => {
+    setLoading(true);
+    try {
+      // First resolve the player, then fetch dependent data in parallel
+      const { playerId, playerData } = await resolvePlayerId();
 
-    // We'll use the player ID after fetchPlayer sets it
-    // For now, query by season
-    const { data: guardianLinks } = await supabase
-      .from('player_guardians')
-      .select('player_id')
-      .eq('guardian_id', user!.id);
+      if (playerId && playerData) {
+        // Get team info
+        const { data: teamLink } = await supabase
+          .from('team_players')
+          .select('teams(name, color)')
+          .eq('player_id', playerId)
+          .limit(1)
+          .maybeSingle();
 
-    if (!guardianLinks || guardianLinks.length === 0) return;
+        const team = (teamLink as any)?.teams;
+        const resolvedPlayer = {
+          ...playerData,
+          team_name: team?.name || null,
+          team_color: team?.color || null,
+        };
+        setPlayer(resolvedPlayer);
 
-    const playerIds = guardianLinks.map(g => g.player_id);
+        // Now fetch stats, achievements, and events in parallel using the resolved playerId
+        await Promise.all([
+          fetchStats(playerId),
+          fetchAchievements(playerId),
+          fetchEvents(),
+        ]);
+      } else {
+        setPlayer(null);
+        setStats(null);
+        setAchievements([]);
+        await fetchEvents();
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchStats = async (playerId: string) => {
+    if (!workingSeason?.id) return;
+
     const { data } = await supabase
       .from('player_season_stats')
       .select('*')
-      .in('player_id', playerIds)
-      .eq('season_id', workingSeason!.id)
+      .eq('player_id', playerId)
+      .eq('season_id', workingSeason.id)
       .limit(1)
       .maybeSingle();
 
     if (data) {
       setStats({
         games_played: data.games_played || 0,
-        total_kills: data.total_kills || 0,
-        total_aces: data.total_aces || 0,
-        total_digs: data.total_digs || 0,
-        total_blocks: data.total_blocks || 0,
-        total_assists: data.total_assists || 0,
-        total_points: data.total_points || 0,
+        // Map DB column names (kills, aces, etc.) to our state shape
+        total_kills: data.kills ?? data.total_kills ?? 0,
+        total_aces: data.aces ?? data.total_aces ?? 0,
+        total_digs: data.digs ?? data.total_digs ?? 0,
+        total_blocks: data.blocks ?? data.total_blocks ?? 0,
+        total_assists: data.assists ?? data.total_assists ?? 0,
+        total_points: data.points ?? data.total_points ?? 0,
       });
     }
   };
 
-  const fetchAchievements = async () => {
-    if (!user?.id) return;
-
-    const { data: guardianLinks } = await supabase
-      .from('player_guardians')
-      .select('player_id')
-      .eq('guardian_id', user.id);
-
-    if (!guardianLinks || guardianLinks.length === 0) return;
-
-    const playerIds = guardianLinks.map(g => g.player_id);
+  const fetchAchievements = async (playerId: string) => {
     const { data } = await supabase
       .from('player_achievements')
       .select('id, earned_at, achievement:achievements(name, icon, rarity, color_primary)')
-      .in('player_id', playerIds)
+      .eq('player_id', playerId)
       .order('earned_at', { ascending: false })
       .limit(10);
 
@@ -436,9 +438,9 @@ export default function PlayerDashboard() {
 }
 
 const createStyles = (colors: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1, backgroundColor: 'transparent' },
   content: { padding: 16 },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent' },
   loadingText: { color: colors.textMuted, marginTop: 12, fontSize: 14 },
 
   // Hero

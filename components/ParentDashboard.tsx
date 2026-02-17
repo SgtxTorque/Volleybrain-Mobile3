@@ -52,6 +52,26 @@ type PaymentStatus = {
   balance: number;
 };
 
+type RecentGame = {
+  id: string;
+  event_date: string;
+  opponent: string | null;
+  game_result: string | null;
+  our_score: number | null;
+  their_score: number | null;
+  team_name: string;
+};
+
+type TodayGame = {
+  id: string;
+  title: string;
+  event_date: string;
+  event_time: string | null;
+  venue_name: string | null;
+  opponent: string | null;
+  team_name: string;
+};
+
 // Status configuration with colors and labels
 const statusConfig: Record<string, { label: string; color: string; icon: string }> = {
   new: { label: 'Pending Review', color: '#FF9500', icon: 'time' },
@@ -74,6 +94,8 @@ export default function ParentDashboard() {
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>({ total_owed: 0, total_paid: 0, balance: 0 });
   const [loading, setLoading] = useState(true);
   const [showShare, setShowShare] = useState(false);
+  const [recentGames, setRecentGames] = useState<RecentGame[]>([]);
+  const [todayGame, setTodayGame] = useState<TodayGame | null>(null);
 
   useEffect(() => {
     fetchParentData();
@@ -250,8 +272,49 @@ export default function ParentDashboard() {
         });
 
         setUpcomingEvents(formattedEvents);
+
+        // Fetch recent completed games (last 3)
+        const { data: recentGameData } = await supabase
+          .from('schedule_events')
+          .select('id, event_date, opponent, game_result, our_score, opponent_score, team_id, teams(name)')
+          .in('team_id', teamIds)
+          .eq('event_type', 'game')
+          .not('game_result', 'is', null)
+          .order('event_date', { ascending: false })
+          .limit(3);
+
+        const formattedRecentGames: RecentGame[] = (recentGameData || []).map((g: any) => ({
+          id: g.id,
+          event_date: g.event_date,
+          opponent: g.opponent,
+          game_result: g.game_result,
+          our_score: g.our_score,
+          their_score: g.opponent_score,
+          team_name: g.teams?.name || '',
+        }));
+        setRecentGames(formattedRecentGames);
+
+        // Check for today's game
+        const todayGameEvent = (events || []).find(
+          (e: any) => e.event_type === 'game' && e.event_date === today
+        );
+        if (todayGameEvent) {
+          setTodayGame({
+            id: todayGameEvent.id,
+            title: todayGameEvent.title,
+            event_date: todayGameEvent.event_date,
+            event_time: todayGameEvent.start_time || null,
+            venue_name: todayGameEvent.location || null,
+            opponent: todayGameEvent.opponent || null,
+            team_name: (todayGameEvent.teams as any)?.name || '',
+          });
+        } else {
+          setTodayGame(null);
+        }
       } else {
         setUpcomingEvents([]);
+        setRecentGames([]);
+        setTodayGame(null);
       }
 
       // Calculate payment status across all children
@@ -412,35 +475,61 @@ export default function ParentDashboard() {
         })
       )}
 
+      {/* Game Day Card */}
+      {todayGame && (
+        <TouchableOpacity
+          style={s.gameDayCard}
+          onPress={() => router.push(`/game-day-parent?eventId=${todayGame.id}` as any)}
+          activeOpacity={0.8}
+        >
+          <View style={s.gameDayLeft}>
+            <View style={s.gameDayIconWrap}>
+              <Ionicons name="flame" size={24} color={colors.danger} />
+            </View>
+            <View style={s.gameDayInfo}>
+              <Text style={s.gameDayTitle}>GAME DAY</Text>
+              <Text style={s.gameDayOpponent}>
+                {todayGame.opponent ? `vs ${todayGame.opponent}` : todayGame.title}
+              </Text>
+              <Text style={s.gameDayMeta}>
+                {todayGame.team_name}
+                {todayGame.event_time ? ` \u2022 ${formatTime(todayGame.event_time)}` : ''}
+              </Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.danger} />
+        </TouchableOpacity>
+      )}
+
       {/* Quick Actions */}
       <Text style={s.sectionTitle}>Quick Actions</Text>
       <View style={s.actionsGrid}>
+        <TouchableOpacity style={s.actionCard} onPress={() => router.push('/my-kids' as any)}>
+          <View style={[s.actionIcon, { backgroundColor: colors.info + '20' }]}>
+            <Ionicons name="people" size={24} color={colors.info} />
+          </View>
+          <Text style={s.actionLabel}>My Kids</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity style={s.actionCard} onPress={() => router.push('/schedule')}>
           <View style={[s.actionIcon, { backgroundColor: colors.primary + '20' }]}>
             <Ionicons name="calendar" size={24} color={colors.primary} />
           </View>
           <Text style={s.actionLabel}>Schedule</Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity style={s.actionCard} onPress={() => setShowShare(true)}>
-          <View style={[s.actionIcon, { backgroundColor: '#AF52DE20' }]}>
-            <Ionicons name="qr-code" size={24} color="#AF52DE" />
+
+        <TouchableOpacity style={s.actionCard} onPress={() => router.push('/family-payments' as any)}>
+          <View style={[s.actionIcon, { backgroundColor: colors.warning + '20' }]}>
+            <Ionicons name="wallet" size={24} color={colors.warning} />
           </View>
-          <Text style={s.actionLabel}>Invite Friends</Text>
+          <Text style={s.actionLabel}>Payments</Text>
         </TouchableOpacity>
-        
+
         <TouchableOpacity style={s.actionCard} onPress={() => router.push('/chats')}>
           <View style={[s.actionIcon, { backgroundColor: colors.success + '20' }]}>
             <Ionicons name="chatbubbles" size={24} color={colors.success} />
           </View>
           <Text style={s.actionLabel}>Team Chat</Text>
-        </TouchableOpacity>
-        
-        <TouchableOpacity style={s.actionCard} onPress={() => router.push('/my-teams')}>
-          <View style={[s.actionIcon, { backgroundColor: '#AF52DE20' }]}>
-            <Ionicons name="people" size={24} color="#AF52DE" />
-          </View>
-          <Text style={s.actionLabel}>My Teams</Text>
         </TouchableOpacity>
       </View>
 
@@ -494,9 +583,48 @@ export default function ParentDashboard() {
         </TouchableOpacity>
       )}
 
+      {/* Recent Games */}
+      {recentGames.length > 0 && (
+        <>
+          <Text style={s.sectionTitle}>Recent Games</Text>
+          {recentGames.map(game => (
+            <TouchableOpacity
+              key={game.id}
+              style={s.recentGameCard}
+              onPress={() => router.push(`/game-results?eventId=${game.id}` as any)}
+              activeOpacity={0.8}
+            >
+              <View style={[
+                s.recentGameResult,
+                { backgroundColor: game.game_result === 'win' ? colors.success + '20' : colors.danger + '20' }
+              ]}>
+                <Text style={[
+                  s.recentGameResultText,
+                  { color: game.game_result === 'win' ? colors.success : colors.danger }
+                ]}>
+                  {game.game_result === 'win' ? 'W' : 'L'}
+                </Text>
+              </View>
+              <View style={s.recentGameInfo}>
+                <Text style={s.recentGameOpponent}>
+                  {game.opponent ? `vs ${game.opponent}` : 'Game'}
+                </Text>
+                <Text style={s.recentGameMeta}>
+                  {game.team_name} {'\u2022'} {formatDate(game.event_date)}
+                </Text>
+              </View>
+              <Text style={s.recentGameScore}>
+                {game.our_score ?? 0}-{game.their_score ?? 0}
+              </Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </TouchableOpacity>
+          ))}
+        </>
+      )}
+
       {/* Payment Alert */}
       {paymentStatus.balance > 0 && (
-        <TouchableOpacity style={s.paymentAlert} onPress={() => router.push('/payments')}>
+        <TouchableOpacity style={s.paymentAlert} onPress={() => router.push('/family-payments' as any)}>
           <Ionicons name="alert-circle" size={24} color={colors.warning} />
           <View style={s.paymentAlertContent}>
             <Text style={s.paymentAlertTitle}>Payment Due</Text>
@@ -518,7 +646,7 @@ export default function ParentDashboard() {
 }
 
 const createStyles = (colors: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background, padding: 16 },
+  container: { flex: 1, backgroundColor: 'transparent', padding: 16 },
   
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   greeting: { fontSize: 16, color: colors.textMuted },
@@ -618,4 +746,22 @@ const createStyles = (colors: any) => StyleSheet.create({
   paymentAlertContent: { flex: 1, marginLeft: 12 },
   paymentAlertTitle: { fontSize: 14, fontWeight: '600', color: colors.warning },
   paymentAlertText: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+
+  // Game Day Card
+  gameDayCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.danger + '12', borderRadius: 16, padding: 14, marginBottom: 20, borderWidth: 1, borderColor: colors.danger + '30', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
+  gameDayLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  gameDayIconWrap: { width: 44, height: 44, borderRadius: 12, backgroundColor: colors.danger + '20', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  gameDayInfo: { flex: 1 },
+  gameDayTitle: { fontSize: 11, fontWeight: '800', color: colors.danger, letterSpacing: 1.5, textTransform: 'uppercase' as const },
+  gameDayOpponent: { fontSize: 16, fontWeight: '700', color: colors.text, marginTop: 2 },
+  gameDayMeta: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+
+  // Recent Games
+  recentGameCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.glassCard, borderRadius: 16, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
+  recentGameResult: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
+  recentGameResultText: { fontSize: 16, fontWeight: '800' },
+  recentGameInfo: { flex: 1 },
+  recentGameOpponent: { fontSize: 15, fontWeight: '600', color: colors.text },
+  recentGameMeta: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+  recentGameScore: { fontSize: 18, fontWeight: '700', color: colors.text, marginRight: 8 },
 });

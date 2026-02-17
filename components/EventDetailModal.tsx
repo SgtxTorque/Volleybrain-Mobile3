@@ -7,7 +7,9 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Linking,
   Modal,
+  Platform,
   ScrollView,
   Text,
   TextInput,
@@ -414,10 +416,10 @@ export default function EventDetailModal({
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }}>
         {/* Header */}
-        <View style={{ 
-          flexDirection: 'row', 
+        <View style={{
+          flexDirection: 'row',
           alignItems: 'center', 
           justifyContent: 'space-between',
           padding: 16,
@@ -556,9 +558,42 @@ export default function EventDetailModal({
                     </Text>
                   </View>
                   {event.venue_address && (
-                    <Text style={{ color: colors.textMuted, fontSize: 14, marginLeft: 28 }}>
+                    <Text style={{ color: colors.textMuted, fontSize: 14, marginLeft: 28, marginBottom: 12 }}>
                       {event.venue_address}
                     </Text>
+                  )}
+                  {/* Get Directions button */}
+                  {(event.venue_address || event.venue_name || event.location) && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        const address = encodeURIComponent(
+                          event.venue_address || event.venue_name || event.location || ''
+                        );
+                        const url = Platform.OS === 'ios'
+                          ? `maps:?q=${address}`
+                          : `geo:0,0?q=${address}`;
+                        Linking.openURL(url).catch(() => {
+                          // Fallback to Google Maps web URL
+                          Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${address}`);
+                        });
+                      }}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: colors.primary + '20',
+                        borderRadius: 10,
+                        paddingVertical: 10,
+                        paddingHorizontal: 16,
+                        marginLeft: 28,
+                        gap: 8,
+                      }}
+                    >
+                      <Ionicons name="navigate" size={18} color={colors.primary} />
+                      <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600' }}>
+                        Get Directions
+                      </Text>
+                    </TouchableOpacity>
                   )}
                 </View>
               )}

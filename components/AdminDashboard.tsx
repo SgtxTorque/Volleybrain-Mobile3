@@ -1015,7 +1015,7 @@ export default function AdminDashboard() {
 }
 
 const createStyles = (colors: any, sportColors: any) => StyleSheet.create({
-  scroll: { flex: 1, backgroundColor: colors.background, padding: 16 },
+  scroll: { flex: 1, backgroundColor: 'transparent', padding: 16 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   greeting: { fontSize: 16, color: colors.textMuted },

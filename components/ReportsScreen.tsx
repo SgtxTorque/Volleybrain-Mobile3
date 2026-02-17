@@ -197,7 +197,7 @@ function formatFilterName(filter: string): string {
 const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
   header: {
     padding: 16,

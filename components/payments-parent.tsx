@@ -562,7 +562,7 @@ export default function ParentPaymentsScreen({ hideHeader = false }: Props) {
   if (loading) {
     const LoadingWrapper = hideHeader ? View : SafeAreaView;
     return (
-      <LoadingWrapper style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
+      <LoadingWrapper style={{ flex: 1, backgroundColor: 'transparent', justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color={colors.primary} />
       </LoadingWrapper>
     );
@@ -571,7 +571,7 @@ export default function ParentPaymentsScreen({ hideHeader = false }: Props) {
   const Wrapper = hideHeader ? View : SafeAreaView;
 
   return (
-    <Wrapper style={{ flex: 1, backgroundColor: colors.background }}>
+    <Wrapper style={{ flex: 1, backgroundColor: 'transparent' }}>
       {/* Header - only show if not hidden */}
       {!hideHeader && (
         <View style={{

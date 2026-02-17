@@ -560,7 +560,7 @@ export default function LineupBuilderScreen() {
 
   if (showGameSelector && !params.eventId) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: 'transparent' }]}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>

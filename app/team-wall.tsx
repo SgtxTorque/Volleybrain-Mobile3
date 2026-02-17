@@ -1042,7 +1042,7 @@ const createStyles = (colors: any) =>
     // Layout
     container: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: 'transparent',
     },
     scroll: {
       flex: 1,

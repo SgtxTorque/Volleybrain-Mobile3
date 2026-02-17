@@ -816,7 +816,7 @@ export default function ReportViewerScreen() {
 const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
   },
   headerActions: {
     flexDirection: 'row',

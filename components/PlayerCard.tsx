@@ -1,7 +1,8 @@
+import { usePermissions } from '@/lib/permissions-context';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Dimensions,
   Image,
@@ -10,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import EmergencyContactModal from './EmergencyContactModal';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -24,6 +26,12 @@ type PlayerCardProps = {
     grade?: number | null;
     team_name?: string | null;
     team_color?: string | null;
+    medical_conditions?: string | null;
+    allergies?: string | null;
+    medications?: string | null;
+    emergency_contact_name?: string | null;
+    emergency_contact_phone?: string | null;
+    emergency_contact_relation?: string | null;
   };
   onPress: () => void;
   size?: 'small' | 'medium' | 'large';
@@ -42,15 +50,19 @@ const positionColors: Record<string, string> = {
 
 export default function PlayerCard({ player, onPress, size = 'medium', teamLogoUrl }: PlayerCardProps) {
   const { colors } = useTheme();
+  const { isCoach, isAdmin } = usePermissions();
   // Derive dark mode from background color
   const isDark = colors.background === '#000' || colors.background === '#000000' || colors.background?.startsWith('#0') || colors.background?.startsWith('#1');
   const s = createStyles(colors, isDark, size);
-  
+
+  const [showEmergencyModal, setShowEmergencyModal] = useState(false);
+
   const positionColor = player.position ? positionColors[player.position] || colors.primary : colors.primary;
   const teamColor = player.team_color || (isDark ? '#1a1a2e' : '#2a2a4a');
   const jerseyNumber = player.jersey_number;
   const hasPhoto = player.photo_url && player.photo_url.length > 0;
-  
+  const hasMedicalAlert = !!(player.medical_conditions || player.allergies);
+
   // Format name as "First L."
   const displayName = `${player.first_name} ${player.last_name.charAt(0)}.`;
 
@@ -126,8 +138,36 @@ export default function PlayerCard({ player, onPress, size = 'medium', teamLogoU
         )}
       </View>
       
+      {/* Medical Alert Indicator */}
+      {hasMedicalAlert && (
+        <View style={s.medicalAlert}>
+          <Ionicons name="alert-circle" size={size === 'small' ? 14 : 16} color="#FF6B6B" />
+        </View>
+      )}
+
+      {/* Emergency Contact Button (coaches/admins only) */}
+      {(isCoach || isAdmin) && (
+        <TouchableOpacity
+          style={s.emergencyBtn}
+          onPress={(e) => {
+            e.stopPropagation?.();
+            setShowEmergencyModal(true);
+          }}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons name="call" size={size === 'small' ? 12 : 14} color="#fff" />
+        </TouchableOpacity>
+      )}
+
       {/* Team color accent line at bottom */}
       <View style={[s.accentLine, { backgroundColor: positionColor }]} />
+
+      {/* Emergency Contact Modal */}
+      <EmergencyContactModal
+        visible={showEmergencyModal}
+        onClose={() => setShowEmergencyModal(false)}
+        player={player}
+      />
     </TouchableOpacity>
   );
 }
@@ -265,6 +305,24 @@ const createStyles = (colors: any, isDark: boolean, size: 'small' | 'medium' | '
     accentLine: {
       height: 3,
       width: '100%',
+    },
+    medicalAlert: {
+      position: 'absolute',
+      bottom: size === 'small' ? 36 : 42,
+      left: size === 'small' ? 6 : 8,
+      backgroundColor: 'rgba(0,0,0,0.6)',
+      borderRadius: 10,
+      padding: 2,
+      zIndex: 10,
+    },
+    emergencyBtn: {
+      position: 'absolute',
+      bottom: size === 'small' ? 36 : 42,
+      right: size === 'small' ? 6 : 8,
+      backgroundColor: 'rgba(16, 185, 129, 0.8)',
+      borderRadius: 10,
+      padding: size === 'small' ? 3 : 4,
+      zIndex: 10,
     },
   });
 };

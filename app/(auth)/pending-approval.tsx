@@ -52,7 +52,7 @@ export default function PendingApprovalScreen() {
 }
 
 const createStyles = (colors: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1, backgroundColor: 'transparent' },
   content: { flex: 1, padding: 24, justifyContent: 'center', alignItems: 'center', },
   iconContainer: { 
     width: 160, 

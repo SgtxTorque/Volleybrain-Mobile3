@@ -662,7 +662,7 @@ export default function ScheduleScreen() {
 
       {/* Add Single Event Modal */}
       <Modal visible={showAddModal} animationType="slide" presentationStyle="pageSheet">
-        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }}>
           <View style={s.modalHeader}>
             <TouchableOpacity onPress={() => { setShowAddModal(false); resetForm(); }}><Text style={{ color: colors.textMuted, fontSize: 16 }}>Cancel</Text></TouchableOpacity>
             <Text style={s.modalTitle}>Add Event</Text>
@@ -828,7 +828,7 @@ export default function ScheduleScreen() {
 
       {/* Bulk Add Modal */}
       <Modal visible={showBulkModal} animationType="slide" presentationStyle="pageSheet">
-        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }}>
           <View style={s.modalHeader}>
             <TouchableOpacity onPress={() => { setShowBulkModal(false); resetBulkForm(); }}><Text style={{ color: colors.textMuted, fontSize: 16 }}>Cancel</Text></TouchableOpacity>
             <Text style={s.modalTitle}>Bulk Add Events</Text>
@@ -985,7 +985,7 @@ export default function ScheduleScreen() {
 }
 
 const createStyles = (colors: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1, backgroundColor: 'transparent' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
   title: { fontSize: 28, fontWeight: '800', color: colors.text },
   subtitle: { fontSize: 14, color: colors.primary, marginTop: 2 },

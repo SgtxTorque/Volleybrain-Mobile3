@@ -629,7 +629,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
   if (loading) {
     const LoadingWrapper = hideHeader ? View : SafeAreaView;
     return (
-      <LoadingWrapper style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
+      <LoadingWrapper style={{ flex: 1, backgroundColor: 'transparent', justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color={colors.primary} />
       </LoadingWrapper>
     );
@@ -642,7 +642,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
   const selectedPendingCount = getSelectedPayments().filter(s => s.payment.status === 'pending').length;
 
   return (
-    <Wrapper style={{ flex: 1, backgroundColor: colors.background }} {...wrapperProps}>
+    <Wrapper style={{ flex: 1, backgroundColor: 'transparent' }} {...wrapperProps}>
       {/* Header */}
       {!hideHeader && (
         <View style={{

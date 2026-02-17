@@ -848,7 +848,7 @@ export default function ParentRegisterScreen() {
 }
 
 const createStyles = (colors: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1, backgroundColor: 'transparent' },
   keyboardView: { flex: 1 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 },
   backBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },

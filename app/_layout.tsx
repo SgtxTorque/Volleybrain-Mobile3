@@ -8,7 +8,7 @@ import { ThemeProvider } from '@/lib/theme';
 import { DarkTheme, DefaultTheme, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useColorScheme, View } from 'react-native';
 
 function RootLayoutNav() {
@@ -58,11 +58,20 @@ function RootLayoutNav() {
     return null;
   }
 
+  // Override Nav themes to use transparent backgrounds so AppBackground shows through
+  const navTheme = useMemo(() => {
+    const base = colorScheme === 'dark' ? DarkTheme : DefaultTheme;
+    return {
+      ...base,
+      colors: { ...base.colors, background: 'transparent', card: 'transparent' },
+    };
+  }, [colorScheme]);
+
   return (
-    <NavThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <NavThemeProvider value={navTheme}>
       <View style={{ flex: 1 }}>
         <AppBackground />
-        <Stack screenOptions={{ headerShown: false }}>
+        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }}>
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="(tabs)" />
         </Stack>

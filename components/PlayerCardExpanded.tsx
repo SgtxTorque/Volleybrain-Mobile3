@@ -17,6 +17,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import EmergencyContactModal from './EmergencyContactModal';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -124,6 +125,7 @@ export default function PlayerCardExpanded({ player, visible, onClose, onUpdate 
   const [badges, setBadges] = useState<PlayerBadge[]>([]);
   const [activeTab, setActiveTab] = useState<'stats' | 'skills' | 'info'>('stats');
   const [showBadgeModal, setShowBadgeModal] = useState(false);
+  const [showEmergencyModal, setShowEmergencyModal] = useState(false);
   const [uploading, setUploading] = useState(false);
 
   const s = createStyles(colors);
@@ -264,6 +266,16 @@ export default function PlayerCardExpanded({ player, visible, onClose, onUpdate 
             <Ionicons name="close" size={28} color="#fff" />
           </TouchableOpacity>
 
+          {/* Emergency Contact Button (coaches/admins only) */}
+          {(isAdmin || isCoach) && (
+            <TouchableOpacity
+              style={s.emergencyBtn}
+              onPress={() => setShowEmergencyModal(true)}
+            >
+              <Ionicons name="medkit" size={20} color="#fff" />
+            </TouchableOpacity>
+          )}
+
           <ScrollView showsVerticalScrollIndicator={false}>
             {/* Header Section */}
             <LinearGradient
@@ -384,7 +396,7 @@ export default function PlayerCardExpanded({ player, visible, onClose, onUpdate 
                 <Ionicons name="fitness" size={18} color={activeTab === 'skills' ? colors.primary : colors.textMuted} />
                 <Text style={[s.tabText, activeTab === 'skills' && { color: colors.primary, fontWeight: '600' }]}>Skills</Text>
               </TouchableOpacity>
-              {isAdmin && (
+              {(isAdmin || isCoach) && (
                 <TouchableOpacity
                   style={[s.tab, activeTab === 'info' && [s.tabActive, { borderBottomColor: colors.primary }]]}
                   onPress={() => setActiveTab('info')}
@@ -421,7 +433,7 @@ export default function PlayerCardExpanded({ player, visible, onClose, onUpdate 
                 </View>
               )}
 
-              {activeTab === 'info' && isAdmin && (
+              {activeTab === 'info' && (isAdmin || isCoach) && (
                 <View style={s.infoList}>
                   <InfoRow icon="person" label="Parent" value={player.parent_name || '—'} />
                   <InfoRow icon="call" label="Phone" value={player.parent_phone || '—'} />
@@ -434,6 +446,13 @@ export default function PlayerCardExpanded({ player, visible, onClose, onUpdate 
             </View>
           </ScrollView>
         </View>
+
+        {/* Emergency Contact Modal */}
+        <EmergencyContactModal
+          visible={showEmergencyModal}
+          onClose={() => setShowEmergencyModal(false)}
+          player={player}
+        />
 
         {/* Badge Award Modal */}
         <Modal visible={showBadgeModal} animationType="fade" transparent>
@@ -538,6 +557,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', alignItems: 'center' },
   card: { width: SCREEN_WIDTH - 32, maxHeight: SCREEN_HEIGHT - 100, backgroundColor: colors.card, borderRadius: 24, overflow: 'hidden' },
   closeBtn: { position: 'absolute', top: 16, right: 16, zIndex: 100, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 20, padding: 4 },
+  emergencyBtn: { position: 'absolute', top: 16, left: 16, zIndex: 100, backgroundColor: 'rgba(239, 68, 68, 0.7)', borderRadius: 20, padding: 6 },
   
   header: { paddingTop: 50, paddingBottom: 24, alignItems: 'center' },
   overallBadge: { position: 'absolute', top: 16, left: 16, backgroundColor: '#FFD700', borderRadius: 8, padding: 8, alignItems: 'center' },

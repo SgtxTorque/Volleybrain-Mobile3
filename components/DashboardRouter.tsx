@@ -74,6 +74,9 @@ export default function DashboardRouter() {
       checkIfParentHasKids(),
     ]);
 
+    // Also check if user is a player directly (via user_account_id or parent_account_id)
+    const isPlayerSelf = await checkIfPlayerSelf();
+
     // Determine dashboard type based on roles
     if (hasTeams && hasKids) {
       setDashboardType('coach_parent');
@@ -81,7 +84,7 @@ export default function DashboardRouter() {
       setDashboardType('coach');
     } else if (hasKids || isParent) {
       setDashboardType('parent');
-    } else if (isPlayer) {
+    } else if (isPlayer || isPlayerSelf) {
       setDashboardType('player');
     } else {
       // Default to parent dashboard for new users
@@ -115,6 +118,32 @@ export default function DashboardRouter() {
     }
   };
 
+  const checkIfPlayerSelf = async (): Promise<boolean> => {
+    if (!user?.id) return false;
+
+    try {
+      // Check user_account_id (player IS this user)
+      const { data: selfPlayers } = await supabase
+        .from('players')
+        .select('id')
+        .eq('user_account_id', user.id)
+        .limit(1);
+      if (selfPlayers && selfPlayers.length > 0) return true;
+
+      // Check parent_account_id where the user is also the player
+      const { data: parentPlayers } = await supabase
+        .from('players')
+        .select('id')
+        .eq('parent_account_id', user.id)
+        .limit(1);
+      if (parentPlayers && parentPlayers.length > 0) return true;
+
+      return false;
+    } catch {
+      return false;
+    }
+  };
+
   const checkIfParentHasKids = async (): Promise<boolean> => {
     if (!user?.id) return false;
 
@@ -133,7 +162,7 @@ export default function DashboardRouter() {
 
   if (dashboardType === 'loading') {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+      <View style={[styles.loadingContainer, { backgroundColor: 'transparent' }]}>
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
