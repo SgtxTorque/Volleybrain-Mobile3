@@ -100,7 +100,7 @@ export default function CoachRegisterScreen() {
           full_name: fullName.trim(),
           phone: phone.trim() || null,
           current_organization_id: org.id,
-          onboarding_complete: true,
+          onboarding_completed: true,
           pending_approval: !skipApproval,
         })
         .eq('id', authData.user.id);
@@ -119,7 +119,7 @@ export default function CoachRegisterScreen() {
       // 5. Create coach record (if not admin)
       if (!isAdminInvite) {
         await supabase.from('coaches').insert({
-          user_id: authData.user.id,
+          profile_id: authData.user.id,
           first_name: fullName.split(' ')[0] || fullName,
           last_name: fullName.split(' ').slice(1).join(' ') || '',
           email: email.trim().toLowerCase(),

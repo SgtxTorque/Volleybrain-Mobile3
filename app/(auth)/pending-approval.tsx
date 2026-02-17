@@ -38,7 +38,7 @@ export default function PendingApprovalScreen() {
         <View style={s.infoCard}>
           <Ionicons name="information-circle" size={24} color={colors.info} />
           <Text style={s.infoText}>
-            If you have any questions, please contact the league administrator at info@blackhornets.com
+            If you have any questions, please contact your league administrator.
           </Text>
         </View>
 

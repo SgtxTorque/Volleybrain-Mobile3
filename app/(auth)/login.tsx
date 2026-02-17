@@ -1,4 +1,5 @@
 import { useAuth } from '@/lib/auth';
+import { useTheme } from '@/lib/theme';
 import { Link } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -18,6 +19,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { signIn } = useAuth();
+  const { colors } = useTheme();
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -34,55 +36,57 @@ export default function LoginScreen() {
     }
   };
 
+  const s = createStyles(colors);
+
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
+      style={s.container}
     >
-      <View style={styles.content}>
+      <View style={s.content}>
         {/* Logo */}
-        <View style={styles.logoContainer}>
-          <Text style={styles.logoEmoji}>🏐</Text>
-          <Text style={styles.logoText}>VolleyBrain</Text>
-          <Text style={styles.tagline}>Youth Volleyball Management</Text>
+        <View style={s.logoContainer}>
+          <Text style={s.logoEmoji}>🏐</Text>
+          <Text style={s.logoText}>VolleyBrain</Text>
+          <Text style={s.tagline}>Youth Volleyball Management</Text>
         </View>
 
         {/* Form */}
-        <View style={styles.form}>
+        <View style={s.form}>
           <TextInput
-            style={styles.input}
+            style={s.input}
             placeholder="Email"
-            placeholderTextColor="#666"
+            placeholderTextColor={colors.textMuted}
             value={email}
             onChangeText={setEmail}
             autoCapitalize="none"
             keyboardType="email-address"
           />
           <TextInput
-            style={styles.input}
+            style={s.input}
             placeholder="Password"
-            placeholderTextColor="#666"
+            placeholderTextColor={colors.textMuted}
             value={password}
             onChangeText={setPassword}
             secureTextEntry
           />
 
-          <TouchableOpacity 
-            style={[styles.button, loading && styles.buttonDisabled]}
+          <TouchableOpacity
+            style={[s.button, loading && s.buttonDisabled]}
             onPress={handleLogin}
             disabled={loading}
           >
             {loading ? (
               <ActivityIndicator color="#000" />
             ) : (
-              <Text style={styles.buttonText}>Sign In</Text>
+              <Text style={s.buttonText}>Sign In</Text>
             )}
           </TouchableOpacity>
 
           <Link href="/(auth)/signup" asChild>
-            <TouchableOpacity style={styles.linkButton}>
-              <Text style={styles.linkText}>
-                Don't have an account? <Text style={styles.linkTextBold}>Sign Up</Text>
+            <TouchableOpacity style={s.linkButton}>
+              <Text style={s.linkText}>
+                Don't have an account? <Text style={s.linkTextBold}>Sign Up</Text>
               </Text>
             </TouchableOpacity>
           </Link>
@@ -92,10 +96,10 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0a0a0a',
+    backgroundColor: colors.background,
   },
   content: {
     flex: 1,
@@ -113,27 +117,27 @@ const styles = StyleSheet.create({
   logoText: {
     fontSize: 36,
     fontWeight: 'bold',
-    color: '#FFD700',
+    color: colors.primary,
   },
   tagline: {
     fontSize: 16,
-    color: '#666',
+    color: colors.textMuted,
     marginTop: 8,
   },
   form: {
     gap: 16,
   },
   input: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    color: '#fff',
+    color: colors.text,
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: colors.border,
   },
   button: {
-    backgroundColor: '#FFD700',
+    backgroundColor: colors.primary,
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
@@ -152,11 +156,11 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   linkText: {
-    color: '#666',
+    color: colors.textMuted,
     fontSize: 14,
   },
   linkTextBold: {
-    color: '#FFD700',
+    color: colors.primary,
     fontWeight: 'bold',
   },
 });

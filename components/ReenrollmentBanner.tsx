@@ -67,18 +67,13 @@ export default function ReenrollmentBanner() {
     if (!user?.id) return;
 
     try {
-      const { data: org } = await supabase
-        .from('organizations')
-        .select('id')
-        .eq('slug', 'black-hornets')
-        .single();
-
-      if (!org) return;
+      const orgId = profile?.current_organization_id;
+      if (!orgId) return;
 
       const { data: seasons } = await supabase
         .from('seasons')
         .select('id, name, age_groups (id, name)')
-        .eq('organization_id', org.id)
+        .eq('organization_id', orgId)
         .eq('registration_open', true);
 
       if (!seasons || seasons.length === 0) {
@@ -204,7 +199,7 @@ export default function ReenrollmentBanner() {
             emergency_contact_name: child.emergency_contact_name,
             emergency_contact_phone: child.emergency_contact_phone,
             emergency_contact_relationship: child.emergency_contact_relationship,
-            registration_status: 'registered',
+            status: 'registered',
             coppa_consent_given: true,
             coppa_consent_date: new Date().toISOString(),
           })
@@ -260,7 +255,7 @@ export default function ReenrollmentBanner() {
           age_group_id: newChildAgeGroup || null,
           parent_name: profile?.full_name,
           parent_email: profile?.email,
-          registration_status: 'registered',
+          status: 'registered',
           coppa_consent_given: true,
           coppa_consent_date: new Date().toISOString(),
         })

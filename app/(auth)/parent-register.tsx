@@ -107,7 +107,7 @@ export default function ParentRegisterScreen() {
         )
       `)
       .eq('organization_id', org.id)
-      .eq('is_active', true)
+      .eq('registration_open', true)
       .order('created_at', { ascending: false });
 
     if (seasonsData && seasonsData.length > 0) {
@@ -199,7 +199,7 @@ export default function ParentRegisterScreen() {
           full_name: fullName.trim(),
           phone: phone.trim() || null,
           current_organization_id: org.id,
-          onboarding_complete: true,
+          onboarding_completed: true,
           pending_approval: !skipApproval, // Skip approval if using invite code
         })
         .eq('id', authData.user.id);

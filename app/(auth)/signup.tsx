@@ -1,4 +1,5 @@
 import { useAuth } from '@/lib/auth';
+import { useTheme } from '@/lib/theme';
 import { Link, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -21,6 +22,7 @@ export default function SignupScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { signUp } = useAuth();
+  const { colors } = useTheme();
   const router = useRouter();
 
   const handleSignup = async () => {
@@ -47,76 +49,78 @@ export default function SignupScreen() {
       Alert.alert('Error', error.message);
     } else {
       Alert.alert(
-        'Success!', 
+        'Success!',
         'Please check your email to verify your account, then sign in.',
         [{ text: 'OK', onPress: () => router.replace('/(auth)/login') }]
       );
     }
   };
 
+  const s = createStyles(colors);
+
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
+      style={s.container}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.content}>
-          <View style={styles.logoContainer}>
-            <Text style={styles.logoEmoji}>🏐</Text>
-            <Text style={styles.logoText}>VolleyBrain</Text>
-            <Text style={styles.tagline}>Create Your Account</Text>
+      <ScrollView contentContainerStyle={s.scrollContent}>
+        <View style={s.content}>
+          <View style={s.logoContainer}>
+            <Text style={s.logoEmoji}>🏐</Text>
+            <Text style={s.logoText}>VolleyBrain</Text>
+            <Text style={s.tagline}>Create Your Account</Text>
           </View>
 
-          <View style={styles.form}>
+          <View style={s.form}>
             <TextInput
-              style={styles.input}
+              style={s.input}
               placeholder="Full Name"
-              placeholderTextColor="#666"
+              placeholderTextColor={colors.textMuted}
               value={fullName}
               onChangeText={setFullName}
             />
             <TextInput
-              style={styles.input}
+              style={s.input}
               placeholder="Email"
-              placeholderTextColor="#666"
+              placeholderTextColor={colors.textMuted}
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
               keyboardType="email-address"
             />
             <TextInput
-              style={styles.input}
+              style={s.input}
               placeholder="Password"
-              placeholderTextColor="#666"
+              placeholderTextColor={colors.textMuted}
               value={password}
               onChangeText={setPassword}
               secureTextEntry
             />
             <TextInput
-              style={styles.input}
+              style={s.input}
               placeholder="Confirm Password"
-              placeholderTextColor="#666"
+              placeholderTextColor={colors.textMuted}
               value={confirmPassword}
               onChangeText={setConfirmPassword}
               secureTextEntry
             />
 
-            <TouchableOpacity 
-              style={[styles.button, loading && styles.buttonDisabled]}
+            <TouchableOpacity
+              style={[s.button, loading && s.buttonDisabled]}
               onPress={handleSignup}
               disabled={loading}
             >
               {loading ? (
                 <ActivityIndicator color="#000" />
               ) : (
-                <Text style={styles.buttonText}>Create Account</Text>
+                <Text style={s.buttonText}>Create Account</Text>
               )}
             </TouchableOpacity>
 
             <Link href="/(auth)/login" asChild>
-              <TouchableOpacity style={styles.linkButton}>
-                <Text style={styles.linkText}>
-                  Already have an account? <Text style={styles.linkTextBold}>Sign In</Text>
+              <TouchableOpacity style={s.linkButton}>
+                <Text style={s.linkText}>
+                  Already have an account? <Text style={s.linkTextBold}>Sign In</Text>
                 </Text>
               </TouchableOpacity>
             </Link>
@@ -127,10 +131,10 @@ export default function SignupScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0a0a0a',
+    backgroundColor: colors.background,
   },
   scrollContent: {
     flexGrow: 1,
@@ -151,27 +155,27 @@ const styles = StyleSheet.create({
   logoText: {
     fontSize: 36,
     fontWeight: 'bold',
-    color: '#FFD700',
+    color: colors.primary,
   },
   tagline: {
     fontSize: 16,
-    color: '#666',
+    color: colors.textMuted,
     marginTop: 8,
   },
   form: {
     gap: 16,
   },
   input: {
-    backgroundColor: '#1a1a1a',
+    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    color: '#fff',
+    color: colors.text,
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: colors.border,
   },
   button: {
-    backgroundColor: '#FFD700',
+    backgroundColor: colors.primary,
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
@@ -190,11 +194,11 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   linkText: {
-    color: '#666',
+    color: colors.textMuted,
     fontSize: 14,
   },
   linkTextBold: {
-    color: '#FFD700',
+    color: colors.primary,
     fontWeight: 'bold',
   },
 });

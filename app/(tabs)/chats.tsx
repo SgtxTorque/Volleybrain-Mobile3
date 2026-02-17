@@ -92,7 +92,7 @@ export default function ChatsScreen() {
         .eq('is_deleted', false)
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       // Get unread count
       const { count } = await supabase

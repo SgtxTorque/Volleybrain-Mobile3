@@ -71,21 +71,21 @@ export async function sendVolunteerBlast(params: {
       console.error('Error getting team parents:', parentError);
       // Fallback: get parents directly from player_parents joined with team_players
       const { data: fallbackParents } = await supabase
-        .from('player_parents')
+        .from('player_guardians')
         .select(`
-          parent_id,
+          guardian_id,
           player:players!inner(
             team_players!inner(team_id)
           )
         `)
         .eq('player.team_players.team_id', teamId);
-      
+
       if (!fallbackParents || fallbackParents.length === 0) {
         return { success: false, recipientCount: 0, error: 'No parents found for this team' };
       }
-      
+
       // Use fallback parents
-      const parentIds = [...new Set(fallbackParents.map(p => p.parent_id))];
+      const parentIds = [...new Set(fallbackParents.map(p => p.guardian_id))];
       return await createNotifications(parentIds, eventId, teamId, role, eventTitle, eventDate, sentBy);
     }
 
@@ -344,7 +344,7 @@ export async function promoteBackupVolunteer(
     // Get all volunteers for this role, ordered by position
     const { data: volunteers } = await supabase
       .from('event_volunteers')
-      .select('id, profile_id, position, profile:profiles(first_name, last_name)')
+      .select('id, profile_id, position, profile:profiles(full_name)')
       .eq('event_id', eventId)
       .eq('role', role)
       .order('position');
@@ -481,8 +481,8 @@ export async function sendRSVPReminders(daysAhead: number = 3): Promise<number> 
       
       // Get parents of players who haven't RSVPed
       const { data: parents } = await supabase
-        .from('player_parents')
-        .select('parent_id, player:players(first_name)')
+        .from('player_guardians')
+        .select('guardian_id, player:players(first_name)')
         .in('player_id', missingRSVPPlayerIds);
       
       if (!parents || parents.length === 0) continue;
@@ -497,7 +497,7 @@ export async function sendRSVPReminders(daysAhead: number = 3): Promise<number> 
       
       // Create notifications for each parent
       const notifications = parents.map((p: any) => ({
-        user_id: p.parent_id,
+        user_id: p.guardian_id,
         title: '📋 RSVP Needed',
         body: `Please let us know if ${p.player?.first_name || 'your player'} can make the ${eventTypeText} on ${formattedDate}: ${event.title}`,
         type: 'rsvp_reminder' as NotificationType,

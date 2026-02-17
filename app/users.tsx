@@ -56,13 +56,8 @@ export default function UsersScreen() {
 
   const fetchUsers = useCallback(async () => {
     try {
-      const { data: org } = await supabase
-        .from('organizations')
-        .select('id')
-        .eq('slug', 'black-hornets')
-        .single();
-
-      if (!org) return;
+      const orgId = profile?.current_organization_id;
+      if (!orgId) return;
 
       // Fetch all profiles with their roles
       const { data: profiles, error } = await supabase
@@ -84,7 +79,7 @@ export default function UsersScreen() {
       const { data: roles } = await supabase
         .from('user_roles')
         .select('id, user_id, role, is_active')
-        .eq('organization_id', org.id);
+        .eq('organization_id', orgId);
 
       // Combine profiles with roles
       const usersWithRoles: UserWithRole[] = (profiles || []).map(profile => ({
@@ -131,7 +126,7 @@ export default function UsersScreen() {
               // Update profile
               await supabase
                 .from('profiles')
-                .update({ pending_approval: false, onboarding_complete: true })
+                .update({ pending_approval: false, onboarding_completed: true })
                 .eq('id', user.id);
 
               // Activate their role(s)
@@ -145,15 +140,15 @@ export default function UsersScreen() {
               // Update any pending player registrations
               await supabase
                 .from('players')
-                .update({ registration_status: 'registered' })
+                .update({ status: 'registered' })
                 .eq('parent_email', user.email)
-                .eq('registration_status', 'pending');
+                .eq('status', 'pending');
 
               // Update any pending coach records
               await supabase
                 .from('coaches')
                 .update({ status: 'active' })
-                .eq('user_id', user.id)
+                .eq('profile_id', user.id)
                 .eq('status', 'pending');
 
               Alert.alert('Approved!', user.full_name + ' has been approved.');
@@ -190,13 +185,13 @@ export default function UsersScreen() {
                 .from('players')
                 .delete()
                 .eq('parent_email', user.email)
-                .eq('registration_status', 'pending');
+                .eq('status', 'pending');
 
               // Delete any coach records
               await supabase
                 .from('coaches')
                 .delete()
-                .eq('user_id', user.id);
+                .eq('profile_id', user.id);
 
               // Delete the profile (this should cascade or the auth user will be orphaned)
               await supabase
@@ -219,13 +214,8 @@ export default function UsersScreen() {
   const updateUserRole = async (user: UserWithRole, newRole: UserRole) => {
     setUpdatingUser(true);
     try {
-      const { data: org } = await supabase
-        .from('organizations')
-        .select('id')
-        .eq('slug', 'black-hornets')
-        .single();
-
-      if (!org) throw new Error('Organization not found');
+      const orgId = profile?.current_organization_id;
+      if (!orgId) throw new Error('Organization not found');
 
       // Check if user already has this role
       const existingRole = user.roles.find(r => r.role === newRole);
@@ -239,7 +229,7 @@ export default function UsersScreen() {
       } else {
         // Add new role
         await supabase.from('user_roles').insert({
-          organization_id: org.id,
+          organization_id: orgId,
           user_id: user.id,
           role: newRole,
           is_active: true,

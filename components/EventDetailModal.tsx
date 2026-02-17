@@ -40,8 +40,7 @@ type Volunteer = {
   role: 'line_judge' | 'scorekeeper';
   position: 'primary' | 'backup_1' | 'backup_2' | 'backup_3';
   profile?: {
-    first_name: string;
-    last_name: string;
+    full_name: string;
   };
 };
 
@@ -92,7 +91,7 @@ export default function EventDetailModal({
     
     // Get players that this user (parent) is linked to on this team
     const { data } = await supabase
-      .from('player_parents')
+      .from('player_guardians')
       .select(`
         player:players(
           id,
@@ -101,7 +100,7 @@ export default function EventDetailModal({
           jersey_number
         )
       `)
-      .eq('parent_id', user.id);
+      .eq('guardian_id', user.id);
     
     if (data) {
       const players = data
@@ -163,8 +162,7 @@ export default function EventDetailModal({
         role,
         position,
         profile:profiles(
-          first_name,
-          last_name
+          full_name
         )
       `)
       .eq('event_id', event.id)
@@ -849,7 +847,7 @@ export default function EventDetailModal({
                           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                             {isPrimary && <Ionicons name="star" size={14} color="#FFB347" style={{ marginRight: 6 }} />}
                             <Text style={{ color: colors.text, fontSize: 14, fontWeight: '500' }}>
-                              {volunteer.profile?.first_name} {volunteer.profile?.last_name?.charAt(0)}.
+                              {volunteer.profile?.full_name || 'Unknown'}
                             </Text>
                             {isMe && (
                               <View style={{ backgroundColor: colors.primary + '20', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginLeft: 8 }}>
@@ -924,7 +922,7 @@ export default function EventDetailModal({
                           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                             {isPrimary && <Ionicons name="star" size={14} color="#FFB347" style={{ marginRight: 6 }} />}
                             <Text style={{ color: colors.text, fontSize: 14, fontWeight: '500' }}>
-                              {volunteer.profile?.first_name} {volunteer.profile?.last_name?.charAt(0)}.
+                              {volunteer.profile?.full_name || 'Unknown'}
                             </Text>
                             {isMe && (
                               <View style={{ backgroundColor: colors.primary + '20', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginLeft: 8 }}>

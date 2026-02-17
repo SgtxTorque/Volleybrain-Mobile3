@@ -154,18 +154,13 @@ export default function AdminDashboard() {
   };
 
   const fetchPendingInvites = async () => {
-    const { data: org } = await supabase
-      .from('organizations')
-      .select('id')
-      .eq('slug', 'black-hornets')
-      .single();
-
-    if (!org) return;
+    const orgId = profile?.current_organization_id;
+    if (!orgId) return;
 
     const { data } = await supabase
       .from('invitations')
       .select('id, email, invite_type, invite_code, status, invited_at, expires_at')
-      .eq('organization_id', org.id)
+      .eq('organization_id', orgId)
       .eq('status', 'pending')
       .order('invited_at', { ascending: false })
       .limit(20);
@@ -209,19 +204,14 @@ export default function AdminDashboard() {
     setInviteLoading(true);
 
     try {
-      const { data: org } = await supabase
-        .from('organizations')
-        .select('id')
-        .eq('slug', 'black-hornets')
-        .single();
-
-      if (!org) throw new Error('Organization not found');
+      const orgId = profile?.current_organization_id;
+      if (!orgId) throw new Error('Organization not found');
 
       const inviteCode = generateInviteCode();
       const roleMap: Record<string, string> = { parent: 'parent', coach: 'head_coach', admin: 'league_admin' };
 
       const { error } = await supabase.from('invitations').insert({
-        organization_id: org.id,
+        organization_id: orgId,
         invite_type: type,
         email: inviteEmail.trim().toLowerCase(),
         invite_code: inviteCode,
@@ -350,23 +340,19 @@ export default function AdminDashboard() {
     if (!newSeasonName.trim()) { Alert.alert('Error', 'Please enter a season name'); return; }
     setCreating(true);
     try {
-      const { data: org } = await supabase
-        .from('organizations')
-        .select('id')
-        .eq('slug', 'black-hornets')
-        .single();
+      const orgId = profile?.current_organization_id;
 
       const { data, error } = await supabase
         .from('seasons')
-        .insert({ 
-          name: newSeasonName.trim(), 
-          status: newSeasonStatus, 
-          registration_open: true, 
-          fee_registration: 150, 
-          fee_uniform: 35, 
-          fee_monthly: 50, 
+        .insert({
+          name: newSeasonName.trim(),
+          status: newSeasonStatus,
+          registration_open: true,
+          fee_registration: 150,
+          fee_uniform: 35,
+          fee_monthly: 50,
           months_in_season: 3,
-          organization_id: org?.id,
+          organization_id: orgId,
           sport_id: activeSport?.id,
         })
         .select().single();

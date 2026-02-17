@@ -162,7 +162,7 @@ export default function LeagueSetupScreen() {
       if (userId) {
         await supabase
           .from('profiles')
-          .update({ organization_id: org.id })
+          .update({ current_organization_id: org.id })
           .eq('id', userId);
       }
 
