@@ -34,7 +34,7 @@ interface AppDrawerProps {
 
 export default function AppDrawer({ visible, onClose }: AppDrawerProps) {
   const { colors } = useTheme();
-  const { actualRoles, primaryRole, isAdmin, isCoach, isParent } = usePermissions();
+  const { actualRoles, primaryRole, isAdmin, isCoach, isParent, isPlayer } = usePermissions();
   const { user, profile, signOut } = useAuth();
   const router = useRouter();
 
@@ -57,6 +57,7 @@ export default function AppDrawer({ visible, onClose }: AppDrawerProps) {
           { id: 'reports', label: 'Reports', icon: 'bar-chart', route: '/(tabs)/reports-tab' },
           { id: 'registration', label: 'Registration', icon: 'person-add', route: '/registration-hub' },
           { id: 'users', label: 'Users', icon: 'people-circle', route: '/users' },
+          { id: 'coach-availability', label: 'Coach Availability', icon: 'calendar-outline', route: '/coach-availability' },
         ],
       });
     }
@@ -70,6 +71,7 @@ export default function AppDrawer({ visible, onClose }: AppDrawerProps) {
           { id: 'my-teams', label: 'My Teams', icon: 'shirt', route: '/(tabs)/my-teams' },
           { id: 'schedule', label: 'Schedule', icon: 'calendar', route: '/(tabs)/schedule' },
           { id: 'availability', label: 'My Availability', icon: 'calendar-outline', route: '/coach-availability' },
+          { id: 'game-prep', label: 'Game Prep', icon: 'analytics', route: '/game-prep' },
         ],
       });
     }
@@ -81,7 +83,19 @@ export default function AppDrawer({ visible, onClose }: AppDrawerProps) {
         items: [
           { id: 'my-players', label: 'My Players', icon: 'people', route: '/(tabs)/players' },
           { id: 'my-teams', label: 'My Teams', icon: 'shirt', route: '/(tabs)/my-teams' },
+          { id: 'parent-schedule', label: 'Schedule', icon: 'calendar', route: '/(tabs)/schedule' },
           { id: 'payments', label: 'Payment History', icon: 'receipt', route: '/payment-hub' },
+        ],
+      });
+    }
+
+    // PLAYER section (player-only users)
+    if (isPlayer && !isAdmin && !isCoach && !isParent) {
+      sections.push({
+        title: 'My Stuff',
+        items: [
+          { id: 'player-schedule', label: 'Schedule', icon: 'calendar', route: '/(tabs)/schedule' },
+          { id: 'player-teams', label: 'My Teams', icon: 'shirt', route: '/(tabs)/my-teams' },
         ],
       });
     }
@@ -230,7 +244,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   drawer: {
     width: '80%',
     maxWidth: 320,
-    backgroundColor: colors.background,
+    backgroundColor: colors.bgSecondary,
     shadowColor: '#000',
     shadowOffset: { width: -2, height: 0 },
     shadowOpacity: 0.25,
@@ -242,9 +256,9 @@ const createStyles = (colors: any) => StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     paddingTop: 60,
-    backgroundColor: colors.card,
+    backgroundColor: colors.glassCard,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.glassBorder,
   },
   avatar: {
     width: 50,
@@ -301,7 +315,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 10,
-    backgroundColor: colors.card,
+    backgroundColor: colors.glassCard,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,

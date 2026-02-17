@@ -430,7 +430,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16, marginBottom: 12, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: colors.border },
   sectionHeaderText: { fontSize: 13, fontWeight: '700', color: colors.textMuted, letterSpacing: 1 },
 
-  teamCard: { backgroundColor: colors.card, borderRadius: 12, marginBottom: 10, overflow: 'hidden' },
+  teamCard: { backgroundColor: colors.glassCard, borderRadius: 16, marginBottom: 10, overflow: 'hidden', borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   teamHeader: { padding: 14 },
   teamInfo: { flex: 1 },
   teamNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
@@ -448,10 +448,10 @@ const createStyles = (colors: any) => StyleSheet.create({
   teamActionText: { fontSize: 11, color: colors.text, fontWeight: '500' },
 
   quickActionsRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  quickActionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: colors.card, paddingVertical: 12, borderRadius: 10 },
+  quickActionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: colors.glassCard, paddingVertical: 12, borderRadius: 12, borderWidth: 1, borderColor: colors.glassBorder },
   quickActionText: { fontSize: 12, fontWeight: '500', color: colors.text },
 
-  childCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, borderRadius: 10, padding: 12, marginBottom: 8 },
+  childCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.glassCard, borderRadius: 16, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   childAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.success + '30', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   childAvatarText: { fontSize: 16, fontWeight: 'bold', color: colors.success },
   childInfo: { flex: 1 },
@@ -462,10 +462,10 @@ const createStyles = (colors: any) => StyleSheet.create({
   ageGroupBadgeSmall: { backgroundColor: colors.primary + '20', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
   ageGroupTextSmall: { fontSize: 10, fontWeight: '600', color: colors.primary },
 
-  emptyCard: { backgroundColor: colors.card, borderRadius: 10, padding: 24, alignItems: 'center', marginBottom: 16 },
+  emptyCard: { backgroundColor: colors.glassCard, borderRadius: 16, padding: 24, alignItems: 'center', marginBottom: 16, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   emptyText: { fontSize: 13, color: colors.textMuted, marginTop: 8 },
 
-  eventCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, borderRadius: 10, marginBottom: 8, overflow: 'hidden' },
+  eventCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.glassCard, borderRadius: 16, marginBottom: 8, overflow: 'hidden', borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   eventTypeIndicator: { width: 4, alignSelf: 'stretch' },
   eventGame: { backgroundColor: colors.danger },
   eventPractice: { backgroundColor: colors.info },

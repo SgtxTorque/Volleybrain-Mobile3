@@ -27,7 +27,7 @@ export default function DashboardRouter() {
   const isParent = permissions.isParent ?? false;
   const isPlayer = permissions.isPlayer ?? false;
   // Check if devModeRole exists in your context (it might be named differently)
-  const devModeRole = (permissions as any).devModeRole ?? (permissions as any).devViewAs ?? null;
+  const devModeRole = permissions.viewAs ?? permissions.devViewAs ?? null;
 
   const [dashboardType, setDashboardType] = useState<DashboardType>('loading');
 
@@ -90,16 +90,26 @@ export default function DashboardRouter() {
   };
 
   const checkIfCoachHasTeams = async (): Promise<boolean> => {
-    if (!user?.id || !workingSeason?.id) return false;
+    if (!user?.id) return false;
 
     try {
-      const { data } = await supabase
+      // Primary: check team_staff
+      const { data: staffData } = await supabase
         .from('team_staff')
         .select('team_id')
         .eq('user_id', user.id)
         .limit(1);
+      if (staffData && staffData.length > 0) return true;
 
-      return Boolean(data && data.length > 0);
+      // Fallback: check coaches table (web parity)
+      const { data: coachData } = await supabase
+        .from('coaches')
+        .select('id')
+        .eq('profile_id', user.id)
+        .limit(1);
+      if (coachData && coachData.length > 0) return true;
+
+      return false;
     } catch {
       return false;
     }

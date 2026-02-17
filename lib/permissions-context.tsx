@@ -13,7 +13,10 @@ type PermissionsContextType = {
   isPlayer: boolean;
   can: typeof can;
   refresh: () => Promise<void>;
-  // Dev mode / Role switching
+  // Role switching (production feature — matches web's getAvailableViews)
+  viewAs: UserRole | null;
+  setViewAs: (role: UserRole | null) => void;
+  // Keep legacy aliases for compatibility
   devMode: boolean;
   devViewAs: UserRole | null;
   setDevViewAs: (role: UserRole | null) => void;
@@ -30,7 +33,9 @@ const PermissionsContext = createContext<PermissionsContextType>({
   isPlayer: false,
   can,
   refresh: async () => {},
-  devMode: __DEV__, // Only enable in development
+  viewAs: null,
+  setViewAs: () => {},
+  devMode: true,
   devViewAs: null,
   setDevViewAs: () => {},
   actualRoles: [],
@@ -40,37 +45,29 @@ export const PermissionsProvider = ({ children }: { children: React.ReactNode })
   const { user, profile } = useAuth();
   const [context, setContext] = useState<PermissionContext | null>(null);
   const [loading, setLoading] = useState(true);
-  const [devViewAs, setDevViewAs] = useState<UserRole | null>(null);
+  const [viewAs, setViewAs] = useState<UserRole | null>(null);
   const [hasPlayerConnections, setHasPlayerConnections] = useState(false);
+  const [hasCoachRecord, setHasCoachRecord] = useState(false);
+  const [hasPlayerSelf, setHasPlayerSelf] = useState(false);
 
   // Check if user has any player connections (making them a parent)
   const checkPlayerConnections = async (): Promise<boolean> => {
     if (!user?.id) return false;
-
     try {
-      // Check player_guardians table
       const { data: guardianLinks } = await supabase
         .from('player_guardians')
         .select('id')
         .eq('guardian_id', user.id)
         .limit(1);
+      if (guardianLinks && guardianLinks.length > 0) return true;
 
-      if (guardianLinks && guardianLinks.length > 0) {
-        return true;
-      }
-
-      // Check players.parent_account_id
       const { data: directPlayers } = await supabase
         .from('players')
         .select('id')
         .eq('parent_account_id', user.id)
         .limit(1);
+      if (directPlayers && directPlayers.length > 0) return true;
 
-      if (directPlayers && directPlayers.length > 0) {
-        return true;
-      }
-
-      // Check players.parent_email
       const parentEmail = profile?.email || user?.email;
       if (parentEmail) {
         const { data: emailPlayers } = await supabase
@@ -78,36 +75,63 @@ export const PermissionsProvider = ({ children }: { children: React.ReactNode })
           .select('id')
           .ilike('parent_email', parentEmail)
           .limit(1);
-
-        if (emailPlayers && emailPlayers.length > 0) {
-          return true;
-        }
+        if (emailPlayers && emailPlayers.length > 0) return true;
       }
+      return false;
+    } catch { return false; }
+  };
 
-      return false;
-    } catch (error) {
-      console.error('Error checking player connections:', error);
-      return false;
-    }
+  // Check if user is a coach via coaches table (matches web's coachLink detection)
+  const checkCoachSelf = async (): Promise<boolean> => {
+    if (!user?.id) return false;
+    try {
+      const { data } = await supabase
+        .from('coaches')
+        .select('id')
+        .eq('profile_id', user.id)
+        .limit(1);
+      return Boolean(data && data.length > 0);
+    } catch { return false; }
+  };
+
+  // Check if user is a player via players table (matches web's playerSelf detection)
+  const checkPlayerSelf = async (): Promise<boolean> => {
+    if (!user?.id) return false;
+    try {
+      const { data } = await supabase
+        .from('players')
+        .select('id')
+        .eq('user_account_id', user.id)
+        .limit(1);
+      return Boolean(data && data.length > 0);
+    } catch { return false; }
   };
 
   const loadPermissions = async () => {
     if (!user?.id) {
       setContext(null);
       setHasPlayerConnections(false);
+      setHasCoachRecord(false);
+      setHasPlayerSelf(false);
       setLoading(false);
       return;
     }
 
     setLoading(true);
-    
+
     // Load roles from user_roles table
     const ctx = await getPermissionContext(user.id);
-    
-    // Check for player connections (auto-detect parent)
-    const hasConnections = await checkPlayerConnections();
-    setHasPlayerConnections(hasConnections);
-    
+
+    // Auto-detect roles (same as web's roleContext loading)
+    const [isParent, isCoach, isPlayer] = await Promise.all([
+      checkPlayerConnections(),
+      checkCoachSelf(),
+      checkPlayerSelf(),
+    ]);
+
+    setHasPlayerConnections(isParent);
+    setHasCoachRecord(isCoach);
+    setHasPlayerSelf(isPlayer);
     setContext(ctx);
     setLoading(false);
   };
@@ -116,19 +140,28 @@ export const PermissionsProvider = ({ children }: { children: React.ReactNode })
     loadPermissions();
   }, [user?.id, profile?.current_organization_id, profile?.email]);
 
-  // Build actual roles: from user_roles table + auto-detected parent
+  // Build actual roles: from user_roles table + auto-detected roles
   const rolesFromTable = context?.roles || [];
   const actualRoles: UserRole[] = [...rolesFromTable];
-  
-  // Auto-add 'parent' if user has player connections and doesn't already have parent role
+
+  // Auto-add 'parent' if user has player connections
   if (hasPlayerConnections && !actualRoles.includes('parent')) {
     actualRoles.push('parent');
   }
 
-  // Apply dev override if set
-  const effectiveRoles: UserRole[] = devViewAs ? [devViewAs] : actualRoles;
+  // Auto-add coach role if user has a coaches record but no coach role in user_roles
+  if (hasCoachRecord && !actualRoles.includes('head_coach') && !actualRoles.includes('assistant_coach')) {
+    actualRoles.push('head_coach');
+  }
 
-  // Create an effective context with overridden roles for dev mode
+  // Auto-add 'player' if user has a player self record
+  if (hasPlayerSelf && !actualRoles.includes('player')) {
+    actualRoles.push('player');
+  }
+
+  // Apply role override if set (production feature — not dev-only)
+  const effectiveRoles: UserRole[] = viewAs ? [viewAs] : actualRoles;
+
   const effectiveContext: PermissionContext | null = context ? {
     ...context,
     roles: effectiveRoles,
@@ -152,9 +185,12 @@ export const PermissionsProvider = ({ children }: { children: React.ReactNode })
         isPlayer,
         can,
         refresh: loadPermissions,
-        devMode: __DEV__,
-        devViewAs,
-        setDevViewAs,
+        viewAs,
+        setViewAs,
+        // Legacy aliases
+        devMode: true,
+        devViewAs: viewAs,
+        setDevViewAs: setViewAs,
         actualRoles,
       }}
     >

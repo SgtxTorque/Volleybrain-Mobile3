@@ -10,7 +10,7 @@ import { useEffect, useRef } from 'react';
 import { useColorScheme } from 'react-native';
 
 function RootLayoutNav() {
-  const { session, loading, profile } = useAuth();
+  const { session, loading, profile, needsOnboarding } = useAuth();
   const segments = useSegments();
   const router = useRouter();
   const colorScheme = useColorScheme();
@@ -26,25 +26,27 @@ function RootLayoutNav() {
     const inAuthGroup = segments[0] === '(auth)';
     
     if (!session && !inAuthGroup) {
-      // Not logged in, go to welcome
       hasNavigated.current = true;
       router.replace('/(auth)/welcome');
     } else if (session && inAuthGroup) {
-      // Logged in but in auth screens
-      // Check if pending approval
       if (profile?.pending_approval) {
         hasNavigated.current = true;
         router.replace('/(auth)/pending-approval');
+      } else if (needsOnboarding) {
+        hasNavigated.current = true;
+        router.replace('/(auth)/league-setup');
       } else {
         hasNavigated.current = true;
         router.replace('/(tabs)');
       }
     } else if (session && !inAuthGroup && profile?.pending_approval) {
-      // Logged in but pending approval
       hasNavigated.current = true;
       router.replace('/(auth)/pending-approval');
+    } else if (session && !inAuthGroup && needsOnboarding) {
+      hasNavigated.current = true;
+      router.replace('/(auth)/league-setup');
     }
-  }, [session, loading, profile?.pending_approval]);
+  }, [session, loading, profile?.pending_approval, needsOnboarding]);
 
   useEffect(() => {
     hasNavigated.current = false;

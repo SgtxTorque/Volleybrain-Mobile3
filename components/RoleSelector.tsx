@@ -1,6 +1,7 @@
 import { usePermissions } from '@/lib/permissions-context';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -23,6 +24,7 @@ const roleOptions: RoleOption[] = [
 export default function RoleSelector() {
   const { colors } = useTheme();
   const { actualRoles, devViewAs, setDevViewAs } = usePermissions();
+  const router = useRouter();
   const [showPicker, setShowPicker] = useState(false);
 
   // Only show if user has multiple roles
@@ -53,6 +55,8 @@ export default function RoleSelector() {
   const handleSelectRole = (roleKey: string | null) => {
     setDevViewAs(roleKey as any);
     setShowPicker(false);
+    // Reset to dashboard on role switch (matches web behavior)
+    setTimeout(() => router.replace('/(tabs)' as any), 100);
   };
 
   const s = createStyles(colors, currentRole.color);

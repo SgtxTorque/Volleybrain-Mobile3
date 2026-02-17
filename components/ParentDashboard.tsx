@@ -524,26 +524,33 @@ const createStyles = (colors: any) => StyleSheet.create({
   greeting: { fontSize: 16, color: colors.textMuted },
   name: { fontSize: 28, fontWeight: 'bold', color: colors.text },
 
-  statsRow: { backgroundColor: colors.card, borderRadius: 12, padding: 16, flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
+  statsRow: { backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', marginBottom: 24, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   statItem: { flex: 1, alignItems: 'center' },
   statDivider: { width: 1, height: 30, backgroundColor: colors.border },
   statNum: { fontSize: 24, fontWeight: 'bold', color: colors.text },
   statLabel: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
 
-  sectionTitle: { fontSize: 18, fontWeight: '600', color: colors.text, marginBottom: 12 },
+  sectionTitle: { fontSize: 18, fontWeight: '600', color: colors.text, marginBottom: 12, textTransform: 'uppercase' as const, letterSpacing: 1 },
 
-  emptyCard: { backgroundColor: colors.card, borderRadius: 12, padding: 32, alignItems: 'center', marginBottom: 24 },
+  emptyCard: { backgroundColor: colors.glassCard, borderRadius: 16, padding: 32, alignItems: 'center', marginBottom: 24, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   emptyText: { fontSize: 14, color: colors.textMuted, marginTop: 8, marginBottom: 16 },
   emptyBtn: { backgroundColor: colors.primary, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 },
   emptyBtnText: { color: '#000', fontWeight: '600' },
 
-  childCard: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    backgroundColor: colors.card, 
-    borderRadius: 12, 
-    padding: 12, 
-    marginBottom: 10 
+  childCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.glassCard,
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 6,
   },
   childAvatar: { 
     width: 48, 
@@ -585,11 +592,11 @@ const createStyles = (colors: any) => StyleSheet.create({
   statusText: { fontSize: 10, fontWeight: '600' },
 
   actionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24 },
-  actionCard: { width: '47%', backgroundColor: colors.card, borderRadius: 12, padding: 16, alignItems: 'center' },
+  actionCard: { width: '47%', backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   actionIcon: { width: 48, height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
   actionLabel: { fontSize: 13, fontWeight: '500', color: colors.text },
 
-  eventCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, borderRadius: 12, marginBottom: 8, overflow: 'hidden' },
+  eventCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.glassCard, borderRadius: 16, marginBottom: 8, overflow: 'hidden', borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   eventTypeIndicator: { width: 4, alignSelf: 'stretch' },
   eventGame: { backgroundColor: colors.danger },
   eventPractice: { backgroundColor: colors.info },

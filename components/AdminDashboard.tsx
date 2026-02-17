@@ -1023,7 +1023,7 @@ const createStyles = (colors: any, sportColors: any) => StyleSheet.create({
   logoBox: { width: 50, height: 50, borderRadius: 25, backgroundColor: sportColors.primary + '20', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: sportColors.primary },
   logoIcon: { fontSize: 24 },
   
-  seasonBanner: { backgroundColor: colors.card, borderRadius: 16, padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, borderWidth: 1, borderColor: sportColors.primary },
+  seasonBanner: { backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   seasonLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   seasonLabel: { fontSize: 11, color: sportColors.primary, fontWeight: '600', letterSpacing: 1 },
   statusPill: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
@@ -1035,16 +1035,16 @@ const createStyles = (colors: any, sportColors: any) => StyleSheet.create({
   regAlert: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.info + '20', borderRadius: 10, padding: 10, marginBottom: 16 },
   regAlertText: { fontSize: 13, color: colors.info },
   
-  statsRow: { backgroundColor: colors.card, borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
+  statsRow: { backgroundColor: colors.glassCard, borderRadius: 16, padding: 12, flexDirection: 'row', alignItems: 'center', marginBottom: 20, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   statItem: { flex: 1, alignItems: 'center' },
   statDivider: { width: 1, height: 30, backgroundColor: colors.border },
   statNum: { fontSize: 20, fontWeight: 'bold', color: colors.text },
   statLabel: { fontSize: 11, color: colors.textMuted, marginTop: 2 },
   
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: colors.text, marginBottom: 12 },
+  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: colors.text, marginBottom: 12, textTransform: 'uppercase' as const, letterSpacing: 1 },
   
   actionsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
-  actionBtn: { backgroundColor: colors.card, borderRadius: 12, padding: 14, alignItems: 'center', width: '23%' },
+  actionBtn: { backgroundColor: colors.glassCard, borderRadius: 16, padding: 14, alignItems: 'center', width: '23%', borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   actionBtnHighlight: { borderWidth: 1, borderColor: sportColors.primary },
   actionText: { fontSize: 10, color: colors.text, marginTop: 6, textAlign: 'center', minHeight: 14 },
   actionIconContainer: { position: 'relative' },
@@ -1062,14 +1062,14 @@ const createStyles = (colors: any, sportColors: any) => StyleSheet.create({
   },
   actionBadgeText: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
   
-  alertsCard: { backgroundColor: colors.card, borderRadius: 16, padding: 16, marginBottom: 20 },
+  alertsCard: { backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginBottom: 20, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   alertRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
   alertDot: { width: 8, height: 8, borderRadius: 4, marginRight: 12 },
   alertText: { fontSize: 14, color: colors.text, flex: 1 },
   
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
   
-  inviteModal: { backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '80%' },
+  inviteModal: { backgroundColor: colors.glassCard, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '80%', borderWidth: 1, borderColor: colors.glassBorder },
   inviteModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: colors.border },
   inviteModalTitle: { fontSize: 20, fontWeight: 'bold', color: colors.text },
   inviteOptions: { padding: 16 },
@@ -1100,7 +1100,7 @@ const createStyles = (colors: any, sportColors: any) => StyleSheet.create({
   teamOptionTextSelected: { color: sportColors.primary, fontWeight: '600' },
   noTeamsText: { fontSize: 14, color: colors.textMuted, fontStyle: 'italic', marginBottom: 16 },
   
-  pendingModal: { backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '80%' },
+  pendingModal: { backgroundColor: colors.glassCard, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '80%', borderWidth: 1, borderColor: colors.glassBorder },
   pendingList: { padding: 16 },
   emptyPending: { alignItems: 'center', padding: 40 },
   emptyPendingText: { fontSize: 18, fontWeight: 'bold', color: colors.text, marginTop: 16 },
@@ -1116,7 +1116,7 @@ const createStyles = (colors: any, sportColors: any) => StyleSheet.create({
   pendingActionBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   pendingActionText: { fontSize: 13, fontWeight: '500' },
   
-  pickerModal: { backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '85%' },
+  pickerModal: { backgroundColor: colors.glassCard, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '85%', borderWidth: 1, borderColor: colors.glassBorder },
   pickerHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: colors.border },
   pickerTitle: { fontSize: 20, fontWeight: 'bold', color: colors.text },
   pickerScroll: { padding: 16 },
@@ -1131,7 +1131,7 @@ const createStyles = (colors: any, sportColors: any) => StyleSheet.create({
   seasonCardName: { fontSize: 16, fontWeight: '600', color: colors.text },
   statusPillSmall: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
   statusPillSmallText: { fontSize: 11, fontWeight: '600' },
-  seasonCardActions: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.card, padding: 12, borderTopWidth: 1, borderTopColor: colors.border },
+  seasonCardActions: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.glassCard, padding: 12, borderTopWidth: 1, borderTopColor: colors.glassBorder },
   regToggleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   regToggleLabel: { fontSize: 13, color: colors.textMuted },
   statusChangeBtn: { backgroundColor: colors.background, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 },
@@ -1144,7 +1144,7 @@ const createStyles = (colors: any, sportColors: any) => StyleSheet.create({
   createSeasonBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: sportColors.primary, padding: 16, margin: 16, borderRadius: 12 },
   createSeasonBtnText: { fontSize: 16, fontWeight: 'bold', color: colors.background },
   
-  modal: { backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 },
+  modal: { backgroundColor: colors.glassCard, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, borderWidth: 1, borderColor: colors.glassBorder },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
   modalTitle: { fontSize: 24, fontWeight: 'bold', color: colors.text },
   inputLabel: { fontSize: 14, color: colors.textMuted, marginBottom: 8 },

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useAuth } from './auth';
 import { useSport } from './sport';
 import { supabase } from './supabase';
 
@@ -33,6 +34,7 @@ const SeasonContext = createContext<SeasonContextType>({
 
 export function SeasonProvider({ children }: { children: React.ReactNode }) {
   const { activeSport } = useSport();
+  const { organization } = useAuth();
   const [allSeasons, setAllSeasons] = useState<Season[]>([]);
   const [workingSeason, setWorkingSeason] = useState<Season | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,6 +44,11 @@ export function SeasonProvider({ children }: { children: React.ReactNode }) {
       .from('seasons')
       .select('*')
       .order('created_at', { ascending: false });
+
+    // Filter by organization (critical data scoping — matches web)
+    if (organization?.id) {
+      query = query.eq('organization_id', organization.id);
+    }
 
     // Filter by active sport if one is selected
     if (activeSport?.id) {
@@ -72,10 +79,10 @@ export function SeasonProvider({ children }: { children: React.ReactNode }) {
     setLoading(false);
   };
 
-  // Refresh when active sport changes
+  // Refresh when active sport or organization changes
   useEffect(() => {
     refreshSeasons();
-  }, [activeSport?.id]);
+  }, [activeSport?.id, organization?.id]);
 
   return (
     <SeasonContext.Provider value={{ allSeasons, workingSeason, setWorkingSeason, refreshSeasons, loading }}>

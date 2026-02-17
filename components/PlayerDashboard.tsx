@@ -448,7 +448,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   levelNumber: { fontSize: 18, fontWeight: '900', color: '#000' },
   levelLabel: { fontSize: 8, fontWeight: '700', color: '#000', marginTop: -2 },
   heroAvatar: { width: 110, height: 110, borderRadius: 55, borderWidth: 3, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
-  heroAvatarInner: { width: 100, height: 100, borderRadius: 50, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.card },
+  heroAvatarInner: { width: 100, height: 100, borderRadius: 50, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.glassCard },
   heroInitials: { fontSize: 40, fontWeight: '900' },
   heroName: { fontSize: 28, fontWeight: '900', color: colors.text, textAlign: 'center', letterSpacing: 1 },
   heroMeta: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginTop: 10 },
@@ -463,7 +463,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   totalXP: { fontSize: 11, color: colors.textMuted, textAlign: 'center', marginTop: 6 },
 
   // Sections
-  section: { backgroundColor: colors.card, borderRadius: 16, padding: 16, marginBottom: 16 },
+  section: { backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
   sectionTitle: { fontSize: 14, fontWeight: '800', color: colors.text, letterSpacing: 1.5 },
 
@@ -485,7 +485,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   trophyRarity: { fontSize: 9, fontWeight: '600', color: colors.textMuted, textTransform: 'uppercase', marginTop: 4, letterSpacing: 0.5 },
 
   // Events
-  eventCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.background, borderRadius: 12, padding: 12, marginBottom: 8, borderLeftWidth: 4 },
+  eventCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.glassCard, borderRadius: 12, padding: 12, marginBottom: 8, borderLeftWidth: 4 },
   eventDate: { alignItems: 'center', width: 44, marginRight: 12 },
   eventDay: { fontSize: 22, fontWeight: '900' },
   eventMonth: { fontSize: 10, fontWeight: '700', color: colors.textMuted },
