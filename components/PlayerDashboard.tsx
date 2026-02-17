@@ -787,30 +787,30 @@ export default function PlayerDashboard() {
       {/* ============================================ */}
       <View style={s.sectionWrapper}>
         <Text style={[s.sectionLabel, { color: colors.textMuted }]}>QUICK ACTIONS</Text>
-        <View style={{ flexDirection: 'row', gap: 12 }}>
+        <View style={s.quickActionsRow}>
           <TouchableOpacity
-            style={[s.card, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder, borderWidth: 1, flex: 1, alignItems: 'center', paddingVertical: 16 }]}
+            style={s.quickActionCard}
             onPress={() => router.push('/(tabs)/gameday')}
             activeOpacity={0.7}
           >
             <Ionicons name="calendar" size={24} color={colors.primary} />
-            <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600', marginTop: 6 }}>Schedule</Text>
+            <Text style={s.quickActionLabel}>Schedule</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[s.card, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder, borderWidth: 1, flex: 1, alignItems: 'center', paddingVertical: 16 }]}
+            style={s.quickActionCard}
             onPress={() => router.push('/(tabs)/my-teams' as any)}
             activeOpacity={0.7}
           >
             <Ionicons name="shirt" size={24} color={colors.success} />
-            <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600', marginTop: 6 }}>My Teams</Text>
+            <Text style={s.quickActionLabel}>My Teams</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[s.card, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder, borderWidth: 1, flex: 1, alignItems: 'center', paddingVertical: 16 }]}
+            style={s.quickActionCard}
             onPress={() => router.push('/achievements' as any)}
             activeOpacity={0.7}
           >
             <Ionicons name="ribbon" size={24} color={colors.warning} />
-            <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600', marginTop: 6 }}>Trophies</Text>
+            <Text style={s.quickActionLabel}>Trophies</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -1203,6 +1203,40 @@ const createStyles = (colors: any) =>
       fontSize: 15,
       lineHeight: 22,
       fontWeight: '500',
+    },
+
+    // ========================
+    // QUICK ACTIONS
+    // ========================
+    quickActionsRow: {
+      flexDirection: 'row',
+      gap: 12,
+    },
+    quickActionCard: {
+      flex: 1,
+      backgroundColor: colors.glassCard,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.glassBorder,
+      paddingVertical: 16,
+      alignItems: 'center',
+      ...Platform.select({
+        ios: {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.15,
+          shadowRadius: 12,
+        },
+        android: {
+          elevation: 6,
+        },
+      }),
+    },
+    quickActionLabel: {
+      color: colors.text,
+      fontSize: 13,
+      fontWeight: '600',
+      marginTop: 6,
     },
 
     // ========================

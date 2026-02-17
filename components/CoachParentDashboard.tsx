@@ -1010,7 +1010,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   quickActionCard: {
     flex: 1,
     backgroundColor: colors.glassCard,
-    borderRadius: 20,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.glassBorder,
     paddingVertical: 16,
@@ -1191,6 +1191,16 @@ const createStyles = (colors: any) => StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     gap: 8,
+    backgroundColor: colors.glassCard,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
+      android: { elevation: 6 },
+    }),
   },
   quickLinkIcon: {
     width: 52,
@@ -1198,8 +1208,6 @@ const createStyles = (colors: any) => StyleSheet.create({
     borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
   },
   quickLinkText: {
     fontSize: 11,

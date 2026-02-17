@@ -92,31 +92,51 @@ export default function ProfileScreen() {
     setUploadingPhoto(true);
     try {
       const asset = result.assets[0];
-      const ext = asset.uri.split('.').pop() || 'jpg';
-      const filePath = `profile-photos/${user!.id}_${Date.now()}.${ext}`;
+      const ext = asset.uri.split('.').pop()?.toLowerCase() || 'jpg';
+      const validExt = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext) ? ext : 'jpg';
+      const contentType = `image/${validExt === 'jpg' ? 'jpeg' : validExt}`;
+      const filePath = `profile-photos/${user!.id}_${Date.now()}.${validExt}`;
 
+      // React Native: use arraybuffer for reliable binary upload
       const response = await fetch(asset.uri);
-      const blob = await response.blob();
+      if (!response.ok) {
+        throw new Error('Could not read the selected image. Please try a different photo.');
+      }
+      const arrayBuffer = await response.arrayBuffer();
 
       const { error: uploadError } = await supabase.storage
         .from('media')
-        .upload(filePath, blob, { contentType: `image/${ext}`, upsert: true });
+        .upload(filePath, arrayBuffer, { contentType, upsert: true });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        if (uploadError.message?.includes('network') || uploadError.message?.includes('fetch')) {
+          throw new Error('Network error. Please check your internet connection and try again.');
+        }
+        if (uploadError.message?.includes('size') || uploadError.message?.includes('too large')) {
+          throw new Error('Photo is too large. Please select a smaller image.');
+        }
+        throw uploadError;
+      }
 
       const { data: urlData } = supabase.storage.from('media').getPublicUrl(filePath);
       const publicUrl = urlData.publicUrl;
 
-      await supabase
+      const { error: updateError } = await supabase
         .from('profiles')
         .update({ avatar_url: publicUrl, photo_url: publicUrl })
         .eq('id', user!.id);
 
+      if (updateError) {
+        throw new Error('Photo uploaded but failed to update your profile. Please try again.');
+      }
+
       setAvatarUrl(publicUrl);
+      await refreshProfile();
       Alert.alert('Success', 'Profile photo updated!');
     } catch (error: any) {
       console.error('Avatar upload error:', error);
-      Alert.alert('Error', error.message || 'Failed to upload photo.');
+      const message = error.message || 'Failed to upload photo. Please try again later.';
+      Alert.alert('Upload Failed', message);
     } finally {
       setUploadingPhoto(false);
     }

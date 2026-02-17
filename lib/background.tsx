@@ -52,7 +52,7 @@ export const GRADIENT_OPTIONS: GradientDef[] = [
 
 export const PATTERN_OPTIONS: PatternDef[] = [
   { key: 'volleyball', label: 'Volleyball', icon: 'basketball-outline' },
-  { key: 'hexagons', label: 'Hexagons', icon: 'hexagon-outline' as any },
+  { key: 'hexagons', label: 'Hexagons', icon: 'apps-outline' },
   { key: 'court-lines', label: 'Court Lines', icon: 'grid-outline' },
   { key: 'diagonal-stripes', label: 'Stripes', icon: 'reorder-four' },
   { key: 'triangles', label: 'Triangles', icon: 'triangle-outline' },

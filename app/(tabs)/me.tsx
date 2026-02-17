@@ -3,18 +3,26 @@ import { usePermissions } from '@/lib/permissions-context';
 import { AccentColor, accentColors, useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   Alert,
+  Animated,
+  LayoutAnimation,
   Platform,
   ScrollView,
   StyleSheet,
   Switch,
   Text,
   TouchableOpacity,
+  UIManager,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+// Enable LayoutAnimation on Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 type MenuItem = {
   icon: keyof typeof Ionicons.glyphMap;
@@ -23,6 +31,74 @@ type MenuItem = {
   iconColor?: string;
   iconBg?: string;
 };
+
+// =============================================================================
+// COLLAPSIBLE SECTION COMPONENT
+// =============================================================================
+
+type CollapsibleSectionProps = {
+  title: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+  colors: any;
+};
+
+function CollapsibleSection({ title, children, defaultOpen = true, colors }: CollapsibleSectionProps) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+  const rotateAnim = useRef(new Animated.Value(defaultOpen ? 1 : 0)).current;
+
+  const toggle = useCallback(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    Animated.timing(rotateAnim, {
+      toValue: isOpen ? 0 : 1,
+      duration: 250,
+      useNativeDriver: true,
+    }).start();
+    setIsOpen(!isOpen);
+  }, [isOpen, rotateAnim]);
+
+  const rotation = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '90deg'],
+  });
+
+  return (
+    <View style={{ marginTop: 28 }}>
+      <TouchableOpacity
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 12,
+          marginLeft: 4,
+          marginRight: 4,
+        }}
+        onPress={toggle}
+        activeOpacity={0.7}
+      >
+        <Text
+          style={{
+            fontSize: 12,
+            fontWeight: '700',
+            color: colors.textMuted,
+            textTransform: 'uppercase',
+            letterSpacing: 1,
+          }}
+        >
+          {title}
+        </Text>
+        <Animated.View style={{ transform: [{ rotate: rotation }] }}>
+          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+        </Animated.View>
+      </TouchableOpacity>
+      {isOpen && children}
+    </View>
+  );
+}
+
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
 
 export default function MeScreen() {
   const { colors, mode, toggleTheme, accentColor, changeAccent, isDark } = useTheme();
@@ -58,80 +134,72 @@ export default function MeScreen() {
     player: colors.warning,
   };
 
-  // Role-specific subtitle
-  const getRoleSubtitle = (): string | null => {
-    return null;
-  };
-
-  // Quick actions
-  const quickActions: { icon: keyof typeof Ionicons.glyphMap; label: string; route: string; color: string }[] = [
-    { icon: 'person-circle', label: 'My Profile', route: '/profile', color: colors.info },
-    { icon: 'ribbon', label: 'Achievements', route: '/achievements', color: colors.warning },
-    { icon: 'notifications', label: 'Notifications', route: '/notification-preferences', color: colors.success },
-    { icon: 'color-palette', label: 'Wallpaper', route: '/background-picker', color: colors.primary },
-  ];
-
-  // Admin menu items
-  const adminItems: MenuItem[] = [
-    { icon: 'person-add', label: 'Registration Hub', route: '/registration-hub', iconColor: colors.primary, iconBg: colors.primary + '15' },
-    { icon: 'people', label: 'Players', route: '/(tabs)/players', iconColor: colors.info, iconBg: colors.info + '15' },
-    { icon: 'shirt', label: 'Teams', route: '/(tabs)/teams', iconColor: colors.success, iconBg: colors.success + '15' },
-    { icon: 'clipboard', label: 'Coaches', route: '/(tabs)/coaches', iconColor: colors.warning, iconBg: colors.warning + '15' },
-    { icon: 'card', label: 'Payments', route: '/(tabs)/payments', iconColor: colors.danger, iconBg: colors.danger + '15' },
-    { icon: 'bar-chart', label: 'Reports', route: '/(tabs)/reports-tab', iconColor: colors.info, iconBg: colors.info + '15' },
-    { icon: 'people-circle', label: 'Users', route: '/users', iconColor: colors.primary, iconBg: colors.primary + '15' },
-    { icon: 'shirt-outline', label: 'Jersey Management', route: '/(tabs)/jersey-management', iconColor: colors.success, iconBg: colors.success + '15' },
-    { icon: 'megaphone', label: 'Send Announcement', route: '/blast-composer', iconColor: colors.warning, iconBg: colors.warning + '15' },
-    { icon: 'checkmark-circle', label: 'Attendance', route: '/attendance', iconColor: colors.info, iconBg: colors.info + '15' },
-    { icon: 'analytics', label: 'Game Prep', route: '/game-prep', iconColor: colors.primary, iconBg: colors.primary + '15' },
-    { icon: 'grid', label: 'Lineup Builder', route: '/lineup-builder', iconColor: colors.success, iconBg: colors.success + '15' },
-    { icon: 'calendar-outline', label: 'Coach Availability', route: '/coach-availability', iconColor: colors.warning, iconBg: colors.warning + '15' },
-  ];
-
-  // Coach (non-admin) menu items
-  const coachItems: MenuItem[] = [
-    { icon: 'person-circle', label: 'My Coach Profile', route: '/coach-profile', iconColor: colors.primary, iconBg: colors.primary + '15' },
-    { icon: 'people', label: 'Roster', route: '/(tabs)/players', iconColor: colors.info, iconBg: colors.info + '15' },
-    { icon: 'shirt', label: 'My Teams', route: '/(tabs)/my-teams', iconColor: colors.success, iconBg: colors.success + '15' },
-    { icon: 'calendar-outline', label: 'My Availability', route: '/coach-availability', iconColor: colors.warning, iconBg: colors.warning + '15' },
-    { icon: 'checkmark-circle', label: 'Attendance', route: '/attendance', iconColor: colors.info, iconBg: colors.info + '15' },
-    { icon: 'analytics', label: 'Game Prep', route: '/game-prep', iconColor: colors.primary, iconBg: colors.primary + '15' },
-    { icon: 'grid', label: 'Lineup Builder', route: '/lineup-builder', iconColor: colors.success, iconBg: colors.success + '15' },
-    { icon: 'megaphone', label: 'Send Announcement', route: '/blast-composer', iconColor: colors.warning, iconBg: colors.warning + '15' },
-  ];
-
-  // Parent menu items
-  const parentItems: MenuItem[] = [
-    { icon: 'people', label: 'My Kids', route: '/my-kids', iconColor: colors.primary, iconBg: colors.primary + '15' },
-    { icon: 'shirt', label: 'My Teams', route: '/(tabs)/my-teams', iconColor: colors.success, iconBg: colors.success + '15' },
-    { icon: 'wallet', label: 'Payments', route: '/family-payments', iconColor: colors.warning, iconBg: colors.warning + '15' },
-    { icon: 'document-text', label: 'Waivers', route: '/my-waivers', iconColor: colors.info, iconBg: colors.info + '15' },
-    { icon: 'share-social', label: 'Invite Friends', route: '/invite-friends', iconColor: colors.primary, iconBg: colors.primary + '15' },
-    { icon: 'lock-closed', label: 'Data Rights', route: '/data-rights', iconColor: colors.danger, iconBg: colors.danger + '15' },
-  ];
-
-  // Player-only menu items
-  const playerItems: MenuItem[] = [
-    { icon: 'calendar', label: 'Schedule', route: '/(tabs)/gameday', iconColor: colors.primary, iconBg: colors.primary + '15' },
-    { icon: 'shirt', label: 'My Teams', route: '/(tabs)/my-teams', iconColor: colors.success, iconBg: colors.success + '15' },
-    { icon: 'ribbon', label: 'Achievements', route: '/achievements', iconColor: colors.warning, iconBg: colors.warning + '15' },
-    { icon: 'trophy', label: 'Standings', route: '/standings', iconColor: colors.info, iconBg: colors.info + '15' },
-  ];
-
-  // Settings items
-  const settingsItems: MenuItem[] = [
-    { icon: 'settings', label: 'Settings', route: '/(tabs)/settings', iconColor: colors.textSecondary, iconBg: colors.textMuted + '15' },
-    { icon: 'calendar', label: 'Season Settings', route: '/season-settings', iconColor: colors.primary, iconBg: colors.primary + '15' },
-    { icon: 'archive', label: 'Season History', route: '/season-archives', iconColor: colors.info, iconBg: colors.info + '15' },
-    { icon: 'business', label: 'Find Organizations', route: '/org-directory', iconColor: colors.success, iconBg: colors.success + '15' },
+  // =========================================================================
+  // SECTION 1: PERSONAL (always visible for all roles)
+  // =========================================================================
+  const personalItems: MenuItem[] = [
+    { icon: 'person-circle', label: 'Profile', route: '/profile', iconColor: colors.info, iconBg: colors.info + '15' },
+    { icon: 'notifications', label: 'Notification Preferences', route: '/notification-preferences', iconColor: colors.success, iconBg: colors.success + '15' },
+    { icon: 'color-palette', label: 'Wallpaper', route: '/background-picker', iconColor: colors.primary, iconBg: colors.primary + '15' },
+    { icon: 'shield-checkmark', label: 'Privacy Policy', route: '/privacy-policy', iconColor: colors.textSecondary, iconBg: colors.textMuted + '15' },
+    { icon: 'document', label: 'Terms of Service', route: '/terms-of-service', iconColor: colors.textSecondary, iconBg: colors.textMuted + '15' },
     { icon: 'help-circle', label: 'Help & Support', route: '/help', iconColor: colors.warning, iconBg: colors.warning + '15' },
   ];
 
-  // Legal items
-  const legalItems: MenuItem[] = [
-    { icon: 'shield-checkmark', label: 'Privacy Policy', route: '/privacy-policy', iconColor: colors.textSecondary, iconBg: colors.textMuted + '15' },
-    { icon: 'document', label: 'Terms of Service', route: '/terms-of-service', iconColor: colors.textSecondary, iconBg: colors.textMuted + '15' },
-    { icon: 'lock-closed', label: 'Data Rights', route: '/data-rights', iconColor: colors.textSecondary, iconBg: colors.textMuted + '15' },
+  // =========================================================================
+  // SECTION 2: MY STUFF (role-specific shortcuts)
+  // =========================================================================
+  const getMyStuffItems = (): MenuItem[] => {
+    if (isAdmin) {
+      // Admin: Season Management, Reports, User Management
+      return [
+        { icon: 'calendar', label: 'Season Management', route: '/season-settings', iconColor: colors.primary, iconBg: colors.primary + '15' },
+        { icon: 'bar-chart', label: 'Reports', route: '/(tabs)/reports-tab', iconColor: colors.info, iconBg: colors.info + '15' },
+        { icon: 'people-circle', label: 'User Management', route: '/users', iconColor: colors.success, iconBg: colors.success + '15' },
+      ];
+    }
+    if (isCoach) {
+      // Coach: My Teams, Roster, Schedule, Availability
+      return [
+        { icon: 'shirt', label: 'My Teams', route: '/(tabs)/my-teams', iconColor: colors.success, iconBg: colors.success + '15' },
+        { icon: 'people', label: 'Roster', route: '/(tabs)/players', iconColor: colors.info, iconBg: colors.info + '15' },
+        { icon: 'calendar', label: 'Schedule', route: '/(tabs)/gameday', iconColor: colors.primary, iconBg: colors.primary + '15' },
+        { icon: 'calendar-outline', label: 'Availability', route: '/coach-availability', iconColor: colors.warning, iconBg: colors.warning + '15' },
+      ];
+    }
+    if (isParent) {
+      // Parent: My Children, Payments, Schedule, Volunteer History
+      return [
+        { icon: 'people', label: 'My Children', route: '/my-kids', iconColor: colors.primary, iconBg: colors.primary + '15' },
+        { icon: 'wallet', label: 'Payments', route: '/family-payments', iconColor: colors.warning, iconBg: colors.warning + '15' },
+        { icon: 'calendar', label: 'Schedule', route: '/(tabs)/gameday', iconColor: colors.info, iconBg: colors.info + '15' },
+        { icon: 'document-text', label: 'Waivers', route: '/my-waivers', iconColor: colors.success, iconBg: colors.success + '15' },
+      ];
+    }
+    if (isPlayer) {
+      // Player: My Stats, My Teams, My Achievements, Schedule
+      return [
+        { icon: 'stats-chart', label: 'My Stats', route: '/standings', iconColor: colors.info, iconBg: colors.info + '15' },
+        { icon: 'shirt', label: 'My Teams', route: '/(tabs)/my-teams', iconColor: colors.success, iconBg: colors.success + '15' },
+        { icon: 'ribbon', label: 'My Achievements', route: '/achievements', iconColor: colors.warning, iconBg: colors.warning + '15' },
+        { icon: 'calendar', label: 'Schedule', route: '/(tabs)/gameday', iconColor: colors.primary, iconBg: colors.primary + '15' },
+      ];
+    }
+    return [];
+  };
+
+  const myStuffItems = getMyStuffItems();
+
+  // =========================================================================
+  // SECTION 3: ADMIN TOOLS (only for admins, collapsible - default closed)
+  // =========================================================================
+  const adminToolsItems: MenuItem[] = [
+    { icon: 'person-add', label: 'Invite Management', route: '/registration-hub', iconColor: colors.primary, iconBg: colors.primary + '15' },
+    { icon: 'clipboard', label: 'Registration Hub', route: '/registration-hub', iconColor: colors.info, iconBg: colors.info + '15' },
+    { icon: 'megaphone', label: 'Blast Composer', route: '/blast-composer', iconColor: colors.warning, iconBg: colors.warning + '15' },
+    { icon: 'card', label: 'Payment Admin', route: '/(tabs)/payments', iconColor: colors.danger, iconBg: colors.danger + '15' },
+    { icon: 'business', label: 'Org Directory', route: '/org-directory', iconColor: colors.success, iconBg: colors.success + '15' },
+    { icon: 'archive', label: 'Season Archives', route: '/season-archives', iconColor: colors.textSecondary, iconBg: colors.textMuted + '15' },
   ];
 
   const handleNavigate = (route: string) => {
@@ -147,7 +215,7 @@ export default function MeScreen() {
 
   const renderMenuItem = (item: MenuItem, index: number) => (
     <TouchableOpacity
-      key={`${item.route}-${index}`}
+      key={`${item.route}-${item.label}-${index}`}
       style={s.menuItem}
       onPress={() => handleNavigate(item.route)}
       activeOpacity={0.7}
@@ -201,138 +269,82 @@ export default function MeScreen() {
             ))}
           </View>
 
-          {/* Role-specific subtitle */}
-          {getRoleSubtitle() && (
-            <Text style={s.heroSubtitle}>{getRoleSubtitle()}</Text>
-          )}
-
           {/* Organization */}
           {organization?.name && (
             <Text style={s.heroOrg}>{organization.name}</Text>
           )}
         </View>
 
-        {/* ===== QUICK ACTIONS ===== */}
-        <Text style={s.sectionHeader}>QUICK ACTIONS</Text>
-        <View style={s.quickActionsGrid}>
-          {quickActions.map((action, index) => (
-            <TouchableOpacity
-              key={action.route}
-              style={s.quickActionCard}
-              onPress={() => handleNavigate(action.route)}
-              activeOpacity={0.7}
-            >
-              <View style={[s.quickActionIconWrap, { backgroundColor: action.color + '15' }]}>
-                <Ionicons name={action.icon} size={28} color={action.color} />
+        {/* ===== PERSONAL SECTION (always visible) ===== */}
+        <CollapsibleSection title="Personal" defaultOpen={true} colors={colors}>
+          <View style={s.menuCard}>
+            {/* Theme toggle inline */}
+            <View style={s.themeRow}>
+              <View style={[s.menuItemIcon, { backgroundColor: colors.warning + '15' }]}>
+                <Ionicons
+                  name={isDark ? 'moon' : 'sunny'}
+                  size={20}
+                  color={colors.warning}
+                />
               </View>
-              <Text style={s.quickActionLabel}>{action.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* ===== ROLE-SPECIFIC SECTION ===== */}
-        {isAdmin && (
-          <>
-            <Text style={s.sectionHeader}>ORGANIZATION TOOLS</Text>
-            <View style={s.menuCard}>
-              {adminItems.map((item, i) => renderMenuItem(item, i))}
-            </View>
-          </>
-        )}
-
-        {isCoach && !isAdmin && (
-          <>
-            <Text style={s.sectionHeader}>MY COACHING</Text>
-            <View style={s.menuCard}>
-              {coachItems.map((item, i) => renderMenuItem(item, i))}
-            </View>
-          </>
-        )}
-
-        {isParent && (
-          <>
-            <Text style={s.sectionHeader}>MY FAMILY</Text>
-            <View style={s.menuCard}>
-              {parentItems.map((item, i) => renderMenuItem(item, i))}
-            </View>
-          </>
-        )}
-
-        {isPlayer && !isAdmin && !isCoach && !isParent && (
-          <>
-            <Text style={s.sectionHeader}>MY STUFF</Text>
-            <View style={s.menuCard}>
-              {playerItems.map((item, i) => renderMenuItem(item, i))}
-            </View>
-          </>
-        )}
-
-        {/* ===== LEAGUE SECTION ===== */}
-        <Text style={s.sectionHeader}>LEAGUE</Text>
-        <View style={s.menuCard}>
-          {[
-            { icon: 'chatbubbles' as keyof typeof Ionicons.glyphMap, label: 'Team Wall', route: '/team-wall', iconColor: colors.primary, iconBg: colors.primary + '15' },
-            { icon: 'trophy' as keyof typeof Ionicons.glyphMap, label: 'Standings', route: '/standings', iconColor: colors.warning, iconBg: colors.warning + '15' },
-          ].map((item, i) => renderMenuItem(item, i))}
-        </View>
-
-        {/* ===== SETTINGS SECTION ===== */}
-        <Text style={s.sectionHeader}>SETTINGS</Text>
-        <View style={s.menuCard}>
-          {/* Theme toggle */}
-          <View style={s.themeRow}>
-            <View style={[s.menuItemIcon, { backgroundColor: colors.warning + '15' }]}>
-              <Ionicons
-                name={isDark ? 'moon' : 'sunny'}
-                size={20}
-                color={colors.warning}
+              <Text style={s.menuItemLabel}>Dark Mode</Text>
+              <Switch
+                value={isDark}
+                onValueChange={toggleTheme}
+                trackColor={{ false: colors.border, true: colors.primary + '60' }}
+                thumbColor={isDark ? colors.primary : '#f4f3f4'}
+                ios_backgroundColor={colors.border}
               />
             </View>
-            <Text style={s.menuItemLabel}>Dark Mode</Text>
-            <Switch
-              value={isDark}
-              onValueChange={toggleTheme}
-              trackColor={{ false: colors.border, true: colors.primary + '60' }}
-              thumbColor={isDark ? colors.primary : '#f4f3f4'}
-              ios_backgroundColor={colors.border}
-            />
-          </View>
 
-          {/* Accent color picker */}
-          <View style={s.accentRow}>
-            <View style={[s.menuItemIcon, { backgroundColor: colors.primary + '15' }]}>
-              <Ionicons name="color-fill" size={20} color={colors.primary} />
+            {/* Accent color picker inline */}
+            <View style={s.accentRow}>
+              <View style={[s.menuItemIcon, { backgroundColor: colors.primary + '15' }]}>
+                <Ionicons name="color-fill" size={20} color={colors.primary} />
+              </View>
+              <Text style={[s.menuItemLabel, { flex: 0, marginRight: 12 }]}>Accent Color</Text>
+              <View style={s.accentCircles}>
+                {accentColorKeys.map((key) => (
+                  <TouchableOpacity
+                    key={key}
+                    style={[
+                      s.accentCircle,
+                      { backgroundColor: accentColors[key].primary },
+                      accentColor === key && s.accentCircleSelected,
+                    ]}
+                    onPress={() => changeAccent(key)}
+                    activeOpacity={0.7}
+                  >
+                    {accentColor === key && (
+                      <Ionicons name="checkmark" size={14} color="#fff" />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
-            <Text style={[s.menuItemLabel, { flex: 0, marginRight: 12 }]}>Accent Color</Text>
-            <View style={s.accentCircles}>
-              {accentColorKeys.map((key) => (
-                <TouchableOpacity
-                  key={key}
-                  style={[
-                    s.accentCircle,
-                    { backgroundColor: accentColors[key].primary },
-                    accentColor === key && s.accentCircleSelected,
-                  ]}
-                  onPress={() => changeAccent(key)}
-                  activeOpacity={0.7}
-                >
-                  {accentColor === key && (
-                    <Ionicons name="checkmark" size={14} color="#fff" />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
+
+            {/* Personal menu items */}
+            {personalItems.map((item, i) => renderMenuItem(item, i))}
           </View>
+        </CollapsibleSection>
 
-          {/* Other settings items */}
-          {settingsItems.map((item, i) => renderMenuItem(item, i))}
-        </View>
+        {/* ===== MY STUFF SECTION (role-specific) ===== */}
+        {myStuffItems.length > 0 && (
+          <CollapsibleSection title="My Stuff" defaultOpen={true} colors={colors}>
+            <View style={s.menuCard}>
+              {myStuffItems.map((item, i) => renderMenuItem(item, i))}
+            </View>
+          </CollapsibleSection>
+        )}
 
-        {/* ===== LEGAL SECTION ===== */}
-        <Text style={s.sectionHeader}>LEGAL</Text>
-        <View style={s.menuCard}>
-          {legalItems.map((item, i) => renderMenuItem(item, i))}
-        </View>
+        {/* ===== ADMIN TOOLS SECTION (only for admins, default collapsed) ===== */}
+        {isAdmin && (
+          <CollapsibleSection title="Admin Tools" defaultOpen={false} colors={colors}>
+            <View style={s.menuCard}>
+              {adminToolsItems.map((item, i) => renderMenuItem(item, i))}
+            </View>
+          </CollapsibleSection>
+        )}
 
         {/* ===== SIGN OUT ===== */}
         <TouchableOpacity
@@ -352,6 +364,10 @@ export default function MeScreen() {
     </SafeAreaView>
   );
 }
+
+// =============================================================================
+// STYLES
+// =============================================================================
 
 const createStyles = (colors: any, isDark: boolean) =>
   StyleSheet.create({
@@ -437,70 +453,10 @@ const createStyles = (colors: any, isDark: boolean) =>
       fontSize: 12,
       fontWeight: '700',
     },
-    heroSubtitle: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: colors.textSecondary,
-      marginTop: 4,
-    },
     heroOrg: {
       fontSize: 13,
       color: colors.textMuted,
       marginTop: 4,
-    },
-
-    // ===== SECTION HEADERS =====
-    sectionHeader: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: colors.textMuted,
-      textTransform: 'uppercase',
-      letterSpacing: 2,
-      marginTop: 28,
-      marginBottom: 12,
-      marginLeft: 4,
-    },
-
-    // ===== QUICK ACTIONS =====
-    quickActionsGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 12,
-    },
-    quickActionCard: {
-      width: '47%',
-      flexGrow: 1,
-      backgroundColor: colors.glassCard,
-      borderWidth: 1,
-      borderColor: colors.glassBorder,
-      borderRadius: 20,
-      padding: 16,
-      alignItems: 'center',
-      ...Platform.select({
-        ios: {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.08,
-          shadowRadius: 8,
-        },
-        android: {
-          elevation: 3,
-        },
-      }),
-    },
-    quickActionIconWrap: {
-      width: 52,
-      height: 52,
-      borderRadius: 16,
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginBottom: 10,
-    },
-    quickActionLabel: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: colors.text,
-      textAlign: 'center',
     },
 
     // ===== MENU CARD =====

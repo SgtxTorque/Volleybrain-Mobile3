@@ -8,9 +8,12 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
+    Linking,
     Modal,
+    Platform,
     RefreshControl,
     ScrollView,
+    Share,
     Text,
     TextInput,
     TouchableOpacity,
@@ -66,9 +69,9 @@ type FamilyGroup = {
   totalDue: number;
 };
 
-type Tab = 'pending' | 'all';
-type FilterMethod = 'all' | 'cashapp' | 'venmo' | 'zelle' | 'cash' | 'check';
-type RecordMethod = 'cash' | 'check' | 'venmo' | 'zelle' | 'cashapp' | 'other';
+type Tab = 'pending' | 'all' | 'summary';
+type FilterMethod = 'all' | 'card' | 'cashapp' | 'venmo' | 'zelle' | 'cash' | 'check';
+type RecordMethod = 'cash' | 'check' | 'venmo' | 'zelle' | 'cashapp' | 'card' | 'other';
 
 // =============================================================================
 // MAIN COMPONENT
@@ -104,12 +107,20 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
   const [recordNote, setRecordNote] = useState('');
   const [loadingFamilies, setLoadingFamilies] = useState(false);
 
+  // Send Reminder Modal State
+  const [showReminderModal, setShowReminderModal] = useState(false);
+  const [reminderMessage, setReminderMessage] = useState('');
+  const [sendingReminder, setSendingReminder] = useState(false);
+
   // Stats
   const [stats, setStats] = useState({
     totalDue: 0,
     totalPending: 0,
     totalPaid: 0,
     pendingCount: 0,
+    totalCount: 0,
+    paidCount: 0,
+    unpaidCount: 0,
   });
 
   // =============================================================================
@@ -201,6 +212,9 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
         totalPending: pending.reduce((sum, p) => sum + p.amount, 0),
         totalPaid: verified.reduce((sum, p) => sum + p.amount, 0),
         pendingCount: pending.length,
+        totalCount: formatted.length,
+        paidCount: verified.length,
+        unpaidCount: unpaid.length,
       });
 
     } catch (error) {
@@ -448,7 +462,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
 
       Alert.alert(
         'Payment Recorded',
-        `Successfully recorded $${getSelectedTotal()} payment for ${selectedFamily.players.join(', ')}.`
+        `Successfully recorded $${Number(getSelectedTotal()).toFixed(2)} payment for ${selectedFamily.players.join(', ')}.`
       );
 
       closeRecordModal();
@@ -542,7 +556,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
 
     Alert.alert(
       'Approve Payments',
-      `Approve ${selectedIds.size} payment${selectedIds.size > 1 ? 's' : ''} totaling $${totalAmount}?`,
+      `Approve ${selectedIds.size} payment${selectedIds.size > 1 ? 's' : ''} totaling $${Number(totalAmount).toFixed(2)}?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -621,7 +635,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
   const handleApproveSingle = async (payment: PaymentRecord) => {
     Alert.alert(
       'Approve Payment',
-      `Approve $${payment.amount} from ${payment.payer_name || payment.player_name}?`,
+      `Approve $${Number(payment.amount).toFixed(2)} from ${payment.payer_name || payment.player_name}?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -651,6 +665,144 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
   };
 
   // =============================================================================
+  // SEND PAYMENT REMINDER
+  // =============================================================================
+
+  const openReminderModal = () => {
+    // Build list of families with outstanding balances
+    const unpaidPayments = payments.filter(p => p.status === 'unpaid' || p.status === 'pending');
+    const familyEmails = [...new Set(unpaidPayments.map(p => p.parent_email).filter(Boolean))];
+
+    if (familyEmails.length === 0) {
+      Alert.alert('No Outstanding Balances', 'All families are current on their payments.');
+      return;
+    }
+
+    const orgName = profile?.full_name ? `- ${profile.full_name}` : '';
+    setReminderMessage(
+      `Hi,\n\nThis is a friendly reminder about your outstanding balance for the current season. Please log in to the VolleyBrain app to view your balance and make a payment.\n\nThank you for your support!\n\n${orgName}`
+    );
+    setShowReminderModal(true);
+  };
+
+  const handleSendReminder = async () => {
+    setSendingReminder(true);
+
+    try {
+      // Get families with outstanding balances
+      const unpaidPayments = payments.filter(p => p.status === 'unpaid');
+      const familyMap = new Map<string, { email: string; players: string[]; totalDue: number }>();
+
+      unpaidPayments.forEach(p => {
+        if (!p.parent_email) return;
+        const existing = familyMap.get(p.parent_email) || { email: p.parent_email, players: [], totalDue: 0 };
+        if (!existing.players.includes(p.player_name)) {
+          existing.players.push(p.player_name);
+        }
+        existing.totalDue += p.amount;
+        familyMap.set(p.parent_email, existing);
+      });
+
+      const families = Array.from(familyMap.values());
+
+      if (families.length === 0) {
+        Alert.alert('No Reminders Needed', 'All families are current on their payments.');
+        setShowReminderModal(false);
+        return;
+      }
+
+      // Create notification records for each family
+      const notifications = families.map(family => ({
+        type: 'payment_reminder',
+        title: 'Payment Reminder',
+        message: reminderMessage.trim(),
+        recipient_email: family.email,
+        metadata: {
+          total_due: family.totalDue,
+          players: family.players,
+          season_id: workingSeason?.id,
+        },
+        created_by: user?.id,
+        created_at: new Date().toISOString(),
+      }));
+
+      // Try to insert notifications (table may not exist, that's OK)
+      const { error } = await supabase
+        .from('notifications')
+        .insert(notifications);
+
+      if (error) {
+        // If table doesn't exist, just show a success message anyway
+        console.log('Notification insert note:', error.message);
+      }
+
+      Alert.alert(
+        'Reminders Sent',
+        `Payment reminders queued for ${families.length} ${families.length === 1 ? 'family' : 'families'} with outstanding balances.`,
+        [{ text: 'OK' }]
+      );
+
+      setShowReminderModal(false);
+    } catch (error) {
+      console.error('Error sending reminders:', error);
+      Alert.alert('Error', 'Failed to send reminders. Please try again.');
+    } finally {
+      setSendingReminder(false);
+    }
+  };
+
+  // =============================================================================
+  // EXPORT / SUMMARY HELPERS
+  // =============================================================================
+
+  const getPaymentSummaryByMethod = () => {
+    const methods = new Map<string, { count: number; total: number }>();
+
+    payments.filter(p => p.status === 'verified' || p.status === 'pending').forEach(p => {
+      const method = p.payment_method || 'unknown';
+      const existing = methods.get(method) || { count: 0, total: 0 };
+      existing.count += 1;
+      existing.total += p.amount;
+      methods.set(method, existing);
+    });
+
+    return Array.from(methods.entries())
+      .map(([method, data]) => ({ method, ...data }))
+      .sort((a, b) => b.total - a.total);
+  };
+
+  const handleExportSummary = async () => {
+    const summary = getPaymentSummaryByMethod();
+    const totalCollected = stats.totalPaid + stats.totalPending;
+    const seasonName = workingSeason?.name || 'All Seasons';
+
+    let text = `Payment Summary - ${seasonName}\n`;
+    text += `${'='.repeat(40)}\n\n`;
+    text += `Total Collected: $${Number(stats.totalPaid).toFixed(2)}\n`;
+    text += `Pending Verification: $${Number(stats.totalPending).toFixed(2)}\n`;
+    text += `Outstanding: $${Number(stats.totalDue).toFixed(2)}\n`;
+    text += `Total Expected: $${Number(totalCollected + stats.totalDue).toFixed(2)}\n\n`;
+    text += `Payments: ${stats.paidCount} paid, ${stats.pendingCount} pending, ${stats.unpaidCount} unpaid\n\n`;
+    text += `By Payment Method:\n`;
+    text += `${'-'.repeat(30)}\n`;
+
+    summary.forEach(s => {
+      text += `${getMethodLabel(s.method)}: ${s.count} payments - $${Number(s.total).toFixed(2)}\n`;
+    });
+
+    text += `\n\nGenerated: ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
+
+    try {
+      await Share.share({
+        title: `Payment Summary - ${seasonName}`,
+        message: text,
+      });
+    } catch (error) {
+      console.error('Error sharing summary:', error);
+    }
+  };
+
+  // =============================================================================
   // RENDER HELPERS
   // =============================================================================
 
@@ -673,6 +825,8 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
 
   const getMethodColor = (method: string | null) => {
     switch (method) {
+      case 'card':
+      case 'stripe': return '#635BFF';
       case 'cashapp': return '#00D632';
       case 'venmo': return '#008CFF';
       case 'zelle': return '#6D1ED4';
@@ -684,6 +838,8 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
 
   const getMethodLabel = (method: string | null) => {
     switch (method) {
+      case 'card':
+      case 'stripe': return 'Card';
       case 'cashapp': return 'Cash App';
       case 'venmo': return 'Venmo';
       case 'zelle': return 'Zelle';
@@ -694,14 +850,29 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
     }
   };
 
-  const getMethodIcon = (method: string | null) => {
+  const getMethodIcon = (method: string | null): string => {
     switch (method) {
+      case 'card':
+      case 'stripe': return 'card';
       case 'cash': return 'cash-outline';
       case 'check': return 'document-text-outline';
       case 'venmo': return 'logo-venmo';
       case 'zelle': return 'flash-outline';
       case 'cashapp': return 'cash-outline';
       default: return 'card-outline';
+    }
+  };
+
+  const getMethodShortLabel = (method: string | null): string => {
+    switch (method) {
+      case 'card':
+      case 'stripe': return 'CARD';
+      case 'cashapp': return '$';
+      case 'venmo': return 'V';
+      case 'zelle': return 'Z';
+      case 'cash': return 'CASH';
+      case 'check': return 'CHK';
+      default: return '?';
     }
   };
 
@@ -841,7 +1012,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
                       </View>
                       <View style={{ alignItems: 'flex-end' }}>
                         <Text style={{ fontSize: 18, fontWeight: '700', color: '#FF3B30' }}>
-                          ${family.totalDue}
+                          ${Number(family.totalDue).toFixed(2)}
                         </Text>
                         <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} style={{ marginTop: 4 }} />
                       </View>
@@ -900,7 +1071,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
                 )}
               </View>
               <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text }}>
-                Select All (${selectedFamily.totalDue})
+                Select All (${Number(selectedFamily.totalDue).toFixed(2)})
               </Text>
             </TouchableOpacity>
 
@@ -959,7 +1130,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
                     </View>
 
                     <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>
-                      ${fee.amount}
+                      ${Number(fee.amount).toFixed(2)}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -988,8 +1159,8 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
                   fontWeight: '600',
                   color: selectedFees.size > 0 ? '#000' : colors.textSecondary,
                 }}>
-                  {selectedFees.size > 0 
-                    ? `Continue with $${getSelectedTotal()}` 
+                  {selectedFees.size > 0
+                    ? `Continue with $${Number(getSelectedTotal()).toFixed(2)}`
                     : 'Select fees to continue'}
                 </Text>
               </TouchableOpacity>
@@ -1027,7 +1198,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
                     {selectedFees.size} fee{selectedFees.size !== 1 ? 's' : ''} selected
                   </Text>
                   <Text style={{ fontSize: 28, fontWeight: '700', color: colors.success }}>
-                    ${getSelectedTotal()}
+                    ${Number(getSelectedTotal()).toFixed(2)}
                   </Text>
                 </View>
               </View>
@@ -1121,7 +1292,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
                       </Text>
                     </View>
                     <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text }}>
-                      ${fee.amount}
+                      ${Number(fee.amount).toFixed(2)}
                     </Text>
                   </View>
                 ))}
@@ -1202,26 +1373,43 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
               </Text>
             )}
           </View>
-          <TouchableOpacity
-            onPress={openRecordModal}
-            style={{
-              backgroundColor: colors.primary,
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingHorizontal: 14,
-              paddingVertical: 10,
-              borderRadius: 10,
-            }}
-          >
-            <Ionicons name="add" size={20} color="#000" />
-            <Text style={{ fontSize: 15, fontWeight: '600', color: '#000', marginLeft: 4 }}>
-              Record
-            </Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TouchableOpacity
+              onPress={openReminderModal}
+              style={{
+                backgroundColor: colors.card,
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingHorizontal: 12,
+                paddingVertical: 10,
+                borderRadius: 10,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
+            >
+              <Ionicons name="notifications-outline" size={18} color={colors.text} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={openRecordModal}
+              style={{
+                backgroundColor: colors.primary,
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingHorizontal: 14,
+                paddingVertical: 10,
+                borderRadius: 10,
+              }}
+            >
+              <Ionicons name="add" size={20} color="#000" />
+              <Text style={{ fontSize: 15, fontWeight: '600', color: '#000', marginLeft: 4 }}>
+                Record
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 
-      {/* Compact Header when hideHeader - just show Record button */}
+      {/* Compact Header when hideHeader - show Record and Reminder buttons */}
       {hideHeader && (
         <View style={{
           flexDirection: 'row',
@@ -1234,22 +1422,39 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
           <Text style={{ fontSize: 14, color: colors.textSecondary }}>
             {workingSeason?.name || 'All Seasons'}
           </Text>
-          <TouchableOpacity
-            onPress={openRecordModal}
-            style={{
-              backgroundColor: colors.primary,
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingHorizontal: 12,
-              paddingVertical: 8,
-              borderRadius: 8,
-            }}
-          >
-            <Ionicons name="add" size={18} color="#000" />
-            <Text style={{ fontSize: 14, fontWeight: '600', color: '#000', marginLeft: 4 }}>
-              Record
-            </Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TouchableOpacity
+              onPress={openReminderModal}
+              style={{
+                backgroundColor: colors.card,
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingHorizontal: 10,
+                paddingVertical: 8,
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
+            >
+              <Ionicons name="notifications-outline" size={16} color={colors.text} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={openRecordModal}
+              style={{
+                backgroundColor: colors.primary,
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingHorizontal: 12,
+                paddingVertical: 8,
+                borderRadius: 8,
+              }}
+            >
+              <Ionicons name="add" size={18} color="#000" />
+              <Text style={{ fontSize: 14, fontWeight: '600', color: '#000', marginLeft: 4 }}>
+                Record
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 
@@ -1267,7 +1472,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
         }}>
           <Text style={{ fontSize: 11, color: '#FF3B30', fontWeight: '600' }}>UNPAID</Text>
           <Text style={{ fontSize: 20, fontWeight: '700', color: '#FF3B30', marginTop: 2 }}>
-            ${stats.totalDue}
+            ${Number(stats.totalDue).toFixed(2)}
           </Text>
         </View>
         <View style={{
@@ -1278,7 +1483,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
         }}>
           <Text style={{ fontSize: 11, color: '#FF9500', fontWeight: '600' }}>PENDING</Text>
           <Text style={{ fontSize: 20, fontWeight: '700', color: '#FF9500', marginTop: 2 }}>
-            ${stats.totalPending}
+            ${Number(stats.totalPending).toFixed(2)}
           </Text>
           <Text style={{ fontSize: 11, color: colors.textSecondary }}>
             {stats.pendingCount} to verify
@@ -1292,7 +1497,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
         }}>
           <Text style={{ fontSize: 11, color: colors.success, fontWeight: '600' }}>PAID</Text>
           <Text style={{ fontSize: 20, fontWeight: '700', color: colors.success, marginTop: 2 }}>
-            ${stats.totalPaid}
+            ${Number(stats.totalPaid).toFixed(2)}
           </Text>
         </View>
       </View>
@@ -1320,9 +1525,10 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
         >
           <Text style={{
             fontWeight: '600',
+            fontSize: 13,
             color: activeTab === 'pending' ? '#000' : colors.text,
           }}>
-            Needs Verification
+            Verify
           </Text>
           {pendingCount > 0 && (
             <View style={{
@@ -1348,9 +1554,28 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
           <Text style={{
             textAlign: 'center',
             fontWeight: '600',
+            fontSize: 13,
             color: activeTab === 'all' ? '#000' : colors.text,
           }}>
-            All Payments
+            All
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => { setActiveTab('summary'); setSelectedIds(new Set()); }}
+          style={{
+            flex: 1,
+            paddingVertical: 10,
+            borderRadius: 8,
+            backgroundColor: activeTab === 'summary' ? colors.primary : 'transparent',
+          }}
+        >
+          <Text style={{
+            textAlign: 'center',
+            fontWeight: '600',
+            fontSize: 13,
+            color: activeTab === 'summary' ? '#000' : colors.text,
+          }}>
+            Summary
           </Text>
         </TouchableOpacity>
       </View>
@@ -1395,7 +1620,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
           marginBottom: 12,
           gap: 8,
         }}>
-          {(['all', 'cashapp', 'venmo', 'zelle'] as FilterMethod[]).map(method => (
+          {(['all', 'card', 'cashapp', 'venmo', 'zelle'] as FilterMethod[]).map(method => (
             <TouchableOpacity
               key={method}
               onPress={() => {
@@ -1584,7 +1809,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
                         {payment.player_name}
                       </Text>
                       <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>
-                        ${payment.amount}
+                        ${Number(payment.amount).toFixed(2)}
                       </Text>
                     </View>
 

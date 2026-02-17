@@ -6,9 +6,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TabLayout() {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { loading } = usePermissions();
   const { profile } = useAuth();
   const [unreadChatCount, setUnreadChatCount] = useState(0);
@@ -113,8 +115,8 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: colors.bgSecondary,
           borderTopWidth: 0,
-          height: Platform.OS === 'ios' ? 88 : 70,
-          paddingBottom: Platform.OS === 'ios' ? 28 : 10,
+          height: 56 + insets.bottom,
+          paddingBottom: insets.bottom,
           paddingTop: 8,
           ...Platform.select({
             ios: {

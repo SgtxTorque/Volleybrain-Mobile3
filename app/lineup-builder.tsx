@@ -135,7 +135,7 @@ export default function LineupBuilderScreen() {
   const { user } = useAuth();
   const { workingSeason } = useSeason();
   const router = useRouter();
-  const params = useLocalSearchParams<{ eventId?: string }>();
+  const params = useLocalSearchParams<{ eventId?: string; teamId?: string }>();
 
   // State: team selection
   const [teams, setTeams] = useState<Team[]>([]);
@@ -159,6 +159,19 @@ export default function LineupBuilderScreen() {
   const [assigningPosition, setAssigningPosition] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [loadingLineup, setLoadingLineup] = useState(false);
+
+  // State: rotation preview
+  const [showRotationPreview, setShowRotationPreview] = useState(false);
+  const [previewRotation, setPreviewRotation] = useState(0);
+
+  // State: substitutions (positionNumber -> benchPlayerId)
+  const [subs, setSubs] = useState<Record<number, string>>({});
+  const [showSubModal, setShowSubModal] = useState(false);
+  const [subForPosition, setSubForPosition] = useState<number | null>(null);
+
+  // State: RSVP auto-fill
+  const [rsvpPlayerIds, setRsvpPlayerIds] = useState<Set<string>>(new Set());
+  const [loadingRsvps, setLoadingRsvps] = useState(false);
 
   // Resolved event ID
   const eventId = params.eventId || selectedGame?.id || null;
@@ -254,7 +267,14 @@ export default function LineupBuilderScreen() {
       }
 
       setTeams(teamList);
-      if (teamList.length > 0) setSelectedTeam(teamList[0]);
+      // If teamId param passed, select that team; otherwise first team
+      if (params.teamId) {
+        const match = teamList.find((t) => t.id === params.teamId);
+        if (match) setSelectedTeam(match);
+        else if (teamList.length > 0) setSelectedTeam(teamList[0]);
+      } else if (teamList.length > 0) {
+        setSelectedTeam(teamList[0]);
+      }
     } catch (err) {
       console.error('Error loading teams:', err);
     } finally {
@@ -360,6 +380,91 @@ export default function LineupBuilderScreen() {
     }
   };
 
+  // Load RSVP data for auto-fill
+  const loadRsvpPlayers = useCallback(async (evtId: string) => {
+    setLoadingRsvps(true);
+    try {
+      const { data } = await supabase
+        .from('event_rsvps')
+        .select('player_id')
+        .eq('event_id', evtId)
+        .eq('status', 'yes');
+
+      if (data) {
+        setRsvpPlayerIds(new Set(data.map((r: { player_id: string }) => r.player_id)));
+      }
+    } catch (err) {
+      console.error('Error loading RSVPs:', err);
+    } finally {
+      setLoadingRsvps(false);
+    }
+  }, []);
+
+  // Load RSVPs when eventId is available
+  useEffect(() => {
+    if (eventId) {
+      loadRsvpPlayers(eventId);
+    }
+  }, [eventId, loadRsvpPlayers]);
+
+  // Load subs metadata from existing lineup
+  const loadExistingSubstitutions = useCallback(async (evtId: string) => {
+    try {
+      const { data } = await supabase
+        .from('game_lineups')
+        .select('rotation_order, metadata')
+        .eq('event_id', evtId)
+        .not('metadata', 'is', null);
+
+      if (data && data.length > 0) {
+        const subsMap: Record<number, string> = {};
+        for (const record of data) {
+          const meta = record.metadata as any;
+          if (meta?.sub_player_id && record.rotation_order) {
+            subsMap[record.rotation_order] = meta.sub_player_id;
+          }
+        }
+        if (Object.keys(subsMap).length > 0) {
+          setSubs(subsMap);
+        }
+      }
+    } catch (err) {
+      console.error('Error loading substitution metadata:', err);
+    }
+  }, []);
+
+  // Load subs when eventId is available and roster loaded
+  useEffect(() => {
+    if (eventId && roster.length > 0) {
+      loadExistingSubstitutions(eventId);
+    }
+  }, [eventId, roster.length, loadExistingSubstitutions]);
+
+  // ============================================================================
+  // ROTATION PREVIEW HELPERS
+  // ============================================================================
+
+  // Volleyball rotation: clockwise shift. After 1 rotation, player at P2 goes to P1, P3->P2, etc.
+  // Rotation order: 1->6->5->4->3->2->1
+  const getRotatedLineup = useCallback(
+    (rotationCount: number): LineupSlot[] => {
+      const rotationOrder = [1, 2, 3, 4, 5, 6];
+      return lineup.map((slot) => {
+        const posIndex = rotationOrder.indexOf(slot.position);
+        // After N rotations clockwise, position X shows the player who was originally at position (X + N) % 6
+        const sourceIndex = (posIndex + rotationCount) % 6;
+        const sourcePosition = rotationOrder[sourceIndex];
+        const sourceSlot = lineup.find((s) => s.position === sourcePosition);
+        return {
+          ...slot,
+          player: sourceSlot?.player || null,
+          isLibero: sourceSlot?.isLibero || false,
+        };
+      });
+    },
+    [lineup]
+  );
+
   // ============================================================================
   // COMPUTED VALUES
   // ============================================================================
@@ -449,7 +554,11 @@ export default function LineupBuilderScreen() {
   };
 
   const handleAutoFill = () => {
-    const unassignedPlayers = [...benchPlayers];
+    // Prioritize RSVP 'going' players if available, then remaining bench players
+    const rsvpGoingBench = benchPlayers.filter((p) => rsvpPlayerIds.has(p.id));
+    const otherBench = benchPlayers.filter((p) => !rsvpPlayerIds.has(p.id));
+    const unassignedPlayers = rsvpPlayerIds.size > 0 ? [...rsvpGoingBench, ...otherBench] : [...benchPlayers];
+
     setLineup((prev) => {
       const newLineup = [...prev];
       for (let i = 0; i < newLineup.length; i++) {
@@ -481,6 +590,10 @@ export default function LineupBuilderScreen() {
       }
       return newLineup;
     });
+
+    if (rsvpPlayerIds.size > 0) {
+      Alert.alert('Auto-Fill', `Prioritized ${rsvpGoingBench.length} players who RSVP'd "Going".`);
+    }
   };
 
   const handleSaveLineup = async () => {
@@ -500,21 +613,43 @@ export default function LineupBuilderScreen() {
       // Delete existing lineup for this event
       await supabase.from('game_lineups').delete().eq('event_id', eventId);
 
-      // Insert new records
-      const records: Omit<GameLineupRecord, 'id'>[] = filledSlots.map((slot) => ({
-        event_id: eventId,
-        player_id: slot.player!.id,
-        rotation_order: slot.position,
-        is_starter: true,
-        is_libero: slot.isLibero,
-        position: slot.label,
-      }));
+      // Insert starter records (with sub metadata if assigned)
+      const records: Record<string, any>[] = filledSlots.map((slot) => {
+        const record: Record<string, any> = {
+          event_id: eventId,
+          player_id: slot.player!.id,
+          rotation_order: slot.position,
+          is_starter: true,
+          is_libero: slot.isLibero,
+          position: slot.label,
+        };
+        // Attach sub metadata if a substitute is assigned for this position
+        if (subs[slot.position]) {
+          record.metadata = { sub_player_id: subs[slot.position] };
+        }
+        return record;
+      });
 
-      const { error } = await supabase.from('game_lineups').insert(records);
+      // Also save bench subs that are designated but whose starter position has no player
+      // (unlikely but defensive)
+      const benchSubRecords = Object.entries(subs)
+        .filter(([posNum]) => !filledSlots.some((s) => s.position === parseInt(posNum)))
+        .map(([posNum, subPlayerId]) => ({
+          event_id: eventId,
+          player_id: subPlayerId,
+          rotation_order: parseInt(posNum),
+          is_starter: false,
+          is_libero: false,
+          position: 'SUB',
+          metadata: { is_sub_for_position: parseInt(posNum) },
+        }));
+
+      const allRecords = [...records, ...benchSubRecords];
+      const { error } = await supabase.from('game_lineups').insert(allRecords);
 
       if (error) throw error;
 
-      Alert.alert('Lineup Saved', `${filledSlots.length} players saved to the lineup.`);
+      Alert.alert('Lineup Saved', `${filledSlots.length} starters${Object.keys(subs).length > 0 ? ` + ${Object.keys(subs).length} subs` : ''} saved.`);
     } catch (err: any) {
       Alert.alert('Save Failed', err.message || 'Please try again.');
     } finally {
@@ -525,6 +660,78 @@ export default function LineupBuilderScreen() {
   const handleSelectGame = (game: Game) => {
     setSelectedGame(game);
     setShowGameSelector(false);
+  };
+
+  const handleOpenSubModal = (position: number) => {
+    setSubForPosition(position);
+    setShowSubModal(true);
+  };
+
+  const handleAssignSub = (playerId: string) => {
+    if (subForPosition === null) return;
+    setSubs((prev) => ({ ...prev, [subForPosition]: playerId }));
+    setShowSubModal(false);
+    setSubForPosition(null);
+  };
+
+  const handleRemoveSub = (position: number) => {
+    setSubs((prev) => {
+      const next = { ...prev };
+      delete next[position];
+      return next;
+    });
+  };
+
+  const handleAutoFillFromRsvp = async () => {
+    if (!eventId) {
+      Alert.alert('No Game Selected', 'Please select a game first.');
+      return;
+    }
+    if (rsvpPlayerIds.size === 0) {
+      Alert.alert('No RSVPs', 'No players have RSVP\'d "Going" for this event yet.');
+      return;
+    }
+
+    // Filter roster to only RSVP 'going' players who are not yet assigned
+    const goingPlayers = roster.filter(
+      (p) => rsvpPlayerIds.has(p.id) && !assignedPlayerIds.has(p.id)
+    );
+
+    if (goingPlayers.length === 0) {
+      Alert.alert('All Set', 'All RSVP\'d players are already in the lineup.');
+      return;
+    }
+
+    const unassigned = [...goingPlayers];
+    setLineup((prev) => {
+      const newLineup = [...prev];
+      for (let i = 0; i < newLineup.length; i++) {
+        if (!newLineup[i].player && unassigned.length > 0) {
+          // Position-match first
+          const matchIdx = unassigned.findIndex((p) => {
+            const playerPos = (p.position || '').toUpperCase();
+            const slotLabel = newLineup[i].label.toUpperCase();
+            if (slotLabel === 'S' && (playerPos.includes('SET') || playerPos === 'S')) return true;
+            if (slotLabel === 'OH' && (playerPos.includes('OUTSIDE') || playerPos === 'OH')) return true;
+            if (slotLabel === 'MB' && (playerPos.includes('MIDDLE') || playerPos === 'MB')) return true;
+            if (slotLabel === 'OPP' && (playerPos.includes('OPP') || playerPos.includes('RIGHT') || playerPos === 'RS')) return true;
+            return false;
+          });
+          if (matchIdx >= 0) {
+            newLineup[i] = { ...newLineup[i], player: unassigned[matchIdx], isLibero: false };
+            unassigned.splice(matchIdx, 1);
+          }
+        }
+      }
+      for (let i = 0; i < newLineup.length; i++) {
+        if (!newLineup[i].player && unassigned.length > 0) {
+          newLineup[i] = { ...newLineup[i], player: unassigned.shift()!, isLibero: false };
+        }
+      }
+      return newLineup;
+    });
+
+    Alert.alert('RSVP Auto-Fill', `Filled ${goingPlayers.length - unassigned.length} positions from RSVP "Going" players.`);
   };
 
   // ============================================================================
@@ -917,6 +1124,186 @@ export default function LineupBuilderScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* RSVP Auto-Fill Button */}
+        {eventId && rsvpPlayerIds.size > 0 && (
+          <View style={styles.rsvpAutoFillWrap}>
+            <TouchableOpacity
+              style={styles.rsvpAutoFillBtn}
+              onPress={handleAutoFillFromRsvp}
+              disabled={loadingRsvps}
+            >
+              <Ionicons name="people" size={18} color="#10B981" />
+              <Text style={styles.rsvpAutoFillText}>
+                AUTO-FILL FROM RSVP ({rsvpPlayerIds.size} going)
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Rotation Preview */}
+        <View style={styles.rotationSection}>
+          <TouchableOpacity
+            style={styles.rotationToggle}
+            onPress={() => setShowRotationPreview(!showRotationPreview)}
+          >
+            <Ionicons name="sync" size={18} color="#6366F1" />
+            <Text style={styles.rotationToggleText}>
+              {showRotationPreview ? 'HIDE ROTATION PREVIEW' : 'ROTATION PREVIEW'}
+            </Text>
+            <Ionicons
+              name={showRotationPreview ? 'chevron-up' : 'chevron-down'}
+              size={16}
+              color="#6366F1"
+            />
+          </TouchableOpacity>
+
+          {showRotationPreview && (
+            <View style={styles.rotationPreviewContainer}>
+              {/* Rotation Navigation */}
+              <View style={styles.rotationNav}>
+                <TouchableOpacity
+                  style={styles.rotationNavBtn}
+                  onPress={() => setPreviewRotation((prev) => (prev - 1 + 6) % 6)}
+                >
+                  <Ionicons name="chevron-back" size={20} color="#94A3B8" />
+                </TouchableOpacity>
+                <View style={styles.rotationNavCenter}>
+                  <Text style={styles.rotationNavLabel}>
+                    ROTATION {previewRotation + 1} / 6
+                  </Text>
+                  {previewRotation > 0 && (
+                    <TouchableOpacity onPress={() => setPreviewRotation(0)}>
+                      <Text style={styles.rotationResetText}>Reset</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+                <TouchableOpacity
+                  style={styles.rotationNavBtn}
+                  onPress={() => setPreviewRotation((prev) => (prev + 1) % 6)}
+                >
+                  <Ionicons name="chevron-forward" size={20} color="#94A3B8" />
+                </TouchableOpacity>
+              </View>
+
+              {/* All 6 Rotations Mini-View */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.rotationScrollContent}
+              >
+                {[0, 1, 2, 3, 4, 5].map((rotIdx) => {
+                  const rotatedLineup = getRotatedLineup(rotIdx);
+                  const isActive = rotIdx === previewRotation;
+                  return (
+                    <TouchableOpacity
+                      key={rotIdx}
+                      style={[
+                        styles.rotationMiniCard,
+                        isActive && styles.rotationMiniCardActive,
+                      ]}
+                      onPress={() => setPreviewRotation(rotIdx)}
+                    >
+                      <Text
+                        style={[
+                          styles.rotationMiniTitle,
+                          isActive && styles.rotationMiniTitleActive,
+                        ]}
+                      >
+                        R{rotIdx + 1}
+                      </Text>
+                      {/* Mini court: front row */}
+                      <View style={styles.rotationMiniRow}>
+                        {[4, 3, 2].map((pos) => {
+                          const slot = rotatedLineup.find((s) => s.position === pos);
+                          return (
+                            <View key={pos} style={[styles.rotationMiniSlot, { borderColor: slot?.color || '#334155' }]}>
+                              <Text style={styles.rotationMiniSlotText}>
+                                {slot?.player
+                                  ? slot.player.jersey_number || slot.player.first_name.charAt(0)
+                                  : '-'}
+                              </Text>
+                            </View>
+                          );
+                        })}
+                      </View>
+                      {/* Mini court: back row */}
+                      <View style={styles.rotationMiniRow}>
+                        {[5, 6, 1].map((pos) => {
+                          const slot = rotatedLineup.find((s) => s.position === pos);
+                          return (
+                            <View key={pos} style={[styles.rotationMiniSlot, { borderColor: slot?.color || '#334155' }]}>
+                              <Text style={styles.rotationMiniSlotText}>
+                                {slot?.player
+                                  ? slot.player.jersey_number || slot.player.first_name.charAt(0)
+                                  : '-'}
+                              </Text>
+                            </View>
+                          );
+                        })}
+                      </View>
+                      {/* Serve indicator */}
+                      {rotIdx === 0 && (
+                        <Text style={styles.rotationServeLabel}>SERVE</Text>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
+        </View>
+
+        {/* Substitution Management */}
+        {lineup.some((s) => s.player) && (
+          <View style={styles.subsSection}>
+            <View style={styles.subsHeader}>
+              <Ionicons name="swap-horizontal" size={18} color="#F59E0B" />
+              <Text style={styles.subsTitle}>SUBSTITUTIONS</Text>
+            </View>
+            <Text style={styles.subsDescription}>
+              Designate a bench player to sub in for each starter
+            </Text>
+            {lineup
+              .filter((slot) => slot.player)
+              .map((slot) => {
+                const subPlayerId = subs[slot.position];
+                const subPlayer = subPlayerId ? roster.find((p) => p.id === subPlayerId) : null;
+                return (
+                  <View key={slot.position} style={styles.subRow}>
+                    <View style={[styles.subPositionBadge, { backgroundColor: slot.color }]}>
+                      <Text style={styles.subPositionText}>P{slot.position}</Text>
+                    </View>
+                    <View style={styles.subStarterInfo}>
+                      <Text style={styles.subStarterName} numberOfLines={1}>
+                        #{slot.player!.jersey_number || '?'} {slot.player!.first_name}
+                      </Text>
+                      <Text style={styles.subStarterLabel}>{slot.label}</Text>
+                    </View>
+                    <Ionicons name="arrow-forward" size={16} color="#475569" />
+                    {subPlayer ? (
+                      <TouchableOpacity
+                        style={styles.subAssignedWrap}
+                        onPress={() => handleRemoveSub(slot.position)}
+                      >
+                        <Text style={styles.subAssignedName} numberOfLines={1}>
+                          #{subPlayer.jersey_number || '?'} {subPlayer.first_name}
+                        </Text>
+                        <Ionicons name="close-circle" size={16} color="#EF4444" />
+                      </TouchableOpacity>
+                    ) : (
+                      <TouchableOpacity
+                        style={styles.subAssignBtn}
+                        onPress={() => handleOpenSubModal(slot.position)}
+                      >
+                        <Text style={styles.subAssignBtnText}>Set Sub</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                );
+              })}
+          </View>
+        )}
+
         {/* Bench Section */}
         <View style={styles.benchSection}>
           <View style={styles.benchHeader}>
@@ -1046,6 +1433,69 @@ export default function LineupBuilderScreen() {
                   </TouchableOpacity>
                 );
               }}
+            />
+          </View>
+        </View>
+      </Modal>
+
+      {/* Substitution Assignment Modal */}
+      <Modal visible={showSubModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.assignModal}>
+            <View style={styles.assignModalHeader}>
+              <View>
+                <Text style={styles.assignModalTitle}>
+                  SET SUB FOR P{subForPosition}
+                </Text>
+                <Text style={styles.assignModalSubtitle}>
+                  Choose a bench player to substitute in
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowSubModal(false);
+                  setSubForPosition(null);
+                }}
+                style={styles.modalCloseBtn}
+              >
+                <Ionicons name="close" size={24} color="#94A3B8" />
+              </TouchableOpacity>
+            </View>
+
+            <FlatList
+              data={benchPlayers.filter(
+                (p) => !Object.values(subs).includes(p.id) || subs[subForPosition || 0] === p.id
+              )}
+              keyExtractor={(item) => item.id}
+              style={styles.assignList}
+              contentContainerStyle={{ paddingBottom: 20 }}
+              ListEmptyComponent={
+                <View style={styles.assignEmpty}>
+                  <Text style={styles.assignEmptyText}>No bench players available</Text>
+                </View>
+              }
+              renderItem={({ item: player }) => (
+                <TouchableOpacity
+                  style={styles.assignPlayerRow}
+                  onPress={() => handleAssignSub(player.id)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.assignJersey}>
+                    <Text style={styles.assignJerseyText}>
+                      {player.jersey_number || '--'}
+                    </Text>
+                  </View>
+                  <View style={styles.assignPlayerInfo}>
+                    <Text style={styles.assignPlayerName}>
+                      {player.first_name} {player.last_name}
+                    </Text>
+                    {player.position && (
+                      <Text style={styles.assignPlayerPos}>{player.position}</Text>
+                    )}
+                  </View>
+                  <Ionicons name="swap-horizontal" size={24} color="#F59E0B" />
+                </TouchableOpacity>
+              )}
             />
           </View>
         </View>
@@ -1669,5 +2119,236 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#F97316',
     letterSpacing: 0.5,
+  },
+
+  // ── RSVP Auto-Fill ──
+  rsvpAutoFillWrap: {
+    paddingHorizontal: 16,
+    marginBottom: 4,
+  },
+  rsvpAutoFillBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: '#10B98115',
+    borderWidth: 1,
+    borderColor: '#10B98140',
+  },
+  rsvpAutoFillText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#10B981',
+    letterSpacing: 0.5,
+  },
+
+  // ── Rotation Preview ──
+  rotationSection: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  rotationToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(99, 102, 241, 0.3)',
+  },
+  rotationToggleText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#6366F1',
+    letterSpacing: 0.5,
+  },
+  rotationPreviewContainer: {
+    marginTop: 10,
+    backgroundColor: 'rgba(30, 41, 59, 0.5)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    padding: 12,
+  },
+  rotationNav: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 16,
+    marginBottom: 12,
+  },
+  rotationNavBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#1E293B',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  rotationNavCenter: {
+    alignItems: 'center',
+  },
+  rotationNavLabel: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#6366F1',
+    letterSpacing: 1,
+  },
+  rotationResetText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#94A3B8',
+    marginTop: 2,
+    textDecorationLine: 'underline',
+  },
+  rotationScrollContent: {
+    paddingHorizontal: 4,
+    gap: 8,
+  },
+  rotationMiniCard: {
+    width: 100,
+    backgroundColor: '#131924',
+    borderRadius: 12,
+    padding: 8,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#1E293B',
+  },
+  rotationMiniCardActive: {
+    borderColor: '#6366F1',
+    backgroundColor: '#6366F115',
+  },
+  rotationMiniTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#64748B',
+    letterSpacing: 1,
+    marginBottom: 6,
+  },
+  rotationMiniTitleActive: {
+    color: '#6366F1',
+  },
+  rotationMiniRow: {
+    flexDirection: 'row',
+    gap: 4,
+    marginBottom: 4,
+  },
+  rotationMiniSlot: {
+    width: 26,
+    height: 26,
+    borderRadius: 6,
+    borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#0D1117',
+  },
+  rotationMiniSlotText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#CBD5E1',
+  },
+  rotationServeLabel: {
+    fontSize: 7,
+    fontWeight: '700',
+    color: '#10B981',
+    letterSpacing: 0.5,
+    marginTop: 2,
+  },
+
+  // ── Substitution Management ──
+  subsSection: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    backgroundColor: 'rgba(30, 41, 59, 0.5)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    padding: 16,
+  },
+  subsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  subsTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#F59E0B',
+    letterSpacing: 1.5,
+  },
+  subsDescription: {
+    fontSize: 11,
+    color: '#64748B',
+    marginBottom: 12,
+    fontStyle: 'italic',
+  },
+  subRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+    gap: 8,
+  },
+  subPositionBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  subPositionText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#fff',
+  },
+  subStarterInfo: {
+    flex: 1,
+    minWidth: 0,
+  },
+  subStarterName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#CBD5E1',
+  },
+  subStarterLabel: {
+    fontSize: 10,
+    color: '#64748B',
+  },
+  subAssignedWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#F59E0B15',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#F59E0B40',
+  },
+  subAssignedName: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#F59E0B',
+    maxWidth: 80,
+  },
+  subAssignBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#1E293B',
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  subAssignBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#94A3B8',
   },
 });

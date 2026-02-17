@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
@@ -50,7 +51,7 @@ type PaymentSettings = {
   instructions: string | null;
 };
 
-type PaymentMethod = 'cashapp' | 'venmo' | 'zelle';
+type PaymentMethod = 'card' | 'cashapp' | 'venmo' | 'zelle';
 
 type Props = {
   hideHeader?: boolean;
@@ -60,7 +61,13 @@ type Props = {
 // DEEP LINK HELPERS
 // =============================================================================
 
-const buildCashAppLink = (handle: string, amount: number, note: string): string => {
+const buildCashAppDeepLink = (handle: string, amount: number, note: string): string => {
+  const cleanHandle = handle.replace(/^\$/, '');
+  const encodedNote = encodeURIComponent(note);
+  return `cashapp://pay/$${cleanHandle}/${amount}?note=${encodedNote}`;
+};
+
+const buildCashAppWebLink = (handle: string, amount: number, note: string): string => {
   const cleanHandle = handle.replace(/^\$/, '');
   const encodedNote = encodeURIComponent(note);
   return `https://cash.app/$${cleanHandle}/${amount}?note=${encodedNote}`;
@@ -99,9 +106,11 @@ export default function ParentPaymentsScreen({ hideHeader = false }: Props) {
   // Payment flow state
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
   const [payerName, setPayerName] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [checkoutProcessing, setCheckoutProcessing] = useState(false);
 
   // =============================================================================
   // DATA FETCHING
@@ -384,70 +393,231 @@ export default function ParentPaymentsScreen({ hideHeader = false }: Props) {
     setShowPaymentModal(true);
   };
 
+  // =============================================================================
+  // STRIPE CHECKOUT
+  // =============================================================================
+
+  const createMobileCheckoutSession = async () => {
+    const selectedPayments = getSelectedPayments();
+    const totalAmount = getSelectedTotal();
+    const parentEmail = profile?.email || user?.email || '';
+    const parentName = profile?.full_name || payerName || 'Parent';
+
+    const itemsList = selectedPayments.map(p =>
+      `${p.player_name} - ${p.fee_name}`
+    ).join(', ');
+
+    const description = `${organization?.name || 'VolleyBrain'}: ${itemsList}`;
+
+    // Get payment IDs (filter out placeholder new- IDs)
+    const paymentIds = selectedPayments
+      .filter(p => !p.id.startsWith('new-'))
+      .map(p => p.id);
+
+    setCheckoutProcessing(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('stripe-create-checkout', {
+        body: {
+          payment_ids: paymentIds,
+          amount: totalAmount,
+          customer_email: parentEmail,
+          customer_name: parentName,
+          description,
+          success_url: 'volleybrain://payment-success',
+          cancel_url: 'volleybrain://payment-cancel',
+          metadata: {
+            source: 'mobile',
+            organization_id: organization?.id || '',
+          },
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.url) {
+        // Mark payments as pending before opening checkout
+        await markPaymentsPending('card');
+
+        // Open Stripe checkout in browser
+        const result = await WebBrowser.openBrowserAsync(data.url, {
+          dismissButtonStyle: 'cancel',
+          presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
+        });
+
+        setShowPaymentModal(false);
+
+        if (result.type === 'cancel' || result.type === 'dismiss') {
+          // User came back without completing - payment is already pending
+          Alert.alert(
+            'Payment Pending',
+            'Your payment session was started. If you completed payment, it will be verified automatically. If not, you can try again.',
+            [{ text: 'OK' }]
+          );
+        }
+
+        // Refresh payments to reflect any status changes
+        fetchPayments();
+        setSelectedIds(new Set());
+        setSelectedMethod(null);
+      } else {
+        throw new Error('No checkout URL returned');
+      }
+    } catch (err: any) {
+      console.error('Stripe checkout error:', err);
+      Alert.alert(
+        'Payment Error',
+        err?.message || 'Failed to create checkout session. Please try another payment method.'
+      );
+    } finally {
+      setCheckoutProcessing(false);
+    }
+  };
+
+  // =============================================================================
+  // MARK PAYMENTS PENDING HELPER
+  // =============================================================================
+
+  const markPaymentsPending = async (method: PaymentMethod) => {
+    const selectedPayments = getSelectedPayments();
+    const name = payerName.trim() || profile?.full_name || '';
+
+    for (const payment of selectedPayments) {
+      const isNew = payment.id.startsWith('new-');
+
+      if (isNew) {
+        await supabase
+          .from('payments')
+          .insert({
+            player_id: payment.player_id,
+            season_id: payment.season_id,
+            fee_type: payment.fee_type,
+            fee_name: payment.fee_name,
+            amount: payment.amount,
+            status: 'pending',
+            payment_method: method,
+            payer_name: name,
+            reported_at: new Date().toISOString(),
+            paid: false,
+          });
+      } else {
+        await supabase
+          .from('payments')
+          .update({
+            status: 'pending',
+            payment_method: method,
+            payer_name: name,
+            reported_at: new Date().toISOString(),
+          })
+          .eq('id', payment.id);
+      }
+    }
+  };
+
+  // =============================================================================
+  // PAYMENT METHOD SELECTION
+  // =============================================================================
+
   const handleMethodSelect = async (method: PaymentMethod) => {
-    if (!settings) return;
+    if (!settings && method !== 'card') return;
 
     const selectedPayments = getSelectedPayments();
     const totalAmount = getSelectedTotal();
-    
+
     // Build note with all selected items
-    const itemsList = selectedPayments.map(p => 
+    const itemsList = selectedPayments.map(p =>
       `${p.player_name} - ${p.fee_name}`
     ).join(', ');
-    
+
     const note = `${organization?.name || 'Payment'}: ${itemsList}`;
 
     setSelectedMethod(method);
 
-    let url = '';
-
-    if (method === 'cashapp' && settings.cashapp_handle) {
-      url = buildCashAppLink(settings.cashapp_handle, totalAmount, note);
-    } else if (method === 'venmo' && settings.venmo_handle) {
-      url = buildVenmoLink(settings.venmo_handle, totalAmount, note);
-    } else if (method === 'zelle') {
-      Alert.alert(
-        'Pay with Zelle',
-        `Send $${totalAmount} to:\n\n${settings.zelle_email || settings.zelle_phone}\n\nInclude in memo:\n"${note}"`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Open Zelle', 
-            onPress: () => {
-              Linking.openURL('zelle://').catch(() => {
-                Alert.alert('Open your bank app to send via Zelle');
-              });
-              setTimeout(() => {
-                setShowPaymentModal(false);
-                setShowConfirmModal(true);
-              }, 1000);
-            }
-          },
-        ]
-      );
+    // --- Stripe Card ---
+    if (method === 'card') {
+      await createMobileCheckoutSession();
       return;
     }
 
-    if (url) {
+    // --- CashApp ---
+    if (method === 'cashapp' && settings?.cashapp_handle) {
       try {
-        const canOpen = await Linking.canOpenURL(url);
+        const deepLink = buildCashAppDeepLink(settings.cashapp_handle, totalAmount, note);
+        const canOpen = await Linking.canOpenURL(deepLink);
         if (canOpen) {
-          await Linking.openURL(url);
-        } else if (method === 'venmo' && settings.venmo_handle) {
-          await Linking.openURL(buildVenmoWebLink(settings.venmo_handle, totalAmount, note));
+          await Linking.openURL(deepLink);
         } else {
-          Alert.alert('App Not Found', `Please install ${method === 'cashapp' ? 'Cash App' : 'Venmo'} to use this payment method.`);
-          return;
+          // Fallback to web URL
+          await Linking.openURL(buildCashAppWebLink(settings.cashapp_handle, totalAmount, note));
         }
-        
         setTimeout(() => {
           setShowPaymentModal(false);
           setShowConfirmModal(true);
         }, 1000);
       } catch (error) {
-        console.error('Error opening payment app:', error);
-        Alert.alert('Error', 'Could not open payment app');
+        console.error('Error opening Cash App:', error);
+        // Final fallback to web
+        try {
+          await Linking.openURL(buildCashAppWebLink(settings.cashapp_handle, totalAmount, note));
+          setTimeout(() => {
+            setShowPaymentModal(false);
+            setShowConfirmModal(true);
+          }, 1000);
+        } catch {
+          Alert.alert('Error', 'Could not open Cash App. Please install it or try another method.');
+        }
       }
+      return;
+    }
+
+    // --- Venmo ---
+    if (method === 'venmo' && settings?.venmo_handle) {
+      try {
+        const deepLink = buildVenmoLink(settings.venmo_handle, totalAmount, note);
+        const canOpen = await Linking.canOpenURL(deepLink);
+        if (canOpen) {
+          await Linking.openURL(deepLink);
+        } else {
+          // Fallback to web URL
+          await Linking.openURL(buildVenmoWebLink(settings.venmo_handle, totalAmount, note));
+        }
+        setTimeout(() => {
+          setShowPaymentModal(false);
+          setShowConfirmModal(true);
+        }, 1000);
+      } catch (error) {
+        console.error('Error opening Venmo:', error);
+        try {
+          await Linking.openURL(buildVenmoWebLink(settings.venmo_handle, totalAmount, note));
+          setTimeout(() => {
+            setShowPaymentModal(false);
+            setShowConfirmModal(true);
+          }, 1000);
+        } catch {
+          Alert.alert('Error', 'Could not open Venmo. Please install it or try another method.');
+        }
+      }
+      return;
+    }
+
+    // --- Zelle ---
+    if (method === 'zelle') {
+      const zelleRecipient = settings?.zelle_email || settings?.zelle_phone || '';
+      Alert.alert(
+        'Pay with Zelle',
+        `Send $${Number(totalAmount).toFixed(2)} to:\n\n${zelleRecipient}\n\nInclude in memo:\n"${note}"\n\nZelle does not have a universal deep link. Please open your bank app and send the payment manually.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'I Sent Payment',
+            onPress: () => {
+              setShowPaymentModal(false);
+              setShowConfirmModal(true);
+            },
+          },
+        ]
+      );
+      return;
     }
   };
 
@@ -460,53 +630,10 @@ export default function ParentPaymentsScreen({ hideHeader = false }: Props) {
     setSubmitting(true);
 
     try {
-      const selectedPayments = getSelectedPayments();
-      
-      for (const payment of selectedPayments) {
-        const isNew = payment.id.startsWith('new-');
-
-        if (isNew) {
-          const { error } = await supabase
-            .from('payments')
-            .insert({
-              player_id: payment.player_id,
-              season_id: payment.season_id,
-              fee_type: payment.fee_type,
-              fee_name: payment.fee_name,
-              amount: payment.amount,
-              status: 'pending',
-              payment_method: selectedMethod,
-              payer_name: payerName.trim(),
-              reported_at: new Date().toISOString(),
-              paid: false,
-            });
-
-          if (error) throw error;
-        } else {
-          const { error } = await supabase
-            .from('payments')
-            .update({
-              status: 'pending',
-              payment_method: selectedMethod,
-              payer_name: payerName.trim(),
-              reported_at: new Date().toISOString(),
-            })
-            .eq('id', payment.id);
-
-          if (error) throw error;
-        }
-      }
-
-      Alert.alert(
-        'Payment Reported! 🎉',
-        `Your payment of $${getSelectedTotal()} has been reported and is pending verification.`,
-        [{ text: 'OK' }]
-      );
+      await markPaymentsPending(selectedMethod);
 
       setShowConfirmModal(false);
-      setSelectedIds(new Set());
-      setSelectedMethod(null);
-      fetchPayments();
+      setShowPaymentSuccess(true);
 
     } catch (error) {
       console.error('Error reporting payment:', error);
@@ -514,6 +641,13 @@ export default function ParentPaymentsScreen({ hideHeader = false }: Props) {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleDismissSuccess = () => {
+    setShowPaymentSuccess(false);
+    setSelectedIds(new Set());
+    setSelectedMethod(null);
+    fetchPayments();
   };
 
   // =============================================================================
@@ -617,16 +751,16 @@ export default function ParentPaymentsScreen({ hideHeader = false }: Props) {
             Total Balance Due
           </Text>
           <Text style={{ fontSize: 36, fontWeight: '800', color: totalDue > 0 ? '#FF3B30' : colors.success }}>
-            ${totalDue}
+            ${Number(totalDue).toFixed(2)}
           </Text>
           {totalPending > 0 && (
             <Text style={{ fontSize: 13, color: '#FF9500', marginTop: 8 }}>
-              ${totalPending} pending verification
+              ${Number(totalPending).toFixed(2)} pending verification
             </Text>
           )}
           {payments.filter(p => p.status === 'verified').length > 0 && (
             <Text style={{ fontSize: 13, color: colors.success, marginTop: 4 }}>
-              ${payments.filter(p => p.status === 'verified').reduce((s, p) => s + p.amount, 0)} paid
+              ${Number(payments.filter(p => p.status === 'verified').reduce((s, p) => s + p.amount, 0)).toFixed(2)} paid
             </Text>
           )}
         </View>
@@ -682,7 +816,7 @@ export default function ParentPaymentsScreen({ hideHeader = false }: Props) {
             
             {selectedIds.size > 0 && (
               <Text style={{ fontSize: 14, color: colors.primary, fontWeight: '600' }}>
-                {selectedIds.size} selected (${getSelectedTotal()})
+                {selectedIds.size} selected (${Number(getSelectedTotal()).toFixed(2)})
               </Text>
             )}
           </View>
@@ -831,7 +965,7 @@ export default function ParentPaymentsScreen({ hideHeader = false }: Props) {
                       {/* Amount & Status */}
                       <View style={{ alignItems: 'flex-end' }}>
                         <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>
-                          ${payment.amount}
+                          ${Number(payment.amount).toFixed(2)}
                         </Text>
                         <View style={{
                           flexDirection: 'row',
@@ -882,7 +1016,7 @@ export default function ParentPaymentsScreen({ hideHeader = false }: Props) {
           >
             <Ionicons name="card" size={20} color="#000" />
             <Text style={{ fontSize: 17, fontWeight: '600', color: '#000', marginLeft: 8 }}>
-              Pay ${getSelectedTotal()} ({selectedIds.size} item{selectedIds.size > 1 ? 's' : ''})
+              Pay ${Number(getSelectedTotal()).toFixed(2)} ({selectedIds.size} item{selectedIds.size > 1 ? 's' : ''})
             </Text>
           </TouchableOpacity>
         </View>
@@ -919,7 +1053,7 @@ export default function ParentPaymentsScreen({ hideHeader = false }: Props) {
                 marginBottom: 16,
               }} />
               <Text style={{ fontSize: 20, fontWeight: '700', color: colors.text }}>
-                Pay ${getSelectedTotal()}
+                Pay ${Number(getSelectedTotal()).toFixed(2)}
               </Text>
               <Text style={{ fontSize: 14, color: colors.textSecondary, marginTop: 4 }}>
                 {selectedIds.size} item{selectedIds.size > 1 ? 's' : ''} selected
@@ -929,6 +1063,46 @@ export default function ParentPaymentsScreen({ hideHeader = false }: Props) {
             <Text style={{ fontSize: 12, fontWeight: '700', color: colors.textMuted, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1 }}>
               Select Payment Method
             </Text>
+
+            {/* Pay with Card (Stripe) */}
+            <TouchableOpacity
+              onPress={() => handleMethodSelect('card')}
+              disabled={checkoutProcessing}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: '#635BFF',
+                borderRadius: 12,
+                padding: 16,
+                marginBottom: 10,
+                opacity: checkoutProcessing ? 0.7 : 1,
+              }}
+            >
+              <View style={{
+                width: 40,
+                height: 40,
+                borderRadius: 10,
+                backgroundColor: '#fff',
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginRight: 14,
+              }}>
+                {checkoutProcessing ? (
+                  <ActivityIndicator size="small" color="#635BFF" />
+                ) : (
+                  <Ionicons name="card" size={22} color="#635BFF" />
+                )}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 16, fontWeight: '600', color: '#fff' }}>
+                  {checkoutProcessing ? 'Processing...' : 'Pay with Card'}
+                </Text>
+                <Text style={{ fontSize: 13, color: '#ffffffcc' }}>Credit or debit card</Text>
+              </View>
+              {!checkoutProcessing && (
+                <Ionicons name="arrow-forward" size={20} color="#fff" />
+              )}
+            </TouchableOpacity>
 
             {settings?.cashapp_handle && (
               <TouchableOpacity
@@ -957,7 +1131,7 @@ export default function ParentPaymentsScreen({ hideHeader = false }: Props) {
                   <Text style={{ fontSize: 16, fontWeight: '600', color: '#fff' }}>Cash App</Text>
                   <Text style={{ fontSize: 13, color: '#ffffffcc' }}>{settings.cashapp_handle}</Text>
                 </View>
-                <Ionicons name="arrow-forward" size={20} color="#fff" />
+                <Ionicons name="open-outline" size={18} color="#fff" />
               </TouchableOpacity>
             )}
 
@@ -988,7 +1162,7 @@ export default function ParentPaymentsScreen({ hideHeader = false }: Props) {
                   <Text style={{ fontSize: 16, fontWeight: '600', color: '#fff' }}>Venmo</Text>
                   <Text style={{ fontSize: 13, color: '#ffffffcc' }}>{settings.venmo_handle}</Text>
                 </View>
-                <Ionicons name="arrow-forward" size={20} color="#fff" />
+                <Ionicons name="open-outline" size={18} color="#fff" />
               </TouchableOpacity>
             )}
 
@@ -1017,9 +1191,11 @@ export default function ParentPaymentsScreen({ hideHeader = false }: Props) {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 16, fontWeight: '600', color: '#fff' }}>Zelle</Text>
-                  <Text style={{ fontSize: 13, color: '#ffffffcc' }}>{settings.zelle_email || settings.zelle_phone}</Text>
+                  <Text style={{ fontSize: 13, color: '#ffffffcc' }}>
+                    {settings.zelle_email || settings.zelle_phone}
+                  </Text>
                 </View>
-                <Ionicons name="arrow-forward" size={20} color="#fff" />
+                <Ionicons name="information-circle-outline" size={18} color="#fff" />
               </TouchableOpacity>
             )}
 
@@ -1140,6 +1316,130 @@ export default function ParentPaymentsScreen({ hideHeader = false }: Props) {
             >
               <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>
                 No, Go Back
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Payment Success Modal */}
+      <Modal
+        visible={showPaymentSuccess}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={handleDismissSuccess}
+      >
+        <View style={{
+          flex: 1,
+          backgroundColor: 'rgba(0,0,0,0.6)',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: 24,
+        }}>
+          <View style={{
+            backgroundColor: colors.card,
+            borderRadius: 24,
+            padding: 32,
+            alignItems: 'center',
+            width: '100%',
+            maxWidth: 360,
+          }}>
+            <View style={{
+              width: 80,
+              height: 80,
+              borderRadius: 40,
+              backgroundColor: colors.success + '20',
+              justifyContent: 'center',
+              alignItems: 'center',
+              marginBottom: 20,
+            }}>
+              <Ionicons name="checkmark-circle" size={48} color={colors.success} />
+            </View>
+
+            <Text style={{
+              fontSize: 22,
+              fontWeight: '700',
+              color: colors.text,
+              textAlign: 'center',
+              marginBottom: 8,
+            }}>
+              Payment Reported!
+            </Text>
+
+            <Text style={{
+              fontSize: 28,
+              fontWeight: '800',
+              color: colors.success,
+              marginBottom: 12,
+            }}>
+              ${Number(getSelectedTotal()).toFixed(2)}
+            </Text>
+
+            <Text style={{
+              fontSize: 14,
+              color: colors.textSecondary,
+              textAlign: 'center',
+              lineHeight: 20,
+              marginBottom: 8,
+            }}>
+              Your payment has been reported and is pending verification by your coach.
+            </Text>
+
+            {selectedMethod && (
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: (
+                  selectedMethod === 'card' ? '#635BFF' :
+                  selectedMethod === 'cashapp' ? '#00D632' :
+                  selectedMethod === 'venmo' ? '#008CFF' :
+                  '#6D1ED4'
+                ) + '20',
+                paddingHorizontal: 14,
+                paddingVertical: 8,
+                borderRadius: 8,
+                marginBottom: 20,
+              }}>
+                <Ionicons
+                  name={
+                    selectedMethod === 'card' ? 'card' :
+                    selectedMethod === 'cashapp' ? 'cash-outline' :
+                    selectedMethod === 'venmo' ? 'logo-venmo' :
+                    'flash-outline'
+                  }
+                  size={16}
+                  color={
+                    selectedMethod === 'card' ? '#635BFF' :
+                    selectedMethod === 'cashapp' ? '#00D632' :
+                    selectedMethod === 'venmo' ? '#008CFF' :
+                    '#6D1ED4'
+                  }
+                  style={{ marginRight: 6 }}
+                />
+                <Text style={{
+                  fontSize: 13,
+                  fontWeight: '600',
+                  color: colors.text,
+                }}>
+                  via {selectedMethod === 'card' ? 'Credit/Debit Card' :
+                       selectedMethod === 'cashapp' ? 'Cash App' :
+                       selectedMethod === 'venmo' ? 'Venmo' : 'Zelle'}
+                </Text>
+              </View>
+            )}
+
+            <TouchableOpacity
+              onPress={handleDismissSuccess}
+              style={{
+                backgroundColor: colors.primary,
+                borderRadius: 12,
+                padding: 16,
+                alignItems: 'center',
+                width: '100%',
+              }}
+            >
+              <Text style={{ fontSize: 16, fontWeight: '600', color: '#000' }}>
+                Done
               </Text>
             </TouchableOpacity>
           </View>

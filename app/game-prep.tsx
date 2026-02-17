@@ -120,6 +120,9 @@ export default function GamePrepScreen() {
   const [games, setGames] = useState<Game[]>([]);
   const [loadingGames, setLoadingGames] = useState(true);
 
+  // Lineup status for each game (eventId -> count of lineup entries)
+  const [lineupCounts, setLineupCounts] = useState<Record<string, number>>({});
+
   // Game day state
   const [mode, setMode] = useState<GameMode>('list');
   const [activeGame, setActiveGame] = useState<Game | null>(null);
@@ -209,8 +212,32 @@ export default function GamePrepScreen() {
       .order('start_time')
       .limit(20);
 
-    setGames(data || []);
+    const gameList = data || [];
+    setGames(gameList);
     setLoadingGames(false);
+
+    // Load lineup counts for all games
+    if (gameList.length > 0) {
+      loadLineupCounts(gameList.map((g: Game) => g.id));
+    }
+  };
+
+  const loadLineupCounts = async (eventIds: string[]) => {
+    try {
+      const counts: Record<string, number> = {};
+      // Query lineup counts per event
+      for (const eid of eventIds) {
+        const { count } = await supabase
+          .from('game_lineups')
+          .select('id', { count: 'exact', head: true })
+          .eq('event_id', eid)
+          .eq('is_starter', true);
+        counts[eid] = count || 0;
+      }
+      setLineupCounts(counts);
+    } catch (err) {
+      console.error('Error loading lineup counts:', err);
+    }
   };
 
   const loadRoster = async (teamId: string) => {
@@ -346,31 +373,48 @@ export default function GamePrepScreen() {
     setSaving(true);
 
     try {
-      // Calculate totals
-      const ourTotal = setScores.reduce((s, set) => s + set.our, 0);
-      const theirTotal = setScores.reduce((s, set) => s + set.their, 0);
-      const ourSetsWon = setScores.filter(s => s.our > s.their).length;
-      const theirSetsWon = setScores.filter(s => s.their > s.our).length;
-      const gameResult = ourSetsWon > theirSetsWon ? 'win' : ourSetsWon < theirSetsWon ? 'loss' : 'tie';
-
-      // Filter out empty last set
+      // Filter out empty last set (e.g., new set started but no points scored)
       const finalSets = setScores.filter(s => s.our > 0 || s.their > 0);
 
-      // Update schedule_events
-      await supabase
+      // Calculate totals from played sets only
+      const ourTotal = finalSets.reduce((s, set) => s + set.our, 0);
+      const theirTotal = finalSets.reduce((s, set) => s + set.their, 0);
+      const ourSetsWonCount = finalSets.filter(s => s.our > s.their).length;
+      const theirSetsWonCount = finalSets.filter(s => s.their > s.our).length;
+
+      // Determine game result: for volleyball, based on sets won
+      const gameResult: 'win' | 'loss' | 'tie' =
+        ourSetsWonCount > theirSetsWonCount ? 'win' :
+        ourSetsWonCount < theirSetsWonCount ? 'loss' : 'tie';
+
+      // Format set_scores with set_number for structured storage
+      const setScoresJson = finalSets.map((s, i) => ({
+        set_number: i + 1,
+        our_score: s.our,
+        opponent_score: s.their,
+        our: s.our,
+        their: s.their,
+      }));
+
+      // Update schedule_events with all required fields
+      const { error: updateError } = await supabase
         .from('schedule_events')
         .update({
           game_status: 'completed',
           our_score: ourTotal,
           opponent_score: theirTotal,
           game_result: gameResult,
-          set_scores: finalSets,
-          our_sets_won: ourSetsWon,
-          opponent_sets_won: theirSetsWon,
+          set_scores: setScoresJson,
+          our_sets_won: ourSetsWonCount,
+          opponent_sets_won: theirSetsWonCount,
           completed_at: new Date().toISOString(),
           completed_by: user.id,
         })
         .eq('id', activeGame.id);
+
+      if (updateError) {
+        throw new Error(updateError.message || 'Failed to save game results.');
+      }
 
       // Save player stats from live tracking
       const statRecords = Object.entries(playerStats)
@@ -391,20 +435,28 @@ export default function GamePrepScreen() {
 
       if (statRecords.length > 0) {
         await supabase.from('game_player_stats').delete().eq('event_id', activeGame.id);
-        await supabase.from('game_player_stats').insert(statRecords);
+        const { error: statsError } = await supabase.from('game_player_stats').insert(statRecords);
+        if (statsError) {
+          console.error('Failed to save live stats:', statsError);
+          // Don't throw - game completion is the priority, stats can be re-entered
+        }
       }
 
       setShowEndModal(false);
 
-      // Prompt for detailed stats entry
+      // Refresh game list immediately so list view reflects completion
+      loadGames();
+
+      // Show success feedback and prompt for detailed stats entry
+      const resultEmoji = gameResult === 'win' ? 'Victory!' : gameResult === 'loss' ? 'Tough loss.' : 'Tie game.';
       Alert.alert(
-        'Game Saved!',
-        `Final: ${ourTotal} - ${theirTotal} (${gameResult.toUpperCase()})\n\nWould you like to enter detailed player stats?`,
+        `Game Saved! ${resultEmoji}`,
+        `Final: ${ourTotal} - ${theirTotal} (${gameResult.toUpperCase()})\nSets: ${ourSetsWonCount} - ${theirSetsWonCount}\n\nWould you like to enter detailed player stats?`,
         [
           {
             text: 'Skip',
             style: 'cancel',
-            onPress: () => { setMode('list'); loadGames(); },
+            onPress: () => { setMode('list'); },
           },
           {
             text: 'Enter Stats',
@@ -431,7 +483,8 @@ export default function GamePrepScreen() {
         ]
       );
     } catch (error: any) {
-      Alert.alert('Save Failed', error.message || 'Please try again.');
+      console.error('Save game error:', error);
+      Alert.alert('Save Failed', error.message || 'Could not save game results. Please check your connection and try again.');
     } finally {
       setSaving(false);
     }
@@ -746,69 +799,97 @@ export default function GamePrepScreen() {
             games.map(game => {
               const isCompleted = game.game_status === 'completed';
               const isToday = game.event_date === new Date().toISOString().split('T')[0];
+              const lineupCount = lineupCounts[game.id] || 0;
+              const hasLineup = lineupCount > 0;
               return (
-                <TouchableOpacity
-                  key={game.id}
-                  style={[gs.gameCard, isToday && gs.gameCardToday]}
-                  onPress={() => !isCompleted && startGameDay(game)}
-                  disabled={isCompleted}
-                >
-                  <View style={gs.gameCardTop}>
-                    <View style={gs.gameCardDate}>
-                      <Text style={[gs.gameDateText, isToday && { color: '#FF3B3B' }]}>
-                        {formatDate(game.event_date)}
-                      </Text>
-                      {game.start_time && (
-                        <Text style={gs.gameTimeText}>{formatTime(game.start_time)}</Text>
+                <View key={game.id}>
+                  <TouchableOpacity
+                    style={[gs.gameCard, isToday && gs.gameCardToday]}
+                    onPress={() => !isCompleted && startGameDay(game)}
+                    disabled={isCompleted}
+                  >
+                    <View style={gs.gameCardTop}>
+                      <View style={gs.gameCardDate}>
+                        <Text style={[gs.gameDateText, isToday && { color: '#FF3B3B' }]}>
+                          {formatDate(game.event_date)}
+                        </Text>
+                        {game.start_time && (
+                          <Text style={gs.gameTimeText}>{formatTime(game.start_time)}</Text>
+                        )}
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        {/* Lineup Status Badge */}
+                        {hasLineup && (
+                          <View style={gs.lineupBadge}>
+                            <Ionicons name="people" size={10} color="#10B981" />
+                            <Text style={gs.lineupBadgeText}>LINEUP SET</Text>
+                          </View>
+                        )}
+                        {isCompleted ? (
+                          <View style={gs.completedBadge}>
+                            <Text style={gs.completedBadgeText}>COMPLETED</Text>
+                          </View>
+                        ) : isToday ? (
+                          <View style={gs.liveBadge}>
+                            <View style={gs.liveDot} />
+                            <Text style={gs.liveBadgeText}>GAME DAY</Text>
+                          </View>
+                        ) : null}
+                      </View>
+                    </View>
+
+                    <Text style={gs.gameOpponent}>
+                      vs {game.opponent_name || 'TBD'}
+                    </Text>
+
+                    <View style={gs.gameCardBottom}>
+                      {game.location && (
+                        <View style={gs.gameLocation}>
+                          <Ionicons name="location" size={14} color="#64748B" />
+                          <Text style={gs.gameLocationText}>{game.location}</Text>
+                        </View>
+                      )}
+                      {game.location_type && (
+                        <View style={[gs.homeBadge, game.location_type === 'home' ? gs.homeBadgeHome : gs.homeBadgeAway]}>
+                          <Text style={gs.homeBadgeText}>
+                            {game.location_type === 'home' ? 'HOME' : 'AWAY'}
+                          </Text>
+                        </View>
                       )}
                     </View>
-                    {isCompleted ? (
-                      <View style={gs.completedBadge}>
-                        <Text style={gs.completedBadgeText}>COMPLETED</Text>
-                      </View>
-                    ) : isToday ? (
-                      <View style={gs.liveBadge}>
-                        <View style={gs.liveDot} />
-                        <Text style={gs.liveBadgeText}>GAME DAY</Text>
-                      </View>
-                    ) : null}
-                  </View>
 
-                  <Text style={gs.gameOpponent}>
-                    vs {game.opponent_name || 'TBD'}
-                  </Text>
-
-                  <View style={gs.gameCardBottom}>
-                    {game.location && (
-                      <View style={gs.gameLocation}>
-                        <Ionicons name="location" size={14} color="#64748B" />
-                        <Text style={gs.gameLocationText}>{game.location}</Text>
-                      </View>
-                    )}
-                    {game.location_type && (
-                      <View style={[gs.homeBadge, game.location_type === 'home' ? gs.homeBadgeHome : gs.homeBadgeAway]}>
-                        <Text style={gs.homeBadgeText}>
-                          {game.location_type === 'home' ? 'HOME' : 'AWAY'}
+                    {/* Set Lineup Button */}
+                    {!isCompleted && (
+                      <TouchableOpacity
+                        style={gs.setLineupBtnWrap}
+                        onPress={() => {
+                          router.push(`/lineup-builder?eventId=${game.id}&teamId=${game.team_id}` as any);
+                        }}
+                      >
+                        <Ionicons name="grid" size={16} color="#6366F1" />
+                        <Text style={gs.setLineupBtnText}>
+                          {hasLineup ? `EDIT LINEUP (${lineupCount})` : 'SET LINEUP'}
                         </Text>
+                        <Ionicons name="chevron-forward" size={14} color="#6366F1" />
+                      </TouchableOpacity>
+                    )}
+
+                    {!isCompleted && (
+                      <View style={gs.startBtnWrap}>
+                        <Text style={gs.startBtnText}>
+                          {isToday ? 'START GAME DAY' : 'ENTER GAME DAY'}
+                        </Text>
+                        <Ionicons name="play" size={16} color={colors.primary} />
                       </View>
                     )}
-                  </View>
 
-                  {!isCompleted && (
-                    <View style={gs.startBtnWrap}>
-                      <Text style={gs.startBtnText}>
-                        {isToday ? 'START GAME DAY' : 'ENTER GAME DAY'}
-                      </Text>
-                      <Ionicons name="play" size={16} color={colors.primary} />
-                    </View>
-                  )}
-
-                  {isCompleted && game.our_score != null && (
-                    <View style={gs.scoreDisplay}>
-                      <Text style={gs.finalScore}>{game.our_score} - {game.opponent_score}</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
+                    {isCompleted && game.our_score != null && (
+                      <View style={gs.scoreDisplay}>
+                        <Text style={gs.finalScore}>{game.our_score} - {game.opponent_score}</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                </View>
               );
             })
           )}
@@ -1070,6 +1151,12 @@ const gs = StyleSheet.create({
   liveBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FF3B3B20', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
   liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#FF3B3B' },
   liveBadgeText: { fontSize: 10, fontWeight: '700', color: '#FF3B3B', letterSpacing: 0.5 },
+  // Lineup Badge & Set Lineup Button
+  lineupBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#10B98120', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  lineupBadgeText: { fontSize: 9, fontWeight: '700', color: '#10B981', letterSpacing: 0.5 },
+  setLineupBtnWrap: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 10, paddingVertical: 10, borderRadius: 10, backgroundColor: '#6366F115', borderWidth: 1, borderColor: '#6366F140' },
+  setLineupBtnText: { fontSize: 12, fontWeight: '800', color: '#6366F1', letterSpacing: 0.5 },
+
   startBtnWrap: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#1E293B' },
   startBtnText: { fontSize: 14, fontWeight: '800', color: '#F97316', letterSpacing: 1 },
   scoreDisplay: { marginTop: 10, alignItems: 'center' },

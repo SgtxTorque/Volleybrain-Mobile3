@@ -131,8 +131,16 @@ export default function ParentDashboard() {
   const [rsvpStatus, setRsvpStatus] = useState<RsvpStatus>(null);
   const [rsvpLoading, setRsvpLoading] = useState(false);
   const [totalTeamEvents, setTotalTeamEvents] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
   const activeChild = children[activeChildIndex] || null;
+
+  // Reset activeChildIndex if it's out of bounds after children changes
+  useEffect(() => {
+    if (children.length > 0 && activeChildIndex >= children.length) {
+      setActiveChildIndex(0);
+    }
+  }, [children.length]);
 
   useEffect(() => {
     fetchParentData();
@@ -157,7 +165,10 @@ export default function ParentDashboard() {
   // -------------------------------------------------------------------------
 
   const fetchParentData = async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      setLoading(false);
+      return;
+    }
 
     try {
       // Get the parent's email (from profile or user)
@@ -293,6 +304,7 @@ export default function ParentDashboard() {
 
       // Fetch upcoming events for teams
       if (teamIds.length > 0) {
+        try {
         const today = new Date().toISOString().split('T')[0];
 
         const { data: events } = await supabase
@@ -377,6 +389,13 @@ export default function ParentDashboard() {
           .select('*', { count: 'exact', head: true })
           .in('team_id', teamIds);
         setTotalTeamEvents(eventCount || 0);
+        } catch (eventsErr) {
+          console.error('Error fetching events:', eventsErr);
+          // Non-fatal: events section will just show empty
+          setUpcomingEvents([]);
+          setRecentGames([]);
+          setTodayGame(null);
+        }
       } else {
         setUpcomingEvents([]);
         setRecentGames([]);
@@ -385,28 +404,34 @@ export default function ParentDashboard() {
 
       // Calculate payment status across all children
       if (formattedChildren.length > 0) {
-        const childIds = formattedChildren.map(c => c.id);
+        try {
+          const childIds = formattedChildren.map(c => c.id);
 
-        const { data: payments } = await supabase
-          .from('payments')
-          .select('amount, paid, player_id')
-          .in('player_id', childIds);
+          const { data: payments } = await supabase
+            .from('payments')
+            .select('amount, paid, player_id')
+            .in('player_id', childIds);
 
-        // Count unique player-season combinations for total owed
-        const uniqueRegistrations = new Set(formattedChildren.map(c => `${c.id}-${c.season_id}`));
-        const seasonFee = workingSeason?.fee_registration || 335;
-        const totalOwed = uniqueRegistrations.size * seasonFee;
-        const totalPaid = (payments || []).filter(p => p.paid).reduce((sum, p) => sum + (p.amount || 0), 0);
+          // Count unique player-season combinations for total owed
+          const uniqueRegistrations = new Set(formattedChildren.map(c => `${c.id}-${c.season_id}`));
+          const seasonFee = workingSeason?.fee_registration || 335;
+          const totalOwed = uniqueRegistrations.size * seasonFee;
+          const totalPaid = (payments || []).filter(p => p.paid).reduce((sum, p) => sum + (p.amount || 0), 0);
 
-        setPaymentStatus({
-          total_owed: totalOwed,
-          total_paid: totalPaid,
-          balance: totalOwed - totalPaid,
-        });
+          setPaymentStatus({
+            total_owed: totalOwed,
+            total_paid: totalPaid,
+            balance: totalOwed - totalPaid,
+          });
+        } catch (payErr) {
+          console.error('Error fetching payment status:', payErr);
+          // Non-fatal: payment card will just show $0
+        }
       }
 
-    } catch (error) {
-      console.error('Error fetching parent data:', error);
+    } catch (err) {
+      console.error('Error fetching parent data:', err);
+      setError('We couldn\u2019t load your family data. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -479,8 +504,12 @@ export default function ParentDashboard() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchParentData();
-    setRefreshing(false);
+    setError(null);
+    try {
+      await fetchParentData();
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   // -------------------------------------------------------------------------
@@ -573,6 +602,36 @@ export default function ParentDashboard() {
       <View style={s.loadingContainer}>
         <ActivityIndicator size="large" color={colors.primary} />
         <Text style={s.loadingText}>Loading your family...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={s.loadingContainer}>
+        <Ionicons name="alert-circle-outline" size={48} color={colors.danger} />
+        <Text style={[s.loadingText, { color: colors.danger, fontWeight: '600', fontSize: 16 }]}>
+          Something went wrong
+        </Text>
+        <Text style={[s.loadingText, { textAlign: 'center', paddingHorizontal: 32 }]}>
+          {error}
+        </Text>
+        <TouchableOpacity
+          style={{
+            marginTop: 16,
+            backgroundColor: colors.primary,
+            paddingHorizontal: 24,
+            paddingVertical: 12,
+            borderRadius: 12,
+          }}
+          onPress={() => {
+            setError(null);
+            setLoading(true);
+            fetchParentData();
+          }}
+        >
+          <Text style={{ color: '#000', fontWeight: '700', fontSize: 15 }}>Try Again</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -683,7 +742,7 @@ export default function ParentDashboard() {
                       <Text style={s.multiChildAvatarIcon}>{child.sport_icon}</Text>
                     ) : (
                       <Text style={[s.multiChildAvatarText, child.sport_color ? { color: child.sport_color } : {}]}>
-                        {child.first_name.charAt(0)}{child.last_name.charAt(0)}
+                        {(child.first_name || '').charAt(0)}{(child.last_name || '').charAt(0)}
                       </Text>
                     )}
                   </View>
@@ -891,7 +950,7 @@ export default function ParentDashboard() {
               s.pulseValue,
               { color: paymentStatus.balance > 0 ? colors.warning : colors.success },
             ]}>
-              {paymentStatus.balance > 0 ? `$${paymentStatus.balance} Due` : '$0 Due'}
+              {paymentStatus.balance > 0 ? `$${Number(paymentStatus.balance).toFixed(2)} Due` : '$0.00 Due'}
             </Text>
             <Text style={s.pulseLabel}>Payments</Text>
           </TouchableOpacity>
@@ -1007,7 +1066,7 @@ export default function ParentDashboard() {
             </View>
             <View>
               <Text style={s.paymentTitle}>Outstanding Balance</Text>
-              <Text style={s.paymentAmount}>${paymentStatus.balance}</Text>
+              <Text style={s.paymentAmount}>${Number(paymentStatus.balance).toFixed(2)}</Text>
             </View>
           </View>
           <TouchableOpacity
@@ -1521,7 +1580,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   pulseCard: {
     flex: 1,
     backgroundColor: colors.glassCard,
-    borderRadius: 20,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.glassBorder,
     paddingVertical: 16,
@@ -1556,7 +1615,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   statCard: {
     width: '48%' as any,
     backgroundColor: colors.glassCard,
-    borderRadius: 20,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.glassBorder,
     padding: 18,

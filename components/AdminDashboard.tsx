@@ -206,7 +206,7 @@ export default function AdminDashboard() {
     if (teamCount === 0) alertList.push({ text: 'No teams created yet', route: '/(tabs)/teams', type: 'error', borderColor: colors.danger });
     if (playerCount === 0 && (!newRegCount || newRegCount === 0)) alertList.push({ text: 'No players registered yet', route: '/(tabs)/players', type: 'error', borderColor: colors.danger });
     if (coachCount === 0) alertList.push({ text: 'No coaches added yet', route: '/(tabs)/coaches', type: 'error', borderColor: colors.danger });
-    if (outstanding > 0) alertList.push({ text: '$' + outstanding + ' in outstanding payments', route: '/(tabs)/payments', type: 'warning', borderColor: colors.warning });
+    if (outstanding > 0) alertList.push({ text: '$' + Number(outstanding).toFixed(2) + ' in outstanding payments', route: '/(tabs)/payments', type: 'warning', borderColor: colors.warning });
 
     const orgId = profile?.current_organization_id;
     const { count: pendingCount } = await supabase.from('invitations').select('*', { count: 'exact', head: true }).eq('status', 'pending').eq('organization_id', orgId);
@@ -269,7 +269,7 @@ export default function AdminDashboard() {
       const name = pay.players ? `${pay.players.first_name || ''} ${pay.players.last_name || ''}`.trim() : 'Unknown';
       activities.push({
         id: 'pay-' + pay.id,
-        text: 'Payment received: $' + pay.amount + ' from ' + name,
+        text: 'Payment received: $' + Number(pay.amount).toFixed(2) + ' from ' + name,
         timestamp: pay.created_at,
         color: colors.info,
       });
@@ -753,7 +753,7 @@ export default function AdminDashboard() {
           <View style={[s.revenueBarFill, { width: `${Math.min(revenuePercent, 100)}%` }]} />
         </View>
         <Text style={s.revenueDetail}>
-          ${totalCollected.toLocaleString()} of ${totalExpected.toLocaleString()} collected
+          ${totalCollected.toFixed(2)} of ${totalExpected.toFixed(2)} collected
         </Text>
         <View style={s.revenueSubStats}>
           <View style={s.revenueSubStat}>
@@ -1579,7 +1579,7 @@ const createStyles = (colors: any, sportColors: any) => StyleSheet.create({
   actionCard: {
     width: '47%',
     backgroundColor: colors.glassCard,
-    borderRadius: 20,
+    borderRadius: 16,
     padding: 20,
     alignItems: 'center',
     borderWidth: 1,

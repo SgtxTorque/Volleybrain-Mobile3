@@ -92,8 +92,8 @@ export default function CoachDashboard() {
     if (!user?.id || !workingSeason?.id) return;
 
     try {
-      // Get teams where user is head coach
-      const { data: headCoachTeams } = await supabase
+      // Get ALL teams where user is on staff (head_coach or assistant_coach)
+      const { data: allStaffTeams } = await supabase
         .from('team_staff')
         .select(`
           team_id,
@@ -107,27 +107,10 @@ export default function CoachDashboard() {
           )
         `)
         .eq('user_id', user.id)
-        .eq('role', 'head_coach');
+        .in('role', ['head_coach', 'assistant_coach']);
 
-      // Get teams where user is assistant coach
-      const { data: assistantTeams } = await supabase
-        .from('team_staff')
-        .select(`
-          team_id,
-          role,
-          teams (
-            id,
-            name,
-            season_id,
-            seasons (name),
-            age_groups (name)
-          )
-        `)
-        .eq('user_id', user.id)
-        .eq('role', 'assistant_coach');
-
-      // Combine and filter to current season
-      const allTeamData = [...(headCoachTeams || []), ...(assistantTeams || [])];
+      // Filter to current season
+      const allTeamData = allStaffTeams || [];
       const seasonTeams = allTeamData.filter(t => {
         const team = t.teams as any;
         return team?.season_id === workingSeason.id;
@@ -227,22 +210,7 @@ export default function CoachDashboard() {
 
         setUpcomingEvents(formattedEvents);
 
-        // Count total and played games for season progress
-        const { count: totalGameCount } = await supabase
-          .from('schedule_events')
-          .select('*', { count: 'exact', head: true })
-          .in('team_id', teamIds)
-          .eq('event_type', 'game');
-
-        const { count: playedGameCount } = await supabase
-          .from('schedule_events')
-          .select('*', { count: 'exact', head: true })
-          .in('team_id', teamIds)
-          .eq('event_type', 'game')
-          .not('game_result', 'is', null);
-
-        setTotalGames(totalGameCount || 0);
-        setGamesPlayed(playedGameCount || 0);
+        // Season progress will be updated per active team in fetchTeamSpecificData
       }
 
     } catch (error) {
@@ -306,6 +274,23 @@ export default function CoachDashboard() {
       } else {
         setAvailableCount(null);
       }
+
+      // Fetch season progress for this team
+      const { count: totalGameCount } = await supabase
+        .from('schedule_events')
+        .select('*', { count: 'exact', head: true })
+        .eq('team_id', teamId)
+        .eq('event_type', 'game');
+
+      const { count: playedGameCount } = await supabase
+        .from('schedule_events')
+        .select('*', { count: 'exact', head: true })
+        .eq('team_id', teamId)
+        .eq('event_type', 'game')
+        .not('game_result', 'is', null);
+
+      setTotalGames(totalGameCount || 0);
+      setGamesPlayed(playedGameCount || 0);
 
       // Fetch top performers from recent game stats
       const { data: recentGameStats } = await supabase
@@ -446,8 +431,9 @@ export default function CoachDashboard() {
 
   const firstName = profile?.full_name?.split(' ')[0] || 'Coach';
 
-  // Season progress
-  const totalWins = teams.reduce((sum, t) => sum + t.wins, 0);
+  // Season progress (scoped to active team)
+  const totalWins = activeTeam ? activeTeam.wins : teams.reduce((sum, t) => sum + t.wins, 0);
+  const totalLosses = activeTeam ? activeTeam.losses : teams.reduce((sum, t) => sum + t.losses, 0);
   const winRate = gamesPlayed > 0 ? Math.round((totalWins / gamesPlayed) * 100) : 0;
 
   const s = createStyles(colors);
@@ -1080,7 +1066,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   actionCard: {
     width: '47%',
     backgroundColor: colors.glassCard,
-    borderRadius: 20,
+    borderRadius: 16,
     padding: 20,
     alignItems: 'center',
     borderWidth: 1,

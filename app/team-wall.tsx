@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Image,
   Modal,
   Platform,
   RefreshControl,
@@ -45,9 +46,11 @@ type Post = {
   title: string | null;
   content: string;
   post_type: string;
+  media_url?: string | null;
   is_pinned: boolean;
   is_published: boolean;
   reaction_count: number;
+  comment_count?: number;
   created_at: string;
   profiles: PostProfile | null;
 };
@@ -74,7 +77,9 @@ type ScheduleEvent = {
   notes: string | null;
 };
 
-type PostType = 'announcement' | 'game_recap' | 'shoutout' | 'milestone' | 'photo';
+type PostType = 'text' | 'announcement' | 'game_recap' | 'shoutout' | 'milestone' | 'photo';
+
+type ReactionType = 'like' | 'heart' | 'fire' | 'clap';
 
 type TabKey = 'feed' | 'roster' | 'schedule';
 
@@ -83,6 +88,7 @@ type TabKey = 'feed' | 'roster' | 'schedule';
 // =============================================================================
 
 const POST_TYPE_CONFIG: Record<PostType, { label: string; color: string; icon: keyof typeof Ionicons.glyphMap }> = {
+  text: { label: 'Post', color: '#64748B', icon: 'chatbubble' },
   announcement: { label: 'Announcement', color: '#F97316', icon: 'megaphone' },
   game_recap: { label: 'Game Recap', color: '#10B981', icon: 'trophy' },
   shoutout: { label: 'Shoutout', color: '#A855F7', icon: 'heart' },
@@ -90,7 +96,14 @@ const POST_TYPE_CONFIG: Record<PostType, { label: string; color: string; icon: k
   photo: { label: 'Photo', color: '#3B82F6', icon: 'camera' },
 };
 
-const POST_TYPES: PostType[] = ['announcement', 'game_recap', 'shoutout', 'milestone', 'photo'];
+const POST_TYPES: PostType[] = ['text', 'announcement', 'game_recap', 'shoutout', 'milestone', 'photo'];
+
+const REACTION_CONFIG: { type: ReactionType; emoji: string; label: string }[] = [
+  { type: 'like', emoji: '👍', label: 'Like' },
+  { type: 'heart', emoji: '❤️', label: 'Heart' },
+  { type: 'fire', emoji: '🔥', label: 'Fire' },
+  { type: 'clap', emoji: '👏', label: 'Clap' },
+];
 
 const AVATAR_COLORS = [
   '#F97316', '#10B981', '#3B82F6', '#A855F7', '#EF4444',
@@ -105,9 +118,15 @@ const getAvatarColor = (name: string): string => {
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 };
 
-const getInitial = (name: string | null): string => {
+const getInitials = (name: string | null): string => {
   if (!name) return '?';
-  return name.trim().charAt(0).toUpperCase();
+  return name
+    .trim()
+    .split(' ')
+    .map((w) => w.charAt(0))
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 };
 
 const formatTimestamp = (iso: string): string => {
@@ -169,13 +188,12 @@ export default function TeamWallScreen() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(false);
   const [refreshingFeed, setRefreshingFeed] = useState(false);
-  const [likedPostIds, setLikedPostIds] = useState<Set<string>>(new Set());
+  const [userReactions, setUserReactions] = useState<Record<string, string>>({}); // postId -> reaction_type
 
   // New post modal
   const [showNewPostModal, setShowNewPostModal] = useState(false);
-  const [newPostTitle, setNewPostTitle] = useState('');
   const [newPostContent, setNewPostContent] = useState('');
-  const [newPostType, setNewPostType] = useState<PostType>('announcement');
+  const [newPostType, setNewPostType] = useState<PostType>('text');
   const [submittingPost, setSubmittingPost] = useState(false);
 
   // Roster state
@@ -212,6 +230,51 @@ export default function TeamWallScreen() {
       loadSchedule();
     }
   }, [teamId, activeTab]);
+
+  // =============================================================================
+  // REAL-TIME SUBSCRIPTION
+  // =============================================================================
+
+  useEffect(() => {
+    if (!teamId) return;
+
+    const channel = supabase
+      .channel(`team-wall-${teamId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'team_posts',
+          filter: `team_id=eq.${teamId}`,
+        },
+        async (payload) => {
+          const newPost = payload.new as any;
+          // Only add if not already in list (avoid duplicates from our own inserts)
+          if (newPost && newPost.is_published && !posts.find((p) => p.id === newPost.id)) {
+            // Fetch the author profile
+            const { data: authorProfile } = await supabase
+              .from('profiles')
+              .select('id, full_name, avatar_url')
+              .eq('id', newPost.author_id)
+              .single();
+
+            const postWithProfile: Post = {
+              ...newPost,
+              profiles: authorProfile || null,
+              reaction_count: 0,
+              comment_count: 0,
+            };
+            setPosts((prev) => [postWithProfile, ...prev]);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [teamId]);
 
   const loadUserTeams = async () => {
     if (!user?.id) return;
@@ -345,28 +408,33 @@ export default function TeamWallScreen() {
     if (!teamId) return;
     setLoadingPosts(true);
     try {
-      const { data, count } = await supabase
+      const { data } = await supabase
         .from('team_posts')
-        .select('*, profiles:author_id(id, full_name, avatar_url)', { count: 'exact' })
+        .select('*, profiles:author_id(id, full_name, avatar_url)')
         .eq('team_id', teamId)
         .eq('is_published', true)
         .order('is_pinned', { ascending: false })
         .order('created_at', { ascending: false })
-        .limit(20);
+        .limit(30);
 
-      setPosts((data as Post[]) || []);
+      const postsData = (data as Post[]) || [];
+      setPosts(postsData);
 
-      // Load user's reactions
-      if (user?.id && data && data.length > 0) {
-        const postIds = data.map((p: any) => p.id);
+      // Load user's reactions for these posts
+      if (user?.id && postsData.length > 0) {
+        const postIds = postsData.map((p) => p.id);
         const { data: reactions } = await supabase
           .from('post_reactions')
-          .select('post_id')
+          .select('post_id, reaction_type')
           .eq('user_id', user.id)
           .in('post_id', postIds);
 
         if (reactions) {
-          setLikedPostIds(new Set(reactions.map(r => r.post_id)));
+          const reactionsMap: Record<string, string> = {};
+          for (const r of reactions) {
+            reactionsMap[r.post_id] = r.reaction_type;
+          }
+          setUserReactions(reactionsMap);
         }
       }
     } catch (error) {
@@ -382,47 +450,66 @@ export default function TeamWallScreen() {
     setRefreshingFeed(false);
   }, [teamId]);
 
-  const handleToggleLike = async (postId: string) => {
+  const handleReaction = async (postId: string, reactionType: ReactionType) => {
     if (!user?.id) return;
 
-    const isLiked = likedPostIds.has(postId);
+    const currentReaction = userReactions[postId];
+    const isRemoving = currentReaction === reactionType;
 
     // Optimistic update
-    const newLiked = new Set(likedPostIds);
-    const updatedPosts = posts.map(p => {
+    const newReactions = { ...userReactions };
+    const updatedPosts = posts.map((p) => {
       if (p.id === postId) {
-        return { ...p, reaction_count: p.reaction_count + (isLiked ? -1 : 1) };
+        let delta = 0;
+        if (isRemoving) {
+          delta = -1;
+        } else if (currentReaction) {
+          delta = 0; // switching reaction type, count stays the same
+        } else {
+          delta = 1;
+        }
+        return { ...p, reaction_count: Math.max(0, (p.reaction_count || 0) + delta) };
       }
       return p;
     });
-    if (isLiked) {
-      newLiked.delete(postId);
+
+    if (isRemoving) {
+      delete newReactions[postId];
     } else {
-      newLiked.add(postId);
+      newReactions[postId] = reactionType;
     }
-    setLikedPostIds(newLiked);
+    setUserReactions(newReactions);
     setPosts(updatedPosts);
 
     try {
-      if (isLiked) {
+      if (isRemoving) {
+        // Remove reaction
         await supabase
           .from('post_reactions')
           .delete()
           .eq('post_id', postId)
           .eq('user_id', user.id);
+      } else if (currentReaction) {
+        // Update existing reaction type
+        await supabase
+          .from('post_reactions')
+          .update({ reaction_type: reactionType })
+          .eq('post_id', postId)
+          .eq('user_id', user.id);
       } else {
+        // Insert new reaction
         await supabase
           .from('post_reactions')
           .insert({
             post_id: postId,
             user_id: user.id,
-            reaction_type: 'like',
+            reaction_type: reactionType,
           });
       }
     } catch (error) {
       // Revert on error
-      console.error('Error toggling like:', error);
-      setLikedPostIds(likedPostIds);
+      console.error('Error toggling reaction:', error);
+      setUserReactions(userReactions);
       setPosts(posts);
     }
   };
@@ -435,29 +522,30 @@ export default function TeamWallScreen() {
 
     setSubmittingPost(true);
     try {
+      const insertPayload: any = {
+        team_id: teamId,
+        author_id: user.id,
+        title: null,
+        content: newPostContent.trim(),
+        post_type: newPostType,
+        is_pinned: false,
+        is_published: true,
+      };
+
       const { data, error } = await supabase
         .from('team_posts')
-        .insert({
-          team_id: teamId,
-          author_id: user.id,
-          title: newPostTitle.trim() || null,
-          content: newPostContent.trim(),
-          post_type: newPostType,
-          is_pinned: false,
-          is_published: true,
-        })
+        .insert(insertPayload)
         .select('*, profiles:author_id(id, full_name, avatar_url)')
         .single();
 
       if (error) throw error;
 
       if (data) {
-        setPosts(prev => [{ ...data, reaction_count: 0 } as Post, ...prev]);
+        setPosts((prev) => [{ ...data, reaction_count: 0, comment_count: 0 } as Post, ...prev]);
       }
 
-      setNewPostTitle('');
       setNewPostContent('');
-      setNewPostType('announcement');
+      setNewPostType('text');
       setShowNewPostModal(false);
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to create post.');
@@ -501,7 +589,6 @@ export default function TeamWallScreen() {
           photo_url: p.photo_url,
         }))
         .sort((a: RosterPlayer, b: RosterPlayer) => {
-          // Sort by jersey number first, then name
           if (a.jersey_number !== null && b.jersey_number !== null) {
             return a.jersey_number - b.jersey_number;
           }
@@ -609,10 +696,10 @@ export default function TeamWallScreen() {
 
   const renderPostCard = ({ item: post }: { item: Post }) => {
     const authorName = post.profiles?.full_name || 'Unknown';
-    const initial = getInitial(authorName);
+    const initials = getInitials(authorName);
     const avatarColor = getAvatarColor(authorName);
-    const typeConfig = POST_TYPE_CONFIG[post.post_type as PostType] || POST_TYPE_CONFIG.announcement;
-    const isLiked = likedPostIds.has(post.id);
+    const typeConfig = POST_TYPE_CONFIG[post.post_type as PostType] || POST_TYPE_CONFIG.text;
+    const currentUserReaction = userReactions[post.id];
 
     return (
       <View style={s.postCard}>
@@ -624,10 +711,10 @@ export default function TeamWallScreen() {
           </View>
         )}
 
-        {/* Post header */}
+        {/* Post header: avatar + name + time ago + type badge */}
         <View style={s.postHeader}>
-          <View style={[s.avatar, { backgroundColor: avatarColor }]}>
-            <Text style={s.avatarText}>{initial}</Text>
+          <View style={[s.postAvatar, { backgroundColor: avatarColor }]}>
+            <Text style={s.postAvatarText}>{initials}</Text>
           </View>
           <View style={s.postHeaderInfo}>
             <Text style={s.postAuthor}>{authorName}</Text>
@@ -645,22 +732,53 @@ export default function TeamWallScreen() {
         {post.title && <Text style={s.postTitle}>{post.title}</Text>}
         <Text style={s.postContent}>{post.content}</Text>
 
-        {/* Post footer */}
-        <View style={s.postFooter}>
-          <TouchableOpacity
-            style={[s.likeButton, isLiked && s.likeButtonActive]}
-            onPress={() => handleToggleLike(post.id)}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name={isLiked ? 'heart' : 'heart-outline'}
-              size={18}
-              color={isLiked ? colors.danger : colors.textMuted}
+        {/* Photo if attached (full width image) */}
+        {post.media_url && (
+          <View style={s.postImageContainer}>
+            <Image
+              source={{ uri: post.media_url }}
+              style={s.postImage}
+              resizeMode="cover"
             />
-            <Text style={[s.likeCount, isLiked && { color: colors.danger }]}>
-              {post.reaction_count || 0}
-            </Text>
-          </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Reaction bar with emoji reactions */}
+        <View style={s.postFooter}>
+          <View style={s.reactionBar}>
+            {REACTION_CONFIG.map((reaction) => {
+              const isActive = currentUserReaction === reaction.type;
+              return (
+                <TouchableOpacity
+                  key={reaction.type}
+                  style={[
+                    s.reactionButton,
+                    isActive && { backgroundColor: colors.primary + '15' },
+                  ]}
+                  onPress={() => handleReaction(post.id, reaction.type)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={s.reactionEmoji}>{reaction.emoji}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <View style={s.postStats}>
+            {(post.reaction_count || 0) > 0 && (
+              <Text style={s.postStatText}>
+                {post.reaction_count} {post.reaction_count === 1 ? 'reaction' : 'reactions'}
+              </Text>
+            )}
+            {(post.comment_count || 0) > 0 && (
+              <TouchableOpacity style={s.commentLink}>
+                <Ionicons name="chatbubble-outline" size={13} color={colors.textMuted} />
+                <Text style={s.postStatText}>
+                  {post.comment_count} {post.comment_count === 1 ? 'comment' : 'comments'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       </View>
     );
@@ -668,7 +786,7 @@ export default function TeamWallScreen() {
 
   const renderRosterPlayer = ({ item: player }: { item: RosterPlayer }) => {
     const fullName = `${player.first_name} ${player.last_name}`;
-    const initial = getInitial(player.first_name);
+    const initials = getInitials(player.first_name);
     const avatarColor = getAvatarColor(fullName);
 
     return (
@@ -677,7 +795,7 @@ export default function TeamWallScreen() {
           {player.jersey_number !== null ? (
             <Text style={s.rosterJerseyNumber}>#{player.jersey_number}</Text>
           ) : (
-            <Text style={s.avatarText}>{initial}</Text>
+            <Text style={s.postAvatarText}>{initials}</Text>
           )}
         </View>
         <View style={s.rosterInfo}>
@@ -745,6 +863,28 @@ export default function TeamWallScreen() {
       </View>
     );
   };
+
+  // Helper: feed header with "What's on your mind?" prompt
+  const renderFeedHeader = () => (
+    <View>
+      {/* "What's on your mind?" prompt card */}
+      <TouchableOpacity
+        style={s.composeCard}
+        onPress={() => setShowNewPostModal(true)}
+        activeOpacity={0.7}
+      >
+        <View style={[s.composeAvatar, { backgroundColor: colors.primary }]}>
+          <Text style={s.composeAvatarText}>
+            {getInitials(profile?.full_name || user?.email || null)}
+          </Text>
+        </View>
+        <View style={s.composeInputMock}>
+          <Text style={s.composeInputText}>What's on your mind?</Text>
+        </View>
+        <Ionicons name="create-outline" size={22} color={colors.primary} />
+      </TouchableOpacity>
+    </View>
+  );
 
   // =============================================================================
   // MAIN RENDER
@@ -837,7 +977,7 @@ export default function TeamWallScreen() {
           ) : posts.length === 0 ? (
             <ScrollView
               style={s.tabContent}
-              contentContainerStyle={s.centeredScroll}
+              contentContainerStyle={s.emptyFeedScroll}
               refreshControl={
                 <RefreshControl
                   refreshing={refreshingFeed}
@@ -847,19 +987,25 @@ export default function TeamWallScreen() {
                 />
               }
             >
-              <Ionicons name="newspaper-outline" size={56} color={colors.textMuted} />
-              <Text style={s.emptyTitle}>No Posts Yet</Text>
-              <Text style={s.emptySubtitle}>
-                {isCoachOrAdmin
-                  ? 'Be the first to post an update for your team!'
-                  : 'Check back later for team updates.'}
-              </Text>
+              {/* Still show the compose card at top for empty state */}
+              {renderFeedHeader()}
+
+              <View style={s.emptyStateContainer}>
+                <Ionicons name="newspaper-outline" size={56} color={colors.textMuted} />
+                <Text style={s.emptyTitle}>No Posts Yet</Text>
+                <Text style={s.emptySubtitle}>
+                  {isCoachOrAdmin
+                    ? 'Be the first to post an update for your team!'
+                    : 'Check back later for team updates.'}
+                </Text>
+              </View>
             </ScrollView>
           ) : (
             <FlatList
               data={posts}
               keyExtractor={(item) => item.id}
               renderItem={renderPostCard}
+              ListHeaderComponent={renderFeedHeader}
               contentContainerStyle={s.listContent}
               refreshControl={
                 <RefreshControl
@@ -871,17 +1017,6 @@ export default function TeamWallScreen() {
               }
               showsVerticalScrollIndicator={false}
             />
-          )}
-
-          {/* Floating Action Button for New Post (coaches/admins only) */}
-          {isCoachOrAdmin && (
-            <TouchableOpacity
-              style={[s.fab, { backgroundColor: teamColor }]}
-              onPress={() => setShowNewPostModal(true)}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="add" size={28} color="#fff" />
-            </TouchableOpacity>
           )}
         </View>
       )}
@@ -939,14 +1074,14 @@ export default function TeamWallScreen() {
         <View style={s.modalOverlay}>
           <View style={s.modalContent}>
             <View style={s.modalHeader}>
-              <Text style={s.modalTitle}>New Post</Text>
+              <Text style={s.modalTitle}>Create Post</Text>
               <TouchableOpacity onPress={() => setShowNewPostModal(false)}>
                 <Ionicons name="close" size={24} color={colors.text} />
               </TouchableOpacity>
             </View>
 
             <ScrollView style={s.modalScroll} keyboardShouldPersistTaps="handled">
-              {/* Post Type Selector */}
+              {/* Post Type Selector Chips */}
               <Text style={s.modalLabel}>Post Type</Text>
               <ScrollView
                 horizontal
@@ -961,13 +1096,13 @@ export default function TeamWallScreen() {
                     <TouchableOpacity
                       key={pt}
                       style={[
-                        s.postTypeOption,
+                        s.postTypeChip,
                         isSelected && { backgroundColor: config.color + '20', borderColor: config.color },
                       ]}
                       onPress={() => setNewPostType(pt)}
                     >
-                      <Ionicons name={config.icon} size={16} color={isSelected ? config.color : colors.textMuted} />
-                      <Text style={[s.postTypeOptionText, isSelected && { color: config.color }]}>
+                      <Ionicons name={config.icon} size={14} color={isSelected ? config.color : colors.textMuted} />
+                      <Text style={[s.postTypeChipText, isSelected && { color: config.color, fontWeight: '600' }]}>
                         {config.label}
                       </Text>
                     </TouchableOpacity>
@@ -975,29 +1110,19 @@ export default function TeamWallScreen() {
                 })}
               </ScrollView>
 
-              {/* Title */}
-              <Text style={s.modalLabel}>Title (optional)</Text>
-              <TextInput
-                style={s.modalInput}
-                value={newPostTitle}
-                onChangeText={setNewPostTitle}
-                placeholder="Post title..."
-                placeholderTextColor={colors.textMuted}
-                maxLength={200}
-              />
-
               {/* Content */}
-              <Text style={s.modalLabel}>Content</Text>
+              <Text style={s.modalLabel}>What's on your mind?</Text>
               <TextInput
                 style={[s.modalInput, s.modalTextArea]}
                 value={newPostContent}
                 onChangeText={setNewPostContent}
-                placeholder="What's happening with the team?"
+                placeholder="Share something with your team..."
                 placeholderTextColor={colors.textMuted}
                 multiline
-                numberOfLines={5}
+                numberOfLines={6}
                 textAlignVertical="top"
                 maxLength={2000}
+                autoFocus
               />
               <Text style={s.charCount}>
                 {newPostContent.length}/2000
@@ -1006,7 +1131,7 @@ export default function TeamWallScreen() {
 
             <View style={s.modalFooter}>
               <TouchableOpacity
-                style={[s.cancelBtn]}
+                style={s.cancelBtn}
                 onPress={() => setShowNewPostModal(false)}
               >
                 <Text style={s.cancelBtnText}>Cancel</Text>
@@ -1052,12 +1177,6 @@ const createStyles = (colors: any) =>
     },
     centered: {
       flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      padding: 32,
-    },
-    centeredScroll: {
-      flexGrow: 1,
       justifyContent: 'center',
       alignItems: 'center',
       padding: 32,
@@ -1212,6 +1331,16 @@ const createStyles = (colors: any) =>
     },
 
     // Empty states
+    emptyFeedScroll: {
+      flexGrow: 1,
+      padding: 16,
+    },
+    emptyStateContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingVertical: 60,
+    },
     emptyTitle: {
       fontSize: 18,
       fontWeight: '600',
@@ -1226,14 +1355,60 @@ const createStyles = (colors: any) =>
       lineHeight: 20,
     },
 
-    // Post Cards
+    // =========================================================================
+    // COMPOSE CARD ("What's on your mind?")
+    // =========================================================================
+    composeCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.glassCard,
+      borderWidth: 1,
+      borderColor: colors.glassBorder,
+      borderRadius: 16,
+      padding: 14,
+      marginBottom: 16,
+      gap: 12,
+      ...Platform.select({
+        ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8 },
+        android: { elevation: 3 },
+      }),
+    },
+    composeAvatar: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    composeAvatarText: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: '#fff',
+    },
+    composeInputMock: {
+      flex: 1,
+      backgroundColor: colors.bgSecondary,
+      borderRadius: 20,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    composeInputText: {
+      fontSize: 14,
+      color: colors.textMuted,
+    },
+
+    // =========================================================================
+    // POST CARDS
+    // =========================================================================
     postCard: {
       backgroundColor: colors.glassCard,
       borderWidth: 1,
       borderColor: colors.glassBorder,
       borderRadius: 16,
-      padding: 16,
-      marginBottom: 12,
+      marginBottom: 14,
+      overflow: 'hidden',
       ...Platform.select({
         ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
         android: { elevation: 6 },
@@ -1243,7 +1418,8 @@ const createStyles = (colors: any) =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: 4,
-      marginBottom: 10,
+      paddingHorizontal: 16,
+      paddingTop: 12,
       paddingBottom: 8,
       borderBottomWidth: 1,
       borderBottomColor: colors.glassBorder,
@@ -1258,17 +1434,19 @@ const createStyles = (colors: any) =>
     postHeader: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginBottom: 12,
+      paddingHorizontal: 16,
+      paddingTop: 14,
+      paddingBottom: 10,
     },
-    avatar: {
-      width: 38,
-      height: 38,
-      borderRadius: 19,
+    postAvatar: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
       justifyContent: 'center',
       alignItems: 'center',
     },
-    avatarText: {
-      fontSize: 16,
+    postAvatarText: {
+      fontSize: 15,
       fontWeight: '700',
       color: '#fff',
     },
@@ -1277,7 +1455,7 @@ const createStyles = (colors: any) =>
       marginLeft: 10,
     },
     postAuthor: {
-      fontSize: 14,
+      fontSize: 15,
       fontWeight: '600',
       color: colors.text,
     },
@@ -1302,36 +1480,64 @@ const createStyles = (colors: any) =>
       fontSize: 16,
       fontWeight: '700',
       color: colors.text,
+      paddingHorizontal: 16,
       marginBottom: 4,
     },
     postContent: {
       fontSize: 14,
       color: colors.textSecondary,
-      lineHeight: 20,
+      lineHeight: 21,
+      paddingHorizontal: 16,
+      paddingBottom: 8,
     },
+
+    // Post image (full width)
+    postImageContainer: {
+      width: '100%',
+      marginBottom: 4,
+    },
+    postImage: {
+      width: '100%',
+      height: 220,
+      backgroundColor: colors.bgSecondary,
+    },
+
+    // Post footer: reaction bar + stats
     postFooter: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginTop: 12,
-      paddingTop: 10,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
       borderTopWidth: 1,
       borderTopColor: colors.glassBorder,
     },
-    likeButton: {
+    reactionBar: {
+      flexDirection: 'row',
+      gap: 6,
+      marginBottom: 6,
+    },
+    reactionButton: {
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    reactionEmoji: {
+      fontSize: 16,
+    },
+    postStats: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 6,
-      paddingVertical: 4,
-      paddingHorizontal: 8,
-      borderRadius: 8,
+      gap: 14,
     },
-    likeButtonActive: {
-      backgroundColor: colors.danger + '15',
-    },
-    likeCount: {
-      fontSize: 13,
-      fontWeight: '500',
+    postStatText: {
+      fontSize: 12,
       color: colors.textMuted,
+      fontWeight: '500',
+    },
+    commentLink: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
     },
 
     // Roster Cards
@@ -1480,22 +1686,6 @@ const createStyles = (colors: any) =>
       color: colors.textMuted,
     },
 
-    // FAB
-    fab: {
-      position: 'absolute',
-      right: 20,
-      bottom: 24,
-      width: 56,
-      height: 56,
-      borderRadius: 28,
-      justifyContent: 'center',
-      alignItems: 'center',
-      ...Platform.select({
-        ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 },
-        android: { elevation: 8 },
-      }),
-    },
-
     // Modal
     modalOverlay: {
       flex: 1,
@@ -1542,7 +1732,7 @@ const createStyles = (colors: any) =>
     postTypeScrollContent: {
       gap: 8,
     },
-    postTypeOption: {
+    postTypeChip: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
@@ -1553,7 +1743,7 @@ const createStyles = (colors: any) =>
       borderColor: colors.border,
       backgroundColor: colors.background,
     },
-    postTypeOptionText: {
+    postTypeChipText: {
       fontSize: 13,
       fontWeight: '500',
       color: colors.textMuted,
@@ -1569,7 +1759,7 @@ const createStyles = (colors: any) =>
       borderColor: colors.border,
     },
     modalTextArea: {
-      minHeight: 120,
+      minHeight: 140,
     },
     charCount: {
       fontSize: 12,

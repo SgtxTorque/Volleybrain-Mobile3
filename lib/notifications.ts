@@ -4,16 +4,24 @@ import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
+const isExpoGo = Constants.appOwnership === 'expo';
+
 // Set notification handler for foreground notifications
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: false,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+try {
+  if (!isExpoGo) {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: false,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
+    });
+  }
+} catch (e) {
+  console.log('Notifications not available:', e);
+}
 
 export type NotificationType =
   | 'volunteer_needed'
@@ -41,6 +49,11 @@ export interface AppNotification {
 // =====================================================
 export async function registerForPushNotificationsAsync(): Promise<string | null> {
   try {
+    if (isExpoGo) {
+      console.log('Push notifications are not available in Expo Go');
+      return null;
+    }
+
     if (!Device.isDevice) {
       console.log('Push notifications require a physical device');
       return null;
@@ -60,8 +73,9 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     }
 
     // Get Expo push token
+    const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
     const tokenData = await Notifications.getExpoPushTokenAsync({
-      projectId: Constants.expoConfig?.extra?.eas?.projectId,
+      projectId,
     });
 
     // Android channel setup

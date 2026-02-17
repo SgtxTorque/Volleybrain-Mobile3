@@ -354,6 +354,11 @@ export default function ChatScreen() {
       </View>
 
       {/* Messages */}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
       <FlatList
         ref={flatListRef}
         data={messages}
@@ -386,14 +391,13 @@ export default function ChatScreen() {
       )}
 
       {/* Input */}
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={s.inputContainer}>
           {currentMember?.can_post !== false ? (
             <>
               <TouchableOpacity style={s.inputBtn} onPress={showMediaActionSheet}>
                 <Ionicons name="add-circle" size={28} color={colors.primary} />
               </TouchableOpacity>
-              
+
               <TouchableOpacity style={s.inputBtn} onPress={() => setShowGifPicker(true)}>
                 <Text style={s.gifBtn}>GIF</Text>
               </TouchableOpacity>
