@@ -58,6 +58,8 @@ export default function AppDrawer({ visible, onClose }: AppDrawerProps) {
           { id: 'registration', label: 'Registration', icon: 'person-add', route: '/registration-hub' },
           { id: 'users', label: 'Users', icon: 'people-circle', route: '/users' },
           { id: 'coach-availability', label: 'Coach Availability', icon: 'calendar-outline', route: '/coach-availability' },
+          { id: 'game-prep', label: 'Game Prep', icon: 'analytics', route: '/game-prep' },
+          { id: 'lineup-builder', label: 'Lineup Builder', icon: 'grid', route: '/lineup-builder' },
         ],
       });
     }
@@ -72,6 +74,7 @@ export default function AppDrawer({ visible, onClose }: AppDrawerProps) {
           { id: 'schedule', label: 'Schedule', icon: 'calendar', route: '/(tabs)/schedule' },
           { id: 'availability', label: 'My Availability', icon: 'calendar-outline', route: '/coach-availability' },
           { id: 'game-prep', label: 'Game Prep', icon: 'analytics', route: '/game-prep' },
+          { id: 'lineup-builder', label: 'Lineup Builder', icon: 'grid', route: '/lineup-builder' },
         ],
       });
     }
@@ -99,6 +102,15 @@ export default function AppDrawer({ visible, onClose }: AppDrawerProps) {
         ],
       });
     }
+
+    // LEAGUE section (always visible — shared features)
+    sections.push({
+      title: 'League',
+      items: [
+        { id: 'team-wall', label: 'Team Wall', icon: 'chatbubbles', route: '/team-wall' },
+        { id: 'standings', label: 'Standings', icon: 'trophy', route: '/standings' },
+      ],
+    });
 
     // SETTINGS section (always visible)
     sections.push({

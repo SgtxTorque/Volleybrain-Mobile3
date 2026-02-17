@@ -597,36 +597,36 @@ export default function ParentPaymentsScreen({ hideHeader = false }: Props) {
         contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        {/* Debug Info - REMOVE AFTER TESTING */}
-        {false && debugInfo ? (
-          <View style={{
-            backgroundColor: '#FFE4B5',
-            borderRadius: 8,
-            padding: 12,
-            marginBottom: 16,
-          }}>
-            <Text style={{ fontSize: 11, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', color: '#333' }}>
-              DEBUG:{'\n'}{debugInfo}
-            </Text>
-          </View>
-        ) : null}
+        {/* Debug removed */}
 
         {/* Summary Card */}
         <View style={{
-          backgroundColor: colors.card,
-          borderRadius: 12,
+          backgroundColor: colors.glassCard,
+          borderRadius: 16,
           padding: 16,
           marginBottom: 20,
+          borderWidth: 1,
+          borderColor: colors.glassBorder,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.15,
+          shadowRadius: 12,
+          elevation: 6,
         }}>
-          <Text style={{ fontSize: 14, color: colors.textSecondary, marginBottom: 4 }}>
+          <Text style={{ fontSize: 12, color: colors.textMuted, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1 }}>
             Total Balance Due
           </Text>
-          <Text style={{ fontSize: 32, fontWeight: '700', color: totalDue > 0 ? '#FF3B30' : colors.success }}>
+          <Text style={{ fontSize: 36, fontWeight: '800', color: totalDue > 0 ? '#FF3B30' : colors.success }}>
             ${totalDue}
           </Text>
           {totalPending > 0 && (
             <Text style={{ fontSize: 13, color: '#FF9500', marginTop: 8 }}>
               ${totalPending} pending verification
+            </Text>
+          )}
+          {payments.filter(p => p.status === 'verified').length > 0 && (
+            <Text style={{ fontSize: 13, color: colors.success, marginTop: 4 }}>
+              ${payments.filter(p => p.status === 'verified').reduce((s, p) => s + p.amount, 0)} paid
             </Text>
           )}
         </View>
@@ -691,10 +691,12 @@ export default function ParentPaymentsScreen({ hideHeader = false }: Props) {
         {/* Payments List */}
         {payments.length === 0 ? (
           <View style={{
-            backgroundColor: colors.card,
-            borderRadius: 12,
+            backgroundColor: colors.glassCard,
+            borderRadius: 16,
             padding: 32,
             alignItems: 'center',
+            borderWidth: 1,
+            borderColor: colors.glassBorder,
           }}>
             <Ionicons name="checkmark-circle" size={48} color={colors.success} />
             <Text style={{ color: colors.text, marginTop: 12, fontSize: 16, fontWeight: '600' }}>
@@ -712,10 +714,17 @@ export default function ParentPaymentsScreen({ hideHeader = false }: Props) {
               <View
                 key={key}
                 style={{
-                  backgroundColor: colors.card,
-                  borderRadius: 12,
+                  backgroundColor: colors.glassCard,
+                  borderRadius: 16,
                   marginBottom: 16,
                   overflow: 'hidden',
+                  borderWidth: 1,
+                  borderColor: colors.glassBorder,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 12,
+                  elevation: 6,
                 }}
               >
                 {/* Player Header */}
@@ -804,6 +813,19 @@ export default function ParentPaymentsScreen({ hideHeader = false }: Props) {
                             Awaiting verification
                           </Text>
                         )}
+                        {payment.status === 'verified' && (
+                          <View style={{ marginTop: 2 }}>
+                            <Text style={{ fontSize: 12, color: colors.success }}>
+                              Paid{payment.payment_method ? ` via ${payment.payment_method}` : ''}
+                              {payment.reported_at ? ` on ${new Date(payment.reported_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` : ''}
+                            </Text>
+                            {payment.payer_name && (
+                              <Text style={{ fontSize: 11, color: colors.textMuted }}>
+                                By: {payment.payer_name}
+                              </Text>
+                            )}
+                          </View>
+                        )}
                       </View>
 
                       {/* Amount & Status */}
@@ -879,11 +901,14 @@ export default function ParentPaymentsScreen({ hideHeader = false }: Props) {
           justifyContent: 'flex-end',
         }}>
           <View style={{
-            backgroundColor: colors.card,
+            backgroundColor: colors.bgSecondary,
             borderTopLeftRadius: 24,
             borderTopRightRadius: 24,
             padding: 20,
             paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+            borderWidth: 1,
+            borderBottomWidth: 0,
+            borderColor: colors.glassBorder,
           }}>
             <View style={{ alignItems: 'center', marginBottom: 20 }}>
               <View style={{
@@ -893,7 +918,7 @@ export default function ParentPaymentsScreen({ hideHeader = false }: Props) {
                 borderRadius: 2,
                 marginBottom: 16,
               }} />
-              <Text style={{ fontSize: 20, fontWeight: '600', color: colors.text }}>
+              <Text style={{ fontSize: 20, fontWeight: '700', color: colors.text }}>
                 Pay ${getSelectedTotal()}
               </Text>
               <Text style={{ fontSize: 14, color: colors.textSecondary, marginTop: 4 }}>
@@ -901,7 +926,7 @@ export default function ParentPaymentsScreen({ hideHeader = false }: Props) {
               </Text>
             </View>
 
-            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textSecondary, marginBottom: 12 }}>
+            <Text style={{ fontSize: 12, fontWeight: '700', color: colors.textMuted, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1 }}>
               Select Payment Method
             </Text>
 

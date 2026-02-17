@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-type Step = 'account' | 'child' | 'review';
+type Step = 'account' | 'child' | 'waiver' | 'review';
 
 type AgeGroup = {
   id: string;
@@ -78,27 +78,31 @@ export default function ParentRegisterScreen() {
   // COPPA Consent
   const [coppaConsent, setCoppaConsent] = useState(false);
 
+  // Waiver
+  const [liabilityWaiver, setLiabilityWaiver] = useState(false);
+  const [photoWaiver, setPhotoWaiver] = useState(false);
+  const [conductWaiver, setConductWaiver] = useState(false);
+  const [signatureName, setSignatureName] = useState('');
+
+  // Fees
+  const [seasonFees, setSeasonFees] = useState<{ fee_type: string; fee_name: string; amount: number }[]>([]);
+
   useEffect(() => {
     fetchSeasons();
   }, []);
 
   const fetchSeasons = async () => {
-    const { data: org } = await supabase
-      .from('organizations')
-      .select('id')
-      .eq('slug', 'black-hornets')
-      .single();
-
-    if (!org) {
-      setLoadingSeasons(false);
-      return;
-    }
-
+    // Load all orgs with open registration seasons (not hardcoded to one org)
     const { data: seasonsData } = await supabase
       .from('seasons')
       .select(`
         id,
         name,
+        organization_id,
+        fee_registration,
+        fee_uniform,
+        fee_monthly,
+        months_in_season,
         age_groups (
           id,
           name,
@@ -106,15 +110,41 @@ export default function ParentRegisterScreen() {
           max_age
         )
       `)
-      .eq('organization_id', org.id)
       .eq('registration_open', true)
       .order('created_at', { ascending: false });
 
     if (seasonsData && seasonsData.length > 0) {
       setSeasons(seasonsData);
       setSelectedSeasonId(seasonsData[0].id);
+      loadFeesForSeason(seasonsData[0].id);
     }
     setLoadingSeasons(false);
+  };
+
+  const loadFeesForSeason = async (seasonId: string) => {
+    const { data: fees } = await supabase
+      .from('season_fees')
+      .select('fee_type, fee_name, amount')
+      .eq('season_id', seasonId)
+      .order('sort_order');
+
+    if (fees && fees.length > 0) {
+      setSeasonFees(fees);
+    } else {
+      // Fallback: use season-level fees
+      const season = seasons.find(s => s.id === seasonId) as any;
+      if (season) {
+        const fallbackFees: { fee_type: string; fee_name: string; amount: number }[] = [];
+        if (season.fee_registration) fallbackFees.push({ fee_type: 'registration', fee_name: 'Registration Fee', amount: season.fee_registration });
+        if (season.fee_uniform) fallbackFees.push({ fee_type: 'uniform', fee_name: 'Uniform Fee', amount: season.fee_uniform });
+        if (season.fee_monthly && season.months_in_season) {
+          for (let i = 1; i <= season.months_in_season; i++) {
+            fallbackFees.push({ fee_type: `monthly_${i}`, fee_name: `Monthly Fee (Month ${i})`, amount: season.fee_monthly });
+          }
+        }
+        setSeasonFees(fallbackFees);
+      }
+    }
   };
 
   const validateAccountStep = (): boolean => {
@@ -153,17 +183,32 @@ export default function ParentRegisterScreen() {
     return true;
   };
 
+  const validateWaiverStep = (): boolean => {
+    if (!liabilityWaiver) {
+      Alert.alert('Waiver Required', 'You must accept the liability waiver to continue.');
+      return false;
+    }
+    if (!signatureName.trim()) {
+      Alert.alert('Signature Required', 'Please type your full name as electronic signature.');
+      return false;
+    }
+    return true;
+  };
+
   const handleNext = () => {
     if (step === 'account' && validateAccountStep()) {
       setStep('child');
     } else if (step === 'child' && validateChildStep()) {
+      setStep('waiver');
+    } else if (step === 'waiver' && validateWaiverStep()) {
       setStep('review');
     }
   };
 
   const handleBack = () => {
     if (step === 'child') setStep('account');
-    else if (step === 'review') setStep('child');
+    else if (step === 'waiver') setStep('child');
+    else if (step === 'review') setStep('waiver');
     else router.back();
   };
 
@@ -183,14 +228,10 @@ export default function ParentRegisterScreen() {
       if (signUpError) throw signUpError;
       if (!authData.user) throw new Error('Failed to create account');
 
-      // 2. Get org ID
-      const { data: org } = await supabase
-        .from('organizations')
-        .select('id')
-        .eq('slug', 'black-hornets')
-        .single();
-
-      if (!org) throw new Error('Organization not found');
+      // 2. Get org ID from selected season
+      const season = seasons.find(s => s.id === selectedSeasonId) as any;
+      const orgId = season?.organization_id;
+      if (!orgId) throw new Error('Organization not found');
 
       // 3. Update profile with additional info
       const { error: profileError } = await supabase
@@ -198,7 +239,7 @@ export default function ParentRegisterScreen() {
         .update({
           full_name: fullName.trim(),
           phone: phone.trim() || null,
-          current_organization_id: org.id,
+          current_organization_id: orgId,
           onboarding_completed: true,
           pending_approval: !skipApproval, // Skip approval if using invite code
         })
@@ -208,7 +249,7 @@ export default function ParentRegisterScreen() {
 
       // 4. Grant parent role
       await supabase.from('user_roles').insert({
-        organization_id: org.id,
+        organization_id: orgId,
         user_id: authData.user.id,
         role: 'parent',
         is_active: true,
@@ -247,6 +288,24 @@ export default function ParentRegisterScreen() {
           is_primary: true,
           can_pickup: true,
         });
+
+        // 6b. Create registration record (matches web flow)
+        try {
+          await supabase.from('registrations').insert({
+            player_id: player.id,
+            season_id: selectedSeasonId,
+            organization_id: orgId,
+            registered_by: authData.user.id,
+            status: skipApproval ? 'approved' : 'pending',
+            liability_waiver: liabilityWaiver,
+            photo_waiver: photoWaiver,
+            conduct_waiver: conductWaiver,
+            electronic_signature: signatureName.trim(),
+            signed_at: new Date().toISOString(),
+          });
+        } catch (e) {
+          console.log('Registrations insert note:', e);
+        }
 
         // 7. If team is pre-selected, assign player to team
         if (preSelectedTeamId) {
@@ -331,11 +390,11 @@ export default function ParentRegisterScreen() {
         {/* Progress */}
         <View style={s.progressContainer}>
           <View style={s.progressBar}>
-            <View style={[s.progressFill, { width: step === 'account' ? '33%' : step === 'child' ? '66%' : '100%' }]} />
+            <View style={[s.progressFill, { width: step === 'account' ? '25%' : step === 'child' ? '50%' : step === 'waiver' ? '75%' : '100%' }]} />
           </View>
           <Text style={s.progressText}>
-            Step {step === 'account' ? '1' : step === 'child' ? '2' : '3'} of 3: {' '}
-            {step === 'account' ? 'Your Account' : step === 'child' ? 'Child Info' : 'Review'}
+            Step {step === 'account' ? '1' : step === 'child' ? '2' : step === 'waiver' ? '3' : '4'} of 4: {' '}
+            {step === 'account' ? 'Your Account' : step === 'child' ? 'Child Info' : step === 'waiver' ? 'Waivers' : 'Review'}
           </Text>
         </View>
 
@@ -484,6 +543,7 @@ export default function ParentRegisterScreen() {
                         onPress={() => {
                           setSelectedSeasonId(season.id);
                           setSelectedAgeGroupId('');
+                          loadFeesForSeason(season.id);
                         }}
                       >
                         <Text style={[s.seasonOptionText, selectedSeasonId === season.id && s.seasonOptionTextActive]}>
@@ -577,7 +637,89 @@ export default function ParentRegisterScreen() {
             </View>
           )}
 
-          {/* Step 3: Review */}
+          {/* Step 3: Waivers */}
+          {step === 'waiver' && (
+            <View style={s.stepContent}>
+              <Text style={s.stepTitle}>Waivers & Agreements</Text>
+              <Text style={s.stepSubtitle}>Please review and accept the following</Text>
+
+              {/* Liability Waiver */}
+              <View style={s.consentContainer}>
+                <Switch
+                  value={liabilityWaiver}
+                  onValueChange={setLiabilityWaiver}
+                  trackColor={{ false: colors.border, true: colors.primary }}
+                  thumbColor={colors.card}
+                />
+                <Text style={s.consentText}>
+                  I hereby release and hold harmless the league, its coaches, volunteers, and staff from any liability for injuries sustained during practices, games, or league-related activities. I understand that volleyball involves physical activity and accept the inherent risks. *
+                </Text>
+              </View>
+
+              {/* Photo Release */}
+              <View style={s.consentContainer}>
+                <Switch
+                  value={photoWaiver}
+                  onValueChange={setPhotoWaiver}
+                  trackColor={{ false: colors.border, true: colors.primary }}
+                  thumbColor={colors.card}
+                />
+                <Text style={s.consentText}>
+                  I grant permission for my child's photo and/or video to be used for league promotional materials, social media, and the team wall.
+                </Text>
+              </View>
+
+              {/* Code of Conduct */}
+              <View style={s.consentContainer}>
+                <Switch
+                  value={conductWaiver}
+                  onValueChange={setConductWaiver}
+                  trackColor={{ false: colors.border, true: colors.primary }}
+                  thumbColor={colors.card}
+                />
+                <Text style={s.consentText}>
+                  I agree that my child and our family will abide by the league's code of conduct, including showing good sportsmanship and respect toward coaches, officials, and other players.
+                </Text>
+              </View>
+
+              {/* Electronic Signature */}
+              <Text style={s.sectionTitle}>Electronic Signature</Text>
+              <View style={s.inputGroup}>
+                <Text style={s.label}>Type your full legal name *</Text>
+                <TextInput
+                  style={s.input}
+                  placeholder="Your full legal name"
+                  placeholderTextColor={colors.textMuted}
+                  value={signatureName}
+                  onChangeText={setSignatureName}
+                  autoCapitalize="words"
+                />
+              </View>
+
+              {/* Fee Breakdown */}
+              {seasonFees.length > 0 && (
+                <>
+                  <Text style={s.sectionTitle}>Fee Breakdown</Text>
+                  <View style={s.reviewCard}>
+                    {seasonFees.map((fee, i) => (
+                      <View key={i} style={[s.reviewRow, i === seasonFees.length - 1 && { borderBottomWidth: 0 }]}>
+                        <Text style={s.reviewLabel}>{fee.fee_name}</Text>
+                        <Text style={s.reviewValue}>${fee.amount}</Text>
+                      </View>
+                    ))}
+                    <View style={[s.reviewRow, { borderBottomWidth: 0, marginTop: 4 }]}>
+                      <Text style={[s.reviewLabel, { fontWeight: '700', color: colors.text }]}>Total</Text>
+                      <Text style={[s.reviewValue, { fontWeight: '700', color: colors.primary, fontSize: 16 }]}>
+                        ${seasonFees.reduce((sum, f) => sum + f.amount, 0)}
+                      </Text>
+                    </View>
+                  </View>
+                </>
+              )}
+            </View>
+          )}
+
+          {/* Step 4: Review */}
           {step === 'review' && (
             <View style={s.stepContent}>
               <Text style={s.stepTitle}>Review & Submit</Text>
