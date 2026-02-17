@@ -64,7 +64,7 @@ export default function NotificationBell({ size = 24, color }: Props) {
   };
 
   const handlePress = () => {
-    router.push('/notifications' as any);
+    router.push('/notification' as any);
   };
 
   return (

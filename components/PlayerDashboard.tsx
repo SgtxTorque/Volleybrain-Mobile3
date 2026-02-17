@@ -1,8 +1,10 @@
 import { useAuth } from '@/lib/auth';
+import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -12,8 +14,11 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
+import ReenrollmentBanner from './ReenrollmentBanner';
+import RoleSelector from './RoleSelector';
 
 // ============================================
 // TYPES
@@ -69,7 +74,7 @@ type RecentGame = {
   opponent_name: string | null;
   game_result: string | null;
   our_score: number | null;
-  their_score: number | null;
+  opponent_score: number | null;
   set_scores: any;
   playerStats: {
     kills: number;
@@ -157,6 +162,8 @@ export default function PlayerDashboard() {
   const { colors } = useTheme();
   const { user } = useAuth();
   const { workingSeason } = useSeason();
+  const router = useRouter();
+  const { actualRoles } = usePermissions();
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -327,7 +334,7 @@ export default function PlayerDashboard() {
     // Get most recent completed game
     const { data: gameData } = await supabase
       .from('schedule_events')
-      .select('id, title, event_date, opponent_name, game_result, our_score, their_score, set_scores')
+      .select('id, title, event_date, opponent_name, game_result, our_score, opponent_score, set_scores')
       .eq('season_id', workingSeason.id)
       .eq('event_type', 'game')
       .lte('event_date', today)
@@ -435,6 +442,11 @@ export default function PlayerDashboard() {
       {/* HERO SECTION */}
       {/* ============================================ */}
       <View style={s.heroSection}>
+        {actualRoles.length > 1 && (
+          <View style={{ alignItems: 'flex-end', paddingHorizontal: 20, paddingTop: 8 }}>
+            <RoleSelector />
+          </View>
+        )}
         <View style={[s.heroGradient, { backgroundColor: colors.primary + '15' }]}>
           {/* Avatar */}
           <View style={[s.heroAvatar, { backgroundColor: colors.primary }]}>
@@ -490,12 +502,15 @@ export default function PlayerDashboard() {
         </View>
       </View>
 
+      <ReenrollmentBanner />
+
       {/* ============================================ */}
       {/* NEXT UP */}
       {/* ============================================ */}
       <View style={s.sectionWrapper}>
         <Text style={[s.sectionLabel, { color: colors.textMuted }]}>NEXT UP</Text>
         {nextEvent ? (
+          <TouchableOpacity activeOpacity={0.7} onPress={() => router.push('/(tabs)/gameday')}>
           <View
             style={[
               s.card,
@@ -543,6 +558,7 @@ export default function PlayerDashboard() {
               )}
             </View>
           </View>
+          </TouchableOpacity>
         ) : (
           <View style={[s.card, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}>
             <View style={s.emptyState}>
@@ -605,10 +621,10 @@ export default function PlayerDashboard() {
             </View>
 
             {/* Score */}
-            {(recentGame.our_score !== null || recentGame.their_score !== null) && (
+            {(recentGame.our_score !== null || recentGame.opponent_score !== null) && (
               <View style={s.scoreContainer}>
                 <Text style={[s.scoreBig, { color: isWin ? colors.success : isLoss ? colors.danger : colors.text }]}>
-                  {recentGame.our_score ?? '-'} - {recentGame.their_score ?? '-'}
+                  {recentGame.our_score ?? '-'} - {recentGame.opponent_score ?? '-'}
                 </Text>
                 {recentGame.set_scores && (
                   <Text style={[s.setScores, { color: colors.textMuted }]}>
@@ -763,6 +779,39 @@ export default function PlayerDashboard() {
               </Text>
             </View>
           )}
+        </View>
+      </View>
+
+      {/* ============================================ */}
+      {/* QUICK ACTIONS */}
+      {/* ============================================ */}
+      <View style={s.sectionWrapper}>
+        <Text style={[s.sectionLabel, { color: colors.textMuted }]}>QUICK ACTIONS</Text>
+        <View style={{ flexDirection: 'row', gap: 12 }}>
+          <TouchableOpacity
+            style={[s.card, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder, borderWidth: 1, flex: 1, alignItems: 'center', paddingVertical: 16 }]}
+            onPress={() => router.push('/(tabs)/gameday')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="calendar" size={24} color={colors.primary} />
+            <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600', marginTop: 6 }}>Schedule</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[s.card, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder, borderWidth: 1, flex: 1, alignItems: 'center', paddingVertical: 16 }]}
+            onPress={() => router.push('/(tabs)/my-teams' as any)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="shirt" size={24} color={colors.success} />
+            <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600', marginTop: 6 }}>My Teams</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[s.card, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder, borderWidth: 1, flex: 1, alignItems: 'center', paddingVertical: 16 }]}
+            onPress={() => router.push('/achievements' as any)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="ribbon" size={24} color={colors.warning} />
+            <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600', marginTop: 6 }}>Trophies</Text>
+          </TouchableOpacity>
         </View>
       </View>
 

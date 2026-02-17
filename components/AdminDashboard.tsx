@@ -128,7 +128,8 @@ export default function AdminDashboard() {
     const { data: players } = await supabase.from('players').select('id').eq('season_id', seasonId);
     const { data: payments } = await supabase.from('payments').select('*').eq('season_id', seasonId);
 
-    const expectedTotal = (players?.length || 0) * 335;
+    const seasonFee = workingSeason?.fee_registration || 335;
+    const expectedTotal = (players?.length || 0) * seasonFee;
     const paidTotal = (payments || []).filter(p => p.paid).reduce((sum, p) => sum + p.amount, 0);
     const outstanding = expectedTotal - paidTotal;
 
@@ -202,10 +203,10 @@ export default function AdminDashboard() {
       });
     }
 
-    if (teamCount === 0) alertList.push({ text: 'No teams created yet', route: '/teams', type: 'error', borderColor: colors.danger });
-    if (playerCount === 0 && (!newRegCount || newRegCount === 0)) alertList.push({ text: 'No players registered yet', route: '/players', type: 'error', borderColor: colors.danger });
-    if (coachCount === 0) alertList.push({ text: 'No coaches added yet', route: '/coaches', type: 'error', borderColor: colors.danger });
-    if (outstanding > 0) alertList.push({ text: '$' + outstanding + ' in outstanding payments', route: '/payments', type: 'warning', borderColor: colors.warning });
+    if (teamCount === 0) alertList.push({ text: 'No teams created yet', route: '/(tabs)/teams', type: 'error', borderColor: colors.danger });
+    if (playerCount === 0 && (!newRegCount || newRegCount === 0)) alertList.push({ text: 'No players registered yet', route: '/(tabs)/players', type: 'error', borderColor: colors.danger });
+    if (coachCount === 0) alertList.push({ text: 'No coaches added yet', route: '/(tabs)/coaches', type: 'error', borderColor: colors.danger });
+    if (outstanding > 0) alertList.push({ text: '$' + outstanding + ' in outstanding payments', route: '/(tabs)/payments', type: 'warning', borderColor: colors.warning });
 
     const orgId = profile?.current_organization_id;
     const { count: pendingCount } = await supabase.from('invitations').select('*', { count: 'exact', head: true }).eq('status', 'pending').eq('organization_id', orgId);
@@ -222,7 +223,8 @@ export default function AdminDashboard() {
       .from('schedule_events')
       .select('*', { count: 'exact', head: true })
       .eq('event_type', 'game')
-      .not('result', 'is', null);
+      .eq('season_id', workingSeason.id)
+      .not('game_result', 'is', null);
     setGamesPlayedCount(gamesCount || 0);
 
     // Fetch recent activity

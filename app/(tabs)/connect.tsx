@@ -27,7 +27,7 @@ type ActiveTab = 'feed' | 'chat' | 'alerts';
 type Announcement = {
   id: string;
   message_type: string;
-  subject: string;
+  title: string;
   body: string;
   priority: string;
   created_at: string;
@@ -39,9 +39,9 @@ type GameResult = {
   event_date: string;
   event_type: string;
   title: string;
-  opponent: string | null;
-  home_score: number | null;
-  away_score: number | null;
+  opponent_name: string | null;
+  our_score: number | null;
+  opponent_score: number | null;
   location: string | null;
 };
 
@@ -203,7 +203,7 @@ export default function ConnectScreen() {
         .from('messages')
         .select('*, sender:profiles!sender_id(full_name)')
         .eq('season_id', workingSeason.id)
-        .order('created_at', { ascending: false })
+        .order('sent_at', { ascending: false })
         .limit(10);
 
       // Fetch recent game results
@@ -212,7 +212,7 @@ export default function ConnectScreen() {
         .select('*')
         .eq('season_id', workingSeason.id)
         .eq('event_type', 'game')
-        .not('home_score', 'is', null)
+        .not('our_score', 'is', null)
         .order('event_date', { ascending: false })
         .limit(5);
 
@@ -228,7 +228,7 @@ export default function ConnectScreen() {
             data: {
               id: a.id,
               message_type: a.message_type,
-              subject: a.subject,
+              title: a.title,
               body: a.body,
               priority: a.priority,
               created_at: a.created_at,
@@ -249,9 +249,9 @@ export default function ConnectScreen() {
               event_date: g.event_date,
               event_type: g.event_type,
               title: g.title,
-              opponent: g.opponent,
-              home_score: g.home_score,
-              away_score: g.away_score,
+              opponent_name: g.opponent_name || g.opponent,
+              our_score: g.our_score,
+              opponent_score: g.opponent_score,
               location: g.location,
             },
           });
@@ -459,6 +459,20 @@ export default function ConnectScreen() {
           fetchAlertsData();
         }
       )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'message_recipients' },
+        () => {
+          fetchAlertsData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'channel_members' },
+        () => {
+          fetchChatData();
+        }
+      )
       .subscribe();
 
     return () => {
@@ -533,7 +547,7 @@ export default function ConnectScreen() {
           <Text style={[s.typeBadgeText, { color: badge.color }]}>{badge.label}</Text>
         </View>
 
-        <Text style={s.feedCardTitle}>{item.subject}</Text>
+        <Text style={s.feedCardTitle}>{item.title}</Text>
         <Text style={s.feedCardBody} numberOfLines={2}>
           {item.body}
         </Text>
@@ -542,8 +556,8 @@ export default function ConnectScreen() {
   };
 
   const renderGameResultCard = (item: GameResult) => {
-    const homeScore = item.home_score ?? 0;
-    const awayScore = item.away_score ?? 0;
+    const homeScore = item.our_score ?? 0;
+    const awayScore = item.opponent_score ?? 0;
     const isWin = homeScore > awayScore;
     const accentColor = isWin ? colors.success : colors.danger;
 
@@ -558,7 +572,7 @@ export default function ConnectScreen() {
         </View>
 
         <Text style={s.feedCardTitle}>
-          {item.title || 'Game'} vs {item.opponent || 'Opponent'}
+          {item.title || 'Game'} vs {item.opponent_name || 'Opponent'}
         </Text>
 
         <View style={s.scoreRow}>

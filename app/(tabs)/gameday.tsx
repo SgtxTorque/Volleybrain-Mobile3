@@ -235,8 +235,9 @@ export default function GameDayScreen() {
     const thirtyDaysOut = new Date();
     thirtyDaysOut.setDate(thirtyDaysOut.getDate() + 30);
     const endStr = thirtyDaysOut.toISOString().split('T')[0];
-    return upcomingEvents.filter((e) => e.event_date <= endStr);
-  }, [upcomingEvents]);
+    const thisWeekIds = new Set(thisWeekEvents.map(e => e.id));
+    return upcomingEvents.filter((e) => e.event_date <= endStr && e.id !== nextEvent?.id && !thisWeekIds.has(e.id));
+  }, [upcomingEvents, nextEvent, thisWeekEvents]);
 
   // Group upcoming by date
   const groupedUpcoming = useMemo(() => {
@@ -884,7 +885,7 @@ export default function GameDayScreen() {
         visible={showEventModal}
         event={selectedEvent}
         onClose={() => setShowEventModal(false)}
-        onGamePrep={() => {}}
+        onGamePrep={(event: any) => router.push('/game-prep' as any)}
         onRefresh={fetchData}
         isCoachOrAdmin={isCoachOrAdmin}
       />

@@ -461,11 +461,11 @@ export default function CoachParentDashboard() {
 
                   {/* Team quick actions */}
                   <View style={s.teamActions}>
-                    <TouchableOpacity style={s.teamAction} onPress={() => router.push('/players')}>
+                    <TouchableOpacity style={s.teamAction} onPress={() => router.push('/(tabs)/players' as any)}>
                       <Ionicons name="people" size={16} color={colors.primary} />
                       <Text style={s.teamActionText}>Roster</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={s.teamAction} onPress={() => router.push('/schedule')}>
+                    <TouchableOpacity style={s.teamAction} onPress={() => router.push('/(tabs)/schedule' as any)}>
                       <Ionicons name="calendar" size={16} color={colors.info} />
                       <Text style={s.teamActionText}>Schedule</Text>
                     </TouchableOpacity>
@@ -532,19 +532,19 @@ export default function CoachParentDashboard() {
           <View style={s.sectionBlock}>
             <Text style={s.sectionLabel}>QUICK ACTIONS</Text>
             <View style={s.quickActionsRow}>
-              <TouchableOpacity style={s.quickActionCard} onPress={() => router.push('/players')}>
+              <TouchableOpacity style={s.quickActionCard} onPress={() => router.push('/(tabs)/players' as any)}>
                 <View style={[s.quickActionIcon, { backgroundColor: colors.primary + '15' }]}>
                   <Ionicons name="list" size={20} color={colors.primary} />
                 </View>
                 <Text style={s.quickActionText}>Lineup</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={s.quickActionCard} onPress={() => router.push('/schedule')}>
+              <TouchableOpacity style={s.quickActionCard} onPress={() => router.push('/(tabs)/schedule' as any)}>
                 <View style={[s.quickActionIcon, { backgroundColor: colors.info + '15' }]}>
                   <Ionicons name="clipboard" size={20} color={colors.info} />
                 </View>
                 <Text style={s.quickActionText}>Game Prep</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={s.quickActionCard} onPress={() => router.push('/messages')}>
+              <TouchableOpacity style={s.quickActionCard} onPress={() => router.push('/(tabs)/messages' as any)}>
                 <View style={[s.quickActionIcon, { backgroundColor: colors.success + '15' }]}>
                   <Ionicons name="megaphone" size={20} color={colors.success} />
                 </View>
@@ -706,21 +706,21 @@ export default function CoachParentDashboard() {
       <View style={s.sectionBlock}>
         <Text style={s.sectionLabel}>QUICK LINKS</Text>
         <View style={s.quickLinksRow}>
-          <TouchableOpacity style={s.quickLinkItem} onPress={() => router.push('/schedule')} activeOpacity={0.7}>
+          <TouchableOpacity style={s.quickLinkItem} onPress={() => router.push('/(tabs)/schedule' as any)} activeOpacity={0.7}>
             <View style={[s.quickLinkIcon, { backgroundColor: colors.primary + '15' }]}>
               <Ionicons name="calendar" size={22} color={colors.primary} />
             </View>
             <Text style={s.quickLinkText}>Schedule</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={s.quickLinkItem} onPress={() => router.push('/chats')} activeOpacity={0.7}>
+          <TouchableOpacity style={s.quickLinkItem} onPress={() => router.push('/(tabs)/chats' as any)} activeOpacity={0.7}>
             <View style={[s.quickLinkIcon, { backgroundColor: colors.success + '15' }]}>
               <Ionicons name="chatbubbles" size={22} color={colors.success} />
             </View>
             <Text style={s.quickLinkText}>Chat</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={s.quickLinkItem} onPress={() => router.push('/messages')} activeOpacity={0.7}>
+          <TouchableOpacity style={s.quickLinkItem} onPress={() => router.push('/(tabs)/messages' as any)} activeOpacity={0.7}>
             <View style={[s.quickLinkIcon, { backgroundColor: colors.info + '15' }]}>
               <Ionicons name="megaphone" size={22} color={colors.info} />
             </View>

@@ -150,16 +150,16 @@ export default function CoachDashboard() {
         // Fetch win/loss record from schedule_events
         const { data: gameResults } = await supabase
           .from('schedule_events')
-          .select('result')
+          .select('game_result')
           .eq('team_id', team.id)
           .eq('event_type', 'game')
-          .not('result', 'is', null);
+          .not('game_result', 'is', null);
 
         let wins = 0;
         let losses = 0;
         (gameResults || []).forEach((g: any) => {
-          if (g.result === 'win') wins++;
-          else if (g.result === 'loss') losses++;
+          if (g.game_result === 'win') wins++;
+          else if (g.game_result === 'loss') losses++;
         });
 
         teamsWithCounts.push({
@@ -239,7 +239,7 @@ export default function CoachDashboard() {
           .select('*', { count: 'exact', head: true })
           .in('team_id', teamIds)
           .eq('event_type', 'game')
-          .not('result', 'is', null);
+          .not('game_result', 'is', null);
 
         setTotalGames(totalGameCount || 0);
         setGamesPlayed(playedGameCount || 0);

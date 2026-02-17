@@ -60,15 +60,6 @@ export default function MeScreen() {
 
   // Role-specific subtitle
   const getRoleSubtitle = (): string | null => {
-    if (isPlayer && !isAdmin && !isCoach && !isParent) {
-      return 'Level 1 \u2022 1,250 XP';
-    }
-    if (isParent && !isAdmin && !isCoach) {
-      return '2 kids enrolled';
-    }
-    if (isCoach && !isAdmin) {
-      return '2 teams coached';
-    }
     return null;
   };
 
@@ -100,6 +91,7 @@ export default function MeScreen() {
   // Coach (non-admin) menu items
   const coachItems: MenuItem[] = [
     { icon: 'person-circle', label: 'My Coach Profile', route: '/coach-profile', iconColor: colors.primary, iconBg: colors.primary + '15' },
+    { icon: 'people', label: 'Roster', route: '/(tabs)/players', iconColor: colors.info, iconBg: colors.info + '15' },
     { icon: 'shirt', label: 'My Teams', route: '/(tabs)/my-teams', iconColor: colors.success, iconBg: colors.success + '15' },
     { icon: 'calendar-outline', label: 'My Availability', route: '/coach-availability', iconColor: colors.warning, iconBg: colors.warning + '15' },
     { icon: 'checkmark-circle', label: 'Attendance', route: '/attendance', iconColor: colors.info, iconBg: colors.info + '15' },
@@ -118,8 +110,17 @@ export default function MeScreen() {
     { icon: 'lock-closed', label: 'Data Rights', route: '/data-rights', iconColor: colors.danger, iconBg: colors.danger + '15' },
   ];
 
+  // Player-only menu items
+  const playerItems: MenuItem[] = [
+    { icon: 'calendar', label: 'Schedule', route: '/(tabs)/gameday', iconColor: colors.primary, iconBg: colors.primary + '15' },
+    { icon: 'shirt', label: 'My Teams', route: '/(tabs)/my-teams', iconColor: colors.success, iconBg: colors.success + '15' },
+    { icon: 'ribbon', label: 'Achievements', route: '/achievements', iconColor: colors.warning, iconBg: colors.warning + '15' },
+    { icon: 'trophy', label: 'Standings', route: '/standings', iconColor: colors.info, iconBg: colors.info + '15' },
+  ];
+
   // Settings items
   const settingsItems: MenuItem[] = [
+    { icon: 'settings', label: 'Settings', route: '/(tabs)/settings', iconColor: colors.textSecondary, iconBg: colors.textMuted + '15' },
     { icon: 'calendar', label: 'Season Settings', route: '/season-settings', iconColor: colors.primary, iconBg: colors.primary + '15' },
     { icon: 'archive', label: 'Season History', route: '/season-archives', iconColor: colors.info, iconBg: colors.info + '15' },
     { icon: 'business', label: 'Find Organizations', route: '/org-directory', iconColor: colors.success, iconBg: colors.success + '15' },
@@ -256,6 +257,24 @@ export default function MeScreen() {
             </View>
           </>
         )}
+
+        {isPlayer && !isAdmin && !isCoach && !isParent && (
+          <>
+            <Text style={s.sectionHeader}>MY STUFF</Text>
+            <View style={s.menuCard}>
+              {playerItems.map((item, i) => renderMenuItem(item, i))}
+            </View>
+          </>
+        )}
+
+        {/* ===== LEAGUE SECTION ===== */}
+        <Text style={s.sectionHeader}>LEAGUE</Text>
+        <View style={s.menuCard}>
+          {[
+            { icon: 'chatbubbles' as keyof typeof Ionicons.glyphMap, label: 'Team Wall', route: '/team-wall', iconColor: colors.primary, iconBg: colors.primary + '15' },
+            { icon: 'trophy' as keyof typeof Ionicons.glyphMap, label: 'Standings', route: '/standings', iconColor: colors.warning, iconBg: colors.warning + '15' },
+          ].map((item, i) => renderMenuItem(item, i))}
+        </View>
 
         {/* ===== SETTINGS SECTION ===== */}
         <Text style={s.sectionHeader}>SETTINGS</Text>
@@ -394,7 +413,7 @@ const createStyles = (colors: any, isDark: boolean) =>
     avatarText: {
       fontSize: 28,
       fontWeight: '800',
-      color: '#000',
+      color: '#FFFFFF',
     },
     heroName: {
       fontSize: 24,

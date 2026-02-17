@@ -10,6 +10,7 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Linking,
   Platform,
   RefreshControl,
   ScrollView,
@@ -393,7 +394,8 @@ export default function ParentDashboard() {
 
         // Count unique player-season combinations for total owed
         const uniqueRegistrations = new Set(formattedChildren.map(c => `${c.id}-${c.season_id}`));
-        const totalOwed = uniqueRegistrations.size * 335;
+        const seasonFee = workingSeason?.fee_registration || 335;
+        const totalOwed = uniqueRegistrations.size * seasonFee;
         const totalPaid = (payments || []).filter(p => p.paid).reduce((sum, p) => sum + (p.amount || 0), 0);
 
         setPaymentStatus({
@@ -811,7 +813,7 @@ export default function ParentDashboard() {
 
             {/* Get Directions */}
             {upcomingEvents[0].location && (
-              <TouchableOpacity style={s.directionsBtn}>
+              <TouchableOpacity style={s.directionsBtn} onPress={() => { const loc = encodeURIComponent(upcomingEvents[0].location || ''); Linking.openURL(Platform.OS === 'ios' ? `maps:?q=${loc}` : `geo:0,0?q=${loc}`); }}>
                 <Ionicons name="navigate-outline" size={14} color={colors.primary} />
                 <Text style={s.directionsBtnText}>Get Directions</Text>
               </TouchableOpacity>
