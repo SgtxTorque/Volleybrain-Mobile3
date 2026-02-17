@@ -84,7 +84,7 @@ const buildVenmoWebLink = (handle: string, amount: number, note: string): string
 
 export default function ParentPaymentsScreen({ hideHeader = false }: Props) {
   const { colors } = useTheme();
-  const { user, profile } = useAuth();
+  const { user, profile, organization } = useAuth();
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
@@ -395,7 +395,7 @@ export default function ParentPaymentsScreen({ hideHeader = false }: Props) {
       `${p.player_name} - ${p.fee_name}`
     ).join(', ');
     
-    const note = `Black Hornets: ${itemsList}`;
+    const note = `${organization?.name || 'Payment'}: ${itemsList}`;
 
     setSelectedMethod(method);
 

@@ -326,7 +326,7 @@ const assignPlayer = async (player: Player) => {
 
           <ScrollView showsVerticalScrollIndicator={false}>
             <Text style={s.label}>Team Name</Text>
-            <TextInput style={s.input} placeholder="e.g., Black Hornets 12U Elite" placeholderTextColor={colors.textMuted} value={teamName} onChangeText={setTeamName} />
+            <TextInput style={s.input} placeholder="e.g., Eagles 12U Elite" placeholderTextColor={colors.textMuted} value={teamName} onChangeText={setTeamName} />
 
             <Text style={s.label}>Age Group</Text>
             <View style={s.optionRow}>

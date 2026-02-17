@@ -631,7 +631,7 @@ export default function ParentRegisterScreen() {
                   thumbColor={colors.card}
                 />
                 <Text style={s.consentText}>
-                  I am the parent or legal guardian of this child and consent to their participation in Black Hornets Volleyball programs. I understand that coaches and staff may communicate with my child through the app's player chat feature, and that I will have view-only access to monitor these communications. *
+                  I am the parent or legal guardian of this child and consent to their participation in the organization's programs. I understand that coaches and staff may communicate with my child through the app's player chat feature, and that I will have view-only access to monitor these communications. *
                 </Text>
               </View>
             </View>

@@ -1,3 +1,4 @@
+import { useAuth } from '@/lib/auth';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
@@ -42,15 +43,17 @@ type Props = {
   title?: string;
 };
 
-export default function ShareRegistrationModal({ 
-  visible, 
-  onClose, 
+export default function ShareRegistrationModal({
+  visible,
+  onClose,
   customUrl,
   title = 'Share Registration'
 }: Props) {
   const { colors } = useTheme();
+  const { organization } = useAuth();
   const [copied, setCopied] = useState(false);
-  
+  const orgName = organization?.name || 'our organization';
+
   const url = customUrl || REGISTRATION_URL;
 
   const handleCopyLink = async () => {
@@ -65,12 +68,12 @@ export default function ShareRegistrationModal({
 
   const handleShare = async () => {
     try {
-      const message = `Join Black Hornets Athletics! Register your player here: ${url}`;
-      
+      const message = `Join ${orgName}! Register your player here: ${url}`;
+
       await Share.share({
         message: message,
         url: url, // iOS only
-        title: 'Black Hornets Registration',
+        title: `${orgName} Registration`,
       });
     } catch (error: any) {
       if (error?.message !== 'User did not share') {
@@ -80,7 +83,7 @@ export default function ShareRegistrationModal({
   };
 
   const handleTextShare = async () => {
-    const message = `Hey! I wanted to share this with you - Black Hornets is open for registration. Sign up here: ${url}`;
+    const message = `Hey! I wanted to share this with you - ${orgName} is open for registration. Sign up here: ${url}`;
     
     try {
       await Share.share({
@@ -261,7 +264,7 @@ export default function ShareRegistrationModal({
             marginTop: 16,
             paddingHorizontal: 32,
           }}>
-            Share this link with parents to register for Black Hornets Athletics
+            Share this link with parents to register for {orgName}
           </Text>
         </View>
       </View>

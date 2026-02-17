@@ -1,3 +1,4 @@
+import ParentOnboardingModal from '@/components/ParentOnboardingModal';
 import ShareRegistrationModal from '@/components/ShareRegistrationModal';
 import { useAuth } from '@/lib/auth';
 import { useSeason } from '@/lib/season';
@@ -637,10 +638,13 @@ export default function ParentDashboard() {
       <View style={{ height: 40 }} />
 
       {/* Share Registration Modal */}
-      <ShareRegistrationModal 
-        visible={showShare} 
-        onClose={() => setShowShare(false)} 
+      <ShareRegistrationModal
+        visible={showShare}
+        onClose={() => setShowShare(false)}
       />
+
+      {/* Parent Onboarding Modal */}
+      <ParentOnboardingModal />
     </ScrollView>
   );
 }

@@ -184,13 +184,13 @@ export default function PlayerDashboard() {
     if (data) {
       setStats({
         games_played: data.games_played || 0,
-        // Map DB column names (kills, aces, etc.) to our state shape
-        total_kills: data.kills ?? data.total_kills ?? 0,
-        total_aces: data.aces ?? data.total_aces ?? 0,
-        total_digs: data.digs ?? data.total_digs ?? 0,
-        total_blocks: data.blocks ?? data.total_blocks ?? 0,
-        total_assists: data.assists ?? data.total_assists ?? 0,
-        total_points: data.points ?? data.total_points ?? 0,
+        // player_season_stats uses total_ prefixed columns
+        total_kills: data.total_kills || 0,
+        total_aces: data.total_aces || 0,
+        total_digs: data.total_digs || 0,
+        total_blocks: data.total_blocks || 0,
+        total_assists: data.total_assists || 0,
+        total_points: data.total_points || 0,
       });
     }
   };

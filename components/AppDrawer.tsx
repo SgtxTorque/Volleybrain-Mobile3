@@ -60,6 +60,8 @@ export default function AppDrawer({ visible, onClose }: AppDrawerProps) {
           { id: 'coach-availability', label: 'Coach Availability', icon: 'calendar-outline', route: '/coach-availability' },
           { id: 'game-prep', label: 'Game Prep', icon: 'analytics', route: '/game-prep' },
           { id: 'lineup-builder', label: 'Lineup Builder', icon: 'grid', route: '/lineup-builder' },
+          { id: 'attendance', label: 'Attendance', icon: 'checkmark-circle', route: '/attendance' },
+          { id: 'blast-composer', label: 'Send Announcement', icon: 'megaphone', route: '/blast-composer' },
         ],
       });
     }
@@ -76,6 +78,8 @@ export default function AppDrawer({ visible, onClose }: AppDrawerProps) {
           { id: 'availability', label: 'My Availability', icon: 'calendar-outline', route: '/coach-availability' },
           { id: 'game-prep', label: 'Game Prep', icon: 'analytics', route: '/game-prep' },
           { id: 'lineup-builder', label: 'Lineup Builder', icon: 'grid', route: '/lineup-builder' },
+          { id: 'attendance', label: 'Attendance', icon: 'checkmark-circle', route: '/attendance' },
+          { id: 'blast-composer', label: 'Send Announcement', icon: 'megaphone', route: '/blast-composer' },
         ],
       });
     }
@@ -89,6 +93,8 @@ export default function AppDrawer({ visible, onClose }: AppDrawerProps) {
           { id: 'my-teams', label: 'My Teams', icon: 'shirt', route: '/(tabs)/my-teams' },
           { id: 'parent-schedule', label: 'Schedule', icon: 'calendar', route: '/(tabs)/schedule' },
           { id: 'family-payments', label: 'Payments', icon: 'wallet', route: '/family-payments' },
+          { id: 'my-waivers', label: 'My Waivers', icon: 'document-text', route: '/my-waivers' },
+          { id: 'invite-friends', label: 'Invite Friends', icon: 'share-social', route: '/invite-friends' },
         ],
       });
     }

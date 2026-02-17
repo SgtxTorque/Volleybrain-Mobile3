@@ -31,7 +31,7 @@ type Team = {
 };
 
 export default function AdminDashboard() {
-  const { profile } = useAuth();
+  const { profile, organization } = useAuth();
   const { isAdmin } = usePermissions();
   const { allSeasons, workingSeason, setWorkingSeason, refreshSeasons } = useSeason();
   const { activeSport, sportColors } = useSport();
@@ -143,10 +143,11 @@ export default function AdminDashboard() {
     if (coachCount === 0) alertList.push({ text: 'No coaches added yet', route: '/coaches', type: 'error' });
     if (outstanding > 0) alertList.push({ text: '$' + outstanding + ' in outstanding payments', route: '/payments', type: 'warning' });
 
-    const { count: pendingCount } = await supabase.from('invitations').select('*', { count: 'exact', head: true }).eq('status', 'pending');
+    const orgId = profile?.current_organization_id;
+    const { count: pendingCount } = await supabase.from('invitations').select('*', { count: 'exact', head: true }).eq('status', 'pending').eq('organization_id', orgId);
     if (pendingCount && pendingCount > 0) alertList.push({ text: pendingCount + ' pending invite' + (pendingCount > 1 ? 's' : '') + ' awaiting response', route: null, type: 'warning' });
 
-    const { count: approvalCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('pending_approval', true);
+    const { count: approvalCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('pending_approval', true).eq('current_organization_id', orgId);
     if (approvalCount && approvalCount > 0) alertList.push({ text: approvalCount + ' account' + (approvalCount > 1 ? 's' : '') + ' awaiting approval', route: '/users', type: 'warning' });
 
     if (alertList.length === 0) alertList.push({ text: 'You are all set!', route: null, type: 'success' });
@@ -230,7 +231,7 @@ export default function AdminDashboard() {
           { 
             text: 'Copy & Share', 
             onPress: () => {
-              const msg = 'You have been invited to join Black Hornets Volleyball on VolleyBrain!\n\nYour invite code: ' + inviteCode + '\n\nDownload the app and use this code to sign up.' + (inviteMessage ? '\n\nMessage: ' + inviteMessage : '');
+              const msg = 'You have been invited to join ' + (organization?.name || 'our organization') + ' on VolleyBrain!\n\nYour invite code: ' + inviteCode + '\n\nDownload the app and use this code to sign up.' + (inviteMessage ? '\n\nMessage: ' + inviteMessage : '');
               Share.share({ message: msg });
             }
           },
@@ -280,7 +281,7 @@ export default function AdminDashboard() {
             text: 'Copy & Share', 
             onPress: () => {
               Share.share({
-                message: 'Join ' + selectedTeam?.name + ' on Black Hornets Volleyball!\n\nUse code: ' + inviteCode + ' when signing up on VolleyBrain.',
+                message: 'Join ' + selectedTeam?.name + ' on ' + (organization?.name || 'VolleyBrain') + '!\n\nUse code: ' + inviteCode + ' when signing up on VolleyBrain.',
               });
             }
           },
@@ -301,7 +302,7 @@ export default function AdminDashboard() {
 
   const resendInvite = async (invite: PendingInvite) => {
     Share.share({
-      message: 'Reminder: You have been invited to join Black Hornets Volleyball!\n\nYour invite code: ' + invite.invite_code + '\n\nDownload VolleyBrain and use this code to sign up.',
+      message: 'Reminder: You have been invited to join ' + (organization?.name || 'our organization') + '!\n\nYour invite code: ' + invite.invite_code + '\n\nDownload VolleyBrain and use this code to sign up.',
     });
   };
 
@@ -329,7 +330,7 @@ export default function AdminDashboard() {
     if (openSeasons.length > 0) {
       const link = 'https://sgtxtorque.github.io/volleyball-registration/';
       Share.share({
-        message: 'Register for Black Hornets Volleyball!\n\n' + link + '\n\nOpen seasons: ' + openSeasons.map(s => s.name).join(', '),
+        message: 'Register for ' + (organization?.name || 'our organization') + '!\n\n' + link + '\n\nOpen seasons: ' + openSeasons.map(s => s.name).join(', '),
       });
     } else {
       Alert.alert('No Open Registration', 'Turn on registration for at least one season first.');
@@ -595,7 +596,7 @@ export default function AdminDashboard() {
                  showInviteForm === 'coach' ? 'Invite Coach' :
                  showInviteForm === 'admin' ? 'Invite Admin' :
                  showInviteForm === 'team_code' ? 'Create Team Code' :
-                 'Invite to Black Hornets'}
+                 'Invite to ' + (organization?.name || 'Organization')}
               </Text>
               <TouchableOpacity onPress={() => { setShowInviteModal(false); setShowInviteForm(null); }}>
                 <Ionicons name="close" size={24} color={colors.text} />

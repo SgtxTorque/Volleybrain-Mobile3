@@ -212,9 +212,9 @@ export default function CoachRegisterScreen() {
             {isAdminInvite ? 'Join as Administrator' : 'Join as a Coach'}
           </Text>
           <Text style={s.subtitle}>
-            {isAdminInvite 
-              ? 'Create your admin account for Black Hornets'
-              : 'Apply to coach for Black Hornets Volleyball'
+            {isAdminInvite
+              ? 'Create your admin account'
+              : 'Apply to coach'
             }
           </Text>
 

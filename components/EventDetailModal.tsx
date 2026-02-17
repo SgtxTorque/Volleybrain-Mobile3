@@ -3,6 +3,7 @@ import { promoteBackupVolunteer, sendVolunteerBlast } from '@/lib/notifications'
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -65,7 +66,8 @@ export default function EventDetailModal({
 }: Props) {
   const { colors } = useTheme();
   const { user, profile } = useAuth();
-  
+  const router = useRouter();
+
   const [activeTab, setActiveTab] = useState<TabType>('details');
   const [loading, setLoading] = useState(false);
   
@@ -664,11 +666,40 @@ export default function EventDetailModal({
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: 8,
+                    marginBottom: 10,
                   }}
                 >
                   <Ionicons name="clipboard" size={20} color="#fff" />
                   <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>
                     Game Prep & Lineup
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {/* Take Attendance Button */}
+              {isCoachOrAdmin && (
+                <TouchableOpacity
+                  onPress={() => {
+                    onClose();
+                    setTimeout(() => {
+                      router.push(`/attendance?eventId=${event.id}` as any);
+                    }, 150);
+                  }}
+                  style={{
+                    backgroundColor: colors.success + '20',
+                    borderRadius: 12,
+                    padding: 16,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    borderWidth: 1,
+                    borderColor: colors.success + '40',
+                  }}
+                >
+                  <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+                  <Text style={{ color: colors.success, fontSize: 16, fontWeight: '600' }}>
+                    Take Attendance
                   </Text>
                 </TouchableOpacity>
               )}

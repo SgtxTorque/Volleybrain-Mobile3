@@ -35,7 +35,7 @@ const PermissionsContext = createContext<PermissionsContextType>({
   refresh: async () => {},
   viewAs: null,
   setViewAs: () => {},
-  devMode: true,
+  devMode: false,
   devViewAs: null,
   setDevViewAs: () => {},
   actualRoles: [],
@@ -188,7 +188,7 @@ export const PermissionsProvider = ({ children }: { children: React.ReactNode })
         viewAs,
         setViewAs,
         // Legacy aliases
-        devMode: true,
+        devMode: __DEV__,
         devViewAs: viewAs,
         setDevViewAs: setViewAs,
         actualRoles,
