@@ -514,6 +514,29 @@ export default function WelcomeScreen() {
             </TouchableOpacity>
           </View>
 
+          {/* Legal Links */}
+          <Text style={{
+            fontSize: 12,
+            color: colors.textMuted,
+            textAlign: 'center',
+            marginTop: 16,
+          }}>
+            By signing up, you agree to our{' '}
+            <Text
+              style={{ color: colors.primary, textDecorationLine: 'underline' }}
+              onPress={() => router.push('/privacy-policy')}
+            >
+              Privacy Policy
+            </Text>{' '}
+            and{' '}
+            <Text
+              style={{ color: colors.primary, textDecorationLine: 'underline' }}
+              onPress={() => router.push('/terms-of-service')}
+            >
+              Terms of Service
+            </Text>
+          </Text>
+
           {/* Footer Spacer */}
           <View style={{ height: 30 }} />
         </ScrollView>

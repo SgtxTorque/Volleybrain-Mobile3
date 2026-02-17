@@ -3,6 +3,7 @@ import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from './supabase';
+import { registerForPushNotificationsAsync, savePushToken } from './notifications';
 
 // ============================================
 // TYPES — aligned with web AuthContext.jsx
@@ -174,6 +175,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         setIsAdmin(false);
         setOrganization(null);
+      }
+
+      // Register push token after profile is confirmed loaded
+      try {
+        const token = await registerForPushNotificationsAsync();
+        if (token && session.user.id) {
+          await savePushToken(session.user.id, token);
+        }
+      } catch (pushErr) {
+        console.error('Push token registration error:', pushErr);
       }
     } catch (err) {
       console.error('Auth init error:', err);

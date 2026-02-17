@@ -10,6 +10,7 @@ import {
     Platform,
     ScrollView,
     StyleSheet,
+    Switch,
     Text,
     TextInput,
     TouchableOpacity,
@@ -46,6 +47,9 @@ export default function CoachRegisterScreen() {
   const [certifications, setCertifications] = useState('');
   const [bio, setBio] = useState('');
 
+  // Terms acceptance
+  const [termsAccepted, setTermsAccepted] = useState(false);
+
   const validateForm = (): boolean => {
     if (!email.trim() || !password || !confirmPassword || !fullName.trim()) {
       Alert.alert('Missing Info', 'Please fill in all required fields.');
@@ -61,6 +65,10 @@ export default function CoachRegisterScreen() {
     }
     if (password !== confirmPassword) {
       Alert.alert('Password Mismatch', 'Passwords do not match.');
+      return false;
+    }
+    if (!termsAccepted) {
+      Alert.alert('Terms Required', 'You must accept the Privacy Policy and Terms of Service to continue.');
       return false;
     }
     return true;
@@ -102,6 +110,7 @@ export default function CoachRegisterScreen() {
           current_organization_id: org.id,
           onboarding_completed: true,
           pending_approval: !skipApproval,
+          accepted_terms_at: new Date().toISOString(),
         })
         .eq('id', authData.user.id);
 
@@ -330,6 +339,23 @@ export default function CoachRegisterScreen() {
             </>
           )}
 
+          {/* Terms & Privacy Policy */}
+          <View style={s.consentContainer}>
+            <Switch
+              value={termsAccepted}
+              onValueChange={setTermsAccepted}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor={colors.card}
+            />
+            <Text style={s.consentText}>
+              I have read and agree to the{' '}
+              <Text style={s.legalLink} onPress={() => router.push('/privacy-policy?fromSignup=true')}>Privacy Policy</Text>
+              {' '}and{' '}
+              <Text style={s.legalLink} onPress={() => router.push('/terms-of-service?fromSignup=true')}>Terms of Service</Text>
+              {' '}*
+            </Text>
+          </View>
+
           {/* Info Notice */}
           {skipApproval ? (
             <View style={s.successNotice}>
@@ -403,6 +429,9 @@ const createStyles = (colors: any) => StyleSheet.create({
   inputDisabled: { backgroundColor: colors.border + '50', color: colors.textMuted },
   inputHint: { fontSize: 12, color: colors.textMuted, marginTop: 4, fontStyle: 'italic' },
   textArea: { minHeight: 100, textAlignVertical: 'top' },
+  consentContainer: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, backgroundColor: colors.background, padding: 16, borderRadius: 12, marginTop: 16, borderWidth: 1, borderColor: colors.border },
+  consentText: { flex: 1, fontSize: 13, color: colors.textMuted, lineHeight: 18 },
+  legalLink: { color: colors.primary, textDecorationLine: 'underline' },
   pendingNotice: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, backgroundColor: colors.glassCard, padding: 16, borderRadius: 16, marginTop: 16, borderWidth: 1, borderColor: colors.glassBorder },
   pendingNoticeText: { flex: 1, fontSize: 14, color: colors.info, lineHeight: 20 },
   successNotice: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, backgroundColor: colors.glassCard, padding: 16, borderRadius: 16, marginTop: 16, borderWidth: 1, borderColor: colors.glassBorder },

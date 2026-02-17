@@ -1,14 +1,25 @@
 import { supabase } from './supabase';
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
+import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 
-// NOTE: Push notifications require a development build, not Expo Go.
-// In-app notifications work everywhere.
-// Push notifications will be enabled when you create a production build.
+// Set notification handler for foreground notifications
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: false,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
-export type NotificationType = 
-  | 'volunteer_needed' 
-  | 'rsvp_reminder' 
-  | 'event_update' 
-  | 'backup_promoted' 
+export type NotificationType =
+  | 'volunteer_needed'
+  | 'rsvp_reminder'
+  | 'event_update'
+  | 'backup_promoted'
   | 'general';
 
 export interface AppNotification {
@@ -26,13 +37,64 @@ export interface AppNotification {
 }
 
 // =====================================================
-// PUSH TOKEN REGISTRATION (placeholder for production build)
+// PUSH TOKEN REGISTRATION
 // =====================================================
+export async function registerForPushNotificationsAsync(): Promise<string | null> {
+  try {
+    if (!Device.isDevice) {
+      console.log('Push notifications require a physical device');
+      return null;
+    }
+
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+
+    if (finalStatus !== 'granted') {
+      console.log('Push notification permission denied');
+      return null;
+    }
+
+    // Get Expo push token
+    const tokenData = await Notifications.getExpoPushTokenAsync({
+      projectId: Constants.expoConfig?.extra?.eas?.projectId,
+    });
+
+    // Android channel setup
+    if (Platform.OS === 'android') {
+      await Notifications.setNotificationChannelAsync('default', {
+        name: 'default',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#F97316',
+      });
+    }
+
+    return tokenData.data;
+  } catch (error) {
+    console.error('Error registering for push notifications:', error);
+    return null;
+  }
+}
+
+// Legacy alias for backward compatibility
 export async function registerForPushNotifications(userId: string): Promise<string | null> {
-  // Push notifications require a development/production build
-  // This is a placeholder - implement when ready for production
-  console.log('Push notifications not available in Expo Go - will work in production build');
-  return null;
+  return registerForPushNotificationsAsync();
+}
+
+// =====================================================
+// SAVE PUSH TOKEN TO SUPABASE
+// =====================================================
+export async function savePushToken(userId: string, token: string) {
+  const { error } = await supabase
+    .from('profiles')
+    .update({ push_token: token })
+    .eq('id', userId);
+  if (error) console.error('Error saving push token:', error);
 }
 
 // =====================================================

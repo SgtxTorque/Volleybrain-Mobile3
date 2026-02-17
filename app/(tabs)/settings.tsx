@@ -4,6 +4,7 @@ import { usePermissions } from '@/lib/permissions-context';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, Modal, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -27,6 +28,7 @@ type Organization = {
 export default function SettingsScreen() {
   const { profile, signOut } = useAuth();
   const { colors, mode, setTheme } = useTheme();
+  const router = useRouter();
   const { 
     isAdmin, 
     context, 
@@ -359,6 +361,25 @@ export default function SettingsScreen() {
           )}
         </View>
 
+        {/* Legal */}
+        <View style={s.card}>
+          <Text style={s.cardTitle}>Legal</Text>
+          <TouchableOpacity style={s.legalRow} onPress={() => router.push('/privacy-policy')}>
+            <View style={s.legalIconWrap}>
+              <Ionicons name="shield-checkmark" size={20} color={colors.text} />
+            </View>
+            <Text style={s.legalRowText}>Privacy Policy</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </TouchableOpacity>
+          <TouchableOpacity style={s.legalRow} onPress={() => router.push('/terms-of-service')}>
+            <View style={s.legalIconWrap}>
+              <Ionicons name="document" size={20} color={colors.text} />
+            </View>
+            <Text style={s.legalRowText}>Terms of Service</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+
         {/* Sign Out */}
         <TouchableOpacity style={s.signOutBtn} onPress={handleSignOut}>
           <Ionicons name="log-out-outline" size={22} color={colors.danger} />
@@ -492,6 +513,10 @@ const createStyles = (colors: any) => StyleSheet.create({
   rolesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   roleChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 },
   roleChipText: { fontSize: 13, fontWeight: '600' },
+
+  legalRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
+  legalIconWrap: { width: 36, height: 36, borderRadius: 10, backgroundColor: colors.glassCard, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  legalRowText: { flex: 1, fontSize: 15, color: colors.text },
 
   signOutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginTop: 8, borderWidth: 1, borderColor: colors.glassBorder },
   signOutText: { fontSize: 16, color: colors.danger, fontWeight: '600' },

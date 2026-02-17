@@ -1,3 +1,4 @@
+import CoppaConsentModal from '@/components/CoppaConsentModal';
 import ParentOnboardingModal from '@/components/ParentOnboardingModal';
 import ShareRegistrationModal from '@/components/ShareRegistrationModal';
 import { useAuth } from '@/lib/auth';
@@ -645,6 +646,9 @@ export default function ParentDashboard() {
 
       {/* Parent Onboarding Modal */}
       <ParentOnboardingModal />
+
+      {/* COPPA Consent Modal — shown for existing parents without consent */}
+      <CoppaConsentModal />
     </ScrollView>
   );
 }

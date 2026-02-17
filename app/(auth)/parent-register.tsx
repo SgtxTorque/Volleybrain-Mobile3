@@ -78,6 +78,9 @@ export default function ParentRegisterScreen() {
   // COPPA Consent
   const [coppaConsent, setCoppaConsent] = useState(false);
 
+  // Terms acceptance
+  const [termsAccepted, setTermsAccepted] = useState(false);
+
   // Waiver
   const [liabilityWaiver, setLiabilityWaiver] = useState(false);
   const [photoWaiver, setPhotoWaiver] = useState(false);
@@ -188,6 +191,10 @@ export default function ParentRegisterScreen() {
       Alert.alert('Waiver Required', 'You must accept the liability waiver to continue.');
       return false;
     }
+    if (!termsAccepted) {
+      Alert.alert('Terms Required', 'You must accept the Privacy Policy and Terms of Service to continue.');
+      return false;
+    }
     if (!signatureName.trim()) {
       Alert.alert('Signature Required', 'Please type your full name as electronic signature.');
       return false;
@@ -233,7 +240,7 @@ export default function ParentRegisterScreen() {
       const orgId = season?.organization_id;
       if (!orgId) throw new Error('Organization not found');
 
-      // 3. Update profile with additional info
+      // 3. Update profile with additional info + COPPA consent
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
@@ -242,6 +249,11 @@ export default function ParentRegisterScreen() {
           current_organization_id: orgId,
           onboarding_completed: true,
           pending_approval: !skipApproval, // Skip approval if using invite code
+          accepted_terms_at: new Date().toISOString(),
+          coppa_consent_given: true,
+          coppa_consent_date: new Date().toISOString(),
+          coppa_consent_guardian_name: fullName.trim(),
+          coppa_consent_guardian_email: email.trim().toLowerCase(),
         })
         .eq('id', authData.user.id);
 
@@ -273,6 +285,8 @@ export default function ParentRegisterScreen() {
           registration_status: skipApproval ? 'registered' : 'pending',
           coppa_consent_given: coppaConsent,
           coppa_consent_date: new Date().toISOString(),
+          coppa_consent_guardian_name: fullName.trim(),
+          coppa_consent_guardian_email: email.trim().toLowerCase(),
         })
         .select()
         .single();
@@ -622,17 +636,48 @@ export default function ParentRegisterScreen() {
                 </View>
               </View>
 
-              {/* COPPA Consent */}
-              <View style={s.consentContainer}>
-                <Switch
-                  value={coppaConsent}
-                  onValueChange={setCoppaConsent}
-                  trackColor={{ false: colors.border, true: colors.primary }}
-                  thumbColor={colors.card}
-                />
-                <Text style={s.consentText}>
-                  I am the parent or legal guardian of this child and consent to their participation in the organization's programs. I understand that coaches and staff may communicate with my child through the app's player chat feature, and that I will have view-only access to monitor these communications. *
-                </Text>
+              {/* COPPA Parental Consent Notice */}
+              <View style={s.coppaSection}>
+                <View style={s.coppaHeader}>
+                  <Ionicons name="shield-checkmark" size={24} color={colors.warning} />
+                  <Text style={s.coppaTitle}>Children's Privacy Notice (COPPA)</Text>
+                </View>
+
+                <View style={s.coppaCard}>
+                  <Text style={s.coppaSubtitle}>Information We Collect About Your Child</Text>
+                  <Text style={s.coppaText}>VolleyBrain collects the following information about your child to manage their participation in youth sports:</Text>
+
+                  <View style={s.coppaList}>
+                    <Text style={s.coppaListItem}>{'\u2022'} Full name and date of birth</Text>
+                    <Text style={s.coppaListItem}>{'\u2022'} School grade and jersey/shirt sizes</Text>
+                    <Text style={s.coppaListItem}>{'\u2022'} Medical information (allergies, conditions, medications)</Text>
+                    <Text style={s.coppaListItem}>{'\u2022'} Photos and profile images</Text>
+                    <Text style={s.coppaListItem}>{'\u2022'} Game statistics and achievements</Text>
+                    <Text style={s.coppaListItem}>{'\u2022'} Team assignments and attendance records</Text>
+                  </View>
+
+                  <Text style={s.coppaSubtitle}>Who Can See This Data</Text>
+                  <View style={s.coppaList}>
+                    <Text style={s.coppaListItem}>{'\u2022'} Coaches and team staff: Medical info, stats, attendance (for player safety and team management)</Text>
+                    <Text style={s.coppaListItem}>{'\u2022'} Other parents on the team: First name and jersey number only</Text>
+                    <Text style={s.coppaListItem}>{'\u2022'} Organization administrators: All data for league management</Text>
+                  </View>
+
+                  <Text style={s.coppaSubtitle}>Data Retention & Your Rights</Text>
+                  <Text style={s.coppaText}>Your child's data is kept while they are enrolled in a season. You may request data export, correction, or deletion at any time through your profile settings. Revoking consent will remove your child from active rosters.</Text>
+                </View>
+
+                <View style={s.consentRow}>
+                  <Switch
+                    value={coppaConsent}
+                    onValueChange={setCoppaConsent}
+                    trackColor={{ false: colors.border, true: colors.primary }}
+                    thumbColor={coppaConsent ? '#fff' : '#f4f3f4'}
+                  />
+                  <Text style={s.consentText}>
+                    I am the parent or legal guardian of this child and I consent to the collection and use of my child's information as described above. *
+                  </Text>
+                </View>
               </View>
             </View>
           )}
@@ -679,6 +724,23 @@ export default function ParentRegisterScreen() {
                 />
                 <Text style={s.consentText}>
                   I agree that my child and our family will abide by the league's code of conduct, including showing good sportsmanship and respect toward coaches, officials, and other players.
+                </Text>
+              </View>
+
+              {/* Terms & Privacy Policy */}
+              <View style={s.consentContainer}>
+                <Switch
+                  value={termsAccepted}
+                  onValueChange={setTermsAccepted}
+                  trackColor={{ false: colors.border, true: colors.primary }}
+                  thumbColor={colors.card}
+                />
+                <Text style={s.consentText}>
+                  I have read and agree to the{' '}
+                  <Text style={s.legalLink} onPress={() => router.push('/privacy-policy?fromSignup=true')}>Privacy Policy</Text>
+                  {' '}and{' '}
+                  <Text style={s.legalLink} onPress={() => router.push('/terms-of-service?fromSignup=true')}>Terms of Service</Text>
+                  {' '}*
                 </Text>
               </View>
 
@@ -899,6 +961,16 @@ const createStyles = (colors: any) => StyleSheet.create({
   teamBannerName: { fontSize: 16, fontWeight: '600', color: colors.info },
   consentContainer: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, backgroundColor: colors.background, padding: 16, borderRadius: 12, marginTop: 16, borderWidth: 1, borderColor: colors.border },
   consentText: { flex: 1, fontSize: 13, color: colors.textMuted, lineHeight: 18 },
+  legalLink: { color: colors.primary, textDecorationLine: 'underline' },
+  coppaSection: { marginTop: 24 },
+  coppaHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 },
+  coppaTitle: { fontSize: 18, fontWeight: '700', color: colors.warning },
+  coppaCard: { backgroundColor: colors.background, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: colors.warning + '40', marginBottom: 16 },
+  coppaSubtitle: { fontSize: 15, fontWeight: '700', color: colors.text, marginBottom: 8, marginTop: 12 },
+  coppaText: { fontSize: 13, color: colors.textMuted, lineHeight: 20 },
+  coppaList: { marginTop: 8, marginBottom: 8, paddingLeft: 4 },
+  coppaListItem: { fontSize: 13, color: colors.textMuted, lineHeight: 22, paddingLeft: 4 },
+  consentRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, backgroundColor: colors.background, padding: 16, borderRadius: 12, borderWidth: 1, borderColor: colors.border },
   reviewCard: { backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   reviewSectionTitle: { fontSize: 16, fontWeight: '600', color: colors.text, marginBottom: 12 },
   reviewRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border },

@@ -6,6 +6,7 @@ import { SeasonProvider } from '@/lib/season';
 import { SportProvider } from '@/lib/sport';
 import { ThemeProvider } from '@/lib/theme';
 import { DarkTheme, DefaultTheme, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
+import * as Notifications from 'expo-notifications';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useRef } from 'react';
@@ -53,6 +54,41 @@ function RootLayoutNav() {
   useEffect(() => {
     hasNavigated.current = false;
   }, [segments]);
+
+  // Handle notification tap (app opened from notification)
+  useEffect(() => {
+    const responseSubscription = Notifications.addNotificationResponseReceivedListener(response => {
+      const data = response.notification.request.content.data;
+      const type = data?.type as string;
+
+      switch (type) {
+        case 'chat':
+          router.push(data.channelId ? `/chat/${data.channelId}` : '/(tabs)/chats');
+          break;
+        case 'schedule':
+          router.push('/(tabs)/schedule');
+          break;
+        case 'payment':
+          router.push('/(tabs)/payments');
+          break;
+        case 'blast':
+          router.push('/(tabs)/messages');
+          break;
+        case 'registration':
+          router.push('/registration-hub');
+          break;
+        case 'game':
+          router.push('/game-prep');
+          break;
+        default:
+          router.push('/(tabs)');
+      }
+    });
+
+    return () => {
+      responseSubscription.remove();
+    };
+  }, []);
 
   if (loading) {
     return null;

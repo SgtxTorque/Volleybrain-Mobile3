@@ -386,6 +386,22 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
 
+          {/* Data Rights */}
+          <TouchableOpacity
+            style={s.dataRightsCard}
+            onPress={() => router.push('/data-rights' as any)}
+            activeOpacity={0.7}
+          >
+            <View style={s.dataRightsIcon}>
+              <Ionicons name="lock-closed" size={22} color={colors.info} />
+            </View>
+            <View style={s.dataRightsContent}>
+              <Text style={s.dataRightsTitle}>Data Rights (COPPA)</Text>
+              <Text style={s.dataRightsDesc}>Review, export, or request deletion of your child's data</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+          </TouchableOpacity>
+
           {/* Danger Zone */}
           <View style={[s.section, s.dangerSection]}>
             <Text style={[s.sectionTitle, { color: colors.danger }]}>Danger Zone</Text>
@@ -447,6 +463,11 @@ const createStyles = (colors: any) => StyleSheet.create({
   saveBtn: { backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 16 },
   saveBtnDisabled: { opacity: 0.5 },
   saveBtnText: { fontSize: 16, fontWeight: '600', color: '#000' },
+  dataRightsCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.info + '30', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
+  dataRightsIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: colors.info + '20', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  dataRightsContent: { flex: 1 },
+  dataRightsTitle: { fontSize: 15, fontWeight: '600', color: colors.text },
+  dataRightsDesc: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
   dangerSection: { borderColor: colors.danger + '40', backgroundColor: colors.danger + '08' },
   dangerText: { fontSize: 14, color: colors.textMuted, lineHeight: 20, marginBottom: 8 },
   deleteBtn: { backgroundColor: colors.danger, borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 16, flexDirection: 'row', justifyContent: 'center', gap: 8 },

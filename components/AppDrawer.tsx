@@ -95,6 +95,7 @@ export default function AppDrawer({ visible, onClose }: AppDrawerProps) {
           { id: 'family-payments', label: 'Payments', icon: 'wallet', route: '/family-payments' },
           { id: 'my-waivers', label: 'My Waivers', icon: 'document-text', route: '/my-waivers' },
           { id: 'invite-friends', label: 'Invite Friends', icon: 'share-social', route: '/invite-friends' },
+          { id: 'data-rights', label: 'Data Rights', icon: 'lock-closed', route: '/data-rights' },
         ],
       });
     }
@@ -124,6 +125,7 @@ export default function AppDrawer({ visible, onClose }: AppDrawerProps) {
     sections.push({
       title: 'Personalize',
       items: [
+        { id: 'notification-prefs', label: 'Notifications', icon: 'notifications-outline', route: '/notification-preferences' },
         { id: 'background', label: 'Background', icon: 'color-palette', route: '/background-picker' },
       ],
     });
@@ -138,6 +140,9 @@ export default function AppDrawer({ visible, onClose }: AppDrawerProps) {
         { id: 'archives', label: 'Season History', icon: 'archive', route: '/season-archives' },
         { id: 'org-directory', label: 'Find Organizations', icon: 'business', route: '/org-directory' },
         { id: 'help', label: 'Help & Support', icon: 'help-circle', route: '/help' },
+        { id: 'data-rights-settings', label: 'Data Rights', icon: 'lock-closed', route: '/data-rights' },
+        { id: 'privacy', label: 'Privacy Policy', icon: 'shield-checkmark', route: '/privacy-policy' },
+        { id: 'terms', label: 'Terms of Service', icon: 'document', route: '/terms-of-service' },
       ],
     });
 
