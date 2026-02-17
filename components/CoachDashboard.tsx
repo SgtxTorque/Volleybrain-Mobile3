@@ -6,6 +6,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -15,6 +17,10 @@ import {
 } from 'react-native';
 import RoleSelector from './RoleSelector';
 
+// ============================================
+// TYPES
+// ============================================
+
 type CoachTeam = {
   id: string;
   name: string;
@@ -22,6 +28,8 @@ type CoachTeam = {
   season_name: string;
   player_count: number;
   age_group_name: string | null;
+  wins: number;
+  losses: number;
 };
 
 type UpcomingEvent = {
@@ -36,6 +44,18 @@ type UpcomingEvent = {
   team_id: string;
 };
 
+type TopPerformer = {
+  player_id: string;
+  player_name: string;
+  initials: string;
+  stat_label: string;
+  stat_value: number;
+};
+
+// ============================================
+// COMPONENT
+// ============================================
+
 export default function CoachDashboard() {
   const { colors } = useTheme();
   const { user, profile } = useAuth();
@@ -47,10 +67,26 @@ export default function CoachDashboard() {
   const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
   const [totalPlayers, setTotalPlayers] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [activeTeamIndex, setActiveTeamIndex] = useState(0);
+  const [topPerformers, setTopPerformers] = useState<TopPerformer[]>([]);
+  const [attendanceRate, setAttendanceRate] = useState<number | null>(null);
+  const [availableCount, setAvailableCount] = useState<{ available: number; total: number } | null>(null);
+  const [gamesPlayed, setGamesPlayed] = useState(0);
+  const [totalGames, setTotalGames] = useState(0);
 
   useEffect(() => {
     fetchCoachData();
   }, [user?.id, workingSeason?.id]);
+
+  // Re-fetch team-specific data when active team changes
+  useEffect(() => {
+    if (teams.length > 0) {
+      const activeTeam = teams[activeTeamIndex];
+      if (activeTeam) {
+        fetchTeamSpecificData(activeTeam.id);
+      }
+    }
+  }, [activeTeamIndex, teams]);
 
   const fetchCoachData = async () => {
     if (!user?.id || !workingSeason?.id) return;
@@ -111,6 +147,21 @@ export default function CoachDashboard() {
         const playerCount = count || 0;
         total += playerCount;
 
+        // Fetch win/loss record from schedule_events
+        const { data: gameResults } = await supabase
+          .from('schedule_events')
+          .select('result')
+          .eq('team_id', team.id)
+          .eq('event_type', 'game')
+          .not('result', 'is', null);
+
+        let wins = 0;
+        let losses = 0;
+        (gameResults || []).forEach((g: any) => {
+          if (g.result === 'win') wins++;
+          else if (g.result === 'loss') losses++;
+        });
+
         teamsWithCounts.push({
           id: team.id,
           name: team.name,
@@ -118,6 +169,8 @@ export default function CoachDashboard() {
           season_name: team.seasons?.name || '',
           player_count: playerCount,
           age_group_name: team.age_groups?.name || null,
+          wins,
+          losses,
         });
       }
 
@@ -131,11 +184,16 @@ export default function CoachDashboard() {
       setTeams(teamsWithCounts);
       setTotalPlayers(total);
 
+      // Reset active team index if out of bounds
+      if (activeTeamIndex >= teamsWithCounts.length) {
+        setActiveTeamIndex(0);
+      }
+
       // Fetch upcoming events for these teams
       const teamIds = teamsWithCounts.map(t => t.id);
       if (teamIds.length > 0) {
         const today = new Date().toISOString().split('T')[0];
-        
+
         const { data: events } = await supabase
           .from('schedule_events')
           .select(`
@@ -168,6 +226,23 @@ export default function CoachDashboard() {
         }));
 
         setUpcomingEvents(formattedEvents);
+
+        // Count total and played games for season progress
+        const { count: totalGameCount } = await supabase
+          .from('schedule_events')
+          .select('*', { count: 'exact', head: true })
+          .in('team_id', teamIds)
+          .eq('event_type', 'game');
+
+        const { count: playedGameCount } = await supabase
+          .from('schedule_events')
+          .select('*', { count: 'exact', head: true })
+          .in('team_id', teamIds)
+          .eq('event_type', 'game')
+          .not('result', 'is', null);
+
+        setTotalGames(totalGameCount || 0);
+        setGamesPlayed(playedGameCount || 0);
       }
 
     } catch (error) {
@@ -177,11 +252,148 @@ export default function CoachDashboard() {
     }
   };
 
+  const fetchTeamSpecificData = async (teamId: string) => {
+    try {
+      // Fetch attendance rate for recent events
+      const { data: recentEvents } = await supabase
+        .from('schedule_events')
+        .select('id')
+        .eq('team_id', teamId)
+        .lte('event_date', new Date().toISOString().split('T')[0])
+        .order('event_date', { ascending: false })
+        .limit(5);
+
+      if (recentEvents && recentEvents.length > 0) {
+        const eventIds = recentEvents.map(e => e.id);
+        const { data: rsvps } = await supabase
+          .from('event_rsvps')
+          .select('status')
+          .in('event_id', eventIds);
+
+        if (rsvps && rsvps.length > 0) {
+          const attending = rsvps.filter(r => r.status === 'yes' || r.status === 'attending' || r.status === 'present').length;
+          setAttendanceRate(Math.round((attending / rsvps.length) * 100));
+        } else {
+          setAttendanceRate(null);
+        }
+      } else {
+        setAttendanceRate(null);
+      }
+
+      // Fetch availability for next event
+      const today = new Date().toISOString().split('T')[0];
+      const { data: nextEvents } = await supabase
+        .from('schedule_events')
+        .select('id')
+        .eq('team_id', teamId)
+        .gte('event_date', today)
+        .order('event_date', { ascending: true })
+        .limit(1);
+
+      if (nextEvents && nextEvents.length > 0) {
+        const { data: rsvps } = await supabase
+          .from('event_rsvps')
+          .select('status')
+          .eq('event_id', nextEvents[0].id);
+
+        const { count: rosterCount } = await supabase
+          .from('team_players')
+          .select('*', { count: 'exact', head: true })
+          .eq('team_id', teamId);
+
+        const available = (rsvps || []).filter(r => r.status === 'yes' || r.status === 'attending').length;
+        setAvailableCount({ available, total: rosterCount || 0 });
+      } else {
+        setAvailableCount(null);
+      }
+
+      // Fetch top performers from recent game stats
+      const { data: recentGameStats } = await supabase
+        .from('game_player_stats')
+        .select(`
+          player_id,
+          kills,
+          aces,
+          blocks,
+          digs,
+          assists,
+          players (first_name, last_name)
+        `)
+        .eq('team_id', teamId)
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (recentGameStats && recentGameStats.length > 0) {
+        // Aggregate stats by player and find top 3
+        const playerMap = new Map<string, { name: string; kills: number; aces: number; blocks: number; digs: number; assists: number }>();
+
+        for (const stat of recentGameStats) {
+          const player = stat.players as any;
+          if (!player) continue;
+          const name = `${player.first_name || ''} ${player.last_name || ''}`.trim();
+          const existing = playerMap.get(stat.player_id) || { name, kills: 0, aces: 0, blocks: 0, digs: 0, assists: 0 };
+          existing.kills += stat.kills || 0;
+          existing.aces += stat.aces || 0;
+          existing.blocks += stat.blocks || 0;
+          existing.digs += stat.digs || 0;
+          existing.assists += stat.assists || 0;
+          playerMap.set(stat.player_id, existing);
+        }
+
+        const performers: TopPerformer[] = [];
+        for (const [playerId, data] of playerMap.entries()) {
+          const bestStat = Math.max(data.kills, data.aces, data.blocks, data.digs, data.assists);
+          let statLabel = '';
+          let statValue = 0;
+
+          if (data.kills >= data.aces && data.kills >= data.blocks && data.kills >= data.digs && data.kills >= data.assists) {
+            statLabel = 'kills';
+            statValue = data.kills;
+          } else if (data.aces >= data.blocks && data.aces >= data.digs && data.aces >= data.assists) {
+            statLabel = 'aces';
+            statValue = data.aces;
+          } else if (data.blocks >= data.digs && data.blocks >= data.assists) {
+            statLabel = 'blocks';
+            statValue = data.blocks;
+          } else if (data.digs >= data.assists) {
+            statLabel = 'digs';
+            statValue = data.digs;
+          } else {
+            statLabel = 'assists';
+            statValue = data.assists;
+          }
+
+          const nameParts = data.name.split(' ');
+          const initials = nameParts.map(n => n[0] || '').join('').toUpperCase().slice(0, 2);
+
+          performers.push({
+            player_id: playerId,
+            player_name: data.name,
+            initials,
+            stat_label: statLabel,
+            stat_value: statValue,
+          });
+        }
+
+        performers.sort((a, b) => b.stat_value - a.stat_value);
+        setTopPerformers(performers.slice(0, 3));
+      } else {
+        setTopPerformers([]);
+      }
+    } catch (error) {
+      console.error('Error fetching team-specific data:', error);
+    }
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
     await fetchCoachData();
     setRefreshing(false);
   };
+
+  // ============================================
+  // HELPERS
+  // ============================================
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr + 'T00:00:00');
@@ -191,7 +403,7 @@ export default function CoachDashboard() {
 
     if (date.toDateString() === today.toDateString()) return 'Today';
     if (date.toDateString() === tomorrow.toDateString()) return 'Tomorrow';
-    
+
     return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   };
 
@@ -204,270 +416,769 @@ export default function CoachDashboard() {
     return `${hour}:${minutes} ${ampm}`;
   };
 
-  const getNextEvent = () => {
-    if (upcomingEvents.length === 0) return null;
-    return upcomingEvents[0];
-  };
-
-  const getNextGameCountdown = () => {
-    const nextGame = upcomingEvents.find(e => e.type === 'game');
-    if (!nextGame) return null;
-    
-    const gameDate = new Date(nextGame.date + 'T00:00:00');
+  const getCountdownText = (dateStr: string) => {
+    const eventDate = new Date(dateStr + 'T00:00:00');
     const today = new Date();
-    const diffTime = gameDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) return 'Today!';
-    if (diffDays === 1) return 'Tomorrow';
-    return `${diffDays} days`;
+    today.setHours(0, 0, 0, 0);
+    const diffTime = eventDate.getTime() - today.getTime();
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return 'TODAY';
+    if (diffDays === 1) return 'TOMORROW';
+    if (diffDays < 7) return `IN ${diffDays} DAYS`;
+    return `IN ${diffDays} DAYS`;
   };
 
-  const navigateToTeamRoster = (teamId: string) => {
-    router.push({ pathname: '/players', params: { teamId } });
+  const getAttendanceColor = (rate: number) => {
+    if (rate > 80) return colors.success;
+    if (rate > 60) return colors.warning;
+    return colors.danger;
   };
 
-  const navigateToTeamChat = (teamId: string) => {
-    router.push({ pathname: '/chat/[id]', params: { id: teamId } });
-  };
+  const activeTeam = teams[activeTeamIndex] || null;
+
+  // Filter upcoming events to active team
+  const activeTeamEvents = activeTeam
+    ? upcomingEvents.filter(e => e.team_id === activeTeam.id)
+    : upcomingEvents;
+
+  const nextEvent = activeTeamEvents.length > 0 ? activeTeamEvents[0] : null;
+
+  const firstName = profile?.full_name?.split(' ')[0] || 'Coach';
+
+  // Season progress
+  const totalWins = teams.reduce((sum, t) => sum + t.wins, 0);
+  const winRate = gamesPlayed > 0 ? Math.round((totalWins / gamesPlayed) * 100) : 0;
 
   const s = createStyles(colors);
-  const nextEvent = getNextEvent();
-  const gameCountdown = getNextGameCountdown();
-  const firstName = profile?.full_name?.split(' ')[0] || 'Coach';
+
+  // ============================================
+  // LOADING STATE
+  // ============================================
+
+  if (loading) {
+    return (
+      <View style={[s.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={{ color: colors.textMuted, marginTop: 12, fontSize: 15 }}>Loading Command Center...</Text>
+      </View>
+    );
+  }
+
+  // ============================================
+  // RENDER
+  // ============================================
 
   return (
     <ScrollView
       style={s.container}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      showsVerticalScrollIndicator={false}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
     >
       {/* Header */}
       <View style={s.header}>
         <View>
           <Text style={s.greeting}>Welcome back,</Text>
-          <Text style={s.name}>{firstName}</Text>
+          <Text style={s.heroName}>{firstName}</Text>
         </View>
         <RoleSelector />
       </View>
 
-      <Text style={s.subtitle}>{workingSeason?.name || 'No Season'}</Text>
+      {/* Team Selector Pills (if multiple teams) */}
+      {teams.length > 1 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={s.teamSelectorContainer}
+          contentContainerStyle={s.teamSelectorContent}
+        >
+          {teams.map((team, index) => (
+            <TouchableOpacity
+              key={team.id}
+              style={[
+                s.teamPill,
+                index === activeTeamIndex && s.teamPillActive,
+              ]}
+              onPress={() => setActiveTeamIndex(index)}
+            >
+              <Text style={[
+                s.teamPillText,
+                index === activeTeamIndex && s.teamPillTextActive,
+              ]}>
+                {team.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
 
-      {/* Quick Stats */}
-      <View style={s.statsRow}>
-        <View style={s.statItem}>
-          <Text style={s.statNum}>{teams.length}</Text>
-          <Text style={s.statLabel}>{teams.length === 1 ? 'Team' : 'Teams'}</Text>
-        </View>
-        <View style={s.statDivider} />
-        <View style={s.statItem}>
-          <Text style={s.statNum}>{totalPlayers}</Text>
-          <Text style={s.statLabel}>Players</Text>
-        </View>
-        <View style={s.statDivider} />
-        <View style={s.statItem}>
-          <Text style={[s.statNum, gameCountdown === 'Today!' && { color: colors.success }]}>
-            {gameCountdown || '—'}
-          </Text>
-          <Text style={s.statLabel}>Next Game</Text>
-        </View>
-      </View>
+      {/* HERO SECTION - Team Card */}
+      {activeTeam ? (
+        <View style={s.heroCard}>
+          <View style={s.heroAccentBar} />
+          <View style={s.heroBody}>
+            <Text style={s.heroTeamName}>{activeTeam.name}</Text>
 
-      {/* My Teams */}
-      <Text style={s.sectionTitle}>My Teams</Text>
-      {teams.length === 0 ? (
-        <View style={s.emptyCard}>
-          <Ionicons name="shirt-outline" size={32} color={colors.textMuted} />
-          <Text style={s.emptyText}>No teams assigned for this season</Text>
-        </View>
-      ) : (
-        teams.map(team => (
-          <View key={team.id} style={s.teamCard}>
-            <View style={s.teamHeader}>
-              <View style={s.teamInfo}>
-                <View style={s.teamNameRow}>
-                  <Text style={s.teamName}>{team.name}</Text>
-                  {team.age_group_name && (
-                    <View style={s.ageGroupBadge}>
-                      <Text style={s.ageGroupText}>{team.age_group_name}</Text>
-                    </View>
-                  )}
-                </View>
-                <View style={s.teamMeta}>
-                  <View style={[s.roleBadge, team.role === 'head_coach' ? s.roleBadgeHC : s.roleBadgeAC]}>
-                    <Text style={s.roleBadgeText}>
-                      {team.role === 'head_coach' ? 'Head Coach' : 'Assistant'}
-                    </Text>
-                  </View>
-                  <Text style={s.playerCount}>{team.player_count} players</Text>
-                </View>
+            <View style={s.heroStatsRow}>
+              <View style={s.heroRecordContainer}>
+                <Text style={[s.heroRecordLetter, { color: colors.success }]}>W</Text>
+                <Text style={s.heroRecordNum}>{activeTeam.wins}</Text>
+                <Text style={s.heroRecordDash}> - </Text>
+                <Text style={[s.heroRecordLetter, { color: colors.danger }]}>L</Text>
+                <Text style={s.heroRecordNum}>{activeTeam.losses}</Text>
+              </View>
+
+              <View style={s.heroStatDivider} />
+
+              <View style={s.heroRosterContainer}>
+                <Ionicons name="people" size={16} color={colors.primary} />
+                <Text style={s.heroRosterText}>{activeTeam.player_count} Players</Text>
               </View>
             </View>
 
-            <View style={s.teamActions}>
-              <TouchableOpacity style={s.teamAction} onPress={() => navigateToTeamRoster(team.id)}>
-                <Ionicons name="people" size={20} color={colors.primary} />
-                <Text style={s.teamActionText}>Roster</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={s.teamAction} onPress={() => router.push('/schedule')}>
-                <Ionicons name="calendar" size={20} color={colors.info} />
-                <Text style={s.teamActionText}>Schedule</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={s.teamAction} onPress={() => navigateToTeamChat(team.id)}>
-                <Ionicons name="chatbubbles" size={20} color={colors.success} />
-                <Text style={s.teamActionText}>Chat</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={s.teamAction} onPress={() => router.push('/players')}>
-                <Ionicons name="card" size={20} color={colors.warning} />
-                <Text style={s.teamActionText}>Cards</Text>
-              </TouchableOpacity>
-            </View>
+            <Text style={s.heroSeasonText}>
+              {activeTeam.season_name}
+              {activeTeam.age_group_name ? ` \u00B7 ${activeTeam.age_group_name}` : ''}
+            </Text>
           </View>
-        ))
+        </View>
+      ) : (
+        <View style={s.emptyCard}>
+          <Ionicons name="shirt-outline" size={36} color={colors.textMuted} />
+          <Text style={s.emptyTitle}>No Teams Assigned</Text>
+          <Text style={s.emptySubtext}>No teams found for this season</Text>
+        </View>
       )}
 
-      {/* Quick Actions */}
-      <Text style={s.sectionTitle}>Quick Actions</Text>
+      {/* MISSION BRIEFING - Next Event */}
+      <Text style={s.sectionLabel}>MISSION BRIEFING</Text>
+      {nextEvent ? (
+        <View style={s.missionCard}>
+          <View style={s.missionTop}>
+            <View style={[
+              s.eventTypeBadge,
+              { backgroundColor: nextEvent.type === 'game' ? colors.danger + '20' : colors.info + '20' },
+            ]}>
+              <View style={[
+                s.eventTypeDot,
+                { backgroundColor: nextEvent.type === 'game' ? colors.danger : colors.info },
+              ]} />
+              <Text style={[
+                s.eventTypeBadgeText,
+                { color: nextEvent.type === 'game' ? colors.danger : colors.info },
+              ]}>
+                {nextEvent.type === 'game' ? 'GAME' : 'PRACTICE'}
+              </Text>
+            </View>
+
+            <Text style={s.countdownText}>{getCountdownText(nextEvent.date)}</Text>
+          </View>
+
+          {nextEvent.type === 'game' && nextEvent.opponent && (
+            <Text style={s.missionOpponent}>vs {nextEvent.opponent}</Text>
+          )}
+
+          {nextEvent.type !== 'game' && (
+            <Text style={s.missionTitle}>{nextEvent.title}</Text>
+          )}
+
+          <View style={s.missionDetails}>
+            <View style={s.missionDetailRow}>
+              <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
+              <Text style={s.missionDetailText}>{formatDate(nextEvent.date)}</Text>
+            </View>
+            {nextEvent.time ? (
+              <View style={s.missionDetailRow}>
+                <Ionicons name="time-outline" size={14} color={colors.textMuted} />
+                <Text style={s.missionDetailText}>{formatTime(nextEvent.time)}</Text>
+              </View>
+            ) : null}
+            {nextEvent.location ? (
+              <View style={s.missionDetailRow}>
+                <Ionicons name="location-outline" size={14} color={colors.textMuted} />
+                <Text style={s.missionDetailText}>{nextEvent.location}</Text>
+              </View>
+            ) : null}
+          </View>
+
+          <View style={s.missionActions}>
+            <TouchableOpacity
+              style={s.missionBtn}
+              onPress={() => router.push({ pathname: '/lineup-builder', params: { teamId: activeTeam?.id } } as any)}
+            >
+              <Ionicons name="list" size={16} color={colors.primary} />
+              <Text style={s.missionBtnText}>Prep Lineup</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={s.missionBtn}
+              onPress={() => router.push('/(tabs)/players' as any)}
+            >
+              <Ionicons name="people" size={16} color={colors.primary} />
+              <Text style={s.missionBtnText}>View Roster</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : (
+        <View style={s.emptyCard}>
+          <Ionicons name="calendar-outline" size={32} color={colors.textMuted} />
+          <Text style={s.emptyTitle}>All Clear</Text>
+          <Text style={s.emptySubtext}>No upcoming events scheduled</Text>
+        </View>
+      )}
+
+      {/* TEAM HEALTH - Quick Indicators */}
+      <Text style={s.sectionLabel}>TEAM HEALTH</Text>
+      <View style={s.healthRow}>
+        <View style={s.healthCard}>
+          <Ionicons
+            name="checkmark-circle"
+            size={24}
+            color={attendanceRate !== null ? getAttendanceColor(attendanceRate) : colors.textMuted}
+          />
+          <Text style={[
+            s.healthNum,
+            attendanceRate !== null && { color: getAttendanceColor(attendanceRate) },
+          ]}>
+            {attendanceRate !== null ? `${attendanceRate}%` : '--'}
+          </Text>
+          <Text style={s.healthLabel}>Attendance</Text>
+        </View>
+
+        <View style={s.healthCard}>
+          <Ionicons name="hand-left" size={24} color={colors.info} />
+          <Text style={s.healthNum}>
+            {availableCount ? `${availableCount.available}/${availableCount.total}` : '--'}
+          </Text>
+          <Text style={s.healthLabel}>Available</Text>
+        </View>
+
+        <View style={s.healthCard}>
+          <Ionicons
+            name={topPerformers.length > 0 ? 'checkmark-done-circle' : 'alert-circle-outline'}
+            size={24}
+            color={colors.success}
+          />
+          <Text style={[s.healthNum, { color: colors.success }]}>
+            {topPerformers.length > 0 ? 'All good' : '--'}
+          </Text>
+          <Text style={s.healthLabel}>Alerts</Text>
+        </View>
+      </View>
+
+      {/* TOP PERFORMERS */}
+      <Text style={s.sectionLabel}>TOP PERFORMERS</Text>
+      {topPerformers.length > 0 ? (
+        <View style={s.performersRow}>
+          {topPerformers.map((performer, idx) => {
+            const accentColors = [colors.warning, '#C0C0C0', '#CD7F32'];
+            const accent = accentColors[idx] || colors.textMuted;
+            return (
+              <View key={performer.player_id} style={s.performerCard}>
+                <View style={[s.performerBadge, { borderColor: accent }]}>
+                  <Text style={s.performerInitials}>{performer.initials}</Text>
+                </View>
+                <Text style={s.performerName} numberOfLines={1}>{performer.player_name}</Text>
+                <Text style={[s.performerStat, { color: accent }]}>
+                  {performer.stat_value} {performer.stat_label}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+      ) : (
+        <View style={s.emptyCard}>
+          <Ionicons name="trophy-outline" size={32} color={colors.textMuted} />
+          <Text style={s.emptySubtext}>Play a game to see top performers</Text>
+        </View>
+      )}
+
+      {/* QUICK ACTIONS */}
+      <Text style={s.sectionLabel}>QUICK ACTIONS</Text>
       <View style={s.actionsGrid}>
-        <TouchableOpacity style={s.actionCard} onPress={() => router.push('/players')}>
-          <View style={[s.actionIcon, { backgroundColor: colors.primary + '20' }]}>
-            <Ionicons name="list" size={24} color={colors.primary} />
+        <TouchableOpacity style={s.actionCard} onPress={() => router.push('/attendance' as any)}>
+          <View style={[s.actionIconCircle, { backgroundColor: colors.success + '26' }]}>
+            <Ionicons name="checkmark-circle" size={32} color={colors.success} />
           </View>
-          <Text style={s.actionLabel}>Lineup</Text>
+          <Text style={s.actionLabel}>Take Attendance</Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity style={s.actionCard} onPress={() => router.push('/players')}>
-          <View style={[s.actionIcon, { backgroundColor: colors.warning + '20' }]}>
-            <Ionicons name="card" size={24} color={colors.warning} />
+
+        <TouchableOpacity style={s.actionCard} onPress={() => router.push('/game-prep' as any)}>
+          <View style={[s.actionIconCircle, { backgroundColor: colors.info + '26' }]}>
+            <Ionicons name="stats-chart" size={32} color={colors.info} />
           </View>
-          <Text style={s.actionLabel}>Player Cards</Text>
+          <Text style={s.actionLabel}>Enter Stats</Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity style={s.actionCard} onPress={() => router.push('/schedule')}>
-          <View style={[s.actionIcon, { backgroundColor: colors.info + '20' }]}>
-            <Ionicons name="clipboard" size={24} color={colors.info} />
+
+        <TouchableOpacity style={s.actionCard} onPress={() => router.push('/blast-composer' as any)}>
+          <View style={[s.actionIconCircle, { backgroundColor: colors.warning + '26' }]}>
+            <Ionicons name="megaphone" size={32} color={colors.warning} />
+          </View>
+          <Text style={s.actionLabel}>Send Message</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={s.actionCard} onPress={() => router.push('/game-prep' as any)}>
+          <View style={[s.actionIconCircle, { backgroundColor: colors.primary + '26' }]}>
+            <Ionicons name="analytics" size={32} color={colors.primary} />
           </View>
           <Text style={s.actionLabel}>Game Prep</Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity style={s.actionCard} onPress={() => router.push('/messages')}>
-          <View style={[s.actionIcon, { backgroundColor: colors.success + '20' }]}>
-            <Ionicons name="megaphone" size={24} color={colors.success} />
-          </View>
-          <Text style={s.actionLabel}>Announce</Text>
-        </TouchableOpacity>
       </View>
 
-      {/* Upcoming */}
-      <Text style={s.sectionTitle}>Upcoming</Text>
-      {upcomingEvents.length === 0 ? (
-        <View style={s.emptyCard}>
-          <Ionicons name="calendar-outline" size={32} color={colors.textMuted} />
-          <Text style={s.emptyText}>No upcoming events scheduled</Text>
+      {/* SEASON PROGRESS */}
+      <Text style={s.sectionLabel}>SEASON PROGRESS</Text>
+      <View style={s.progressCard}>
+        <Text style={s.progressTitle}>
+          Game {gamesPlayed} of {totalGames} completed
+        </Text>
+        <View style={s.progressBarBg}>
+          <View style={[
+            s.progressBarFill,
+            { width: totalGames > 0 ? `${Math.round((gamesPlayed / totalGames) * 100)}%` : '0%' },
+          ]} />
         </View>
-      ) : (
-        upcomingEvents.slice(0, 3).map(event => (
-          <TouchableOpacity key={event.id} style={s.eventCard} onPress={() => router.push('/schedule')}>
-            <View style={[s.eventTypeIndicator, event.type === 'game' ? s.eventGame : s.eventPractice]} />
-            <View style={s.eventContent}>
-              <View style={s.eventHeader}>
-                <Text style={s.eventTitle}>
-                  {event.type === 'game' && event.opponent ? `vs ${event.opponent}` : event.title}
-                </Text>
-                <View style={[s.eventTypeBadge, event.type === 'game' ? s.eventTypeBadgeGame : s.eventTypeBadgePractice]}>
-                  <Text style={s.eventTypeBadgeText}>{event.type === 'game' ? 'Game' : 'Practice'}</Text>
-                </View>
-              </View>
-              <Text style={s.eventTeam}>{event.team_name}</Text>
-              <View style={s.eventDetails}>
-                <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
-                <Text style={s.eventDetailText}>{formatDate(event.date)}</Text>
-                {event.time && (
-                  <>
-                    <Ionicons name="time-outline" size={14} color={colors.textMuted} style={{ marginLeft: 12 }} />
-                    <Text style={s.eventDetailText}>{formatTime(event.time)}</Text>
-                  </>
-                )}
-              </View>
-              {event.location && (
-                <View style={s.eventDetails}>
-                  <Ionicons name="location-outline" size={14} color={colors.textMuted} />
-                  <Text style={s.eventDetailText}>{event.location}</Text>
-                </View>
-              )}
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-          </TouchableOpacity>
-        ))
-      )}
+        <View style={s.progressStatsRow}>
+          <View style={s.progressStat}>
+            <Text style={s.progressStatNum}>{totalWins}</Text>
+            <Text style={s.progressStatLabel}>Won</Text>
+          </View>
+          <View style={s.progressStat}>
+            <Text style={s.progressStatNum}>{winRate}%</Text>
+            <Text style={s.progressStatLabel}>Win %</Text>
+          </View>
+          <View style={s.progressStat}>
+            <Text style={s.progressStatNum}>{totalGames - gamesPlayed}</Text>
+            <Text style={s.progressStatLabel}>Remaining</Text>
+          </View>
+        </View>
+      </View>
 
-      {upcomingEvents.length > 3 && (
-        <TouchableOpacity style={s.viewAllBtn} onPress={() => router.push('/schedule')}>
-          <Text style={s.viewAllText}>View Full Schedule</Text>
-          <Ionicons name="arrow-forward" size={16} color={colors.primary} />
-        </TouchableOpacity>
-      )}
-
-      <View style={{ height: 40 }} />
+      {/* Bottom padding for tab bar */}
+      <View style={{ height: 120 }} />
     </ScrollView>
   );
 }
 
+// ============================================
+// STYLES
+// ============================================
+
 const createStyles = (colors: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'transparent', padding: 16 },
-  
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  greeting: { fontSize: 16, color: colors.textMuted },
-  name: { fontSize: 28, fontWeight: '800', color: colors.text },
-  subtitle: { fontSize: 15, color: colors.textMuted, marginBottom: 20 },
+  container: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    paddingHorizontal: 20,
+  },
 
-  statsRow: { backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', marginBottom: 24, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
-  statItem: { flex: 1, alignItems: 'center' },
-  statDivider: { width: 1, height: 30, backgroundColor: colors.border },
-  statNum: { fontSize: 24, fontWeight: 'bold', color: colors.text },
-  statLabel: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+  // Header
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  greeting: {
+    fontSize: 15,
+    color: colors.textMuted,
+    lineHeight: 22,
+  },
+  heroName: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: colors.text,
+    letterSpacing: -0.5,
+  },
 
-  sectionTitle: { fontSize: 13, fontWeight: '700', color: colors.textMuted, marginBottom: 12, textTransform: 'uppercase' as const, letterSpacing: 1 },
+  // Team Selector Pills
+  teamSelectorContainer: {
+    marginBottom: 16,
+    flexGrow: 0,
+  },
+  teamSelectorContent: {
+    gap: 8,
+    paddingVertical: 4,
+  },
+  teamPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: colors.glassCard,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+  },
+  teamPillActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  teamPillText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  teamPillTextActive: {
+    color: '#000',
+  },
 
-  emptyCard: { backgroundColor: colors.glassCard, borderRadius: 16, padding: 32, alignItems: 'center', marginBottom: 24, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
-  emptyText: { fontSize: 14, color: colors.textMuted, marginTop: 8 },
+  // Hero Card
+  heroCard: {
+    backgroundColor: colors.glassCard,
+    borderRadius: 20,
+    overflow: 'hidden',
+    marginBottom: 28,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
+      android: { elevation: 6 },
+    }),
+  },
+  heroAccentBar: {
+    height: 4,
+    backgroundColor: colors.primary,
+  },
+  heroBody: {
+    padding: 20,
+  },
+  heroTeamName: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: colors.text,
+    letterSpacing: -0.5,
+    marginBottom: 12,
+  },
+  heroStatsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  heroRecordContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
+  heroRecordLetter: {
+    fontSize: 14,
+    fontWeight: '800',
+    marginRight: 4,
+  },
+  heroRecordNum: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  heroRecordDash: {
+    fontSize: 20,
+    color: colors.textMuted,
+    marginHorizontal: 4,
+  },
+  heroStatDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: colors.glassBorder,
+    marginHorizontal: 16,
+  },
+  heroRosterContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  heroRosterText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  heroSeasonText: {
+    fontSize: 13,
+    color: colors.textMuted,
+    marginTop: 4,
+  },
 
-  teamCard: { backgroundColor: colors.glassCard, borderRadius: 16, marginBottom: 12, overflow: 'hidden', borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
-  teamHeader: { padding: 16 },
-  teamInfo: { flex: 1 },
-  teamNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-  teamName: { fontSize: 18, fontWeight: '600', color: colors.text },
-  ageGroupBadge: { backgroundColor: colors.primary + '20', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 },
-  ageGroupText: { fontSize: 12, fontWeight: '600', color: colors.primary },
-  teamMeta: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  roleBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-  roleBadgeHC: { backgroundColor: colors.success + '20' },
-  roleBadgeAC: { backgroundColor: colors.info + '20' },
-  roleBadgeText: { fontSize: 11, fontWeight: '600', color: colors.text },
-  playerCount: { fontSize: 13, color: colors.textMuted },
-  teamActions: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: colors.border },
-  teamAction: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, borderRightWidth: 1, borderRightColor: colors.border },
-  teamActionText: { fontSize: 12, color: colors.text, fontWeight: '500' },
+  // Section Label
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textMuted,
+    letterSpacing: 2,
+    textTransform: 'uppercase' as const,
+    marginBottom: 12,
+  },
 
-  actionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24 },
-  actionCard: { width: '47%', backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
-  actionIcon: { width: 48, height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
-  actionLabel: { fontSize: 13, fontWeight: '500', color: colors.text },
+  // Mission Briefing Card
+  missionCard: {
+    backgroundColor: colors.glassCard,
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 28,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
+      android: { elevation: 6 },
+    }),
+  },
+  missionTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  eventTypeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  eventTypeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  eventTypeBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  countdownText: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: colors.primary,
+  },
+  missionOpponent: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 12,
+  },
+  missionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 12,
+  },
+  missionDetails: {
+    gap: 6,
+    marginBottom: 16,
+  },
+  missionDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  missionDetailText: {
+    fontSize: 14,
+    color: colors.textMuted,
+  },
+  missionActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  missionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.glassCard,
+    borderRadius: 12,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+  },
+  missionBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary,
+  },
 
-  eventCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.glassCard, borderRadius: 16, marginBottom: 8, overflow: 'hidden', borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
-  eventTypeIndicator: { width: 4, alignSelf: 'stretch' },
-  eventGame: { backgroundColor: colors.danger },
-  eventPractice: { backgroundColor: colors.info },
-  eventContent: { flex: 1, padding: 12 },
-  eventHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
-  eventTitle: { fontSize: 15, fontWeight: '600', color: colors.text, flex: 1 },
-  eventTypeBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, marginLeft: 8 },
-  eventTypeBadgeGame: { backgroundColor: colors.danger + '20' },
-  eventTypeBadgePractice: { backgroundColor: colors.info + '20' },
-  eventTypeBadgeText: { fontSize: 10, fontWeight: '600', color: colors.text },
-  eventTeam: { fontSize: 12, color: colors.textMuted, marginBottom: 6 },
-  eventDetails: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
-  eventDetailText: { fontSize: 12, color: colors.textMuted },
+  // Team Health
+  healthRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 28,
+  },
+  healthCard: {
+    flex: 1,
+    backgroundColor: colors.glassCard,
+    borderRadius: 20,
+    padding: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
+      android: { elevation: 6 },
+    }),
+  },
+  healthNum: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: colors.text,
+    marginTop: 6,
+    textAlign: 'center',
+  },
+  healthLabel: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginTop: 2,
+    textAlign: 'center',
+  },
 
-  viewAllBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12 },
-  viewAllText: { fontSize: 14, color: colors.primary, fontWeight: '500' },
+  // Top Performers
+  performersRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 28,
+  },
+  performerCard: {
+    flex: 1,
+    backgroundColor: colors.glassCard,
+    borderRadius: 20,
+    padding: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
+      android: { elevation: 6 },
+    }),
+  },
+  performerBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primary + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    marginBottom: 6,
+  },
+  performerInitials: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  performerName: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.text,
+    textAlign: 'center',
+    marginBottom: 2,
+  },
+  performerStat: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+
+  // Quick Actions
+  actionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 28,
+  },
+  actionCard: {
+    width: '47%',
+    backgroundColor: colors.glassCard,
+    borderRadius: 20,
+    padding: 20,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
+      android: { elevation: 6 },
+    }),
+  },
+  actionIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  actionLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.text,
+    textAlign: 'center',
+  },
+
+  // Season Progress
+  progressCard: {
+    backgroundColor: colors.glassCard,
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 28,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
+      android: { elevation: 6 },
+    }),
+  },
+  progressTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 12,
+    lineHeight: 22,
+  },
+  progressBarBg: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.glassBorder,
+    overflow: 'hidden',
+    marginBottom: 16,
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 4,
+    backgroundColor: colors.primary,
+  },
+  progressStatsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  progressStat: {
+    alignItems: 'center',
+  },
+  progressStatNum: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  progressStatLabel: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+
+  // Empty / Placeholder Cards
+  emptyCard: {
+    backgroundColor: colors.glassCard,
+    borderRadius: 20,
+    padding: 28,
+    alignItems: 'center',
+    marginBottom: 28,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
+      android: { elevation: 6 },
+    }),
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text,
+    marginTop: 10,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: colors.textMuted,
+    marginTop: 4,
+    textAlign: 'center',
+  },
 });

@@ -6,6 +6,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -14,6 +16,10 @@ import {
   View,
 } from 'react-native';
 import RoleSelector from './RoleSelector';
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 type CoachTeam = {
   id: string;
@@ -28,7 +34,10 @@ type ChildPlayer = {
   first_name: string;
   last_name: string;
   team_name: string | null;
+  team_id: string | null;
   age_group_name: string | null;
+  jersey_number?: string | null;
+  position?: string | null;
 };
 
 type UpcomingEvent = {
@@ -42,6 +51,18 @@ type UpcomingEvent = {
   team_name: string;
 };
 
+type PlayerStats = {
+  games_played: number;
+  total_kills: number;
+  total_aces: number;
+};
+
+type ActiveMode = 'coach' | 'parent';
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
 export default function CoachParentDashboard() {
   const { colors } = useTheme();
   const { user, profile } = useAuth();
@@ -49,14 +70,35 @@ export default function CoachParentDashboard() {
   const router = useRouter();
 
   const [refreshing, setRefreshing] = useState(false);
-  const [coachTeams, setCoachTeams] = useState<CoachTeam[]>([]);
-  const [children, setChildren] = useState<ChildPlayer[]>([]);
-  const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeMode, setActiveMode] = useState<ActiveMode>('coach');
+
+  // Coach data
+  const [coachTeams, setCoachTeams] = useState<CoachTeam[]>([]);
+  const [coachUpcomingEvents, setCoachUpcomingEvents] = useState<UpcomingEvent[]>([]);
+
+  // Parent data
+  const [children, setChildren] = useState<ChildPlayer[]>([]);
+  const [parentUpcomingEvents, setParentUpcomingEvents] = useState<UpcomingEvent[]>([]);
+  const [activeChildIndex, setActiveChildIndex] = useState(0);
+  const [childStats, setChildStats] = useState<PlayerStats | null>(null);
+
+  const activeChild = children[activeChildIndex] || null;
 
   useEffect(() => {
     fetchData();
   }, [user?.id, workingSeason?.id]);
+
+  // Fetch child stats when active child changes
+  useEffect(() => {
+    if (activeChild && workingSeason?.id) {
+      fetchChildStats(activeChild.id);
+    }
+  }, [activeChild?.id, workingSeason?.id]);
+
+  // -------------------------------------------------------------------------
+  // Data fetching (preserved from original)
+  // -------------------------------------------------------------------------
 
   const fetchData = async () => {
     if (!user?.id || !workingSeason?.id) return;
@@ -90,11 +132,11 @@ export default function CoachParentDashboard() {
       });
 
       const teamsWithCounts: CoachTeam[] = [];
-      const allTeamIds: string[] = [];
+      const allCoachTeamIds: string[] = [];
 
       for (const t of seasonTeams) {
         const team = t.teams as any;
-        allTeamIds.push(team.id);
+        allCoachTeamIds.push(team.id);
 
         const { count } = await supabase
           .from('team_players')
@@ -119,6 +161,8 @@ export default function CoachParentDashboard() {
       setCoachTeams(teamsWithCounts);
 
       // PARENT DATA
+      const allParentTeamIds: string[] = [];
+
       const { data: guardianLinks } = await supabase
         .from('player_guardians')
         .select('player_id')
@@ -130,7 +174,7 @@ export default function CoachParentDashboard() {
         const { data: players } = await supabase
           .from('players')
           .select(`
-            id, first_name, last_name, season_id,
+            id, first_name, last_name, season_id, jersey_number, position,
             age_groups (name),
             team_players (team_id, teams (id, name))
           `)
@@ -144,14 +188,17 @@ export default function CoachParentDashboard() {
             const team = teamPlayer?.teams as any;
             const ageGroup = player.age_groups as any;
 
-            if (team?.id) allTeamIds.push(team.id);
+            if (team?.id) allParentTeamIds.push(team.id);
 
             currentSeasonChildren.push({
               id: player.id,
               first_name: player.first_name,
               last_name: player.last_name,
               team_name: team?.name || null,
+              team_id: team?.id || null,
               age_group_name: ageGroup?.name || null,
+              jersey_number: (player as any).jersey_number || null,
+              position: (player as any).position || null,
             });
           }
         });
@@ -159,24 +206,23 @@ export default function CoachParentDashboard() {
         setChildren(currentSeasonChildren);
       }
 
-      // UPCOMING EVENTS
-      const uniqueTeamIds = [...new Set(allTeamIds)];
-      if (uniqueTeamIds.length > 0) {
+      // COACH UPCOMING EVENTS
+      if (allCoachTeamIds.length > 0) {
         const today = new Date().toISOString().split('T')[0];
 
-        const { data: events } = await supabase
+        const { data: coachEvents } = await supabase
           .from('schedule_events')
           .select(`
             id, title, event_type, event_date, start_time,
             location, opponent, team_id, teams (name)
           `)
-          .in('team_id', uniqueTeamIds)
+          .in('team_id', allCoachTeamIds)
           .gte('event_date', today)
           .order('event_date', { ascending: true })
           .order('start_time', { ascending: true })
           .limit(5);
 
-        const formattedEvents: UpcomingEvent[] = (events || []).map(e => ({
+        setCoachUpcomingEvents((coachEvents || []).map(e => ({
           id: e.id,
           title: e.title,
           type: e.event_type as 'game' | 'practice',
@@ -185,9 +231,35 @@ export default function CoachParentDashboard() {
           location: e.location,
           opponent: e.opponent,
           team_name: (e.teams as any)?.name || '',
-        }));
+        })));
+      }
 
-        setUpcomingEvents(formattedEvents);
+      // PARENT UPCOMING EVENTS
+      if (allParentTeamIds.length > 0) {
+        const today = new Date().toISOString().split('T')[0];
+
+        const { data: parentEvents } = await supabase
+          .from('schedule_events')
+          .select(`
+            id, title, event_type, event_date, start_time,
+            location, opponent, team_id, teams (name)
+          `)
+          .in('team_id', allParentTeamIds)
+          .gte('event_date', today)
+          .order('event_date', { ascending: true })
+          .order('start_time', { ascending: true })
+          .limit(5);
+
+        setParentUpcomingEvents((parentEvents || []).map(e => ({
+          id: e.id,
+          title: e.title,
+          type: e.event_type as 'game' | 'practice',
+          date: e.event_date,
+          time: e.start_time || '',
+          location: e.location,
+          opponent: e.opponent,
+          team_name: (e.teams as any)?.name || '',
+        })));
       }
 
     } catch (error) {
@@ -197,11 +269,41 @@ export default function CoachParentDashboard() {
     }
   };
 
+  const fetchChildStats = async (playerId: string) => {
+    if (!workingSeason?.id) return;
+    try {
+      const { data } = await supabase
+        .from('player_season_stats')
+        .select('*')
+        .eq('player_id', playerId)
+        .eq('season_id', workingSeason.id)
+        .limit(1)
+        .maybeSingle();
+
+      if (data) {
+        setChildStats({
+          games_played: data.games_played || 0,
+          total_kills: data.total_kills || 0,
+          total_aces: data.total_aces || 0,
+        });
+      } else {
+        setChildStats(null);
+      }
+    } catch (err) {
+      console.error('Error fetching child stats:', err);
+      setChildStats(null);
+    }
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
     await fetchData();
     setRefreshing(false);
   };
+
+  // -------------------------------------------------------------------------
+  // Helpers
+  // -------------------------------------------------------------------------
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr + 'T00:00:00');
@@ -211,7 +313,7 @@ export default function CoachParentDashboard() {
 
     if (date.toDateString() === today.toDateString()) return 'Today';
     if (date.toDateString() === tomorrow.toDateString()) return 'Tomorrow';
-    
+
     return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   };
 
@@ -224,6 +326,18 @@ export default function CoachParentDashboard() {
     return `${hour}:${minutes} ${ampm}`;
   };
 
+  const getCountdownText = (dateStr: string) => {
+    const eventDate = new Date(dateStr + 'T00:00:00');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diffTime = eventDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return 'TODAY';
+    if (diffDays === 1) return 'TOMORROW';
+    return `IN ${diffDays} DAYS`;
+  };
+
   const navigateToTeamChat = (teamId: string) => {
     router.push({ pathname: '/chat/[id]', params: { id: teamId } });
   };
@@ -231,255 +345,866 @@ export default function CoachParentDashboard() {
   const s = createStyles(colors);
   const firstName = profile?.full_name?.split(' ')[0] || 'Coach';
 
+  // -------------------------------------------------------------------------
+  // Loading state
+  // -------------------------------------------------------------------------
+
+  if (loading) {
+    return (
+      <View style={s.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={s.loadingText}>Loading dashboard...</Text>
+      </View>
+    );
+  }
+
+  const currentEvents = activeMode === 'coach' ? coachUpcomingEvents : parentUpcomingEvents;
+  const nextEvent = currentEvents[0] || null;
+
+  // -------------------------------------------------------------------------
+  // Render
+  // -------------------------------------------------------------------------
+
   return (
     <ScrollView
       style={s.container}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      contentContainerStyle={s.contentContainer}
+      showsVerticalScrollIndicator={false}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
     >
       {/* Header */}
       <View style={s.header}>
         <View>
           <Text style={s.greeting}>Welcome back,</Text>
-          <Text style={s.name}>{firstName}</Text>
+          <Text style={s.heroName}>{firstName}</Text>
         </View>
         <RoleSelector />
       </View>
 
-      {/* COACHING SECTION */}
-      {coachTeams.length > 0 && (
-        <>
-          <View style={s.sectionHeader}>
-            <Ionicons name="clipboard" size={20} color={colors.info} />
-            <Text style={s.sectionHeaderText}>COACHING</Text>
-          </View>
+      {/* ================================================================ */}
+      {/* MODE SWITCHER                                                     */}
+      {/* ================================================================ */}
+      <View style={s.modeSwitcher}>
+        <TouchableOpacity
+          style={[s.modeBtn, activeMode === 'coach' && s.modeBtnActive]}
+          onPress={() => setActiveMode('coach')}
+          activeOpacity={0.7}
+        >
+          <Ionicons
+            name="clipboard"
+            size={16}
+            color={activeMode === 'coach' ? '#000' : colors.textMuted}
+          />
+          <Text style={[s.modeBtnText, activeMode === 'coach' && s.modeBtnTextActive]}>
+            Coach Mode
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[s.modeBtn, activeMode === 'parent' && s.modeBtnActive]}
+          onPress={() => setActiveMode('parent')}
+          activeOpacity={0.7}
+        >
+          <Ionicons
+            name="people"
+            size={16}
+            color={activeMode === 'parent' ? '#000' : colors.textMuted}
+          />
+          <Text style={[s.modeBtnText, activeMode === 'parent' && s.modeBtnTextActive]}>
+            Parent Mode
+          </Text>
+        </TouchableOpacity>
+      </View>
 
-          {coachTeams.map(team => (
-            <View key={team.id} style={s.teamCard}>
-              <View style={s.teamHeader}>
-                <View style={s.teamInfo}>
-                  <View style={s.teamNameRow}>
-                    <Text style={s.teamName}>{team.name}</Text>
-                    {team.age_group_name && (
-                      <View style={s.ageGroupBadge}>
-                        <Text style={s.ageGroupText}>{team.age_group_name}</Text>
+      {/* ================================================================ */}
+      {/* COACH MODE CONTENT                                                */}
+      {/* ================================================================ */}
+      {activeMode === 'coach' && (
+        <View>
+          {/* Team Cards */}
+          {coachTeams.length === 0 ? (
+            <View style={s.emptyCard}>
+              <Ionicons name="clipboard-outline" size={36} color={colors.textMuted} />
+              <Text style={s.emptyText}>No teams assigned this season</Text>
+            </View>
+          ) : (
+            <>
+              <Text style={s.sectionLabel}>YOUR TEAMS</Text>
+              {coachTeams.map(team => (
+                <View key={team.id} style={s.teamCard}>
+                  <View style={s.teamCardTop}>
+                    <View style={s.teamCardLeft}>
+                      <View style={[s.teamIconWrap, team.role === 'head_coach' ? { backgroundColor: colors.primary + '15' } : { backgroundColor: colors.info + '15' }]}>
+                        <Ionicons
+                          name={team.role === 'head_coach' ? 'shield' : 'shield-half'}
+                          size={22}
+                          color={team.role === 'head_coach' ? colors.primary : colors.info}
+                        />
+                      </View>
+                      <View style={s.teamCardInfo}>
+                        <Text style={s.teamCardName}>{team.name}</Text>
+                        <View style={s.teamCardMeta}>
+                          <View style={[s.roleBadge, team.role === 'head_coach' ? s.roleBadgeHC : s.roleBadgeAC]}>
+                            <Text style={[s.roleBadgeText, { color: team.role === 'head_coach' ? colors.success : colors.info }]}>
+                              {team.role === 'head_coach' ? 'Head Coach' : 'Assistant'}
+                            </Text>
+                          </View>
+                          <Text style={s.playerCountText}>{team.player_count} players</Text>
+                          {team.age_group_name && (
+                            <View style={s.ageGroupBadge}>
+                              <Text style={s.ageGroupText}>{team.age_group_name}</Text>
+                            </View>
+                          )}
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Team quick actions */}
+                  <View style={s.teamActions}>
+                    <TouchableOpacity style={s.teamAction} onPress={() => router.push('/players')}>
+                      <Ionicons name="people" size={16} color={colors.primary} />
+                      <Text style={s.teamActionText}>Roster</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={s.teamAction} onPress={() => router.push('/schedule')}>
+                      <Ionicons name="calendar" size={16} color={colors.info} />
+                      <Text style={s.teamActionText}>Schedule</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={s.teamAction} onPress={() => navigateToTeamChat(team.id)}>
+                      <Ionicons name="chatbubbles" size={16} color={colors.success} />
+                      <Text style={s.teamActionText}>Chat</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </>
+          )}
+
+          {/* Next Coach Event */}
+          {nextEvent && (
+            <View style={s.sectionBlock}>
+              <Text style={s.sectionLabel}>NEXT UP</Text>
+              <View style={s.nextEventCard}>
+                <View style={s.nextEventTop}>
+                  <View style={[
+                    s.nextEventTypeBadge,
+                    nextEvent.type === 'game'
+                      ? { backgroundColor: colors.danger + '20' }
+                      : { backgroundColor: colors.info + '20' },
+                  ]}>
+                    <Text style={[
+                      s.nextEventTypeText,
+                      { color: nextEvent.type === 'game' ? colors.danger : colors.info },
+                    ]}>
+                      {nextEvent.type === 'game' ? 'GAME' : 'PRACTICE'}
+                    </Text>
+                  </View>
+                  <Text style={s.nextEventTeamName}>{nextEvent.team_name}</Text>
+                </View>
+                <Text style={s.nextEventCountdown}>{getCountdownText(nextEvent.date)}</Text>
+                <Text style={s.nextEventTitle}>
+                  {nextEvent.type === 'game' && nextEvent.opponent
+                    ? `vs ${nextEvent.opponent}`
+                    : nextEvent.title}
+                </Text>
+                <View style={s.nextEventDetails}>
+                  <View style={s.nextEventDetailRow}>
+                    <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
+                    <Text style={s.nextEventDetailText}>{formatDate(nextEvent.date)}</Text>
+                  </View>
+                  {nextEvent.time ? (
+                    <View style={s.nextEventDetailRow}>
+                      <Ionicons name="time-outline" size={14} color={colors.textMuted} />
+                      <Text style={s.nextEventDetailText}>{formatTime(nextEvent.time)}</Text>
+                    </View>
+                  ) : null}
+                  {nextEvent.location ? (
+                    <View style={s.nextEventDetailRow}>
+                      <Ionicons name="location-outline" size={14} color={colors.textMuted} />
+                      <Text style={s.nextEventDetailText}>{nextEvent.location}</Text>
+                    </View>
+                  ) : null}
+                </View>
+              </View>
+            </View>
+          )}
+
+          {/* Coach Quick Actions */}
+          <View style={s.sectionBlock}>
+            <Text style={s.sectionLabel}>QUICK ACTIONS</Text>
+            <View style={s.quickActionsRow}>
+              <TouchableOpacity style={s.quickActionCard} onPress={() => router.push('/players')}>
+                <View style={[s.quickActionIcon, { backgroundColor: colors.primary + '15' }]}>
+                  <Ionicons name="list" size={20} color={colors.primary} />
+                </View>
+                <Text style={s.quickActionText}>Lineup</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.quickActionCard} onPress={() => router.push('/schedule')}>
+                <View style={[s.quickActionIcon, { backgroundColor: colors.info + '15' }]}>
+                  <Ionicons name="clipboard" size={20} color={colors.info} />
+                </View>
+                <Text style={s.quickActionText}>Game Prep</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.quickActionCard} onPress={() => router.push('/messages')}>
+                <View style={[s.quickActionIcon, { backgroundColor: colors.success + '15' }]}>
+                  <Ionicons name="megaphone" size={20} color={colors.success} />
+                </View>
+                <Text style={s.quickActionText}>Announce</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* ================================================================ */}
+      {/* PARENT MODE CONTENT                                               */}
+      {/* ================================================================ */}
+      {activeMode === 'parent' && (
+        <View>
+          {/* Child Hero */}
+          {children.length === 0 ? (
+            <View style={s.emptyCard}>
+              <Ionicons name="people-outline" size={36} color={colors.textMuted} />
+              <Text style={s.emptyText}>No children registered this season</Text>
+            </View>
+          ) : children.length === 1 ? (
+            <View style={s.childHeroCard}>
+              <View style={s.childHeroTop}>
+                <View style={s.childHeroAvatar}>
+                  <Text style={s.childHeroAvatarText}>
+                    {activeChild?.first_name?.charAt(0)}{activeChild?.last_name?.charAt(0)}
+                  </Text>
+                </View>
+                <View style={s.childHeroInfo}>
+                  <Text style={s.childHeroName}>{activeChild?.first_name} {activeChild?.last_name}</Text>
+                  {activeChild?.team_name && (
+                    <Text style={s.childHeroTeam}>{activeChild.team_name}</Text>
+                  )}
+                  <View style={s.childHeroBadges}>
+                    {activeChild?.jersey_number && (
+                      <View style={s.childBadge}>
+                        <Text style={s.childBadgeText}>#{activeChild.jersey_number}</Text>
+                      </View>
+                    )}
+                    {activeChild?.position && (
+                      <View style={[s.childBadge, { backgroundColor: colors.info + '20' }]}>
+                        <Text style={[s.childBadgeText, { color: colors.info }]}>{activeChild.position}</Text>
                       </View>
                     )}
                   </View>
-                  <View style={s.teamMeta}>
-                    <View style={[s.roleBadge, team.role === 'head_coach' ? s.roleBadgeHC : s.roleBadgeAC]}>
-                      <Text style={s.roleBadgeText}>
-                        {team.role === 'head_coach' ? 'Head Coach' : 'Assistant'}
+                </View>
+              </View>
+            </View>
+          ) : (
+            /* Multiple children: horizontal scroll */
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={s.multiChildScroll}
+            >
+              {children.map((child, index) => {
+                const isActive = index === activeChildIndex;
+                return (
+                  <TouchableOpacity
+                    key={child.id}
+                    style={[s.multiChildCard, isActive && { borderColor: colors.primary, borderWidth: 2 }]}
+                    onPress={() => setActiveChildIndex(index)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={s.multiChildAvatar}>
+                      <Text style={s.multiChildAvatarText}>
+                        {child.first_name.charAt(0)}{child.last_name.charAt(0)}
                       </Text>
                     </View>
-                    <Text style={s.playerCount}>{team.player_count} players</Text>
+                    <Text style={s.multiChildName} numberOfLines={1}>{child.first_name}</Text>
+                    {child.team_name && (
+                      <Text style={s.multiChildTeam} numberOfLines={1}>{child.team_name}</Text>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          )}
+
+          {/* Next Parent Event */}
+          {nextEvent && (
+            <View style={s.sectionBlock}>
+              <Text style={s.sectionLabel}>NEXT UP</Text>
+              <View style={s.nextEventCard}>
+                <View style={s.nextEventTop}>
+                  <View style={[
+                    s.nextEventTypeBadge,
+                    nextEvent.type === 'game'
+                      ? { backgroundColor: colors.danger + '20' }
+                      : { backgroundColor: colors.info + '20' },
+                  ]}>
+                    <Text style={[
+                      s.nextEventTypeText,
+                      { color: nextEvent.type === 'game' ? colors.danger : colors.info },
+                    ]}>
+                      {nextEvent.type === 'game' ? 'GAME' : 'PRACTICE'}
+                    </Text>
                   </View>
+                  <Text style={s.nextEventTeamName}>{nextEvent.team_name}</Text>
                 </View>
-              </View>
-
-              <View style={s.teamActions}>
-                <TouchableOpacity style={s.teamAction} onPress={() => router.push('/players')}>
-                  <Ionicons name="people" size={18} color={colors.primary} />
-                  <Text style={s.teamActionText}>Roster</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={s.teamAction} onPress={() => router.push('/schedule')}>
-                  <Ionicons name="calendar" size={18} color={colors.info} />
-                  <Text style={s.teamActionText}>Schedule</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={s.teamAction} onPress={() => navigateToTeamChat(team.id)}>
-                  <Ionicons name="chatbubbles" size={18} color={colors.success} />
-                  <Text style={s.teamActionText}>Chat</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={s.teamAction} onPress={() => router.push('/players')}>
-                  <Ionicons name="card" size={18} color={colors.warning} />
-                  <Text style={s.teamActionText}>Cards</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ))}
-
-          {/* Coach Quick Actions */}
-          <View style={s.quickActionsRow}>
-            <TouchableOpacity style={s.quickActionBtn} onPress={() => router.push('/players')}>
-              <Ionicons name="list" size={20} color={colors.primary} />
-              <Text style={s.quickActionText}>Lineup</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={s.quickActionBtn} onPress={() => router.push('/schedule')}>
-              <Ionicons name="clipboard" size={20} color={colors.info} />
-              <Text style={s.quickActionText}>Game Prep</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={s.quickActionBtn} onPress={() => router.push('/messages')}>
-              <Ionicons name="megaphone" size={20} color={colors.success} />
-              <Text style={s.quickActionText}>Announce</Text>
-            </TouchableOpacity>
-          </View>
-        </>
-      )}
-
-      {/* FAMILY SECTION */}
-      {children.length > 0 && (
-        <>
-          <View style={s.sectionHeader}>
-            <Ionicons name="people" size={20} color={colors.success} />
-            <Text style={s.sectionHeaderText}>MY FAMILY</Text>
-          </View>
-
-          {children.map(child => (
-            <View key={child.id} style={s.childCard}>
-              <View style={s.childAvatar}>
-                <Text style={s.childAvatarText}>{child.first_name.charAt(0)}</Text>
-              </View>
-              <View style={s.childInfo}>
-                <Text style={s.childName}>{child.first_name} {child.last_name}</Text>
-                <View style={s.childMeta}>
-                  {child.team_name ? (
-                    <Text style={s.childTeam}>{child.team_name}</Text>
-                  ) : (
-                    <Text style={s.childTeamPending}>Team TBD</Text>
-                  )}
-                  {child.age_group_name && (
-                    <View style={s.ageGroupBadgeSmall}>
-                      <Text style={s.ageGroupTextSmall}>{child.age_group_name}</Text>
+                <Text style={s.nextEventCountdown}>{getCountdownText(nextEvent.date)}</Text>
+                <Text style={s.nextEventTitle}>
+                  {nextEvent.type === 'game' && nextEvent.opponent
+                    ? `vs ${nextEvent.opponent}`
+                    : nextEvent.title}
+                </Text>
+                <View style={s.nextEventDetails}>
+                  <View style={s.nextEventDetailRow}>
+                    <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
+                    <Text style={s.nextEventDetailText}>{formatDate(nextEvent.date)}</Text>
+                  </View>
+                  {nextEvent.time ? (
+                    <View style={s.nextEventDetailRow}>
+                      <Ionicons name="time-outline" size={14} color={colors.textMuted} />
+                      <Text style={s.nextEventDetailText}>{formatTime(nextEvent.time)}</Text>
                     </View>
-                  )}
+                  ) : null}
+                  {nextEvent.location ? (
+                    <View style={s.nextEventDetailRow}>
+                      <Ionicons name="location-outline" size={14} color={colors.textMuted} />
+                      <Text style={s.nextEventDetailText}>{nextEvent.location}</Text>
+                    </View>
+                  ) : null}
                 </View>
               </View>
-              <TouchableOpacity onPress={() => router.push('/players')}>
-                <Ionicons name="card" size={20} color={colors.warning} />
-              </TouchableOpacity>
             </View>
-          ))}
+          )}
 
-          {/* Family Quick Actions */}
-          <View style={s.quickActionsRow}>
-            <TouchableOpacity style={s.quickActionBtn} onPress={() => router.push('/schedule')}>
-              <Ionicons name="calendar" size={20} color={colors.primary} />
-              <Text style={s.quickActionText}>Schedule</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={s.quickActionBtn} onPress={() => router.push('/players')}>
-              <Ionicons name="card" size={20} color={colors.warning} />
-              <Text style={s.quickActionText}>Player Cards</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={s.quickActionBtn} onPress={() => router.push('/payments')}>
-              <Ionicons name="card-outline" size={20} color={colors.info} />
-              <Text style={s.quickActionText}>Payments</Text>
-            </TouchableOpacity>
-          </View>
-        </>
+          {/* Quick Pulse for child */}
+          {activeChild && (
+            <View style={s.sectionBlock}>
+              <Text style={s.sectionLabel}>AT A GLANCE</Text>
+              <View style={s.pulseRow}>
+                <View style={s.pulseCard}>
+                  <Ionicons name="trophy-outline" size={22} color={colors.primary} />
+                  <Text style={s.pulseNumber}>{childStats?.games_played ?? 0}</Text>
+                  <Text style={s.pulseLabel}>Games</Text>
+                </View>
+                <View style={s.pulseCard}>
+                  <Ionicons name="flash-outline" size={22} color={colors.warning} />
+                  <Text style={s.pulseNumber}>{childStats?.total_kills ?? 0}</Text>
+                  <Text style={s.pulseLabel}>Kills</Text>
+                </View>
+                <View style={s.pulseCard}>
+                  <Ionicons name="star-outline" size={22} color={colors.success} />
+                  <Text style={s.pulseNumber}>{childStats?.total_aces ?? 0}</Text>
+                  <Text style={s.pulseLabel}>Aces</Text>
+                </View>
+              </View>
+            </View>
+          )}
+        </View>
       )}
 
-      {/* UPCOMING EVENTS (Combined) */}
-      <View style={s.sectionHeader}>
-        <Ionicons name="calendar" size={20} color={colors.danger} />
-        <Text style={s.sectionHeaderText}>UPCOMING</Text>
+      {/* ================================================================ */}
+      {/* SHARED SECTION -- Quick Links (always visible)                     */}
+      {/* ================================================================ */}
+      <View style={s.sectionBlock}>
+        <Text style={s.sectionLabel}>QUICK LINKS</Text>
+        <View style={s.quickLinksRow}>
+          <TouchableOpacity style={s.quickLinkItem} onPress={() => router.push('/schedule')} activeOpacity={0.7}>
+            <View style={[s.quickLinkIcon, { backgroundColor: colors.primary + '15' }]}>
+              <Ionicons name="calendar" size={22} color={colors.primary} />
+            </View>
+            <Text style={s.quickLinkText}>Schedule</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={s.quickLinkItem} onPress={() => router.push('/chats')} activeOpacity={0.7}>
+            <View style={[s.quickLinkIcon, { backgroundColor: colors.success + '15' }]}>
+              <Ionicons name="chatbubbles" size={22} color={colors.success} />
+            </View>
+            <Text style={s.quickLinkText}>Chat</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={s.quickLinkItem} onPress={() => router.push('/messages')} activeOpacity={0.7}>
+            <View style={[s.quickLinkIcon, { backgroundColor: colors.info + '15' }]}>
+              <Ionicons name="megaphone" size={22} color={colors.info} />
+            </View>
+            <Text style={s.quickLinkText}>Announce</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={s.quickLinkItem} onPress={() => router.push('/profile' as any)} activeOpacity={0.7}>
+            <View style={[s.quickLinkIcon, { backgroundColor: colors.warning + '15' }]}>
+              <Ionicons name="person" size={22} color={colors.warning} />
+            </View>
+            <Text style={s.quickLinkText}>Profile</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {upcomingEvents.length === 0 ? (
-        <View style={s.emptyCard}>
-          <Ionicons name="calendar-outline" size={32} color={colors.textMuted} />
-          <Text style={s.emptyText}>No upcoming events</Text>
-        </View>
-      ) : (
-        upcomingEvents.map(event => (
-          <TouchableOpacity key={event.id} style={s.eventCard} onPress={() => router.push('/schedule')}>
-            <View style={[s.eventTypeIndicator, event.type === 'game' ? s.eventGame : s.eventPractice]} />
-            <View style={s.eventContent}>
-              <View style={s.eventHeader}>
-                <Text style={s.eventTitle}>
-                  {event.type === 'game' && event.opponent ? `vs ${event.opponent}` : event.title}
-                </Text>
-                <View style={[s.eventTypeBadge, event.type === 'game' ? s.eventTypeBadgeGame : s.eventTypeBadgePractice]}>
-                  <Text style={s.eventTypeBadgeText}>{event.type === 'game' ? 'Game' : 'Practice'}</Text>
-                </View>
-              </View>
-              <Text style={s.eventTeam}>{event.team_name}</Text>
-              <View style={s.eventDetails}>
-                <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
-                <Text style={s.eventDetailText}>{formatDate(event.date)}</Text>
-                {event.time && (
-                  <>
-                    <Ionicons name="time-outline" size={14} color={colors.textMuted} style={{ marginLeft: 12 }} />
-                    <Text style={s.eventDetailText}>{formatTime(event.time)}</Text>
-                  </>
-                )}
-              </View>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-          </TouchableOpacity>
-        ))
-      )}
-
-      {upcomingEvents.length > 3 && (
-        <TouchableOpacity style={s.viewAllBtn} onPress={() => router.push('/schedule')}>
-          <Text style={s.viewAllText}>View Full Schedule</Text>
-          <Ionicons name="arrow-forward" size={16} color={colors.primary} />
-        </TouchableOpacity>
-      )}
-
-      <View style={{ height: 40 }} />
+      {/* Bottom padding */}
+      <View style={{ height: 120 }} />
     </ScrollView>
   );
 }
 
+// ---------------------------------------------------------------------------
+// Styles
+// ---------------------------------------------------------------------------
+
 const createStyles = (colors: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'transparent', padding: 16 },
-  
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  greeting: { fontSize: 16, color: colors.textMuted },
-  name: { fontSize: 28, fontWeight: '800', color: colors.text },
+  container: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  contentContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
+  },
+  loadingText: {
+    fontSize: 15,
+    color: colors.textMuted,
+  },
 
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16, marginBottom: 12, paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: colors.border },
-  sectionHeaderText: { fontSize: 13, fontWeight: '700', color: colors.textMuted, letterSpacing: 1, textTransform: 'uppercase' as const },
+  // Header
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  greeting: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textMuted,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 1.5,
+  },
+  heroName: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: colors.text,
+    letterSpacing: -0.5,
+    marginTop: 2,
+  },
 
-  teamCard: { backgroundColor: colors.glassCard, borderRadius: 16, marginBottom: 10, overflow: 'hidden', borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
-  teamHeader: { padding: 14 },
-  teamInfo: { flex: 1 },
-  teamNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
-  teamName: { fontSize: 16, fontWeight: '600', color: colors.text },
-  ageGroupBadge: { backgroundColor: colors.primary + '20', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  ageGroupText: { fontSize: 10, fontWeight: '600', color: colors.primary },
-  teamMeta: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  roleBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4 },
-  roleBadgeHC: { backgroundColor: colors.success + '20' },
-  roleBadgeAC: { backgroundColor: colors.info + '20' },
-  roleBadgeText: { fontSize: 10, fontWeight: '600', color: colors.text },
-  playerCount: { fontSize: 12, color: colors.textMuted },
-  teamActions: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: colors.border },
-  teamAction: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 10 },
-  teamActionText: { fontSize: 11, color: colors.text, fontWeight: '500' },
+  // Section
+  sectionBlock: {
+    marginBottom: 28,
+  },
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase' as const,
+    letterSpacing: 2,
+    color: colors.textMuted,
+    marginBottom: 12,
+  },
 
-  quickActionsRow: { flexDirection: 'row', gap: 12, marginBottom: 16 },
-  quickActionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: colors.glassCard, paddingVertical: 12, borderRadius: 16, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
-  quickActionText: { fontSize: 12, fontWeight: '500', color: colors.text },
+  // ========== MODE SWITCHER ==========
+  modeSwitcher: {
+    flexDirection: 'row',
+    backgroundColor: colors.glassCard,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    padding: 4,
+    marginBottom: 28,
+  },
+  modeBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  modeBtnActive: {
+    backgroundColor: colors.primary,
+  },
+  modeBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.textMuted,
+  },
+  modeBtnTextActive: {
+    color: '#000',
+  },
 
-  childCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.glassCard, borderRadius: 16, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
-  childAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.success + '30', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  childAvatarText: { fontSize: 16, fontWeight: 'bold', color: colors.success },
-  childInfo: { flex: 1 },
-  childName: { fontSize: 15, fontWeight: '600', color: colors.text, marginBottom: 2 },
-  childMeta: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  childTeam: { fontSize: 12, color: colors.textMuted },
-  childTeamPending: { fontSize: 12, color: colors.warning, fontStyle: 'italic' },
-  ageGroupBadgeSmall: { backgroundColor: colors.primary + '20', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  ageGroupTextSmall: { fontSize: 10, fontWeight: '600', color: colors.primary },
+  // ========== EMPTY STATE ==========
+  emptyCard: {
+    backgroundColor: colors.glassCard,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    padding: 36,
+    alignItems: 'center',
+    marginBottom: 28,
+    gap: 10,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
+      android: { elevation: 6 },
+    }),
+  },
+  emptyText: {
+    fontSize: 15,
+    color: colors.textMuted,
+  },
 
-  emptyCard: { backgroundColor: colors.glassCard, borderRadius: 16, padding: 24, alignItems: 'center', marginBottom: 16, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
-  emptyText: { fontSize: 13, color: colors.textMuted, marginTop: 8 },
+  // ========== TEAM CARD (Coach Mode) ==========
+  teamCard: {
+    backgroundColor: colors.glassCard,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    marginBottom: 12,
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
+      android: { elevation: 6 },
+    }),
+  },
+  teamCardTop: {
+    padding: 16,
+  },
+  teamCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  teamIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  teamCardInfo: {
+    flex: 1,
+  },
+  teamCardName: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  teamCardMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  roleBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  roleBadgeHC: {
+    backgroundColor: colors.success + '20',
+  },
+  roleBadgeAC: {
+    backgroundColor: colors.info + '20',
+  },
+  roleBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  playerCountText: {
+    fontSize: 12,
+    color: colors.textMuted,
+  },
+  ageGroupBadge: {
+    backgroundColor: colors.primary + '20',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  ageGroupText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  teamActions: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: colors.glassBorder,
+  },
+  teamAction: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+  },
+  teamActionText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.text,
+  },
 
-  eventCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.glassCard, borderRadius: 16, marginBottom: 8, overflow: 'hidden', borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
-  eventTypeIndicator: { width: 4, alignSelf: 'stretch' },
-  eventGame: { backgroundColor: colors.danger },
-  eventPractice: { backgroundColor: colors.info },
-  eventContent: { flex: 1, padding: 12 },
-  eventHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 },
-  eventTitle: { fontSize: 14, fontWeight: '600', color: colors.text, flex: 1 },
-  eventTypeBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginLeft: 8 },
-  eventTypeBadgeGame: { backgroundColor: colors.danger + '20' },
-  eventTypeBadgePractice: { backgroundColor: colors.info + '20' },
-  eventTypeBadgeText: { fontSize: 9, fontWeight: '600', color: colors.text },
-  eventTeam: { fontSize: 11, color: colors.textMuted, marginBottom: 4 },
-  eventDetails: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-  eventDetailText: { fontSize: 11, color: colors.textMuted },
+  // ========== NEXT EVENT (shared between modes) ==========
+  nextEventCard: {
+    backgroundColor: colors.glassCard,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    padding: 20,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
+      android: { elevation: 6 },
+    }),
+  },
+  nextEventTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 10,
+  },
+  nextEventTypeBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  nextEventTypeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  nextEventTeamName: {
+    fontSize: 13,
+    color: colors.textMuted,
+  },
+  nextEventCountdown: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: colors.primary,
+    letterSpacing: -0.5,
+    marginBottom: 4,
+  },
+  nextEventTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 12,
+  },
+  nextEventDetails: {
+    gap: 6,
+  },
+  nextEventDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  nextEventDetailText: {
+    fontSize: 14,
+    color: colors.textMuted,
+  },
 
-  viewAllBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10 },
-  viewAllText: { fontSize: 13, color: colors.primary, fontWeight: '500' },
+  // ========== QUICK ACTIONS (Coach Mode) ==========
+  quickActionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  quickActionCard: {
+    flex: 1,
+    backgroundColor: colors.glassCard,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    paddingVertical: 16,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    gap: 8,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
+      android: { elevation: 6 },
+    }),
+  },
+  quickActionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  quickActionText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.text,
+  },
+
+  // ========== CHILD HERO (Parent Mode) ==========
+  childHeroCard: {
+    backgroundColor: colors.glassCard,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    padding: 20,
+    marginBottom: 28,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
+      android: { elevation: 6 },
+    }),
+  },
+  childHeroTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  childHeroAvatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.success + '15',
+    borderWidth: 2,
+    borderColor: colors.success,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  childHeroAvatarText: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: colors.success,
+  },
+  childHeroInfo: {
+    flex: 1,
+  },
+  childHeroName: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: colors.text,
+    letterSpacing: -0.5,
+  },
+  childHeroTeam: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  childHeroBadges: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 8,
+  },
+  childBadge: {
+    backgroundColor: colors.primary + '20',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  childBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+
+  // Multi-child horizontal scroll
+  multiChildScroll: {
+    gap: 12,
+    paddingRight: 20,
+    marginBottom: 28,
+  },
+  multiChildCard: {
+    width: 160,
+    backgroundColor: colors.glassCard,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    padding: 16,
+    alignItems: 'center',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
+      android: { elevation: 6 },
+    }),
+  },
+  multiChildAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.success + '15',
+    borderWidth: 2,
+    borderColor: colors.success,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  multiChildAvatarText: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: colors.success,
+  },
+  multiChildName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.text,
+    textAlign: 'center',
+  },
+  multiChildTeam: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 2,
+    textAlign: 'center',
+  },
+
+  // Pulse cards (Parent mode stats)
+  pulseRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  pulseCard: {
+    flex: 1,
+    backgroundColor: colors.glassCard,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    paddingVertical: 16,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    gap: 4,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
+      android: { elevation: 6 },
+    }),
+  },
+  pulseNumber: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: colors.text,
+    letterSpacing: -0.5,
+  },
+  pulseLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.textMuted,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.5,
+  },
+
+  // ========== QUICK LINKS (Shared section) ==========
+  quickLinksRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  quickLinkItem: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 8,
+  },
+  quickLinkIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+  },
+  quickLinkText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.text,
+    textAlign: 'center',
+  },
 });

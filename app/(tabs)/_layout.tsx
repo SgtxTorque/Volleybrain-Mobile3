@@ -1,4 +1,3 @@
-import AppDrawer from '@/components/AppDrawer';
 import { useAuth } from '@/lib/auth';
 import { usePermissions } from '@/lib/permissions-context';
 import { supabase } from '@/lib/supabase';
@@ -6,13 +5,12 @@ import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Platform, View } from 'react-native';
 
 export default function TabLayout() {
   const { colors } = useTheme();
   const { loading } = usePermissions();
-  const { user, profile } = useAuth();
-  const [drawerVisible, setDrawerVisible] = useState(false);
+  const { profile } = useAuth();
   const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [unreadAlertCount, setUnreadAlertCount] = useState(0);
 
@@ -97,7 +95,8 @@ export default function TabLayout() {
     };
   }, [profile?.id]);
 
-  // Keep your existing loading state
+  const totalUnread = unreadChatCount + unreadAlertCount;
+
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'transparent' }}>
@@ -107,148 +106,114 @@ export default function TabLayout() {
   }
 
   return (
-    <>
-      <Tabs
-        screenOptions={{
-          headerShown: false,
-          sceneStyle: { backgroundColor: 'transparent' },
-          tabBarStyle: {
-            backgroundColor: colors.bgSecondary,
-            borderTopWidth: 0,
-            height: 85,
-            paddingBottom: 25,
-            paddingTop: 10,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: -2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 8,
-            elevation: 8,
-          },
-          tabBarActiveTintColor: colors.primary,
-          tabBarInactiveTintColor: colors.textMuted,
-          tabBarLabelStyle: {
-            fontSize: 11,
-            fontWeight: '500',
-          },
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        sceneStyle: { backgroundColor: 'transparent' },
+        tabBarStyle: {
+          backgroundColor: colors.bgSecondary,
+          borderTopWidth: 0,
+          height: Platform.OS === 'ios' ? 88 : 70,
+          paddingBottom: Platform.OS === 'ios' ? 28 : 10,
+          paddingTop: 8,
+          ...Platform.select({
+            ios: {
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: -4 },
+              shadowOpacity: 0.15,
+              shadowRadius: 12,
+            },
+            android: {
+              elevation: 12,
+            },
+          }),
+        },
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textMuted,
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '600',
+          letterSpacing: 0.3,
+        },
+      }}
+    >
+      {/* ====== VISIBLE TABS ====== */}
+
+      {/* HOME */}
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Home',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'home' : 'home-outline'}
+              size={24}
+              color={color}
+            />
+          ),
         }}
-      >
-        {/* ====== VISIBLE TABS (5 max) ====== */}
-        
-        {/* HOME */}
-        <Tabs.Screen
-          name="index"
-          options={{
-            title: 'Home',
-            tabBarIcon: ({ color, focused }) => (
-              <Ionicons 
-                name={focused ? 'home' : 'home-outline'} 
-                size={24} 
-                color={color} 
-              />
-            ),
-          }}
-        />
-
-        {/* SCHEDULE */}
-        <Tabs.Screen
-          name="schedule"
-          options={{
-            title: 'Schedule',
-            tabBarIcon: ({ color, focused }) => (
-              <Ionicons 
-                name={focused ? 'calendar' : 'calendar-outline'} 
-                size={24} 
-                color={color} 
-              />
-            ),
-          }}
-        />
-
-        {/* CHATS */}
-        <Tabs.Screen
-          name="chats"
-          options={{
-            title: 'Chat',
-            tabBarIcon: ({ color, focused }) => (
-              <Ionicons
-                name={focused ? 'chatbubbles' : 'chatbubbles-outline'}
-                size={24}
-                color={color}
-              />
-            ),
-            tabBarBadge: unreadChatCount > 0 ? unreadChatCount : undefined,
-            tabBarBadgeStyle: { backgroundColor: colors.danger, fontSize: 10 },
-          }}
-        />
-
-        {/* MESSAGES / BLASTS */}
-        <Tabs.Screen
-          name="messages"
-          options={{
-            title: 'Alerts',
-            tabBarIcon: ({ color, focused }) => (
-              <Ionicons
-                name={focused ? 'megaphone' : 'megaphone-outline'}
-                size={24}
-                color={color}
-              />
-            ),
-            tabBarBadge: unreadAlertCount > 0 ? unreadAlertCount : undefined,
-            tabBarBadgeStyle: { backgroundColor: colors.danger, fontSize: 10 },
-          }}
-        />
-
-        {/* MENU - Opens drawer instead of navigating */}
-        <Tabs.Screen
-          name="menu-placeholder"
-          options={{
-            title: 'Menu',
-            tabBarIcon: ({ color }) => (
-              <Ionicons name="menu" size={24} color={color} />
-            ),
-            tabBarButton: (props) => (
-              <TouchableOpacity
-                style={styles.menuButton}
-                onPress={() => setDrawerVisible(true)}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="menu" size={24} color={colors.textMuted} />
-                <Text style={[styles.menuLabel, { color: colors.textMuted }]}>Menu</Text>
-              </TouchableOpacity>
-            ),
-          }}
-        />
-
-        {/* ====== HIDDEN TABS (accessible via drawer) ====== */}
-        <Tabs.Screen name="players" options={{ href: null }} />
-        <Tabs.Screen name="teams" options={{ href: null }} />
-        <Tabs.Screen name="coaches" options={{ href: null }} />
-        <Tabs.Screen name="payments" options={{ href: null }} />
-        <Tabs.Screen name="reports-tab" options={{ href: null }} />
-        <Tabs.Screen name="settings" options={{ href: null }} />
-        <Tabs.Screen name="my-teams" options={{ href: null }} />
-        <Tabs.Screen name="jersey-management" options={{ href: null }} />
-      </Tabs>
-
-      {/* App Drawer */}
-      <AppDrawer 
-        visible={drawerVisible} 
-        onClose={() => setDrawerVisible(false)} 
       />
-    </>
+
+      {/* GAME DAY */}
+      <Tabs.Screen
+        name="gameday"
+        options={{
+          title: 'Game Day',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'flash' : 'flash-outline'}
+              size={24}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      {/* CONNECT */}
+      <Tabs.Screen
+        name="connect"
+        options={{
+          title: 'Connect',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'chatbubbles' : 'chatbubbles-outline'}
+              size={24}
+              color={color}
+            />
+          ),
+          tabBarBadge: totalUnread > 0 ? totalUnread : undefined,
+          tabBarBadgeStyle: { backgroundColor: colors.danger, fontSize: 10 },
+        }}
+      />
+
+      {/* ME */}
+      <Tabs.Screen
+        name="me"
+        options={{
+          title: 'Me',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'person' : 'person-outline'}
+              size={24}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      {/* ====== HIDDEN TABS ====== */}
+      <Tabs.Screen name="schedule" options={{ href: null }} />
+      <Tabs.Screen name="chats" options={{ href: null }} />
+      <Tabs.Screen name="messages" options={{ href: null }} />
+      <Tabs.Screen name="players" options={{ href: null }} />
+      <Tabs.Screen name="teams" options={{ href: null }} />
+      <Tabs.Screen name="coaches" options={{ href: null }} />
+      <Tabs.Screen name="payments" options={{ href: null }} />
+      <Tabs.Screen name="reports-tab" options={{ href: null }} />
+      <Tabs.Screen name="settings" options={{ href: null }} />
+      <Tabs.Screen name="my-teams" options={{ href: null }} />
+      <Tabs.Screen name="jersey-management" options={{ href: null }} />
+      <Tabs.Screen name="menu-placeholder" options={{ href: null }} />
+    </Tabs>
   );
 }
-
-const styles = StyleSheet.create({
-  menuButton: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingTop: 10,
-  },
-  menuLabel: {
-    fontSize: 11,
-    fontWeight: '500',
-    marginTop: 4,
-  },
-});

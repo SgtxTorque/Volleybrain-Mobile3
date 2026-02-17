@@ -9,6 +9,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -18,6 +20,10 @@ import {
 } from 'react-native';
 import ReenrollmentBanner from './ReenrollmentBanner';
 import RoleSelector from './RoleSelector';
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 type ChildPlayer = {
   id: string;
@@ -34,6 +40,8 @@ type ChildPlayer = {
   sport_color: string | null;
   registration_status: 'new' | 'approved' | 'active' | 'rostered' | 'waitlisted' | 'denied';
   registration_id: string | null;
+  jersey_number?: string | null;
+  position?: string | null;
 };
 
 type UpcomingEvent = {
@@ -74,7 +82,22 @@ type TodayGame = {
   team_name: string;
 };
 
-// Status configuration with colors and labels
+type PlayerStats = {
+  games_played: number;
+  total_kills: number;
+  total_aces: number;
+  total_digs: number;
+  total_blocks: number;
+  total_assists: number;
+  total_points: number;
+};
+
+type RsvpStatus = 'yes' | 'no' | 'maybe' | null;
+
+// ---------------------------------------------------------------------------
+// Status configuration
+// ---------------------------------------------------------------------------
+
 const statusConfig: Record<string, { label: string; color: string; icon: string }> = {
   new: { label: 'Pending Review', color: '#FF9500', icon: 'time' },
   approved: { label: 'Approved', color: '#5AC8FA', icon: 'checkmark-circle' },
@@ -84,6 +107,10 @@ const statusConfig: Record<string, { label: string; color: string; icon: string 
   denied: { label: 'Not Approved', color: '#FF3B30', icon: 'close-circle' },
 };
 
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
 export default function ParentDashboard() {
   const { colors } = useTheme();
   const { user, profile } = useAuth();
@@ -92,16 +119,41 @@ export default function ParentDashboard() {
 
   const [refreshing, setRefreshing] = useState(false);
   const [children, setChildren] = useState<ChildPlayer[]>([]);
+  const [activeChildIndex, setActiveChildIndex] = useState(0);
   const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>({ total_owed: 0, total_paid: 0, balance: 0 });
   const [loading, setLoading] = useState(true);
   const [showShare, setShowShare] = useState(false);
   const [recentGames, setRecentGames] = useState<RecentGame[]>([]);
   const [todayGame, setTodayGame] = useState<TodayGame | null>(null);
+  const [childStats, setChildStats] = useState<PlayerStats | null>(null);
+  const [rsvpStatus, setRsvpStatus] = useState<RsvpStatus>(null);
+  const [rsvpLoading, setRsvpLoading] = useState(false);
+  const [totalTeamEvents, setTotalTeamEvents] = useState(0);
+
+  const activeChild = children[activeChildIndex] || null;
 
   useEffect(() => {
     fetchParentData();
   }, [user?.id, profile?.email]);
+
+  // Fetch stats for active child whenever it changes
+  useEffect(() => {
+    if (activeChild) {
+      fetchChildStats(activeChild.id);
+    }
+  }, [activeChild?.id, workingSeason?.id]);
+
+  // Fetch RSVP for next event whenever active child or events change
+  useEffect(() => {
+    if (activeChild && upcomingEvents.length > 0) {
+      fetchRsvpStatus(upcomingEvents[0].id, activeChild.id);
+    }
+  }, [activeChild?.id, upcomingEvents]);
+
+  // -------------------------------------------------------------------------
+  // Data fetching (preserved from original)
+  // -------------------------------------------------------------------------
 
   const fetchParentData = async () => {
     if (!user?.id) return;
@@ -109,7 +161,7 @@ export default function ParentDashboard() {
     try {
       // Get the parent's email (from profile or user)
       const parentEmail = profile?.email || user?.email;
-      
+
       // Collect all player IDs from multiple sources
       let playerIds: string[] = [];
 
@@ -118,7 +170,7 @@ export default function ParentDashboard() {
         .from('player_guardians')
         .select('player_id')
         .eq('guardian_id', user.id);
-      
+
       if (guardianLinks) {
         playerIds.push(...guardianLinks.map(g => g.player_id));
       }
@@ -128,7 +180,7 @@ export default function ParentDashboard() {
         .from('players')
         .select('id')
         .eq('parent_account_id', user.id);
-      
+
       if (directPlayers) {
         playerIds.push(...directPlayers.map(p => p.id));
       }
@@ -139,7 +191,7 @@ export default function ParentDashboard() {
           .from('players')
           .select('id')
           .ilike('parent_email', parentEmail);
-        
+
         if (emailPlayers) {
           playerIds.push(...emailPlayers.map(p => p.id));
         }
@@ -173,6 +225,8 @@ export default function ParentDashboard() {
           last_name,
           sport_id,
           season_id,
+          jersey_number,
+          position,
           team_players (
             team_id,
             teams (id, name)
@@ -206,7 +260,7 @@ export default function ParentDashboard() {
         const team = teamPlayer?.teams as any;
         const season = seasons?.find(s => s.id === player.season_id);
         const sport = sports?.find(s => s.id === player.sport_id);
-        
+
         // Get registration status
         const regKey = `${player.id}-${player.season_id}`;
         const registration = regMap.get(regKey);
@@ -229,6 +283,8 @@ export default function ParentDashboard() {
           sport_color: sport?.color_primary || null,
           registration_status: regStatus,
           registration_id: registration?.id || null,
+          jersey_number: (player as any).jersey_number || null,
+          position: (player as any).position || null,
         });
       });
 
@@ -237,7 +293,7 @@ export default function ParentDashboard() {
       // Fetch upcoming events for teams
       if (teamIds.length > 0) {
         const today = new Date().toISOString().split('T')[0];
-        
+
         const { data: events } = await supabase
           .from('schedule_events')
           .select(`
@@ -313,6 +369,13 @@ export default function ParentDashboard() {
         } else {
           setTodayGame(null);
         }
+
+        // Count total events for the team (for attendance rate)
+        const { count: eventCount } = await supabase
+          .from('schedule_events')
+          .select('*', { count: 'exact', head: true })
+          .in('team_id', teamIds);
+        setTotalTeamEvents(eventCount || 0);
       } else {
         setUpcomingEvents([]);
         setRecentGames([]);
@@ -322,7 +385,7 @@ export default function ParentDashboard() {
       // Calculate payment status across all children
       if (formattedChildren.length > 0) {
         const childIds = formattedChildren.map(c => c.id);
-        
+
         const { data: payments } = await supabase
           .from('payments')
           .select('amount, paid, player_id')
@@ -332,7 +395,7 @@ export default function ParentDashboard() {
         const uniqueRegistrations = new Set(formattedChildren.map(c => `${c.id}-${c.season_id}`));
         const totalOwed = uniqueRegistrations.size * 335;
         const totalPaid = (payments || []).filter(p => p.paid).reduce((sum, p) => sum + (p.amount || 0), 0);
-        
+
         setPaymentStatus({
           total_owed: totalOwed,
           total_paid: totalPaid,
@@ -347,11 +410,80 @@ export default function ParentDashboard() {
     }
   };
 
+  const fetchChildStats = async (playerId: string) => {
+    if (!workingSeason?.id) return;
+    try {
+      const { data } = await supabase
+        .from('player_season_stats')
+        .select('*')
+        .eq('player_id', playerId)
+        .eq('season_id', workingSeason.id)
+        .limit(1)
+        .maybeSingle();
+
+      if (data) {
+        setChildStats({
+          games_played: data.games_played || 0,
+          total_kills: data.total_kills || 0,
+          total_aces: data.total_aces || 0,
+          total_digs: data.total_digs || 0,
+          total_blocks: data.total_blocks || 0,
+          total_assists: data.total_assists || 0,
+          total_points: data.total_points || 0,
+        });
+      } else {
+        setChildStats(null);
+      }
+    } catch (err) {
+      console.error('Error fetching child stats:', err);
+      setChildStats(null);
+    }
+  };
+
+  const fetchRsvpStatus = async (eventId: string, playerId: string) => {
+    try {
+      const { data: existingRsvp } = await supabase
+        .from('event_rsvps')
+        .select('status')
+        .eq('event_id', eventId)
+        .eq('player_id', playerId)
+        .maybeSingle();
+
+      setRsvpStatus(existingRsvp?.status as RsvpStatus || null);
+    } catch (err) {
+      console.error('Error fetching RSVP:', err);
+    }
+  };
+
+  const handleRsvp = async (status: 'yes' | 'no' | 'maybe') => {
+    if (!activeChild || upcomingEvents.length === 0 || !user?.id) return;
+    const nextEvent = upcomingEvents[0];
+    setRsvpLoading(true);
+    try {
+      await supabase.from('event_rsvps').upsert({
+        event_id: nextEvent.id,
+        player_id: activeChild.id,
+        status,
+        responded_by: user.id,
+        responded_at: new Date().toISOString(),
+      }, { onConflict: 'event_id,player_id' });
+      setRsvpStatus(status);
+    } catch (err) {
+      console.error('Error saving RSVP:', err);
+    } finally {
+      setRsvpLoading(false);
+    }
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
     await fetchParentData();
     setRefreshing(false);
   };
+
+  // -------------------------------------------------------------------------
+  // Helpers
+  // -------------------------------------------------------------------------
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr + 'T00:00:00');
@@ -361,7 +493,7 @@ export default function ParentDashboard() {
 
     if (date.toDateString() === today.toDateString()) return 'Today';
     if (date.toDateString() === tomorrow.toDateString()) return 'Tomorrow';
-    
+
     return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   };
 
@@ -374,23 +506,93 @@ export default function ParentDashboard() {
     return `${hour}:${minutes} ${ampm}`;
   };
 
+  const getCountdownText = (dateStr: string) => {
+    const eventDate = new Date(dateStr + 'T00:00:00');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diffTime = eventDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return 'TODAY';
+    if (diffDays === 1) return 'TOMORROW';
+    if (diffDays <= 7) return `IN ${diffDays} DAYS`;
+    return `IN ${diffDays} DAYS`;
+  };
+
+  const getShortDate = (dateStr: string) => {
+    const date = new Date(dateStr + 'T00:00:00');
+    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' });
+  };
+
+  const getPrideMoment = (): { icon: string; text: string } => {
+    if (!activeChild) return { icon: 'star', text: 'Ready for the next challenge!' };
+
+    // Check if recent game was a win
+    if (recentGames.length > 0) {
+      const lastGame = recentGames[0];
+      if (lastGame.game_result === 'win') {
+        return { icon: 'trophy', text: `${activeChild.first_name}'s team won! Great game!` };
+      }
+      if (childStats && childStats.total_kills > 0) {
+        return { icon: 'flash', text: `${activeChild.first_name} has ${childStats.total_kills} kills this season!` };
+      }
+    }
+
+    if (childStats && childStats.games_played > 0) {
+      return { icon: 'star', text: `${activeChild.first_name} has played ${childStats.games_played} games this season!` };
+    }
+
+    return { icon: 'star', text: `${activeChild.first_name} is ready for their next challenge!` };
+  };
+
   const getStatusConfig = (status: string) => {
     return statusConfig[status] || statusConfig.new;
+  };
+
+  const getRegistrationComplete = (): boolean => {
+    if (!activeChild) return false;
+    return ['active', 'rostered'].includes(activeChild.registration_status);
+  };
+
+  const getNextEventShortDate = (): string => {
+    if (upcomingEvents.length === 0) return 'None';
+    return getShortDate(upcomingEvents[0].date);
   };
 
   const s = createStyles(colors);
   const firstName = profile?.full_name?.split(' ')[0] || 'Parent';
 
+  // -------------------------------------------------------------------------
+  // Loading state
+  // -------------------------------------------------------------------------
+
+  if (loading) {
+    return (
+      <View style={s.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={s.loadingText}>Loading your family...</Text>
+      </View>
+    );
+  }
+
+  const prideMoment = getPrideMoment();
+
+  // -------------------------------------------------------------------------
+  // Render
+  // -------------------------------------------------------------------------
+
   return (
     <ScrollView
       style={s.container}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      contentContainerStyle={s.contentContainer}
+      showsVerticalScrollIndicator={false}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
     >
       {/* Header */}
       <View style={s.header}>
         <View>
-          <Text style={s.greeting}>Welcome back,</Text>
-          <Text style={s.name}>{firstName}</Text>
+          <Text style={s.greeting}>My Family</Text>
+          <Text style={s.heroName}>{firstName}</Text>
         </View>
         <RoleSelector />
       </View>
@@ -398,86 +600,128 @@ export default function ParentDashboard() {
       {/* Re-enrollment Banner */}
       <ReenrollmentBanner />
 
-      {/* Quick Stats */}
-      <View style={s.statsRow}>
-        <View style={s.statItem}>
-          <Text style={s.statNum}>{children.length}</Text>
-          <Text style={s.statLabel}>{children.length === 1 ? 'Child' : 'Children'}</Text>
-        </View>
-        <View style={s.statDivider} />
-        <View style={s.statItem}>
-          <Text style={s.statNum}>{upcomingEvents.length}</Text>
-          <Text style={s.statLabel}>Upcoming</Text>
-        </View>
-        <View style={s.statDivider} />
-        <View style={s.statItem}>
-          <Text style={[s.statNum, paymentStatus.balance > 0 && { color: colors.warning }]}>
-            ${paymentStatus.balance}
-          </Text>
-          <Text style={s.statLabel}>Balance</Text>
-        </View>
-      </View>
-
-      {/* My Children */}
-      <Text style={s.sectionTitle}>My Children</Text>
+      {/* ================================================================ */}
+      {/* HERO SECTION -- Child Card(s)                                     */}
+      {/* ================================================================ */}
       {children.length === 0 ? (
-        <View style={s.emptyCard}>
-          <Ionicons name="people-outline" size={32} color={colors.textMuted} />
-          <Text style={s.emptyText}>No children registered yet</Text>
-          <TouchableOpacity style={s.emptyBtn} onPress={() => router.push('/(auth)/parent-register')}>
-            <Text style={s.emptyBtnText}>Register a Child</Text>
+        <View style={s.emptyHeroCard}>
+          <View style={s.emptyHeroIcon}>
+            <Ionicons name="people-outline" size={40} color={colors.textMuted} />
+          </View>
+          <Text style={s.emptyHeroTitle}>No athletes registered yet</Text>
+          <Text style={s.emptyHeroSub}>Register your child to get started</Text>
+          <TouchableOpacity style={s.emptyHeroBtn} onPress={() => router.push('/(auth)/parent-register')}>
+            <Ionicons name="add-circle" size={20} color="#000" />
+            <Text style={s.emptyHeroBtnText}>Register a Child</Text>
           </TouchableOpacity>
         </View>
-      ) : (
-        children.map(child => {
-          const status = getStatusConfig(child.registration_status);
-          return (
-            <View key={`${child.id}-${child.season_id}`} style={s.childCard}>
-              {/* Sport Icon */}
-              <View style={[s.childAvatar, child.sport_color ? { backgroundColor: child.sport_color + '30' } : {}]}>
-                {child.sport_icon ? (
-                  <Text style={s.sportIcon}>{child.sport_icon}</Text>
-                ) : (
-                  <Text style={[s.childAvatarText, child.sport_color ? { color: child.sport_color } : {}]}>
-                    {child.first_name.charAt(0)}
-                  </Text>
+      ) : children.length === 1 ? (
+        /* Single child -- large hero card */
+        <View style={s.heroChildCard}>
+          <View style={s.heroChildTop}>
+            <View style={[s.heroAvatar, activeChild?.sport_color ? { borderColor: activeChild.sport_color } : {}]}>
+              {activeChild?.sport_icon ? (
+                <Text style={s.heroAvatarIcon}>{activeChild.sport_icon}</Text>
+              ) : (
+                <Text style={[s.heroAvatarText, activeChild?.sport_color ? { color: activeChild.sport_color } : {}]}>
+                  {activeChild?.first_name?.charAt(0)}{activeChild?.last_name?.charAt(0)}
+                </Text>
+              )}
+            </View>
+            <View style={s.heroChildInfo}>
+              <Text style={s.heroChildName}>{activeChild?.first_name} {activeChild?.last_name}</Text>
+              {activeChild?.team_name && (
+                <Text style={s.heroChildTeam}>{activeChild.team_name}</Text>
+              )}
+              <View style={s.heroChildBadges}>
+                {activeChild?.jersey_number && (
+                  <View style={s.heroBadge}>
+                    <Text style={s.heroBadgeText}>#{activeChild.jersey_number}</Text>
+                  </View>
+                )}
+                {activeChild?.position && (
+                  <View style={[s.heroBadge, { backgroundColor: colors.info + '20' }]}>
+                    <Text style={[s.heroBadgeText, { color: colors.info }]}>{activeChild.position}</Text>
+                  </View>
+                )}
+                {activeChild?.sport_name && (
+                  <View style={[s.heroBadge, { backgroundColor: (activeChild.sport_color || colors.primary) + '20' }]}>
+                    <Text style={[s.heroBadgeText, { color: activeChild.sport_color || colors.primary }]}>
+                      {activeChild.sport_name}
+                    </Text>
+                  </View>
                 )}
               </View>
-              
-              <View style={s.childInfo}>
-                <Text style={s.childName}>{child.first_name} {child.last_name}</Text>
-                
-                {/* Sport & Season */}
-                <Text style={[s.childSport, child.sport_color ? { color: child.sport_color } : {}]}>
-                  {child.sport_name ? `${child.sport_name} • ` : ''}{child.season_name}
-                </Text>
-                
-                {/* Team or Status */}
-                <View style={s.childMeta}>
-                  {child.team_name ? (
-                    <View style={s.teamBadge}>
-                      <Ionicons name="people" size={12} color="#AF52DE" />
-                      <Text style={s.teamBadgeText}>{child.team_name}</Text>
-                    </View>
-                  ) : child.registration_status === 'rostered' ? null : (
-                    <Text style={s.childTeamPending}>Team TBD</Text>
-                  )}
-                </View>
-              </View>
-              
-              {/* Status Badge */}
-              <View style={[s.statusBadge, { backgroundColor: status.color + '20' }]}>
-                <Ionicons name={status.icon as any} size={12} color={status.color} />
-                <Text style={[s.statusText, { color: status.color }]}>
-                  {status.label}
-                </Text>
-              </View>
             </View>
-          );
-        })
+          </View>
+          <Text style={s.proudParentText}>Proud parent of 1 athlete</Text>
+        </View>
+      ) : (
+        /* Multiple children -- horizontal scroll */
+        <View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={s.childScrollContainer}
+          >
+            {children.map((child, index) => {
+              const isActive = index === activeChildIndex;
+              return (
+                <TouchableOpacity
+                  key={`${child.id}-${child.season_id}`}
+                  style={[
+                    s.multiChildCard,
+                    isActive && { borderColor: colors.primary, borderWidth: 2 },
+                  ]}
+                  onPress={() => setActiveChildIndex(index)}
+                  activeOpacity={0.8}
+                >
+                  <View style={[s.multiChildAvatar, child.sport_color ? { borderColor: child.sport_color } : {}]}>
+                    {child.sport_icon ? (
+                      <Text style={s.multiChildAvatarIcon}>{child.sport_icon}</Text>
+                    ) : (
+                      <Text style={[s.multiChildAvatarText, child.sport_color ? { color: child.sport_color } : {}]}>
+                        {child.first_name.charAt(0)}{child.last_name.charAt(0)}
+                      </Text>
+                    )}
+                  </View>
+                  <Text style={s.multiChildName} numberOfLines={1}>{child.first_name} {child.last_name}</Text>
+                  {child.team_name && (
+                    <Text style={s.multiChildTeam} numberOfLines={1}>{child.team_name}</Text>
+                  )}
+                  {child.jersey_number && (
+                    <View style={s.multiChildBadge}>
+                      <Text style={s.multiChildBadgeText}>#{child.jersey_number}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+          <Text style={s.proudParentText}>
+            Proud parent of {children.length} athlete{children.length !== 1 ? 's' : ''}
+          </Text>
+        </View>
       )}
 
-      {/* Game Day Card */}
+      {/* ================================================================ */}
+      {/* PRIDE MOMENT -- Latest Achievement/Stat                           */}
+      {/* ================================================================ */}
+      {activeChild && (
+        <View style={s.sectionBlock}>
+          <Text style={s.sectionLabel}>LATEST</Text>
+          <View style={s.prideCard}>
+            <View style={s.prideIconWrap}>
+              <Ionicons name={prideMoment.icon as any} size={24} color={colors.primary} />
+            </View>
+            <Text style={s.prideText}>{prideMoment.text}</Text>
+          </View>
+        </View>
+      )}
+
+      {/* ================================================================ */}
+      {/* GAME DAY (if today)                                               */}
+      {/* ================================================================ */}
       {todayGame && (
         <TouchableOpacity
           style={s.gameDayCard}
@@ -486,7 +730,7 @@ export default function ParentDashboard() {
         >
           <View style={s.gameDayLeft}>
             <View style={s.gameDayIconWrap}>
-              <Ionicons name="flame" size={24} color={colors.danger} />
+              <Ionicons name="flame" size={28} color={colors.danger} />
             </View>
             <View style={s.gameDayInfo}>
               <Text style={s.gameDayTitle}>GAME DAY</Text>
@@ -499,144 +743,279 @@ export default function ParentDashboard() {
               </Text>
             </View>
           </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.danger} />
+          <Ionicons name="chevron-forward" size={22} color={colors.danger} />
         </TouchableOpacity>
       )}
 
-      {/* Quick Actions */}
-      <Text style={s.sectionTitle}>Quick Actions</Text>
-      <View style={s.actionsGrid}>
-        <TouchableOpacity style={s.actionCard} onPress={() => router.push('/my-kids' as any)}>
-          <View style={[s.actionIcon, { backgroundColor: colors.info + '20' }]}>
-            <Ionicons name="people" size={24} color={colors.info} />
+      {/* ================================================================ */}
+      {/* NEXT UP -- Upcoming Event with Countdown & RSVP                   */}
+      {/* ================================================================ */}
+      <View style={s.sectionBlock}>
+        <Text style={s.sectionLabel}>NEXT UP</Text>
+        {upcomingEvents.length === 0 ? (
+          <View style={s.glassCard}>
+            <View style={s.emptyNextUp}>
+              <Ionicons name="checkmark-circle" size={32} color={colors.success} />
+              <Text style={s.emptyNextUpText}>All caught up! No upcoming events.</Text>
+            </View>
           </View>
-          <Text style={s.actionLabel}>My Kids</Text>
-        </TouchableOpacity>
+        ) : (
+          <View style={s.nextUpCard}>
+            {/* Event type badge */}
+            <View style={s.nextUpTop}>
+              <View style={[
+                s.nextUpTypeBadge,
+                upcomingEvents[0].type === 'game'
+                  ? { backgroundColor: colors.danger + '20' }
+                  : { backgroundColor: colors.info + '20' },
+              ]}>
+                <Text style={[
+                  s.nextUpTypeBadgeText,
+                  { color: upcomingEvents[0].type === 'game' ? colors.danger : colors.info },
+                ]}>
+                  {upcomingEvents[0].type === 'game' ? 'GAME' : 'PRACTICE'}
+                </Text>
+              </View>
+              <Text style={s.nextUpTeam}>{upcomingEvents[0].team_name}</Text>
+            </View>
 
-        <TouchableOpacity style={s.actionCard} onPress={() => router.push('/schedule')}>
-          <View style={[s.actionIcon, { backgroundColor: colors.primary + '20' }]}>
-            <Ionicons name="calendar" size={24} color={colors.primary} />
-          </View>
-          <Text style={s.actionLabel}>Schedule</Text>
-        </TouchableOpacity>
+            {/* Countdown */}
+            <Text style={s.nextUpCountdown}>{getCountdownText(upcomingEvents[0].date)}</Text>
 
-        <TouchableOpacity style={s.actionCard} onPress={() => router.push('/family-payments' as any)}>
-          <View style={[s.actionIcon, { backgroundColor: colors.warning + '20' }]}>
-            <Ionicons name="wallet" size={24} color={colors.warning} />
-          </View>
-          <Text style={s.actionLabel}>Payments</Text>
-        </TouchableOpacity>
+            {/* Title */}
+            <Text style={s.nextUpTitle}>
+              {upcomingEvents[0].type === 'game' && upcomingEvents[0].opponent
+                ? `vs ${upcomingEvents[0].opponent}`
+                : upcomingEvents[0].title}
+            </Text>
 
-        <TouchableOpacity style={s.actionCard} onPress={() => router.push('/chats')}>
-          <View style={[s.actionIcon, { backgroundColor: colors.success + '20' }]}>
-            <Ionicons name="chatbubbles" size={24} color={colors.success} />
+            {/* Date, time, venue */}
+            <View style={s.nextUpDetails}>
+              <View style={s.nextUpDetailRow}>
+                <Ionicons name="calendar-outline" size={15} color={colors.textMuted} />
+                <Text style={s.nextUpDetailText}>{formatDate(upcomingEvents[0].date)}</Text>
+              </View>
+              {upcomingEvents[0].time ? (
+                <View style={s.nextUpDetailRow}>
+                  <Ionicons name="time-outline" size={15} color={colors.textMuted} />
+                  <Text style={s.nextUpDetailText}>{formatTime(upcomingEvents[0].time)}</Text>
+                </View>
+              ) : null}
+              {upcomingEvents[0].location ? (
+                <View style={s.nextUpDetailRow}>
+                  <Ionicons name="location-outline" size={15} color={colors.textMuted} />
+                  <Text style={s.nextUpDetailText}>{upcomingEvents[0].location}</Text>
+                </View>
+              ) : null}
+            </View>
+
+            {/* Get Directions */}
+            {upcomingEvents[0].location && (
+              <TouchableOpacity style={s.directionsBtn}>
+                <Ionicons name="navigate-outline" size={14} color={colors.primary} />
+                <Text style={s.directionsBtnText}>Get Directions</Text>
+              </TouchableOpacity>
+            )}
+
+            {/* RSVP Buttons */}
+            {activeChild && (
+              <View style={s.rsvpSection}>
+                <Text style={s.rsvpLabel}>RSVP for {activeChild.first_name}</Text>
+                <View style={s.rsvpRow}>
+                  <TouchableOpacity
+                    style={[s.rsvpBtn, rsvpStatus === 'yes' && s.rsvpBtnActiveYes]}
+                    onPress={() => handleRsvp('yes')}
+                    disabled={rsvpLoading}
+                  >
+                    <Text style={[s.rsvpBtnText, rsvpStatus === 'yes' && s.rsvpBtnTextActive]}>
+                      Going
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[s.rsvpBtn, rsvpStatus === 'no' && s.rsvpBtnActiveNo]}
+                    onPress={() => handleRsvp('no')}
+                    disabled={rsvpLoading}
+                  >
+                    <Text style={[s.rsvpBtnText, rsvpStatus === 'no' && s.rsvpBtnTextActive]}>
+                      Can't Make It
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[s.rsvpBtn, rsvpStatus === 'maybe' && s.rsvpBtnActiveMaybe]}
+                    onPress={() => handleRsvp('maybe')}
+                    disabled={rsvpLoading}
+                  >
+                    <Text style={[s.rsvpBtnText, rsvpStatus === 'maybe' && s.rsvpBtnTextActive]}>
+                      Maybe
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
           </View>
-          <Text style={s.actionLabel}>Team Chat</Text>
-        </TouchableOpacity>
+        )}
       </View>
 
-      {/* Upcoming Events */}
-      <Text style={s.sectionTitle}>Upcoming</Text>
-      {upcomingEvents.length === 0 ? (
-        <View style={s.emptyCard}>
-          <Ionicons name="calendar-outline" size={32} color={colors.textMuted} />
-          <Text style={s.emptyText}>No upcoming events</Text>
-        </View>
-      ) : (
-        upcomingEvents.slice(0, 3).map(event => (
-          <TouchableOpacity key={event.id} style={s.eventCard} onPress={() => router.push('/schedule')}>
-            <View style={[s.eventTypeIndicator, event.type === 'game' ? s.eventGame : s.eventPractice]} />
-            <View style={s.eventContent}>
-              <View style={s.eventHeader}>
-                <Text style={s.eventTitle}>
-                  {event.type === 'game' && event.opponent ? `vs ${event.opponent}` : event.title}
-                </Text>
-                <View style={[s.eventTypeBadge, event.type === 'game' ? s.eventTypeBadgeGame : s.eventTypeBadgePractice]}>
-                  <Text style={s.eventTypeBadgeText}>{event.type === 'game' ? 'Game' : 'Practice'}</Text>
-                </View>
-              </View>
-              <Text style={s.eventChild}>{event.child_name} • {event.team_name}</Text>
-              <View style={s.eventDetails}>
-                <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
-                <Text style={s.eventDetailText}>{formatDate(event.date)}</Text>
-                {event.time && (
-                  <>
-                    <Ionicons name="time-outline" size={14} color={colors.textMuted} style={{ marginLeft: 12 }} />
-                    <Text style={s.eventDetailText}>{formatTime(event.time)}</Text>
-                  </>
-                )}
-              </View>
-              {event.location && (
-                <View style={s.eventDetails}>
-                  <Ionicons name="location-outline" size={14} color={colors.textMuted} />
-                  <Text style={s.eventDetailText}>{event.location}</Text>
-                </View>
-              )}
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+      {/* ================================================================ */}
+      {/* QUICK PULSE -- 3 Status Cards                                     */}
+      {/* ================================================================ */}
+      <View style={s.sectionBlock}>
+        <Text style={s.sectionLabel}>AT A GLANCE</Text>
+        <View style={s.pulseRow}>
+          {/* Registration */}
+          <TouchableOpacity style={s.pulseCard} onPress={() => router.push('/my-kids' as any)} activeOpacity={0.7}>
+            <Ionicons
+              name={getRegistrationComplete() ? 'checkmark-circle' : 'time'}
+              size={24}
+              color={getRegistrationComplete() ? colors.success : colors.warning}
+            />
+            <Text style={[
+              s.pulseValue,
+              { color: getRegistrationComplete() ? colors.success : colors.warning },
+            ]}>
+              {getRegistrationComplete() ? 'Complete' : 'Pending'}
+            </Text>
+            <Text style={s.pulseLabel}>Registration</Text>
           </TouchableOpacity>
-        ))
+
+          {/* Payments */}
+          <TouchableOpacity style={s.pulseCard} onPress={() => router.push('/family-payments' as any)} activeOpacity={0.7}>
+            <Ionicons
+              name="wallet"
+              size={24}
+              color={paymentStatus.balance > 0 ? colors.warning : colors.success}
+            />
+            <Text style={[
+              s.pulseValue,
+              { color: paymentStatus.balance > 0 ? colors.warning : colors.success },
+            ]}>
+              {paymentStatus.balance > 0 ? `$${paymentStatus.balance} Due` : '$0 Due'}
+            </Text>
+            <Text style={s.pulseLabel}>Payments</Text>
+          </TouchableOpacity>
+
+          {/* Next Event */}
+          <TouchableOpacity style={s.pulseCard} onPress={() => router.push('/schedule')} activeOpacity={0.7}>
+            <Ionicons name="calendar" size={24} color={colors.info} />
+            <Text style={[s.pulseValue, { color: colors.info }]}>{getNextEventShortDate()}</Text>
+            <Text style={s.pulseLabel}>Next Event</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* ================================================================ */}
+      {/* SEASON STATS -- Child's Numbers                                   */}
+      {/* ================================================================ */}
+      {activeChild && (
+        <View style={s.sectionBlock}>
+          <Text style={s.sectionLabel}>SEASON STATS</Text>
+          <View style={s.statsGrid}>
+            {/* Games Played */}
+            <View style={s.statCard}>
+              <Ionicons name="trophy-outline" size={18} color={colors.textMuted} style={s.statCardIcon} />
+              <Text style={s.statNumber}>{childStats?.games_played ?? 0}</Text>
+              <Text style={s.statCardLabel}>Games Played</Text>
+            </View>
+
+            {/* Total Kills */}
+            <View style={s.statCard}>
+              <Ionicons name="flash-outline" size={18} color={colors.textMuted} style={s.statCardIcon} />
+              <Text style={s.statNumber}>{childStats?.total_kills ?? 0}</Text>
+              <Text style={s.statCardLabel}>Total Kills</Text>
+            </View>
+
+            {/* Total Aces */}
+            <View style={s.statCard}>
+              <Ionicons name="star-outline" size={18} color={colors.textMuted} style={s.statCardIcon} />
+              <Text style={s.statNumber}>{childStats?.total_aces ?? 0}</Text>
+              <Text style={s.statCardLabel}>Total Aces</Text>
+            </View>
+
+            {/* Attendance Rate */}
+            <View style={s.statCard}>
+              <Ionicons name="checkmark-done-outline" size={18} color={colors.textMuted} style={s.statCardIcon} />
+              <Text style={s.statNumber}>
+                {totalTeamEvents > 0
+                  ? `${Math.round(((childStats?.games_played ?? 0) / totalTeamEvents) * 100)}%`
+                  : '--'}
+              </Text>
+              <Text style={s.statCardLabel}>Attendance</Text>
+            </View>
+          </View>
+        </View>
       )}
 
-      {upcomingEvents.length > 3 && (
-        <TouchableOpacity style={s.viewAllBtn} onPress={() => router.push('/schedule')}>
-          <Text style={s.viewAllText}>View Full Schedule</Text>
-          <Ionicons name="arrow-forward" size={16} color={colors.primary} />
-        </TouchableOpacity>
-      )}
-
-      {/* Recent Games */}
+      {/* ================================================================ */}
+      {/* TEAM FEED -- Recent Activity                                      */}
+      {/* ================================================================ */}
       {recentGames.length > 0 && (
-        <>
-          <Text style={s.sectionTitle}>Recent Games</Text>
-          {recentGames.map(game => (
+        <View style={s.sectionBlock}>
+          <Text style={s.sectionLabel}>TEAM FEED</Text>
+          {recentGames.slice(0, 3).map(game => (
             <TouchableOpacity
               key={game.id}
-              style={s.recentGameCard}
+              style={s.feedCard}
               onPress={() => router.push(`/game-results?eventId=${game.id}` as any)}
               activeOpacity={0.8}
             >
               <View style={[
-                s.recentGameResult,
-                { backgroundColor: game.game_result === 'win' ? colors.success + '20' : colors.danger + '20' }
+                s.feedResultIcon,
+                { backgroundColor: game.game_result === 'win' ? colors.success + '20' : colors.danger + '20' },
               ]}>
                 <Text style={[
-                  s.recentGameResultText,
-                  { color: game.game_result === 'win' ? colors.success : colors.danger }
+                  s.feedResultText,
+                  { color: game.game_result === 'win' ? colors.success : colors.danger },
                 ]}>
                   {game.game_result === 'win' ? 'W' : 'L'}
                 </Text>
               </View>
-              <View style={s.recentGameInfo}>
-                <Text style={s.recentGameOpponent}>
+              <View style={s.feedContent}>
+                <Text style={s.feedTitle}>
                   {game.opponent ? `vs ${game.opponent}` : 'Game'}
                 </Text>
-                <Text style={s.recentGameMeta}>
+                <Text style={s.feedMeta}>
                   {game.team_name} {'\u2022'} {formatDate(game.event_date)}
                 </Text>
               </View>
-              <Text style={s.recentGameScore}>
+              <Text style={s.feedScore}>
                 {game.our_score ?? 0}-{game.their_score ?? 0}
               </Text>
               <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
             </TouchableOpacity>
           ))}
-        </>
+          <TouchableOpacity style={s.seeAllBtn} onPress={() => router.push('/schedule')}>
+            <Text style={s.seeAllText}>See All</Text>
+            <Ionicons name="arrow-forward" size={14} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
       )}
 
-      {/* Payment Alert */}
+      {/* ================================================================ */}
+      {/* PAYMENT CARD (only if balance > 0)                                */}
+      {/* ================================================================ */}
       {paymentStatus.balance > 0 && (
-        <TouchableOpacity style={s.paymentAlert} onPress={() => router.push('/family-payments' as any)}>
-          <Ionicons name="alert-circle" size={24} color={colors.warning} />
-          <View style={s.paymentAlertContent}>
-            <Text style={s.paymentAlertTitle}>Payment Due</Text>
-            <Text style={s.paymentAlertText}>You have an outstanding balance of ${paymentStatus.balance}</Text>
+        <TouchableOpacity
+          style={s.paymentCard}
+          onPress={() => router.push('/family-payments' as any)}
+          activeOpacity={0.8}
+        >
+          <View style={s.paymentLeft}>
+            <View style={s.paymentIconWrap}>
+              <Ionicons name="wallet-outline" size={22} color={colors.warning} />
+            </View>
+            <View>
+              <Text style={s.paymentTitle}>Outstanding Balance</Text>
+              <Text style={s.paymentAmount}>${paymentStatus.balance}</Text>
+            </View>
           </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.warning} />
+          <TouchableOpacity
+            style={s.paymentBtn}
+            onPress={() => router.push('/family-payments' as any)}
+          >
+            <Text style={s.paymentBtnText}>View Details</Text>
+          </TouchableOpacity>
         </TouchableOpacity>
       )}
-
-      <View style={{ height: 40 }} />
 
       {/* Share Registration Modal */}
       <ShareRegistrationModal
@@ -647,129 +1026,668 @@ export default function ParentDashboard() {
       {/* Parent Onboarding Modal */}
       <ParentOnboardingModal />
 
-      {/* COPPA Consent Modal — shown for existing parents without consent */}
+      {/* COPPA Consent Modal */}
       <CoppaConsentModal />
+
+      {/* Bottom padding */}
+      <View style={{ height: 120 }} />
     </ScrollView>
   );
 }
 
+// ---------------------------------------------------------------------------
+// Styles
+// ---------------------------------------------------------------------------
+
 const createStyles = (colors: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'transparent', padding: 16 },
-  
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  greeting: { fontSize: 16, color: colors.textMuted },
-  name: { fontSize: 28, fontWeight: '800', color: colors.text },
+  container: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  contentContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
+  },
+  loadingText: {
+    fontSize: 15,
+    color: colors.textMuted,
+  },
 
-  statsRow: { backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', marginBottom: 24, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
-  statItem: { flex: 1, alignItems: 'center' },
-  statDivider: { width: 1, height: 30, backgroundColor: colors.border },
-  statNum: { fontSize: 24, fontWeight: 'bold', color: colors.text },
-  statLabel: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+  // Header
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  greeting: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textMuted,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 1.5,
+  },
+  heroName: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: colors.text,
+    letterSpacing: -0.5,
+    marginTop: 2,
+  },
 
-  sectionTitle: { fontSize: 13, fontWeight: '700', color: colors.textMuted, marginBottom: 12, textTransform: 'uppercase' as const, letterSpacing: 1 },
+  // Section
+  sectionBlock: {
+    marginBottom: 28,
+  },
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase' as const,
+    letterSpacing: 2,
+    color: colors.textMuted,
+    marginBottom: 12,
+  },
 
-  emptyCard: { backgroundColor: colors.glassCard, borderRadius: 16, padding: 32, alignItems: 'center', marginBottom: 24, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
-  emptyText: { fontSize: 14, color: colors.textMuted, marginTop: 8, marginBottom: 16 },
-  emptyBtn: { backgroundColor: colors.primary, paddingHorizontal: 20, paddingVertical: 14, borderRadius: 12 },
-  emptyBtnText: { color: '#000', fontWeight: '600' },
+  // Glass Card base
+  glassCard: {
+    backgroundColor: colors.glassCard,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 6,
+      },
+    }),
+  },
 
-  childCard: {
+  // ========== HERO -- Empty ==========
+  emptyHeroCard: {
+    backgroundColor: colors.glassCard,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    padding: 40,
+    alignItems: 'center',
+    marginBottom: 28,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
+      android: { elevation: 6 },
+    }),
+  },
+  emptyHeroIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.glassCard,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  emptyHeroTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 6,
+  },
+  emptyHeroSub: {
+    fontSize: 14,
+    color: colors.textMuted,
+    marginBottom: 20,
+  },
+  emptyHeroBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 14,
+  },
+  emptyHeroBtnText: {
+    color: '#000',
+    fontWeight: '700',
+    fontSize: 15,
+  },
+
+  // ========== HERO -- Single Child ==========
+  heroChildCard: {
+    backgroundColor: colors.glassCard,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    padding: 20,
+    marginBottom: 28,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
+      android: { elevation: 6 },
+    }),
+  },
+  heroChildTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  heroAvatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.primary + '15',
+    borderWidth: 2,
+    borderColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  heroAvatarIcon: {
+    fontSize: 36,
+  },
+  heroAvatarText: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: colors.primary,
+  },
+  heroChildInfo: {
+    flex: 1,
+  },
+  heroChildName: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: colors.text,
+    letterSpacing: -0.5,
+  },
+  heroChildTeam: {
+    fontSize: 15,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  heroChildBadges: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 8,
+  },
+  heroBadge: {
+    backgroundColor: colors.primary + '20',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  heroBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  proudParentText: {
+    fontSize: 13,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+
+  // ========== HERO -- Multiple Children ==========
+  childScrollContainer: {
+    paddingRight: 20,
+    gap: 12,
+  },
+  multiChildCard: {
+    width: 280,
+    backgroundColor: colors.glassCard,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    padding: 20,
+    alignItems: 'center',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
+      android: { elevation: 6 },
+    }),
+  },
+  multiChildAvatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.primary + '15',
+    borderWidth: 2,
+    borderColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  multiChildAvatarIcon: {
+    fontSize: 28,
+  },
+  multiChildAvatarText: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: colors.primary,
+  },
+  multiChildName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+    textAlign: 'center',
+  },
+  multiChildTeam: {
+    fontSize: 13,
+    color: colors.textMuted,
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  multiChildBadge: {
+    backgroundColor: colors.primary + '20',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  multiChildBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+
+  // ========== PRIDE MOMENT ==========
+  prideCard: {
+    backgroundColor: colors.glassCard,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
+      android: { elevation: 6 },
+    }),
+  },
+  prideIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.primary + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  prideText: {
+    flex: 1,
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.text,
+    fontWeight: '500',
+  },
+
+  // ========== GAME DAY ==========
+  gameDayCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.danger + '10',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.danger + '30',
+    padding: 16,
+    marginBottom: 28,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
+      android: { elevation: 6 },
+    }),
+  },
+  gameDayLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  gameDayIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: colors.danger + '20',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  gameDayInfo: {
+    flex: 1,
+  },
+  gameDayTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: colors.danger,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase' as const,
+  },
+  gameDayOpponent: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.text,
+    marginTop: 2,
+  },
+  gameDayMeta: {
+    fontSize: 13,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+
+  // ========== NEXT UP ==========
+  nextUpCard: {
+    backgroundColor: colors.glassCard,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    padding: 20,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
+      android: { elevation: 6 },
+    }),
+  },
+  nextUpTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12,
+  },
+  nextUpTypeBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  nextUpTypeBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  nextUpTeam: {
+    fontSize: 13,
+    color: colors.textMuted,
+  },
+  nextUpCountdown: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: colors.primary,
+    letterSpacing: -0.5,
+    marginBottom: 4,
+  },
+  nextUpTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 12,
+  },
+  nextUpDetails: {
+    gap: 6,
+    marginBottom: 12,
+  },
+  nextUpDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  nextUpDetailText: {
+    fontSize: 14,
+    color: colors.textMuted,
+  },
+  directionsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 16,
+  },
+  directionsBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  emptyNextUp: {
+    padding: 24,
+    alignItems: 'center',
+    gap: 10,
+  },
+  emptyNextUpText: {
+    fontSize: 15,
+    color: colors.textMuted,
+  },
+
+  // RSVP
+  rsvpSection: {
+    borderTopWidth: 1,
+    borderTopColor: colors.glassBorder,
+    paddingTop: 14,
+    marginTop: 4,
+  },
+  rsvpLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.textMuted,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 1,
+    marginBottom: 10,
+  },
+  rsvpRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  rsvpBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    backgroundColor: colors.glassCard,
+    alignItems: 'center',
+  },
+  rsvpBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textMuted,
+  },
+  rsvpBtnActiveYes: {
+    backgroundColor: colors.success + '20',
+    borderColor: colors.success,
+  },
+  rsvpBtnActiveNo: {
+    backgroundColor: colors.danger + '20',
+    borderColor: colors.danger,
+  },
+  rsvpBtnActiveMaybe: {
+    backgroundColor: colors.warning + '20',
+    borderColor: colors.warning,
+  },
+  rsvpBtnTextActive: {
+    color: colors.text,
+  },
+
+  // ========== QUICK PULSE ==========
+  pulseRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  pulseCard: {
+    flex: 1,
+    backgroundColor: colors.glassCard,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    paddingVertical: 16,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    gap: 6,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
+      android: { elevation: 6 },
+    }),
+  },
+  pulseValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  pulseLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.textMuted,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.5,
+    textAlign: 'center',
+  },
+
+  // ========== SEASON STATS ==========
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  statCard: {
+    width: '48%' as any,
+    backgroundColor: colors.glassCard,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    padding: 18,
+    flexGrow: 1,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
+      android: { elevation: 6 },
+    }),
+  },
+  statCardIcon: {
+    marginBottom: 8,
+  },
+  statNumber: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: colors.text,
+    letterSpacing: -0.5,
+  },
+  statCardLabel: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 2,
+    fontWeight: '500',
+  },
+
+  // ========== TEAM FEED ==========
+  feedCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.glassCard,
-    borderRadius: 16,
-    padding: 12,
-    marginBottom: 10,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.glassBorder,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 6,
+    padding: 14,
+    marginBottom: 8,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
+      android: { elevation: 6 },
+    }),
   },
-  childAvatar: { 
-    width: 48, 
-    height: 48, 
-    borderRadius: 24, 
-    backgroundColor: colors.primary + '30', 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    marginRight: 12 
+  feedResultIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
-  childAvatarText: { fontSize: 20, fontWeight: 'bold', color: colors.primary },
-  sportIcon: { fontSize: 24 },
-  childInfo: { flex: 1 },
-  childName: { fontSize: 16, fontWeight: '600', color: colors.text, marginBottom: 2 },
-  childSport: { fontSize: 13, color: colors.primary, marginBottom: 4 },
-  childMeta: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  childTeam: { fontSize: 13, color: colors.textMuted },
-  childTeamPending: { fontSize: 12, color: colors.textMuted, fontStyle: 'italic' },
-  teamBadge: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    gap: 4, 
-    backgroundColor: '#AF52DE20', 
-    paddingHorizontal: 8, 
-    paddingVertical: 3, 
-    borderRadius: 6 
+  feedResultText: {
+    fontSize: 18,
+    fontWeight: '800',
   },
-  teamBadgeText: { fontSize: 12, color: '#AF52DE', fontWeight: '500' },
-  ageGroupBadge: { backgroundColor: colors.primary + '20', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  ageGroupText: { fontSize: 11, fontWeight: '600', color: colors.primary },
-  statusBadge: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    gap: 4, 
-    paddingHorizontal: 8, 
-    paddingVertical: 6, 
-    borderRadius: 8 
+  feedContent: {
+    flex: 1,
   },
-  statusText: { fontSize: 10, fontWeight: '600' },
+  feedTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  feedMeta: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  feedScore: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+    marginRight: 8,
+  },
+  seeAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+  },
+  seeAllText: {
+    fontSize: 14,
+    color: colors.primary,
+    fontWeight: '600',
+  },
 
-  actionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24 },
-  actionCard: { width: '47%', backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
-  actionIcon: { width: 48, height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
-  actionLabel: { fontSize: 13, fontWeight: '500', color: colors.text },
-
-  eventCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.glassCard, borderRadius: 16, marginBottom: 8, overflow: 'hidden', borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
-  eventTypeIndicator: { width: 4, alignSelf: 'stretch' },
-  eventGame: { backgroundColor: colors.danger },
-  eventPractice: { backgroundColor: colors.info },
-  eventContent: { flex: 1, padding: 12 },
-  eventHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
-  eventTitle: { fontSize: 15, fontWeight: '600', color: colors.text, flex: 1 },
-  eventTypeBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, marginLeft: 8 },
-  eventTypeBadgeGame: { backgroundColor: colors.danger + '20' },
-  eventTypeBadgePractice: { backgroundColor: colors.info + '20' },
-  eventTypeBadgeText: { fontSize: 10, fontWeight: '600', color: colors.text },
-  eventChild: { fontSize: 12, color: colors.primary, marginBottom: 6 },
-  eventDetails: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
-  eventDetailText: { fontSize: 12, color: colors.textMuted },
-
-  viewAllBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12 },
-  viewAllText: { fontSize: 14, color: colors.primary, fontWeight: '500' },
-
-  paymentAlert: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.warning + '15', borderRadius: 16, padding: 16, marginTop: 8, borderWidth: 1, borderColor: colors.warning + '40', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
-  paymentAlertContent: { flex: 1, marginLeft: 12 },
-  paymentAlertTitle: { fontSize: 14, fontWeight: '600', color: colors.warning },
-  paymentAlertText: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
-
-  // Game Day Card
-  gameDayCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.danger + '12', borderRadius: 16, padding: 14, marginBottom: 20, borderWidth: 1, borderColor: colors.danger + '30', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
-  gameDayLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  gameDayIconWrap: { width: 44, height: 44, borderRadius: 12, backgroundColor: colors.danger + '20', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  gameDayInfo: { flex: 1 },
-  gameDayTitle: { fontSize: 11, fontWeight: '800', color: colors.danger, letterSpacing: 1.5, textTransform: 'uppercase' as const },
-  gameDayOpponent: { fontSize: 16, fontWeight: '700', color: colors.text, marginTop: 2 },
-  gameDayMeta: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
-
-  // Recent Games
-  recentGameCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.glassCard, borderRadius: 16, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
-  recentGameResult: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
-  recentGameResultText: { fontSize: 16, fontWeight: '800' },
-  recentGameInfo: { flex: 1 },
-  recentGameOpponent: { fontSize: 15, fontWeight: '600', color: colors.text },
-  recentGameMeta: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
-  recentGameScore: { fontSize: 18, fontWeight: '700', color: colors.text, marginRight: 8 },
+  // ========== PAYMENT CARD ==========
+  paymentCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.glassCard,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.warning + '30',
+    padding: 18,
+    marginBottom: 28,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
+      android: { elevation: 6 },
+    }),
+  },
+  paymentLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 14,
+  },
+  paymentIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: colors.warning + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  paymentTitle: {
+    fontSize: 13,
+    color: colors.textMuted,
+    fontWeight: '600',
+  },
+  paymentAmount: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: colors.warning,
+  },
+  paymentBtn: {
+    backgroundColor: colors.warning + '20',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  paymentBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.warning,
+  },
 });
