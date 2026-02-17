@@ -1,0 +1,144 @@
+import { useAuth } from '@/lib/auth';
+import { usePermissions } from '@/lib/permissions-context';
+import { useSeason } from '@/lib/season';
+import { supabase } from '@/lib/supabase';
+import { useTheme } from '@/lib/theme';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
+
+// Import dashboard components
+import AdminDashboard from './AdminDashboard';
+import CoachDashboard from './CoachDashboard';
+import CoachParentDashboard from './CoachParentDashboard';
+import ParentDashboard from './ParentDashboard';
+
+type DashboardType = 'admin' | 'coach' | 'parent' | 'coach_parent' | 'loading';
+
+export default function DashboardRouter() {
+  const { colors } = useTheme();
+  const { user } = useAuth();
+  const permissions = usePermissions();
+  const { workingSeason } = useSeason();
+
+  // Extract what we need, with fallbacks
+  const isAdmin = permissions.isAdmin ?? false;
+  const isCoach = permissions.isCoach ?? false;
+  const isParent = permissions.isParent ?? false;
+  // Check if devModeRole exists in your context (it might be named differently)
+  const devModeRole = (permissions as any).devModeRole ?? (permissions as any).devViewAs ?? null;
+
+  const [dashboardType, setDashboardType] = useState<DashboardType>('loading');
+
+  useEffect(() => {
+    determineDashboard();
+  }, [user?.id, workingSeason?.id, isAdmin, isCoach, isParent, devModeRole]);
+
+  const determineDashboard = async () => {
+    if (!user?.id) {
+      setDashboardType('loading');
+      return;
+    }
+
+    // If dev mode is active, show the corresponding dashboard
+    if (devModeRole) {
+      if (devModeRole === 'league_admin') {
+        setDashboardType('admin');
+        return;
+      }
+      if (devModeRole === 'head_coach' || devModeRole === 'assistant_coach') {
+        const hasKids = await checkIfParentHasKids();
+        setDashboardType(hasKids ? 'coach_parent' : 'coach');
+        return;
+      }
+      if (devModeRole === 'parent') {
+        setDashboardType('parent');
+        return;
+      }
+    }
+
+    // Admin gets admin dashboard always
+    if (isAdmin) {
+      setDashboardType('admin');
+      return;
+    }
+
+    // Check actual coaching status and parent status
+    const [hasTeams, hasKids] = await Promise.all([
+      checkIfCoachHasTeams(),
+      checkIfParentHasKids(),
+    ]);
+
+    // Determine dashboard type based on roles
+    if (hasTeams && hasKids) {
+      setDashboardType('coach_parent');
+    } else if (hasTeams) {
+      setDashboardType('coach');
+    } else if (hasKids || isParent) {
+      setDashboardType('parent');
+    } else {
+      // Default to parent dashboard for new users
+      setDashboardType('parent');
+    }
+  };
+
+  const checkIfCoachHasTeams = async (): Promise<boolean> => {
+    if (!user?.id || !workingSeason?.id) return false;
+
+    try {
+      const { data } = await supabase
+        .from('team_staff')
+        .select('team_id')
+        .eq('user_id', user.id)
+        .limit(1);
+
+      return Boolean(data && data.length > 0);
+    } catch {
+      return false;
+    }
+  };
+
+  const checkIfParentHasKids = async (): Promise<boolean> => {
+    if (!user?.id) return false;
+
+    try {
+      const { data } = await supabase
+        .from('player_guardians')
+        .select('player_id')
+        .eq('guardian_id', user.id)
+        .limit(1);
+
+      return Boolean(data && data.length > 0);
+    } catch {
+      return false;
+    }
+  };
+
+  if (dashboardType === 'loading') {
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  switch (dashboardType) {
+    case 'admin':
+      return <AdminDashboard />;
+    case 'coach':
+      return <CoachDashboard />;
+    case 'parent':
+      return <ParentDashboard />;
+    case 'coach_parent':
+      return <CoachParentDashboard />;
+    default:
+      return <ParentDashboard />;
+  }
+}
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+});

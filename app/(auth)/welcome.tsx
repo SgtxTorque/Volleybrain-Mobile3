@@ -1,0 +1,403 @@
+import { supabase } from '@/lib/supabase';
+import { useTheme } from '@/lib/theme';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+// =============================================================================
+// WELCOME SCREEN
+// Sign in first, then 3 clear paths for new users
+// =============================================================================
+
+export default function WelcomeScreen() {
+  const { colors } = useTheme();
+  const router = useRouter();
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // =============================================================================
+  // SIGN IN
+  // =============================================================================
+
+  const handleSignIn = async () => {
+    if (!email.trim() || !password.trim()) {
+      Alert.alert('Missing Fields', 'Please enter your email and password.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password: password,
+      });
+
+      if (error) throw error;
+
+      // Session is handled automatically by auth context listener
+      // Navigation will happen via _layout.tsx when session changes
+    } catch (error: any) {
+      console.error('Sign in error:', error);
+      Alert.alert(
+        'Sign In Failed',
+        error.message || 'Please check your credentials and try again.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      Alert.alert('Enter Email', 'Please enter your email address first.');
+      return;
+    }
+
+    Alert.alert(
+      'Reset Password',
+      `Send password reset link to ${email}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Send',
+          onPress: async () => {
+            try {
+              const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase());
+              if (error) throw error;
+              Alert.alert('Check Your Email', 'We sent you a password reset link.');
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'Failed to send reset email.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  // =============================================================================
+  // RENDER
+  // =============================================================================
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        <ScrollView
+          contentContainerStyle={{
+            flexGrow: 1,
+            padding: 24,
+          }}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Logo & Branding */}
+          <View style={{ alignItems: 'center', marginTop: 16, marginBottom: 28 }}>
+            <View style={{
+              width: 90,
+              height: 90,
+              borderRadius: 45,
+              backgroundColor: colors.primary + '20',
+              borderWidth: 3,
+              borderColor: colors.primary,
+              justifyContent: 'center',
+              alignItems: 'center',
+              marginBottom: 14,
+            }}>
+              <Text style={{ fontSize: 44 }}>🏐</Text>
+            </View>
+            <Text style={{
+              fontSize: 28,
+              fontWeight: '700',
+              color: colors.text,
+            }}>
+              VolleyBrain
+            </Text>
+            <Text style={{
+              fontSize: 15,
+              color: colors.primary,
+              fontWeight: '600',
+              marginTop: 4,
+            }}>
+              Black Hornets Volleyball
+            </Text>
+          </View>
+
+          {/* Sign In Section */}
+          <View style={{ marginBottom: 20 }}>
+            <Text style={{
+              fontSize: 18,
+              fontWeight: '600',
+              color: colors.text,
+              marginBottom: 14,
+              textAlign: 'center',
+            }}>
+              Welcome back!
+            </Text>
+
+            {/* Email Input */}
+            <View style={{
+              backgroundColor: colors.card,
+              borderRadius: 12,
+              flexDirection: 'row',
+              alignItems: 'center',
+              paddingHorizontal: 14,
+              marginBottom: 10,
+            }}>
+              <Ionicons name="mail-outline" size={20} color={colors.textSecondary} />
+              <TextInput
+                value={email}
+                onChangeText={setEmail}
+                placeholder="Email address"
+                placeholderTextColor={colors.textSecondary}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                style={{
+                  flex: 1,
+                  padding: 14,
+                  fontSize: 16,
+                  color: colors.text,
+                }}
+              />
+            </View>
+
+            {/* Password Input */}
+            <View style={{
+              backgroundColor: colors.card,
+              borderRadius: 12,
+              flexDirection: 'row',
+              alignItems: 'center',
+              paddingHorizontal: 14,
+              marginBottom: 10,
+            }}>
+              <Ionicons name="lock-closed-outline" size={20} color={colors.textSecondary} />
+              <TextInput
+                value={password}
+                onChangeText={setPassword}
+                placeholder="Password"
+                placeholderTextColor={colors.textSecondary}
+                secureTextEntry={!showPassword}
+                style={{
+                  flex: 1,
+                  padding: 14,
+                  fontSize: 16,
+                  color: colors.text,
+                }}
+              />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                <Ionicons
+                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                  size={20}
+                  color={colors.textSecondary}
+                />
+              </TouchableOpacity>
+            </View>
+
+            {/* Forgot Password */}
+            <TouchableOpacity
+              onPress={handleForgotPassword}
+              style={{ alignSelf: 'flex-end', marginBottom: 14 }}
+            >
+              <Text style={{ fontSize: 13, color: colors.primary, fontWeight: '500' }}>
+                Forgot password?
+              </Text>
+            </TouchableOpacity>
+
+            {/* Sign In Button */}
+            <TouchableOpacity
+              onPress={handleSignIn}
+              disabled={loading}
+              style={{
+                backgroundColor: colors.primary,
+                borderRadius: 12,
+                padding: 15,
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexDirection: 'row',
+              }}
+            >
+              {loading ? (
+                <ActivityIndicator color="#000" />
+              ) : (
+                <>
+                  <Ionicons name="log-in-outline" size={20} color="#000" />
+                  <Text style={{
+                    fontSize: 16,
+                    fontWeight: '600',
+                    color: '#000',
+                    marginLeft: 8,
+                  }}>
+                    Sign In
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {/* Divider */}
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            marginVertical: 20,
+          }}>
+            <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
+            <Text style={{
+              fontSize: 13,
+              color: colors.textSecondary,
+              marginHorizontal: 14,
+              fontWeight: '500',
+            }}>
+              Get Started
+            </Text>
+            <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
+          </View>
+
+          {/* Get Started Options */}
+          <View style={{ gap: 10 }}>
+            {/* Start a League */}
+            <TouchableOpacity
+              onPress={() => router.push('/(auth)/league-setup')}
+              style={{
+                backgroundColor: colors.card,
+                borderRadius: 12,
+                padding: 14,
+                flexDirection: 'row',
+                alignItems: 'center',
+              }}
+            >
+              <View style={{
+                width: 44,
+                height: 44,
+                borderRadius: 12,
+                backgroundColor: '#FF950020',
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginRight: 12,
+              }}>
+                <Ionicons name="trophy" size={22} color="#FF9500" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{
+                  fontSize: 15,
+                  fontWeight: '600',
+                  color: colors.text,
+                }}>
+                  I'm starting a league
+                </Text>
+                <Text style={{
+                  fontSize: 12,
+                  color: colors.textSecondary,
+                  marginTop: 1,
+                }}>
+                  Set up your organization
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+
+            {/* Register a Player */}
+            <TouchableOpacity
+              onPress={() => router.push('/(auth)/parent-register')}
+              style={{
+                backgroundColor: colors.card,
+                borderRadius: 12,
+                padding: 14,
+                flexDirection: 'row',
+                alignItems: 'center',
+              }}
+            >
+              <View style={{
+                width: 44,
+                height: 44,
+                borderRadius: 12,
+                backgroundColor: '#34C75920',
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginRight: 12,
+              }}>
+                <Ionicons name="people" size={22} color="#34C759" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{
+                  fontSize: 15,
+                  fontWeight: '600',
+                  color: colors.text,
+                }}>
+                  Register a player
+                </Text>
+                <Text style={{
+                  fontSize: 12,
+                  color: colors.textSecondary,
+                  marginTop: 1,
+                }}>
+                  Sign up your player for a season
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+
+            {/* Join as Coach */}
+            <TouchableOpacity
+              onPress={() => router.push('/(auth)/coach-register')}
+              style={{
+                backgroundColor: colors.card,
+                borderRadius: 12,
+                padding: 14,
+                flexDirection: 'row',
+                alignItems: 'center',
+              }}
+            >
+              <View style={{
+                width: 44,
+                height: 44,
+                borderRadius: 12,
+                backgroundColor: '#007AFF20',
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginRight: 12,
+              }}>
+                <Ionicons name="clipboard" size={22} color="#007AFF" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{
+                  fontSize: 15,
+                  fontWeight: '600',
+                  color: colors.text,
+                }}>
+                  Join as a coach
+                </Text>
+                <Text style={{
+                  fontSize: 12,
+                  color: colors.textSecondary,
+                  marginTop: 1,
+                }}>
+                  Request to coach a team
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Footer Spacer */}
+          <View style={{ height: 30 }} />
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}

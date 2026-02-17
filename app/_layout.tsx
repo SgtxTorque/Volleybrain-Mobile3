@@ -1,24 +1,82 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
+import { AuthProvider, useAuth } from '@/lib/auth';
+import { PermissionsProvider } from '@/lib/permissions-context';
+import { SeasonProvider } from '@/lib/season';
+import { SportProvider } from '@/lib/sport';
+import { ThemeProvider } from '@/lib/theme';
+import { DarkTheme, DefaultTheme, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
+import { useEffect, useRef } from 'react';
+import { useColorScheme } from 'react-native';
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
-
-export const unstable_settings = {
-  anchor: '(tabs)',
-};
-
-export default function RootLayout() {
+function RootLayoutNav() {
+  const { session, loading, profile } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
   const colorScheme = useColorScheme();
+  const hasNavigated = useRef(false);
+
+  useEffect(() => {
+    if (loading) {
+      hasNavigated.current = false;
+      return;
+    }
+    if (hasNavigated.current) return;
+    
+    const inAuthGroup = segments[0] === '(auth)';
+    
+    if (!session && !inAuthGroup) {
+      // Not logged in, go to welcome
+      hasNavigated.current = true;
+      router.replace('/(auth)/welcome');
+    } else if (session && inAuthGroup) {
+      // Logged in but in auth screens
+      // Check if pending approval
+      if (profile?.pending_approval) {
+        hasNavigated.current = true;
+        router.replace('/(auth)/pending-approval');
+      } else {
+        hasNavigated.current = true;
+        router.replace('/(tabs)');
+      }
+    } else if (session && !inAuthGroup && profile?.pending_approval) {
+      // Logged in but pending approval
+      hasNavigated.current = true;
+      router.replace('/(auth)/pending-approval');
+    }
+  }, [session, loading, profile?.pending_approval]);
+
+  useEffect(() => {
+    hasNavigated.current = false;
+  }, [segments]);
+
+  if (loading) {
+    return null;
+  }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+    <NavThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(tabs)" />
       </Stack>
       <StatusBar style="auto" />
-    </ThemeProvider>
+    </NavThemeProvider>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <AuthProvider>
+      <ThemeProvider>
+        <SportProvider>
+          <SeasonProvider>
+            <PermissionsProvider>
+              <RootLayoutNav />
+            </PermissionsProvider>
+          </SeasonProvider>
+        </SportProvider>
+      </ThemeProvider>
+    </AuthProvider>
   );
 }
