@@ -20,6 +20,7 @@ type Props = {
 };
 
 export default function EmojiPicker({ visible, onClose, onSelect }: Props) {
+  if (!visible) return null;
   const { colors } = useTheme();
   const [selectedCategory, setSelectedCategory] = useState('Smileys');
 
@@ -32,7 +33,7 @@ export default function EmojiPicker({ visible, onClose, onSelect }: Props) {
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
-      <View style={s.overlay}>
+      <View style={s.overlay} pointerEvents={visible ? 'auto' : 'none'}>
         <View style={s.container}>
           <View style={s.header}>
             <Text style={s.title}>Emoji</Text>

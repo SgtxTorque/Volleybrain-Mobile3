@@ -6,232 +6,22 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Modal,
   ScrollView,
   StyleSheet,
   Switch,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 
-export default function CoppaConsentModal() {
-  const { colors } = useTheme();
-  const { user, profile, signOut, refreshProfile } = useAuth();
-  const { isParent } = usePermissions();
-
-  const [visible, setVisible] = useState(false);
-  const [consentChecked, setConsentChecked] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [checking, setChecking] = useState(true);
-
-  useEffect(() => {
-    checkCoppaStatus();
-  }, [user?.id, profile?.coppa_consent_given, isParent]);
-
-  const checkCoppaStatus = async () => {
-    if (!user?.id || !isParent) {
-      setChecking(false);
-      setVisible(false);
-      return;
-    }
-
-    // Already gave consent — skip entirely
-    if (profile?.coppa_consent_given) {
-      setChecking(false);
-      setVisible(false);
-      return;
-    }
-
-    try {
-      // Check if user has children via player_guardians
-      const { data: guardianLinks } = await supabase
-        .from('player_guardians')
-        .select('id')
-        .eq('guardian_id', user.id)
-        .limit(1);
-
-      let hasChildren = (guardianLinks && guardianLinks.length > 0);
-
-      // Also check players by parent_account_id
-      if (!hasChildren) {
-        const { data: directPlayers } = await supabase
-          .from('players')
-          .select('id')
-          .eq('parent_account_id', user.id)
-          .limit(1);
-
-        hasChildren = (directPlayers && directPlayers.length > 0);
-      }
-
-      // Also check by parent_email
-      if (!hasChildren && profile?.email) {
-        const { data: emailPlayers } = await supabase
-          .from('players')
-          .select('id')
-          .ilike('parent_email', profile.email)
-          .limit(1);
-
-        hasChildren = (emailPlayers && emailPlayers.length > 0);
-      }
-
-      if (hasChildren && !profile?.coppa_consent_given) {
-        setVisible(true);
-      } else {
-        setVisible(false);
-      }
-    } catch (error) {
-      console.error('Error checking COPPA status:', error);
-      // On error, don't block the user
-      setVisible(false);
-    } finally {
-      setChecking(false);
-    }
-  };
-
-  const handleConsent = async () => {
-    if (!user?.id || !profile) return;
-
-    setSaving(true);
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          coppa_consent_given: true,
-          coppa_consent_date: new Date().toISOString(),
-          coppa_consent_guardian_name: profile.full_name || '',
-          coppa_consent_guardian_email: profile.email || '',
-        })
-        .eq('id', profile.id);
-
-      if (error) throw error;
-
-      await refreshProfile();
-      setVisible(false);
-    } catch (error) {
-      console.error('Error saving COPPA consent:', error);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleSkipForNow = () => {
-    // Let parent use the app — they'll be prompted again next session
-    setVisible(false);
-  };
-
-  const handleSignOut = async () => {
-    setVisible(false);
-    await signOut();
-  };
-
-  if (checking || !visible) return null;
-
-  const s = createStyles(colors);
-
-  return (
-    <Modal
-      visible={visible}
-      animationType="fade"
-      transparent
-      onRequestClose={handleSkipForNow}
-    >
-      <View style={s.overlay}>
-        <View style={s.container}>
-          <ScrollView
-            style={s.scroll}
-            contentContainerStyle={s.scrollContent}
-            showsVerticalScrollIndicator={false}
-          >
-            {/* Header */}
-            <View style={s.headerSection}>
-              <View style={s.iconWrap}>
-                <Ionicons name="shield-checkmark" size={48} color={colors.warning} />
-              </View>
-              <Text style={s.title}>Parental Consent Required</Text>
-              <Text style={s.subtitle}>
-                Federal law (COPPA) requires parental consent before collecting information about children under 13.
-              </Text>
-            </View>
-
-            {/* Data Collection Notice */}
-            <View style={s.coppaCard}>
-              <Text style={s.coppaSubtitle}>Information We Collect About Your Child</Text>
-              <Text style={s.coppaText}>
-                VolleyBrain collects the following information about your child to manage their participation in youth sports:
-              </Text>
-
-              <View style={s.coppaList}>
-                <Text style={s.coppaListItem}>{'\u2022'} Full name and date of birth</Text>
-                <Text style={s.coppaListItem}>{'\u2022'} School grade and jersey/shirt sizes</Text>
-                <Text style={s.coppaListItem}>{'\u2022'} Medical information (allergies, conditions, medications)</Text>
-                <Text style={s.coppaListItem}>{'\u2022'} Photos and profile images</Text>
-                <Text style={s.coppaListItem}>{'\u2022'} Game statistics and achievements</Text>
-                <Text style={s.coppaListItem}>{'\u2022'} Team assignments and attendance records</Text>
-              </View>
-
-              <Text style={s.coppaSubtitle}>Who Can See This Data</Text>
-              <View style={s.coppaList}>
-                <Text style={s.coppaListItem}>
-                  {'\u2022'} Coaches and team staff: Medical info, stats, attendance (for player safety and team management)
-                </Text>
-                <Text style={s.coppaListItem}>
-                  {'\u2022'} Other parents on the team: First name and jersey number only
-                </Text>
-                <Text style={s.coppaListItem}>
-                  {'\u2022'} Organization administrators: All data for league management
-                </Text>
-              </View>
-
-              <Text style={s.coppaSubtitle}>Data Retention & Your Rights</Text>
-              <Text style={s.coppaText}>
-                Your child's data is kept while they are enrolled in a season. You may request data export, correction, or deletion at any time through your profile settings. Revoking consent will remove your child from active rosters.
-              </Text>
-            </View>
-
-            {/* Consent Switch */}
-            <View style={s.consentRow}>
-              <Switch
-                value={consentChecked}
-                onValueChange={setConsentChecked}
-                trackColor={{ false: colors.border, true: colors.primary }}
-                thumbColor={consentChecked ? '#fff' : '#f4f3f4'}
-              />
-              <Text style={s.consentText}>
-                I am the parent or legal guardian and I consent to the collection and use of my child's information as described above.
-              </Text>
-            </View>
-
-            {/* Buttons */}
-            <TouchableOpacity
-              style={[s.consentBtn, !consentChecked && s.consentBtnDisabled]}
-              onPress={handleConsent}
-              disabled={!consentChecked || saving}
-            >
-              {saving ? (
-                <ActivityIndicator color="#000" />
-              ) : (
-                <>
-                  <Ionicons name="checkmark-circle" size={20} color="#000" />
-                  <Text style={s.consentBtnText}>I Consent</Text>
-                </>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity style={s.skipBtn} onPress={handleSkipForNow}>
-              <Text style={s.skipBtnText}>Skip for Now</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={s.signOutBtn} onPress={handleSignOut}>
-              <Ionicons name="log-out-outline" size={20} color={colors.danger} />
-              <Text style={s.signOutBtnText}>Sign Out</Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
-      </View>
-    </Modal>
-  );
-}
+type Props = {
+  visible: boolean;
+  onDone?: () => void;
+  onMount?: () => void;
+  onUnmount?: () => void;
+  onVisibleChange?: (v: boolean) => void;
+  onShouldShowChange?: (s: boolean) => void;
+};
 
 const createStyles = (colors: any) =>
   StyleSheet.create({
@@ -240,6 +30,13 @@ const createStyles = (colors: any) =>
       backgroundColor: 'rgba(0,0,0,0.5)',
       justifyContent: 'center',
       alignItems: 'center',
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      zIndex: 9999,
+      elevation: 9999,
     },
     container: {
       width: '92%',
@@ -376,3 +173,230 @@ const createStyles = (colors: any) =>
       color: colors.danger,
     },
   });
+
+export default function CoppaConsentModal({
+  visible,
+  onDone,
+  onMount,
+  onUnmount,
+  onVisibleChange,
+  onShouldShowChange,
+}: Props) {
+  const { colors } = useTheme();
+  const { user, profile, signOut, refreshProfile } = useAuth();
+  const { isParent } = usePermissions();
+  const [shouldShow, setShouldShow] = useState(false);
+  const [consentChecked, setConsentChecked] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    if (visible) {
+      onMount?.();
+    } else {
+      onUnmount?.();
+    }
+    onVisibleChange?.(visible);
+  }, [visible, onMount, onUnmount, onVisibleChange]);
+
+  useEffect(() => {
+    onShouldShowChange?.(shouldShow);
+  }, [shouldShow, onShouldShowChange]);
+
+  useEffect(() => {
+    console.log('[CoppaConsentModal] useEffect triggered - visible:', visible, 'user.id:', user?.id, 'isParent:', isParent);
+    if (!visible) {
+      console.log('[CoppaConsentModal] visible is false, resetting state');
+      setShouldShow(false);
+      setChecking(false);
+      return;
+    }
+    console.log('[CoppaConsentModal] visible is true, calling checkCoppaStatus');
+    checkCoppaStatus();
+  }, [visible, user?.id, profile?.coppa_consent_given, isParent]);
+
+  const checkCoppaStatus = async () => {
+    console.log('[CoppaConsentModal] checkCoppaStatus called - starting check');
+    if (!user?.id || !profile || !isParent) {
+      console.log('[CoppaConsentModal] Early exit - missing user/profile/isParent');
+      setChecking(false);
+      setShouldShow(false);
+      return;
+    }
+    if (profile?.coppa_consent_given) {
+      console.log('[CoppaConsentModal] User already gave COPPA consent, calling onDone');
+      setChecking(false);
+      setShouldShow(false);
+      onDone?.();
+      return;
+    }
+    try {
+      console.log('[CoppaConsentModal] Checking for child records...');
+      const { data: guardianLinks } = await supabase
+        .from('player_guardians')
+        .select('id')
+        .eq('guardian_id', user.id)
+        .limit(1);
+      let hasChildren = guardianLinks && guardianLinks.length > 0;
+      if (!hasChildren) {
+        const { data: directPlayers } = await supabase
+          .from('players')
+          .select('id')
+          .eq('parent_account_id', user.id)
+          .limit(1);
+        hasChildren = directPlayers && directPlayers.length > 0;
+      }
+      if (!hasChildren && profile?.email) {
+        const { data: emailPlayers } = await supabase
+          .from('players')
+          .select('id')
+          .ilike('parent_email', profile.email)
+          .limit(1);
+        hasChildren = emailPlayers && emailPlayers.length > 0;
+      }
+      console.log('[CoppaConsentModal] hasChildren check complete:', hasChildren);
+      if (hasChildren && !profile?.coppa_consent_given) {
+        console.log('[CoppaConsentModal] User has children and no COPPA consent - showing modal');
+        setShouldShow(true);
+      } else {
+        console.log('[CoppaConsentModal] No children or already consented - calling onDone');
+        setShouldShow(false);
+        onDone?.();
+      }
+    } catch (error) {
+      console.error('[CoppaConsentModal] Error checking COPPA status:', error);
+      setShouldShow(false);
+      onDone?.();
+    } finally {
+      console.log('[CoppaConsentModal] checkCoppaStatus complete, setting checking=false');
+      setChecking(false);
+    }
+  };
+
+  const handleConsent = async () => {
+    if (!user?.id || !profile) return;
+    console.log('[CoppaConsentModal] handleConsent called - saving COPPA consent');
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          coppa_consent_given: true,
+          coppa_consent_date: new Date().toISOString(),
+          coppa_consent_guardian_name: profile.full_name || '',
+          coppa_consent_guardian_email: profile.email || '',
+        })
+        .eq('id', profile.id);
+      if (error) throw error;
+      console.log('[CoppaConsentModal] COPPA consent saved, refreshing profile');
+      await refreshProfile();
+      console.log('[CoppaConsentModal] Profile refreshed, setting shouldShow=false and calling onDone');
+      setShouldShow(false);
+      onDone?.();
+    } catch (error) {
+      console.error('[CoppaConsentModal] Error saving COPPA consent:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSkipForNow = () => {
+    console.log('[CoppaConsentModal] handleSkipForNow called');
+    setShouldShow(false);
+    onDone?.();
+  };
+
+  const handleSignOut = async () => {
+    console.log('[CoppaConsentModal] handleSignOut called');
+    setShouldShow(false);
+    await signOut();
+  };
+
+  if (!user || !profile || !isParent) {
+    console.log('[CoppaConsentModal] Early return: !user, !profile, or !isParent');
+    return null;
+  }
+  if (checking || !visible || !shouldShow) {
+    console.log('[CoppaConsentModal] Return null - checking:', checking, 'visible:', visible, 'shouldShow:', shouldShow);
+    return null;
+  }
+
+  const styles = createStyles(colors);
+
+  return (
+    <View
+      style={styles.overlay}
+      onTouchStart={() => {
+        console.log('[CoppaConsentModal] OVERLAY TAP CAPTURED');
+      }}
+    >
+      <View style={styles.container}>
+        <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+          <View style={styles.headerSection}>
+            <View style={styles.iconWrap}>
+              <Ionicons name="shield-checkmark" size={40} color={colors.warning} />
+            </View>
+            <Text style={styles.title}>COPPA Compliance</Text>
+            <Text style={styles.subtitle}>Children's Online Privacy Protection Act</Text>
+          </View>
+
+          <View style={styles.coppaCard}>
+            <Text style={styles.coppaSubtitle}>What is COPPA?</Text>
+            <Text style={styles.coppaText}>
+              COPPA is a US law that protects children under 13 years old by requiring parental consent before collecting their personal information online.
+            </Text>
+
+            <Text style={styles.coppaSubtitle}>What We Collect:</Text>
+            <View style={styles.coppaList}>
+              <Text style={styles.coppaListItem}>• Child's name and age</Text>
+              <Text style={styles.coppaListItem}>• Photos and performance stats</Text>
+              <Text style={styles.coppaListItem}>• Team information</Text>
+              <Text style={styles.coppaListItem}>• Emergency contact details</Text>
+            </View>
+
+            <Text style={styles.coppaSubtitle}>Your Consent</Text>
+            <Text style={styles.coppaText}>
+              By checking the consent box below, you confirm that you are the parent or legal guardian of the child(ren) on this account and consent to the collection of their information for volleyball team management purposes.
+            </Text>
+          </View>
+
+          <View style={styles.consentRow}>
+            <Switch
+              value={consentChecked}
+              onValueChange={setConsentChecked}
+              disabled={saving}
+              trackColor={{ false: colors.glassBorder, true: colors.primary }}
+            />
+            <Text style={styles.consentText}>
+              I confirm that I am the parent/guardian and consent to COPPA-compliant data collection
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.consentBtn, !consentChecked && styles.consentBtnDisabled]}
+            onPress={handleConsent}
+            disabled={!consentChecked || saving}
+          >
+            {saving ? (
+              <ActivityIndicator color="#000" />
+            ) : (
+              <>
+                <Ionicons name="checkmark-done" size={20} color="#000" />
+                <Text style={styles.consentBtnText}>I Give Consent</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.skipBtn} onPress={handleSkipForNow} disabled={saving}>
+            <Text style={styles.skipBtnText}>Skip for Now</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut} disabled={saving}>
+            <Ionicons name="log-out" size={18} color={colors.danger} />
+            <Text style={styles.signOutBtnText}>Sign Out</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
+    </View>
+  );
+}

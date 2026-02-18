@@ -1,5 +1,6 @@
 import { usePermissions } from '@/lib/permissions-context';
 import { useTheme } from '@/lib/theme';
+import { getSportDisplay, getPositionInfo } from '@/constants/sport-display';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
@@ -22,6 +23,7 @@ type PlayerCardProps = {
     last_name: string;
     jersey_number?: number | null;
     position?: string | null;
+    sport_name?: string | null;
     photo_url?: string | null;
     grade?: number | null;
     team_name?: string | null;
@@ -32,6 +34,14 @@ type PlayerCardProps = {
     emergency_contact_name?: string | null;
     emergency_contact_phone?: string | null;
     emergency_contact_relation?: string | null;
+    kills?: number | null;
+    digs?: number | null;
+    aces?: number | null;
+    blocks?: number | null;
+    assists?: number | null;
+    points?: number | null;
+    rebounds?: number | null;
+    [key: string]: any;
   };
   onPress: () => void;
   size?: 'small' | 'medium' | 'large';

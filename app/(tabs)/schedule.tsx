@@ -174,16 +174,39 @@ export default function ScheduleScreen() {
         .from('schedule_events')
         .select('*')
         .eq('season_id', workingSeason.id)
-        .order('event_date', { ascending: true })
-        .order('event_time', { ascending: true });
+        .order('event_date', { ascending: true });
 
       if (error) throw error;
 
+      // Helper: compute effective start from event_date + event_time
+      const getEffectiveStart = (e: any): Date | null => {
+        if (e.start_time) return new Date(e.start_time);
+        if (e.event_date && e.event_time) return new Date(`${e.event_date}T${e.event_time}`);
+        if (e.event_date) return new Date(`${e.event_date}T00:00:00`);
+        return null;
+      };
+
+      // Sort by effective start
+      const sortedEventsData = (eventsData || [])
+        .map((e: any) => ({ ...e, effectiveStart: getEffectiveStart(e) }))
+        .sort((a: any, b: any) => {
+          const aTime = a.effectiveStart?.getTime() ?? Infinity;
+          const bTime = b.effectiveStart?.getTime() ?? Infinity;
+          return aTime - bTime;
+        });
+
+      console.log('[ScheduleScreen] EVENTS_SORT_SAMPLE', sortedEventsData.slice(0, 3).map((e: any) => ({
+        id: e.id,
+        title: e.title,
+        event_date: e.event_date,
+        event_time: e.event_time,
+        effectiveStart: e.effectiveStart?.toISOString(),
+      })));
       let eventsWithExtras: ScheduleEvent[] = [];
       
       try {
         eventsWithExtras = await Promise.all(
-          (eventsData || []).map(async (event: any) => {
+          sortedEventsData.map(async (event: any) => {
             // Fetch RSVPs
             const { data: rsvps } = await supabase
               .from('event_rsvps')
@@ -244,7 +267,7 @@ export default function ScheduleScreen() {
           })
         );
       } catch (rsvpError) {
-        eventsWithExtras = (eventsData || []).map((event: any) => {
+        eventsWithExtras = sortedEventsData.map((event: any) => {
           const team = teamsData?.find((t: Team) => t.id === event.team_id);
           return {
             ...event,

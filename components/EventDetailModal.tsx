@@ -92,9 +92,11 @@ export default function EventDetailModal({
 
   const fetchMyPlayers = async () => {
     if (!user || !event) return;
-    
-    // Get players that this user (parent) is linked to on this team
-    const { data } = await supabase
+    console.log('[EventDetailModal] fetchMyPlayers start', { userId: user.id, eventTeamId: event.team_id });
+
+    // first gather player IDs associated with this parent account the same way the web does
+    // 1. via player_guardians table
+    const { data: guardianLinks } = await supabase
       .from('player_guardians')
       .select(`
         player:players(
@@ -105,23 +107,45 @@ export default function EventDetailModal({
         )
       `)
       .eq('guardian_id', user.id);
-    
-    if (data) {
-      const players = data
-        .map((d: any) => d.player)
-        .filter((p: any) => p !== null);
-      
-      // Filter to only players on this team
-      const { data: teamPlayers } = await supabase
-        .from('team_players')
-        .select('player_id')
-        .eq('team_id', event.team_id);
-      
-      const teamPlayerIds = teamPlayers?.map(tp => tp.player_id) || [];
-      const filteredPlayers = players.filter((p: Player) => teamPlayerIds.includes(p.id));
-      
-      setMyPlayers(filteredPlayers);
-    }
+    console.log('[EventDetailModal] guardianLinks', guardianLinks);
+
+    const fromGuardians: Player[] = (guardianLinks || [])
+      .map((d: any) => d.player)
+      .filter((p: any) => p !== null);
+
+    // 2. via parent_account_id on players table (web logic)
+    const { data: directPlayers } = await supabase
+      .from('players')
+      .select('id, first_name, last_name, jersey_number')
+      .eq('parent_account_id', user.id);
+    console.log('[EventDetailModal] directPlayers by parent_account_id', directPlayers);
+
+    const allPlayers: Player[] = [
+      ...fromGuardians,
+      ...(directPlayers || []),
+    ];
+
+    // dedupe by id
+    const playerMap = new Map<string, Player>();
+    allPlayers.forEach(p => {
+      if (p && p.id) playerMap.set(String(p.id), p);
+    });
+    const uniquePlayers = Array.from(playerMap.values());
+
+    console.log('[EventDetailModal] PARENT_PLAYER_IDS', uniquePlayers.map(p => p.id));
+
+    // now filter those by team membership
+    const { data: teamPlayers } = await supabase
+      .from('team_players')
+      .select('player_id')
+      .eq('team_id', event.team_id);
+    console.log('[EventDetailModal] teamPlayers for team', event.team_id, teamPlayers);
+
+    const teamPlayerIds = (teamPlayers?.map(tp => String(tp.player_id)) || []);
+    const filteredPlayers = uniquePlayers.filter(p => teamPlayerIds.includes(String(p.id)));
+    console.log('[EventDetailModal] filteredPlayers', filteredPlayers);
+
+    setMyPlayers(filteredPlayers);
   };
 
   const fetchRSVPs = async () => {
@@ -857,6 +881,12 @@ export default function EventDetailModal({
                   <Text style={{ color: colors.textMuted, fontSize: 16, fontWeight: '600', marginTop: 12, textAlign: 'center' }}>
                     No players linked to your account on this team
                   </Text>
+                  {/** debug info **/}
+                  {__DEV__ && (
+                    <Text style={{ color: colors.textMuted, fontSize: 12, marginTop: 8 }}>
+                      (uid: {user?.id}, team: {event?.team_id})
+                    </Text>
+                  )}
                 </View>
               )}
 

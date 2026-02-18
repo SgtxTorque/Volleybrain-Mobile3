@@ -69,13 +69,15 @@ export default function RoleSelector() {
         <Ionicons name="chevron-down" size={12} color={currentRole.color} />
       </TouchableOpacity>
 
-      <Modal visible={showPicker} animationType="fade" transparent>
-        <TouchableOpacity 
-          style={s.overlay} 
-          activeOpacity={1} 
-          onPress={() => setShowPicker(false)}
-        >
-          <View style={s.modal}>
+      {showPicker && (
+        <Modal visible={showPicker} animationType="fade" transparent>
+          <TouchableOpacity 
+            style={s.overlay} 
+            activeOpacity={1} 
+            onPress={() => setShowPicker(false)}
+            pointerEvents={showPicker ? 'auto' : 'none'}
+          >
+            <View style={s.modal}>
             <Text style={s.modalTitle}>Switch View</Text>
             <Text style={s.modalSubtitle}>You have multiple roles</Text>
 
@@ -113,8 +115,9 @@ export default function RoleSelector() {
               <Text style={s.cancelBtnText}>Cancel</Text>
             </TouchableOpacity>
           </View>
-        </TouchableOpacity>
-      </Modal>
+          </TouchableOpacity>
+        </Modal>
+      )}
     </>
   );
 }

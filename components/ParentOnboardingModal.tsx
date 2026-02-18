@@ -1,181 +1,31 @@
+import { useAuth } from '@/lib/auth';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import {
-  Animated,
-  Dimensions,
-  Modal,
-  Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 
-const ONBOARDING_KEY = 'vb_parent_onboarded';
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
-type Slide = {
+interface Slide {
+  id: string;
   title: string;
+  subtitle: string;
+  icon: string;
   description: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  iconColor: string;
-};
+  color: string;
+}
 
 type Props = {
-  onDismiss?: () => void;
+  visible: boolean;
+  onDone?: () => void;
+  onMount?: () => void;
+  onUnmount?: () => void;
+  onVisibleChange?: (v: boolean) => void;
 };
-
-export default function ParentOnboardingModal({ onDismiss }: Props) {
-  const { colors } = useTheme();
-  const [visible, setVisible] = useState(false);
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const fadeAnim = useRef(new Animated.Value(1)).current;
-
-  const slides: Slide[] = [
-    {
-      title: 'Welcome to VolleyBrain!',
-      description: 'Your one-stop hub for managing your child\'s volleyball journey',
-      icon: 'home',
-      iconColor: colors.primary,
-    },
-    {
-      title: 'Track Your Child',
-      description: 'View stats, schedules, and achievements from My Kids',
-      icon: 'people',
-      iconColor: colors.info,
-    },
-    {
-      title: 'Stay Connected',
-      description: 'Chat with coaches, get schedule updates, and never miss a game',
-      icon: 'chatbubbles',
-      iconColor: colors.success,
-    },
-    {
-      title: 'Manage Payments',
-      description: 'View and pay registration fees from the Payments section',
-      icon: 'wallet',
-      iconColor: colors.warning,
-    },
-  ];
-
-  useEffect(() => {
-    checkOnboarding();
-  }, []);
-
-  const checkOnboarding = async () => {
-    try {
-      const hasOnboarded = await AsyncStorage.getItem(ONBOARDING_KEY);
-      if (hasOnboarded) {
-        setVisible(false);
-        return;
-      }
-      // Small delay to let the dashboard render first
-      setTimeout(() => setVisible(true), 500);
-    } catch (e) {
-      // On error, don't show modal — don't block the user
-      console.log('Error checking onboarding status:', e);
-      setVisible(false);
-    }
-  };
-
-  const handleDismiss = async () => {
-    try {
-      await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
-    } catch (e) {
-      console.log('Error saving onboarding status:', e);
-    }
-    setVisible(false);
-    onDismiss?.();
-  };
-
-  const animateSlideTransition = (nextSlide: number) => {
-    Animated.timing(fadeAnim, {
-      toValue: 0,
-      duration: 150,
-      useNativeDriver: true,
-    }).start(() => {
-      setCurrentSlide(nextSlide);
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
-    });
-  };
-
-  const handleNext = () => {
-    if (currentSlide < slides.length - 1) {
-      animateSlideTransition(currentSlide + 1);
-    } else {
-      handleDismiss();
-    }
-  };
-
-  const s = createStyles(colors);
-  const slide = slides[currentSlide];
-  const isLastSlide = currentSlide === slides.length - 1;
-
-  return (
-    <Modal
-      visible={visible}
-      animationType="fade"
-      transparent
-      onRequestClose={handleDismiss}
-    >
-      <View style={s.overlay}>
-        <View style={s.modalContainer}>
-          {/* Skip button — always visible */}
-          <TouchableOpacity style={s.skipBtn} onPress={handleDismiss}>
-            <Text style={s.skipText}>{isLastSlide ? 'Close' : 'Skip'}</Text>
-          </TouchableOpacity>
-
-          {/* Slide Content */}
-          <Animated.View style={[s.slideContent, { opacity: fadeAnim }]}>
-            {/* Icon */}
-            <View style={[s.iconCircle, { backgroundColor: slide.iconColor + '20' }]}>
-              <Ionicons name={slide.icon} size={48} color={slide.iconColor} />
-            </View>
-
-            {/* Text */}
-            <Text style={s.slideTitle}>{slide.title}</Text>
-            <Text style={s.slideDescription}>{slide.description}</Text>
-          </Animated.View>
-
-          {/* Dots Indicator */}
-          <View style={s.dotsRow}>
-            {slides.map((_, index) => (
-              <View
-                key={index}
-                style={[
-                  s.dot,
-                  index === currentSlide
-                    ? { backgroundColor: colors.primary, width: 24 }
-                    : { backgroundColor: colors.textMuted + '40' },
-                ]}
-              />
-            ))}
-          </View>
-
-          {/* Next / Get Started Button */}
-          <TouchableOpacity
-            style={[s.nextBtn, { backgroundColor: colors.primary }]}
-            onPress={handleNext}
-            activeOpacity={0.8}
-          >
-            <Text style={s.nextBtnText}>
-              {isLastSlide ? 'Get Started!' : 'Next'}
-            </Text>
-            {!isLastSlide && (
-              <Ionicons name="arrow-forward" size={18} color="#000" />
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
-  );
-}
 
 const createStyles = (colors: any) =>
   StyleSheet.create({
@@ -184,89 +34,238 @@ const createStyles = (colors: any) =>
       backgroundColor: 'rgba(0,0,0,0.5)',
       justifyContent: 'center',
       alignItems: 'center',
-      padding: 24,
-    },
-    modalContainer: {
-      width: '100%',
-      maxWidth: 380,
-      backgroundColor: colors.card,
-      borderWidth: 1,
-      borderColor: colors.glassBorder,
-      borderRadius: 24,
-      padding: 32,
-      alignItems: 'center',
-      ...Platform.select({
-        ios: {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.3,
-          shadowRadius: 24,
-        },
-        android: { elevation: 12 },
-      }),
-    },
-    skipBtn: {
       position: 'absolute',
-      top: 16,
-      right: 20,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      zIndex: 9999,
+      elevation: 9999,
     },
-    skipText: {
-      fontSize: 14,
-      color: colors.textMuted,
-      fontWeight: '500',
+    container: {
+      width: '92%',
+      maxHeight: '90%',
+      backgroundColor: colors.card,
+      borderRadius: 24,
+      overflow: 'hidden',
+      borderWidth: 0,
     },
-    slideContent: {
-      alignItems: 'center',
-      paddingTop: 16,
-      paddingBottom: 24,
+    scroll: {
+      flex: 1,
     },
-    iconCircle: {
-      width: 96,
-      height: 96,
-      borderRadius: 48,
-      justifyContent: 'center',
+    scrollContent: {
+      padding: 24,
+      paddingBottom: 32,
+    },
+    slide: {
       alignItems: 'center',
       marginBottom: 24,
     },
-    slideTitle: {
+    iconWrap: {
+      width: 100,
+      height: 100,
+      borderRadius: 50,
+      backgroundColor: colors.glassCard,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 20,
+    },
+    title: {
       fontSize: 24,
       fontWeight: '800',
       color: colors.text,
       textAlign: 'center',
+      marginBottom: 8,
+    },
+    subtitle: {
+      fontSize: 16,
+      fontWeight: '600',
+      color: colors.primary,
+      textAlign: 'center',
       marginBottom: 12,
     },
-    slideDescription: {
-      fontSize: 16,
-      color: colors.textSecondary,
+    description: {
+      fontSize: 14,
+      color: colors.textMuted,
       textAlign: 'center',
       lineHeight: 22,
-      paddingHorizontal: 8,
+      marginBottom: 20,
     },
-    dotsRow: {
+    footer: {
       flexDirection: 'row',
+      justifyContent: 'space-between',
       alignItems: 'center',
-      gap: 8,
-      marginBottom: 24,
+      marginTop: 32,
+      paddingTop: 20,
+      borderTopWidth: 1,
+      borderTopColor: colors.glassBorder,
+    },
+    indicators: {
+      flexDirection: 'row',
+      gap: 6,
     },
     dot: {
       width: 8,
       height: 8,
       borderRadius: 4,
+      backgroundColor: colors.glassBorder,
+    },
+    dotActive: {
+      backgroundColor: colors.primary,
+      width: 24,
     },
     nextBtn: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: 20,
+      paddingVertical: 10,
+      borderRadius: 8,
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'center',
-      gap: 8,
-      width: '100%',
-      paddingVertical: 16,
-      borderRadius: 14,
+      gap: 6,
     },
     nextBtnText: {
-      fontSize: 17,
-      fontWeight: '700',
+      fontSize: 14,
+      fontWeight: '600',
       color: '#000',
     },
+    skipBtn: {
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+      borderRadius: 8,
+    },
+    skipBtnText: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textMuted,
+    },
   });
+
+export default function ParentOnboardingModal({
+  visible,
+  onDone,
+  onMount,
+  onUnmount,
+}: Props) {
+  const { colors } = useTheme();
+  const { user, profile } = useAuth();
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  React.useEffect(() => {
+    if (visible) {
+      onMount?.();
+    } else {
+      onUnmount?.();
+    }
+  }, [visible, onMount, onUnmount]);
+
+  const slides: Slide[] = [
+    {
+      id: 'welcome',
+      title: 'Welcome to Volleybrain',
+      subtitle: 'Team Management Made Easy',
+      icon: 'volleyball',
+      description: 'Connect with coaches, track your child\'s progress, and stay updated with team events.',
+      color: '#FF6B6B',
+    },
+    {
+      id: 'teams',
+      title: 'Join Your Child\'s Team',
+      subtitle: 'Connect & Communicate',
+      icon: 'people',
+      description: 'Get invited to teams by coaches. Accept invitations to access schedules, results, and team chat.',
+      color: '#4ECDC4',
+    },
+    {
+      id: 'notifications',
+      title: 'Stay Connected',
+      subtitle: 'Get Important Updates',
+      icon: 'notifications',
+      description: 'Receive notifications about games, practices, payments, and important team announcements.',
+      color: '#45B7D1',
+    },
+    {
+      id: 'payments',
+      title: 'Manage Payments',
+      subtitle: 'Easy Payment Processing',
+      icon: 'card',
+      description: 'View season fees, make payments securely, and track your payment history.',
+      color: '#96CEB4',
+    },
+    {
+      id: 'ready',
+      title: 'You\'re All Set!',
+      subtitle: 'Ready to Go',
+      icon: 'checkmark-circle',
+      description: 'You\'re ready to manage your child\'s volleyball journey. Let\'s get started!',
+      color: '#FFEAA7',
+    },
+  ];
+
+  const handleNext = () => {
+    if (currentSlide < slides.length - 1) {
+      setCurrentSlide(currentSlide + 1);
+    } else {
+      onDone?.();
+    }
+  };
+
+  const handleSkip = () => {
+    onDone?.();
+  };
+
+  if (!user || !profile || !visible) {
+    console.log('[ParentOnboardingModal] Return null - user:', !!user, 'profile:', !!profile, 'visible:', visible);
+    return null;
+  }
+
+  const styles = createStyles(colors);
+  const slide = slides[currentSlide];
+
+  return (
+    <View
+      style={styles.overlay}
+      onTouchStart={() => {
+        console.log('[ParentOnboardingModal] OVERLAY TAP CAPTURED');
+      }}
+    >
+      <View style={styles.container}>
+        <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+          <View style={styles.slide}>
+            <View style={[styles.iconWrap, { backgroundColor: slide.color + '20' }]}>
+              <Ionicons name={slide.icon as any} size={50} color={slide.color} />
+            </View>
+            <Text style={styles.title}>{slide.title}</Text>
+            <Text style={styles.subtitle}>{slide.subtitle}</Text>
+            <Text style={styles.description}>{slide.description}</Text>
+          </View>
+
+          <View style={styles.footer}>
+            <View style={styles.indicators}>
+              {slides.map((_, index) => (
+                <View
+                  key={index}
+                  style={[styles.dot, index === currentSlide && styles.dotActive]}
+                />
+              ))}
+            </View>
+
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <TouchableOpacity style={styles.skipBtn} onPress={handleSkip}>
+                <Text style={styles.skipBtnText}>
+                  {currentSlide === slides.length - 1 ? 'Done' : 'Skip'}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.nextBtn} onPress={handleNext}>
+                <Text style={styles.nextBtnText}>
+                  {currentSlide === slides.length - 1 ? 'Finish' : 'Next'}
+                </Text>
+                <Ionicons name="arrow-forward" size={16} color="#000" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </ScrollView>
+      </View>
+    </View>
+  );
+}

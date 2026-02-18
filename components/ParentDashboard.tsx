@@ -2,8 +2,10 @@ import CoppaConsentModal from '@/components/CoppaConsentModal';
 import ParentOnboardingModal from '@/components/ParentOnboardingModal';
 import ShareRegistrationModal from '@/components/ShareRegistrationModal';
 import { useAuth } from '@/lib/auth';
+import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
+import { useTeamContext } from '@/lib/team-context';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -11,6 +13,7 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Linking,
   Platform,
   RefreshControl,
@@ -56,6 +59,7 @@ type UpcomingEvent = {
   opponent: string | null;
   team_name: string;
   child_name: string;
+  team_id?: string | null; // included to support filtering by team
 };
 
 type PaymentStatus = {
@@ -110,13 +114,58 @@ const statusConfig: Record<string, { label: string; color: string; icon: string 
 };
 
 // ---------------------------------------------------------------------------
+// Event Parsing Helper
+// ---------------------------------------------------------------------------
+
+/**
+ * Manual date parser compatible with React Native/Hermes.
+ * Parses YYYY-MM-DD and HH:MM:SS without template literals.
+ */
+function parseEventStart(e: any): Date | null {
+  if (e?.start_time) {
+    const d = new Date(e.start_time);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  const dateStr = e?.event_date;   // "2026-02-28"
+  const timeStr = e?.event_time;   // "18:00:00"
+
+  if (!dateStr) return null;
+
+  // Parse YYYY-MM-DD manually
+  const [yS, mS, dS] = String(dateStr).split("-");
+  const y = Number(yS);
+  const m = Number(mS);
+  const d = Number(dS);
+  if (!y || !m || !d) return null;
+
+  // If time missing, default to 00:00:00
+  let hh = 0, mm = 0, ss = 0;
+  if (timeStr) {
+    const parts = String(timeStr).split(":");
+    hh = Number(parts[0] ?? 0);
+    mm = Number(parts[1] ?? 0);
+    ss = Number(parts[2] ?? 0);
+  }
+
+  // Local time (month is 0-based)
+  const dt = new Date(y, m - 1, d, hh, mm, ss);
+  return isNaN(dt.getTime()) ? null : dt;
+}
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
+
+// Temporary feature flag: disable COPPA flow for development
+const ENABLE_COPPA = false;
 
 export default function ParentDashboard() {
   const { colors } = useTheme();
   const { user, profile } = useAuth();
+  const { isParent } = usePermissions();
   const { workingSeason, allSeasons } = useSeason();
+  const { selectedTeamId, setSelectedTeamId } = useTeamContext();
   const router = useRouter();
 
   const [refreshing, setRefreshing] = useState(false);
@@ -133,9 +182,55 @@ export default function ParentDashboard() {
   const [rsvpLoading, setRsvpLoading] = useState(false);
   const [totalTeamEvents, setTotalTeamEvents] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [onboardingDone, setOnboardingDone] = useState(true); // default true to suppress COPPA until checked
+  const [modalStage, setModalStage] = useState<'loading' | 'onboarding' | 'coppa' | 'none'>('loading');
+  const [onboardingMounted, setOnboardingMounted] = useState(false);
+  const [onboardingVisible, setOnboardingVisible] = useState(false);
+  const [coppaMounted, setCoppaMounted] = useState(false);
+  const [coppaVisible, setCoppaVisible] = useState(false);
+  const [coppaCompleted, setCoppaCompleted] = useState(false);
+  const [shareMounted, setShareMounted] = useState(false);
+  const [shareVisible, setShareVisible] = useState(false);
 
-  const activeChild = children[activeChildIndex] || null;
+  const activeChild = children[activeChildIndex] ?? children[0] ?? null;
+
+  // Extract unique teams from children for team switcher
+  const uniqueTeams = React.useMemo(() => {
+    const teamMap = new Map<string, { id: string; name: string; color: string }>();
+    children.forEach(child => {
+      if (child.team_id && child.team_name) {
+        teamMap.set(child.team_id, {
+          id: child.team_id,
+          name: child.team_name,
+          color: child.sport_color || '#999',
+        });
+      }
+    });
+    return Array.from(teamMap.values());
+  }, [children]);
+
+  // Set default team on first load if none selected
+  useEffect(() => {
+    if (!selectedTeamId && uniqueTeams.length > 0) {
+      console.log('[ParentDashboard] Setting default team:', uniqueTeams[0].id);
+      setSelectedTeamId(uniqueTeams[0].id);
+    }
+  }, [uniqueTeams.length]);
+
+  // log when selection changes
+  useEffect(() => {
+    console.log('[ParentDashboard] selectedTeamId changed to', selectedTeamId);
+  }, [selectedTeamId]);
+
+  // Filter upcoming events by selected team
+  const filteredUpcomingEvents = React.useMemo(() => {
+    console.log('[ParentDashboard] computing filteredUpcomingEvents', { selectedTeamId, upcomingCount: upcomingEvents.length });
+    if (!selectedTeamId) return upcomingEvents;
+    const filtered = upcomingEvents.filter(evt => String(evt.team_id) === String(selectedTeamId));
+    console.log(`[ParentDashboard] Filtered events: ${filtered.length} of ${upcomingEvents.length} for team ${selectedTeamId}`, filtered);
+    return filtered;
+  }, [upcomingEvents, selectedTeamId]);
+
+  const nextEvent = filteredUpcomingEvents[0]; // note: now filtered by selected team
 
   // Reset activeChildIndex if it's out of bounds after children changes
   useEffect(() => {
@@ -146,14 +241,39 @@ export default function ParentDashboard() {
 
   // Check if onboarding is done so we can sequence modals (onboarding first, then COPPA)
   useEffect(() => {
-    AsyncStorage.getItem('vb_parent_onboarded').then(val => {
-      setOnboardingDone(val === 'true');
-    }).catch(() => setOnboardingDone(true));
+    let isMounted = true;
+    AsyncStorage.getItem('vb_parent_onboarded')
+      .then(val => {
+        if (!isMounted) return;
+        setModalStage(val === 'true' ? 'coppa' : 'onboarding');
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setModalStage('coppa');
+      });
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
     fetchParentData();
   }, [user?.id, profile?.email]);
+
+  useEffect(() => {
+    if (modalStage === 'coppa' && isParent === false) {
+      setModalStage('none');
+    }
+  }, [modalStage, isParent]);
+
+  // Bypass COPPA flow if feature flag is disabled
+  useEffect(() => {
+    if (!ENABLE_COPPA && modalStage === 'coppa') {
+      console.log('[ParentDashboard] COPPA disabled by feature flag, skipping to none');
+      setModalStage('none');
+      setCoppaCompleted(true);
+    }
+  }, [ENABLE_COPPA]);
 
   // Fetch stats for active child whenever it changes
   useEffect(() => {
@@ -164,10 +284,10 @@ export default function ParentDashboard() {
 
   // Fetch RSVP for next event whenever active child or events change
   useEffect(() => {
-    if (activeChild && upcomingEvents.length > 0) {
-      fetchRsvpStatus(upcomingEvents[0].id, activeChild.id);
+    if (activeChild && filteredUpcomingEvents.length > 0) {
+      fetchRsvpStatus(filteredUpcomingEvents[0].id, activeChild.id);
     }
-  }, [activeChild?.id, upcomingEvents]);
+  }, [activeChild?.id, filteredUpcomingEvents]);
 
   // -------------------------------------------------------------------------
   // Data fetching (preserved from original)
@@ -220,6 +340,7 @@ export default function ParentDashboard() {
 
       // Remove duplicates
       playerIds = [...new Set(playerIds)];
+      console.log('[ParentDashboard] derived parent playerIds', playerIds);
 
       if (playerIds.length === 0) {
         setChildren([]);
@@ -276,6 +397,8 @@ export default function ParentDashboard() {
       const formattedChildren: ChildPlayer[] = [];
       const teamIds: string[] = [];
 
+      console.log('[ParentDashboard] starting to format children, player count', (players||[]).length);
+
       (players || []).forEach(player => {
         const teamPlayer = (player.team_players as any)?.[0];
         const team = teamPlayer?.teams as any;
@@ -287,7 +410,10 @@ export default function ParentDashboard() {
         const registration = regMap.get(regKey);
         const regStatus = registration?.status || 'new';
 
-        if (team?.id) teamIds.push(team.id);
+        if (team?.id) {
+          const strId = String(team.id);
+          teamIds.push(strId);
+        }
 
         formattedChildren.push({
           id: player.id,
@@ -310,68 +436,124 @@ export default function ParentDashboard() {
       });
 
       setChildren(formattedChildren);
-
+      console.log('[ParentDashboard] formattedChildren', formattedChildren);
+      console.log('[ParentDashboard] computed teamIds', teamIds);
+      
       // Fetch upcoming events for teams
       if (teamIds.length > 0) {
         try {
         const today = new Date().toISOString().split('T')[0];
 
-        const { data: events } = await supabase
+        // ========== DIAGNOSTIC: Simplified query ==========
+        console.log('[EVENTS_QUERY_INPUT]', { teamIds });
+        const { data: eventsSimple, error: errorSimple, count: countSimple } = await supabase
           .from('schedule_events')
-          .select(`
-            id,
-            title,
-            event_type,
-            event_date,
-            start_time,
-            location,
-            opponent,
-            team_id,
-            teams (name)
-          `)
+          .select('id, team_id, title, event_date, event_time, start_time')
           .in('team_id', teamIds)
-          .gte('event_date', today)
-          .order('event_date', { ascending: true })
-          .order('start_time', { ascending: true })
-          .limit(5);
+          .limit(50);
+        
+        console.log('[EVENTS_QUERY_RAW]', {
+          count: eventsSimple?.length || 0,
+          first: eventsSimple?.[0],
+          error: errorSimple,
+        });
 
-        const formattedEvents: UpcomingEvent[] = (events || []).map(e => {
-          const teamName = (e.teams as any)?.name || '';
+        // ========== DIAGNOSTIC: Test by-id fetch ==========
+        const { data: oneEvent, error: oneErr } = await supabase
+          .from('schedule_events')
+          .select('id, team_id, title')
+          .eq('id', 'c273b68f-7cad-4721-b24b-0174e1612d54')
+          .maybeSingle();
+        
+        console.log('[EVENTS_QUERY_BY_ID]', { one: oneEvent, oneErr });
+        
+        // ========== END DIAGNOSTIC ==========
+
+        const { data: events, error: fetchErr } = await supabase
+          .from('schedule_events')
+          .select('id, team_id, title, event_type, event_date, event_time, start_time, location, opponent')
+          .in('team_id', teamIds)
+          .gte('event_date', today);
+
+        // Ensure raw is assigned from fetched data immediately
+        const raw = events ?? [];
+        
+        console.log("[EVENTS_PIPELINE_CHECK]", {
+          fetchErr,
+          fetchedCount: events?.length ?? 0
+        });
+
+        // Manual parsing with diagnostic logging
+        const now = new Date();
+
+        const normalized = raw
+          .map((e: any) => {
+            const effectiveStart = parseEventStart(e);
+            return { ...e, effectiveStart };
+          });
+
+        const invalidCount = normalized.filter(e => !e.effectiveStart).length;
+
+        const upcoming = normalized
+          .filter(e => e.effectiveStart && e.effectiveStart.getTime() >= now.getTime())
+          .sort((a, b) => a.effectiveStart.getTime() - b.effectiveStart.getTime());
+
+        console.log("[EVENTS_PARSE_DEBUG]", {
+          raw: normalized.length,
+          invalidCount,
+          now: now.toISOString(),
+          sample: normalized.slice(0, 5).map(e => ({
+            id: e.id,
+            title: e.title,
+            event_date: e.event_date,
+            event_time: e.event_time,
+            start_time: e.start_time,
+            effectiveStart: e.effectiveStart ? e.effectiveStart.toISOString() : null,
+          })),
+        });
+
+        const formattedEvents: UpcomingEvent[] = upcoming.map((e: any) => {
           const child = formattedChildren.find(c => c.team_id === e.team_id);
           return {
             id: e.id,
             title: e.title,
             type: e.event_type as 'game' | 'practice',
             date: e.event_date,
-            time: e.start_time || '',
+            time: e.event_time || '',
             location: e.location,
             opponent: e.opponent,
-            team_name: teamName,
+            team_name: child?.team_name || '',
             child_name: child ? child.first_name : '',
+            team_id: e.team_id, // persist team for filtering
           };
         });
 
         setUpcomingEvents(formattedEvents);
+        console.log('[ParentDashboard] fetched upcoming events', formattedEvents);
+        console.log('[ParentDashboard] current selectedTeamId during fetch', selectedTeamId);
 
         // Fetch recent completed games (last 3)
         const { data: recentGameData } = await supabase
           .from('schedule_events')
-          .select('id, event_date, opponent, game_result, our_score, opponent_score, team_id, teams(name)')
+          .select('id, event_date, opponent, game_result, our_score, opponent_score, team_id')
           .in('team_id', teamIds)
           .eq('event_type', 'game')
           .not('game_result', 'is', null)
           .order('event_date', { ascending: false })
           .limit(3);
 
-        const formattedRecentGames: RecentGame[] = (recentGameData || []).map((g: any) => ({
-          id: g.id,
-          event_date: g.event_date,
-          opponent: g.opponent,
-          game_result: g.game_result,
-          our_score: g.our_score,
-          their_score: g.opponent_score,
-          team_name: g.teams?.name || '',
-        }));
+        const formattedRecentGames: RecentGame[] = (recentGameData || []).map((g: any) => {
+          const recentChild = formattedChildren.find(c => c.team_id === g.team_id);
+          return {
+            id: g.id,
+            event_date: g.event_date,
+            opponent: g.opponent,
+            game_result: g.game_result,
+            our_score: g.our_score,
+            their_score: g.opponent_score,
+            team_name: recentChild?.team_name || '',
+          };
+        });
         setRecentGames(formattedRecentGames);
 
         // Check for today's game
@@ -379,6 +561,7 @@ export default function ParentDashboard() {
           (e: any) => e.event_type === 'game' && e.event_date === today
         );
         if (todayGameEvent) {
+          const todayChild = formattedChildren.find(c => c.team_id === todayGameEvent.team_id);
           setTodayGame({
             id: todayGameEvent.id,
             title: todayGameEvent.title,
@@ -386,7 +569,7 @@ export default function ParentDashboard() {
             event_time: todayGameEvent.start_time || null,
             venue_name: todayGameEvent.location || null,
             opponent: todayGameEvent.opponent || null,
-            team_name: (todayGameEvent.teams as any)?.name || '',
+            team_name: todayChild?.team_name || '',
           });
         } else {
           setTodayGame(null);
@@ -492,8 +675,14 @@ export default function ParentDashboard() {
   };
 
   const handleRsvp = async (status: 'yes' | 'no' | 'maybe') => {
-    if (!activeChild || upcomingEvents.length === 0 || !user?.id) return;
-    const nextEvent = upcomingEvents[0];
+    // use filtered list so RSVP applies to the selected team
+    if (!activeChild || filteredUpcomingEvents.length === 0 || !user?.id) return;
+    const nextEvent = filteredUpcomingEvents[0];
+    // ensure child belongs to the team
+    if (String(activeChild.team_id) !== String(nextEvent.team_id)) {
+      Alert.alert('Not on Team', `${activeChild.first_name} isn\'t on the roster for this event.`);
+      return;
+    }
     setRsvpLoading(true);
     try {
       await supabase.from('event_rsvps').upsert({
@@ -595,8 +784,24 @@ export default function ParentDashboard() {
   };
 
   const getNextEventShortDate = (): string => {
-    if (upcomingEvents.length === 0) return 'None';
-    return getShortDate(upcomingEvents[0].date);
+    if (!nextEvent) return 'None';
+    return getShortDate(nextEvent.date);
+  };
+
+  const handleOnboardingDone = async () => {
+    try {
+      await AsyncStorage.setItem('vb_parent_onboarded', 'true');
+    } catch (e) {
+      console.log('Error saving onboarding status:', e);
+    } finally {
+      setModalStage('coppa');
+    }
+  };
+
+  const handleCoppaDone = () => {
+    console.log('[ParentDashboard] handleCoppaDone called - setting modalStage to none and marking COPPA as completed');
+    setCoppaCompleted(true);
+    setModalStage('none');
   };
 
   const s = createStyles(colors);
@@ -652,12 +857,12 @@ export default function ParentDashboard() {
   // -------------------------------------------------------------------------
 
   return (
-    <ScrollView
-      style={s.container}
-      contentContainerStyle={s.contentContainer}
-      showsVerticalScrollIndicator={false}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
-    >
+      <ScrollView
+        style={s.container}
+        contentContainerStyle={s.contentContainer}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+      >
       {/* Header */}
       <View style={s.header}>
         <View>
@@ -667,8 +872,61 @@ export default function ParentDashboard() {
         <RoleSelector />
       </View>
 
+      {/* Debug banner: modal stage and mounted/visible states */}
+      <View style={{
+        backgroundColor: colors.glassCard,
+        borderRadius: 12,
+        padding: 8,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: colors.glassBorder,
+      }}>
+        <Text style={{ fontSize: 12, color: colors.textMuted }}>
+          modalStage: {modalStage} — onboarding(mounted/visible): {onboardingMounted ? '1' : '0'}/{onboardingVisible ? '1' : '0'} — coppa: {coppaMounted ? '1' : '0'}/{coppaVisible ? '1' : '0'} — share: {shareMounted ? '1' : '0'}/{shareVisible ? '1' : '0'}
+        </Text>
+      </View>
+
       {/* Re-enrollment Banner */}
       <ReenrollmentBanner />
+
+      {/* TEAM SWITCHER: Show if multiple teams */}
+      {uniqueTeams.length > 1 && (
+        <View style={{ paddingHorizontal: 0, marginBottom: 24 }}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}
+          >
+            {uniqueTeams.map(team => (
+              <TouchableOpacity
+                key={team.id}
+                style={[
+                  s.teamChip,
+                  selectedTeamId === team.id && {
+                    borderWidth: 2,
+                    borderColor: team.color,
+                    backgroundColor: team.color + '15',
+                  },
+                ]}
+                onPress={() => {
+                  setSelectedTeamId(team.id);
+                }}
+              >
+                <View
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: 4,
+                    backgroundColor: team.color,
+                    marginRight: 8,
+                  }}
+                />
+                <Text style={s.teamChipText}>{team.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
 
       {/* ================================================================ */}
       {/* HERO SECTION -- Child Card(s)                                     */}
@@ -845,11 +1103,21 @@ export default function ParentDashboard() {
       {/* ================================================================ */}
       <View style={s.sectionBlock}>
         <Text style={s.sectionLabel}>NEXT UP</Text>
-        {upcomingEvents.length === 0 ? (
+      {!nextEvent ? (
           <View style={s.glassCard}>
             <View style={s.emptyNextUp}>
               <Ionicons name="checkmark-circle" size={32} color={colors.success} />
-              <Text style={s.emptyNextUpText}>All caught up! No upcoming events.</Text>
+              <Text style={s.emptyNextUpText}>
+                All caught up! No upcoming events
+                {upcomingEvents.length > 0 && filteredUpcomingEvents.length === 0
+                  ? ' for the selected team.'
+                  : '.'}
+              </Text>
+              {upcomingEvents.length > 0 && filteredUpcomingEvents.length === 0 && (
+                <Text style={s.emptyNextUpSubtext}>
+                  There are events for other teams – try switching teams to view them.
+                </Text>
+              )}
             </View>
           </View>
         ) : (
@@ -858,91 +1126,99 @@ export default function ParentDashboard() {
             <View style={s.nextUpTop}>
               <View style={[
                 s.nextUpTypeBadge,
-                upcomingEvents[0].type === 'game'
+                nextEvent.type === 'game'
                   ? { backgroundColor: colors.danger + '20' }
                   : { backgroundColor: colors.info + '20' },
               ]}>
                 <Text style={[
                   s.nextUpTypeBadgeText,
-                  { color: upcomingEvents[0].type === 'game' ? colors.danger : colors.info },
+                  { color: nextEvent.type === 'game' ? colors.danger : colors.info },
                 ]}>
-                  {upcomingEvents[0].type === 'game' ? 'GAME' : 'PRACTICE'}
+                  {nextEvent.type === 'game' ? 'GAME' : 'PRACTICE'}
                 </Text>
               </View>
-              <Text style={s.nextUpTeam}>{upcomingEvents[0].team_name}</Text>
+              <Text style={s.nextUpTeam}>{nextEvent.team_name}</Text>
             </View>
 
             {/* Countdown */}
-            <Text style={s.nextUpCountdown}>{getCountdownText(upcomingEvents[0].date)}</Text>
+            <Text style={s.nextUpCountdown}>{getCountdownText(nextEvent.date)}</Text>
 
             {/* Title */}
             <Text style={s.nextUpTitle}>
-              {upcomingEvents[0].type === 'game' && upcomingEvents[0].opponent
-                ? `vs ${upcomingEvents[0].opponent}`
-                : upcomingEvents[0].title}
+              {nextEvent.type === 'game' && nextEvent.opponent
+                ? `vs ${nextEvent.opponent}`
+                : nextEvent.title}
             </Text>
 
             {/* Date, time, venue */}
             <View style={s.nextUpDetails}>
               <View style={s.nextUpDetailRow}>
                 <Ionicons name="calendar-outline" size={15} color={colors.textMuted} />
-                <Text style={s.nextUpDetailText}>{formatDate(upcomingEvents[0].date)}</Text>
+                <Text style={s.nextUpDetailText}>{formatDate(nextEvent.date)}</Text>
               </View>
-              {upcomingEvents[0].time ? (
+              {nextEvent.time ? (
                 <View style={s.nextUpDetailRow}>
                   <Ionicons name="time-outline" size={15} color={colors.textMuted} />
-                  <Text style={s.nextUpDetailText}>{formatTime(upcomingEvents[0].time)}</Text>
+                  <Text style={s.nextUpDetailText}>{formatTime(nextEvent.time)}</Text>
                 </View>
               ) : null}
-              {upcomingEvents[0].location ? (
+              {nextEvent.location ? (
                 <View style={s.nextUpDetailRow}>
                   <Ionicons name="location-outline" size={15} color={colors.textMuted} />
-                  <Text style={s.nextUpDetailText}>{upcomingEvents[0].location}</Text>
+                  <Text style={s.nextUpDetailText}>{nextEvent.location}</Text>
                 </View>
               ) : null}
             </View>
 
             {/* Get Directions */}
-            {upcomingEvents[0].location && (
-              <TouchableOpacity style={s.directionsBtn} onPress={() => { const loc = encodeURIComponent(upcomingEvents[0].location || ''); Linking.openURL(Platform.OS === 'ios' ? `maps:?q=${loc}` : `geo:0,0?q=${loc}`); }}>
+            {nextEvent.location && (
+              <TouchableOpacity style={s.directionsBtn} onPress={() => { const loc = encodeURIComponent(nextEvent.location || ''); Linking.openURL(Platform.OS === 'ios' ? `maps:?q=${loc}` : `geo:0,0?q=${loc}`); }}>
                 <Ionicons name="navigate-outline" size={14} color={colors.primary} />
                 <Text style={s.directionsBtnText}>Get Directions</Text>
               </TouchableOpacity>
             )}
 
-            {/* RSVP Buttons */}
+            {/* RSVP Buttons or eligibility message */}
             {activeChild && (
               <View style={s.rsvpSection}>
                 <Text style={s.rsvpLabel}>RSVP for {activeChild.first_name}</Text>
-                <View style={s.rsvpRow}>
-                  <TouchableOpacity
-                    style={[s.rsvpBtn, rsvpStatus === 'yes' && s.rsvpBtnActiveYes]}
-                    onPress={() => handleRsvp('yes')}
-                    disabled={rsvpLoading}
-                  >
-                    <Text style={[s.rsvpBtnText, rsvpStatus === 'yes' && s.rsvpBtnTextActive]}>
-                      Going
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[s.rsvpBtn, rsvpStatus === 'no' && s.rsvpBtnActiveNo]}
-                    onPress={() => handleRsvp('no')}
-                    disabled={rsvpLoading}
-                  >
-                    <Text style={[s.rsvpBtnText, rsvpStatus === 'no' && s.rsvpBtnTextActive]}>
-                      Can't Make It
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[s.rsvpBtn, rsvpStatus === 'maybe' && s.rsvpBtnActiveMaybe]}
-                    onPress={() => handleRsvp('maybe')}
-                    disabled={rsvpLoading}
-                  >
-                    <Text style={[s.rsvpBtnText, rsvpStatus === 'maybe' && s.rsvpBtnTextActive]}>
-                      Maybe
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+                {nextEvent && String(activeChild.team_id) === String(nextEvent.team_id) ? (
+                  <View style={s.rsvpRow}>
+                    <TouchableOpacity
+                      style={[s.rsvpBtn, rsvpStatus === 'yes' && s.rsvpBtnActiveYes]}
+                      onPress={() => handleRsvp('yes')}
+                      disabled={rsvpLoading}
+                    >
+                      <Text style={[s.rsvpBtnText, rsvpStatus === 'yes' && s.rsvpBtnTextActive]}>
+                        Going
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[s.rsvpBtn, rsvpStatus === 'no' && s.rsvpBtnActiveNo]}
+                      onPress={() => handleRsvp('no')}
+                      disabled={rsvpLoading}
+                    >
+                      <Text style={[s.rsvpBtnText, rsvpStatus === 'no' && s.rsvpBtnTextActive]}>
+                        Can't Make It
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[s.rsvpBtn, rsvpStatus === 'maybe' && s.rsvpBtnActiveMaybe]}
+                      onPress={() => handleRsvp('maybe')}
+                      disabled={rsvpLoading}
+                    >
+                      <Text style={[s.rsvpBtnText, rsvpStatus === 'maybe' && s.rsvpBtnTextActive]}>
+                        Maybe
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <Text style={s.rsvpHelpText}>
+                    {nextEvent
+                      ? `${activeChild.first_name} is not on the ${nextEvent.team_name} roster.`
+                      : 'No upcoming event to RSVP for.'}
+                  </Text>
+                )}
               </View>
             )}
           </View>
@@ -1114,13 +1390,42 @@ export default function ParentDashboard() {
       <ShareRegistrationModal
         visible={showShare}
         onClose={() => setShowShare(false)}
+        onMount={() => setShareMounted(true)}
+        onUnmount={() => setShareMounted(false)}
+        onVisibleChange={(v) => setShareVisible(v)}
       />
 
       {/* Parent Onboarding Modal — shows first */}
-      <ParentOnboardingModal onDismiss={() => setOnboardingDone(true)} />
+      <ParentOnboardingModal
+        visible={modalStage === 'onboarding'}
+        onDone={handleOnboardingDone}
+        onMount={() => setOnboardingMounted(true)}
+        onUnmount={() => setOnboardingMounted(false)}
+        onVisibleChange={(v: boolean) => setOnboardingVisible(v)}
+      />
 
       {/* COPPA Consent Modal — only shows AFTER onboarding is done */}
-      {onboardingDone && <CoppaConsentModal />}
+      {(() => {
+        const coppaVisible = ENABLE_COPPA && modalStage === 'coppa' && !coppaCompleted;
+        console.log('[ParentDashboard RENDER] CoppaConsentModal visible calculation:', {
+          coppaVisible,
+          ENABLE_COPPA,
+          modalStage,
+          coppaCompleted,
+          isParent,
+          profileId: profile?.id,
+          coppaConsentGiven: profile?.coppa_consent_given,
+        });
+        return (
+          <CoppaConsentModal
+            visible={coppaVisible}
+            onDone={handleCoppaDone}
+            onMount={() => setCoppaMounted(true)}
+            onUnmount={() => setCoppaMounted(false)}
+            onVisibleChange={(v) => setCoppaVisible(v)}
+          />
+        );
+      })()}
 
       {/* Bottom padding */}
       <View style={{ height: 120 }} />
@@ -1135,7 +1440,7 @@ export default function ParentDashboard() {
 const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: colors.background || colors.card,
   },
   contentContainer: {
     paddingHorizontal: 20,
@@ -1567,6 +1872,12 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontSize: 15,
     color: colors.textMuted,
   },
+  emptyNextUpSubtext: {
+    fontSize: 13,
+    color: colors.textMuted,
+    marginTop: 4,
+    textAlign: 'center' as const,
+  },
 
   // RSVP
   rsvpSection: {
@@ -1582,6 +1893,11 @@ const createStyles = (colors: any) => StyleSheet.create({
     textTransform: 'uppercase' as const,
     letterSpacing: 1,
     marginBottom: 10,
+  },
+  rsvpHelpText: {
+    fontSize: 13,
+    color: colors.textMuted,
+    fontStyle: 'italic',
   },
   rsvpRow: {
     flexDirection: 'row',
@@ -1656,6 +1972,21 @@ const createStyles = (colors: any) => StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
+  },
+  teamChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  teamChipText: {
+    fontSize: 13,
+    color: colors.textMuted,
   },
   statCard: {
     width: '48%' as any,
@@ -1796,4 +2127,5 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontWeight: '700',
     color: colors.warning,
   },
+
 });

@@ -19,6 +19,7 @@ type Props = {
 };
 
 export default function GifPicker({ visible, onClose, onSelect }: Props) {
+  if (!visible) return null;
   const { colors } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [gifs, setGifs] = useState<Gif[]>([]);
@@ -95,7 +96,7 @@ export default function GifPicker({ visible, onClose, onSelect }: Props) {
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
-      <View style={s.overlay}>
+      <View style={s.overlay} pointerEvents={visible ? 'auto' : 'none'}>
         <View style={s.container}>
           <View style={s.header}>
             <Text style={s.title}>GIFs</Text>

@@ -30,6 +30,7 @@ type EmergencyContactModalProps = {
 };
 
 export default function EmergencyContactModal({ visible, onClose, player }: EmergencyContactModalProps) {
+  if (!visible) return null;
   const { colors } = useTheme();
   const s = createStyles(colors);
 

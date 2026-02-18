@@ -4,13 +4,13 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import React, { useState } from 'react';
 import {
-    Alert,
-    Modal,
-    Platform,
-    Share,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Modal,
+  Platform,
+  Share,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
@@ -41,18 +41,36 @@ type Props = {
   customUrl?: string;
   // Optional: customize the title
   title?: string;
+  onMount?: () => void;
+  onUnmount?: () => void;
+  onVisibleChange?: (v: boolean) => void;
 };
 
 export default function ShareRegistrationModal({
   visible,
   onClose,
   customUrl,
-  title = 'Share Registration'
+  title = 'Share Registration',
+  onMount,
+  onUnmount,
+  onVisibleChange,
 }: Props) {
+  if (!visible) return null;
   const { colors } = useTheme();
   const { organization } = useAuth();
   const [copied, setCopied] = useState(false);
   const orgName = organization?.name || 'our organization';
+
+  React.useEffect(() => {
+    onMount?.();
+    onVisibleChange?.(true);
+    console.log('ShareRegistrationModal mounted');
+    return () => {
+      onUnmount?.();
+      onVisibleChange?.(false);
+      console.log('ShareRegistrationModal unmounted');
+    };
+  }, []);
 
   const url = customUrl || REGISTRATION_URL;
 
@@ -105,7 +123,7 @@ export default function ShareRegistrationModal({
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.7)',
         justifyContent: 'flex-end',
-      }}>
+      }} pointerEvents={visible ? 'auto' : 'none'}>
         <View style={{
           backgroundColor: colors.card,
           borderTopLeftRadius: 24,
