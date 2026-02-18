@@ -6,6 +6,7 @@ import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -132,6 +133,7 @@ export default function ParentDashboard() {
   const [rsvpLoading, setRsvpLoading] = useState(false);
   const [totalTeamEvents, setTotalTeamEvents] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [onboardingDone, setOnboardingDone] = useState(true); // default true to suppress COPPA until checked
 
   const activeChild = children[activeChildIndex] || null;
 
@@ -141,6 +143,13 @@ export default function ParentDashboard() {
       setActiveChildIndex(0);
     }
   }, [children.length]);
+
+  // Check if onboarding is done so we can sequence modals (onboarding first, then COPPA)
+  useEffect(() => {
+    AsyncStorage.getItem('vb_parent_onboarded').then(val => {
+      setOnboardingDone(val === 'true');
+    }).catch(() => setOnboardingDone(true));
+  }, []);
 
   useEffect(() => {
     fetchParentData();
@@ -1084,11 +1093,11 @@ export default function ParentDashboard() {
         onClose={() => setShowShare(false)}
       />
 
-      {/* Parent Onboarding Modal */}
-      <ParentOnboardingModal />
+      {/* Parent Onboarding Modal — shows first */}
+      <ParentOnboardingModal onDismiss={() => setOnboardingDone(true)} />
 
-      {/* COPPA Consent Modal */}
-      <CoppaConsentModal />
+      {/* COPPA Consent Modal — only shows AFTER onboarding is done */}
+      {onboardingDone && <CoppaConsentModal />}
 
       {/* Bottom padding */}
       <View style={{ height: 120 }} />

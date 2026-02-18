@@ -23,7 +23,11 @@ type Slide = {
   iconColor: string;
 };
 
-export default function ParentOnboardingModal() {
+type Props = {
+  onDismiss?: () => void;
+};
+
+export default function ParentOnboardingModal({ onDismiss }: Props) {
   const { colors } = useTheme();
   const [visible, setVisible] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -63,11 +67,16 @@ export default function ParentOnboardingModal() {
   const checkOnboarding = async () => {
     try {
       const hasOnboarded = await AsyncStorage.getItem(ONBOARDING_KEY);
-      if (!hasOnboarded) {
-        setVisible(true);
+      if (hasOnboarded) {
+        setVisible(false);
+        return;
       }
+      // Small delay to let the dashboard render first
+      setTimeout(() => setVisible(true), 500);
     } catch (e) {
+      // On error, don't show modal — don't block the user
       console.log('Error checking onboarding status:', e);
+      setVisible(false);
     }
   };
 
@@ -78,6 +87,7 @@ export default function ParentOnboardingModal() {
       console.log('Error saving onboarding status:', e);
     }
     setVisible(false);
+    onDismiss?.();
   };
 
   const animateSlideTransition = (nextSlide: number) => {
@@ -116,12 +126,10 @@ export default function ParentOnboardingModal() {
     >
       <View style={s.overlay}>
         <View style={s.modalContainer}>
-          {/* Skip button */}
-          {!isLastSlide && (
-            <TouchableOpacity style={s.skipBtn} onPress={handleDismiss}>
-              <Text style={s.skipText}>Skip</Text>
-            </TouchableOpacity>
-          )}
+          {/* Skip button — always visible */}
+          <TouchableOpacity style={s.skipBtn} onPress={handleDismiss}>
+            <Text style={s.skipText}>{isLastSlide ? 'Close' : 'Skip'}</Text>
+          </TouchableOpacity>
 
           {/* Slide Content */}
           <Animated.View style={[s.slideContent, { opacity: fadeAnim }]}>
@@ -173,7 +181,7 @@ const createStyles = (colors: any) =>
   StyleSheet.create({
     overlay: {
       flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.6)',
+      backgroundColor: 'rgba(0,0,0,0.5)',
       justifyContent: 'center',
       alignItems: 'center',
       padding: 24,
@@ -181,7 +189,7 @@ const createStyles = (colors: any) =>
     modalContainer: {
       width: '100%',
       maxWidth: 380,
-      backgroundColor: colors.glassCard,
+      backgroundColor: colors.card,
       borderWidth: 1,
       borderColor: colors.glassBorder,
       borderRadius: 24,

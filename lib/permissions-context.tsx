@@ -159,6 +159,14 @@ export const PermissionsProvider = ({ children }: { children: React.ReactNode })
     actualRoles.push('player');
   }
 
+  // Web parity: admins and coaches can always preview the player view
+  // (web's getAvailableViews adds player preview for admins/coaches)
+  const hasAdminRole = actualRoles.includes('league_admin');
+  const hasCoachRole = actualRoles.includes('head_coach') || actualRoles.includes('assistant_coach');
+  if ((hasAdminRole || hasCoachRole) && !actualRoles.includes('player')) {
+    actualRoles.push('player');
+  }
+
   // Apply role override if set (production feature — not dev-only)
   const effectiveRoles: UserRole[] = viewAs ? [viewAs] : actualRoles;
 
