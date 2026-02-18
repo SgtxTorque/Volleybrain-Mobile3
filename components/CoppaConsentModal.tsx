@@ -27,16 +27,17 @@ export default function CoppaConsentModal() {
 
   useEffect(() => {
     checkCoppaStatus();
-  }, [user?.id, profile, isParent]);
+  }, [user?.id, profile?.coppa_consent_given, isParent]);
 
   const checkCoppaStatus = async () => {
     if (!user?.id || !isParent) {
       setChecking(false);
+      setVisible(false);
       return;
     }
 
-    // Already gave consent
-    if (profile?.coppa_consent_given === true) {
+    // Already gave consent — skip entirely
+    if (profile?.coppa_consent_given) {
       setChecking(false);
       setVisible(false);
       return;
@@ -76,9 +77,13 @@ export default function CoppaConsentModal() {
 
       if (hasChildren && !profile?.coppa_consent_given) {
         setVisible(true);
+      } else {
+        setVisible(false);
       }
     } catch (error) {
       console.error('Error checking COPPA status:', error);
+      // On error, don't block the user
+      setVisible(false);
     } finally {
       setChecking(false);
     }
@@ -110,6 +115,11 @@ export default function CoppaConsentModal() {
     }
   };
 
+  const handleSkipForNow = () => {
+    // Let parent use the app — they'll be prompted again next session
+    setVisible(false);
+  };
+
   const handleSignOut = async () => {
     setVisible(false);
     await signOut();
@@ -124,7 +134,7 @@ export default function CoppaConsentModal() {
       visible={visible}
       animationType="fade"
       transparent
-      onRequestClose={() => {}}
+      onRequestClose={handleSkipForNow}
     >
       <View style={s.overlay}>
         <View style={s.container}>
@@ -208,6 +218,10 @@ export default function CoppaConsentModal() {
               )}
             </TouchableOpacity>
 
+            <TouchableOpacity style={s.skipBtn} onPress={handleSkipForNow}>
+              <Text style={s.skipBtnText}>Skip for Now</Text>
+            </TouchableOpacity>
+
             <TouchableOpacity style={s.signOutBtn} onPress={handleSignOut}>
               <Ionicons name="log-out-outline" size={20} color={colors.danger} />
               <Text style={s.signOutBtnText}>Sign Out</Text>
@@ -223,18 +237,17 @@ const createStyles = (colors: any) =>
   StyleSheet.create({
     overlay: {
       flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.85)',
+      backgroundColor: 'rgba(0,0,0,0.5)',
       justifyContent: 'center',
       alignItems: 'center',
     },
     container: {
       width: '92%',
       maxHeight: '90%',
-      backgroundColor: colors.bgSecondary,
+      backgroundColor: colors.card,
       borderRadius: 24,
       overflow: 'hidden',
-      borderWidth: 1,
-      borderColor: colors.glassBorder,
+      borderWidth: 0,
     },
     scroll: {
       flex: 1,
@@ -334,6 +347,18 @@ const createStyles = (colors: any) =>
       fontSize: 16,
       fontWeight: '700',
       color: '#000',
+    },
+    skipBtn: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 14,
+      borderRadius: 12,
+      marginBottom: 12,
+    },
+    skipBtnText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.textMuted,
     },
     signOutBtn: {
       flexDirection: 'row',

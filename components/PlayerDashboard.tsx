@@ -5,10 +5,11 @@ import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
+  Image,
   Platform,
   RefreshControl,
   ScrollView,
@@ -17,22 +18,49 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ReenrollmentBanner from './ReenrollmentBanner';
 import RoleSelector from './RoleSelector';
+
+// ============================================
+// FORCED DARK PALETTE
+// ============================================
+
+const DARK = {
+  bg: '#0A0F1A',
+  card: '#111827',
+  cardAlt: '#1A2235',
+  border: 'rgba(255,255,255,0.08)',
+  text: '#FFFFFF',
+  textSecondary: '#CBD5E1',
+  textMuted: '#64748B',
+  accent: '#F97316',
+  gold: '#FFD700',
+  neonGreen: '#00FF88',
+  neonBlue: '#00D4FF',
+  neonPurple: '#A855F7',
+  neonPink: '#EC4899',
+  neonRed: '#FF3B3B',
+};
 
 // ============================================
 // TYPES
 // ============================================
 
-type PlayerData = {
+type PlayerRecord = {
   id: string;
   first_name: string;
   last_name: string;
   jersey_number: string | null;
   position: string | null;
   photo_url: string | null;
-  team_name: string | null;
-  team_color: string | null;
+  avatar_url: string | null;
+};
+
+type TeamInfo = {
+  id: string;
+  name: string;
+  color: string | null;
 };
 
 type SeasonStats = {
@@ -43,6 +71,7 @@ type SeasonStats = {
   total_blocks: number;
   total_assists: number;
   total_points: number;
+  total_service_errors: number;
 };
 
 type Achievement = {
@@ -53,6 +82,7 @@ type Achievement = {
     icon: string;
     rarity: string;
     color_primary: string;
+    category: string | null;
   };
 };
 
@@ -62,71 +92,85 @@ type UpcomingEvent = {
   event_type: string;
   event_date: string;
   start_time: string | null;
-  opponent: string | null;
   opponent_name: string | null;
   location: string | null;
 };
 
 type RecentGame = {
   id: string;
-  title: string;
   event_date: string;
   opponent_name: string | null;
   game_result: string | null;
   our_score: number | null;
   opponent_score: number | null;
   set_scores: any;
-  playerStats: {
-    kills: number;
-    aces: number;
-    blocks: number;
-    digs: number;
-    assists: number;
-    points: number;
-  } | null;
 };
 
-// ============================================
-// TROPHY DEFINITIONS
-// ============================================
-
-type TrophyDef = {
+type PlayerGameStat = {
   id: string;
-  name: string;
-  icon: string;
-  ionicon: string;
-  check: (stats: SeasonStats) => boolean;
+  created_at: string;
+  kills: number;
+  aces: number;
+  digs: number;
+  blocks: number;
+  assists: number;
+  points: number;
 };
 
-const TROPHY_DEFINITIONS: TrophyDef[] = [
-  { id: 'first_kill', name: 'First Kill', icon: '⚡', ionicon: 'flash', check: (s) => s.total_kills >= 1 },
-  { id: 'ace_machine', name: 'Ace Machine', icon: '🎯', ionicon: 'star', check: (s) => s.total_aces >= 10 },
-  { id: 'block_party', name: 'Block Party', icon: '🧱', ionicon: 'hand-left', check: (s) => s.total_blocks >= 5 },
-  { id: 'dig_deep', name: 'Dig Deep', icon: '🛡', ionicon: 'shield', check: (s) => s.total_digs >= 20 },
-  { id: 'iron_player', name: 'Iron Player', icon: '🏋', ionicon: 'fitness', check: (s) => s.games_played >= 10 },
-  { id: 'win_streak', name: 'Win Streak', icon: '🔥', ionicon: 'flame', check: () => false },
-  { id: 'mvp', name: 'MVP', icon: '👑', ionicon: 'diamond', check: () => false },
-  { id: 'century', name: 'Century', icon: '💯', ionicon: 'trophy', check: (s) => s.total_kills >= 100 },
+// ============================================
+// STAT DEFINITIONS
+// ============================================
+
+type StatDef = {
+  key: keyof SeasonStats;
+  label: string;
+  color: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  max: number;
+};
+
+const STAT_DEFS: StatDef[] = [
+  { key: 'total_kills', label: 'Kills', color: '#FF3B3B', icon: 'flash', max: 100 },
+  { key: 'total_aces', label: 'Aces', color: '#A855F7', icon: 'star', max: 50 },
+  { key: 'total_digs', label: 'Digs', color: '#00D4FF', icon: 'shield', max: 100 },
+  { key: 'total_blocks', label: 'Blocks', color: '#F97316', icon: 'hand-left', max: 50 },
+  { key: 'total_assists', label: 'Assists', color: '#10B981', icon: 'git-merge', max: 80 },
+  { key: 'total_points', label: 'Points', color: '#EC4899', icon: 'trophy', max: 150 },
 ];
 
 // ============================================
 // HELPERS
 // ============================================
 
-const calculateLevel = (stats: SeasonStats | null) => {
-  if (!stats) return { level: 1, currentXP: 0, totalXP: 0, xpToNext: 100 };
-  const xpTotal =
-    (stats.games_played || 0) * 10 +
-    (stats.total_kills || 0) +
-    (stats.total_aces || 0) +
-    (stats.total_blocks || 0) +
-    (stats.total_digs || 0);
-  return {
-    level: Math.floor(xpTotal / 100) + 1,
-    currentXP: xpTotal % 100,
-    totalXP: xpTotal,
-    xpToNext: 100 - (xpTotal % 100),
-  };
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+const calculateLevel = (stats: SeasonStats | null): { level: number; currentXP: number; xpForNext: number } => {
+  if (!stats) return { level: 1, currentXP: 0, xpForNext: 1000 };
+  const raw = (stats.games_played || 0) * 10 + (stats.total_points || 0);
+  const level = Math.floor(raw / 100) + 1;
+  const currentXP = raw % 1000;
+  return { level, currentXP, xpForNext: 1000 };
+};
+
+const calculateOVR = (stats: SeasonStats | null): number => {
+  if (!stats) return 50;
+  return Math.min(
+    99,
+    Math.round(
+      50 +
+        (stats.total_kills || 0) * 0.3 +
+        (stats.total_aces || 0) * 0.5 +
+        (stats.total_blocks || 0) * 0.3 +
+        (stats.total_digs || 0) * 0.2 +
+        (stats.total_assists || 0) * 0.2
+    )
+  );
+};
+
+const getOVRTier = (ovr: number): { borderColor: string; label: string } => {
+  if (ovr >= 80) return { borderColor: DARK.gold, label: 'ELITE' };
+  if (ovr >= 60) return { borderColor: '#C0C0C0', label: 'RISING' };
+  return { borderColor: '#CD7F32', label: 'ROOKIE' };
 };
 
 const getCountdown = (dateStr: string): string | null => {
@@ -140,6 +184,16 @@ const getCountdown = (dateStr: string): string | null => {
   return `IN ${diffDays} DAYS`;
 };
 
+const formatDate = (dateStr: string): string => {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+};
+
+const formatShortDate = (dateStr: string): string => {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
+
 const formatTime = (time: string | null): string => {
   if (!time) return '';
   const [h, m] = time.split(':');
@@ -147,265 +201,215 @@ const formatTime = (time: string | null): string => {
   return `${hour % 12 || 12}:${m} ${hour >= 12 ? 'PM' : 'AM'}`;
 };
 
-const formatDate = (dateStr: string): string => {
-  const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-};
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
 // ============================================
 // COMPONENT
 // ============================================
 
 export default function PlayerDashboard() {
   const { colors } = useTheme();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { workingSeason } = useSeason();
+  const { actualRoles, viewAs } = usePermissions();
   const router = useRouter();
-  const { actualRoles } = usePermissions();
+  const insets = useSafeAreaInsets();
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [player, setPlayer] = useState<PlayerData | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const [player, setPlayer] = useState<PlayerRecord | null>(null);
+  const [team, setTeam] = useState<TeamInfo | null>(null);
   const [stats, setStats] = useState<SeasonStats | null>(null);
   const [achievements, setAchievements] = useState<Achievement[]>([]);
-  const [events, setEvents] = useState<UpcomingEvent[]>([]);
-  const [recentGame, setRecentGame] = useState<RecentGame | null>(null);
-
-  useEffect(() => {
-    if (user?.id && workingSeason?.id) fetchAll();
-  }, [user?.id, workingSeason?.id]);
+  const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
+  const [recentGames, setRecentGames] = useState<RecentGame[]>([]);
+  const [playerGameStats, setPlayerGameStats] = useState<PlayerGameStat[]>([]);
 
   // -----------------------------------------------
-  // Player resolution — all lookup paths preserved
+  // LOAD ALL DATA
   // -----------------------------------------------
-  const resolvePlayerId = async (): Promise<{ playerId: string | null; playerData: any }> => {
-    if (!user?.id || !workingSeason?.id) return { playerId: null, playerData: null };
 
-    // 1. Check user_account_id (player IS this user)
-    const { data: selfPlayers } = await supabase
-      .from('players')
-      .select('id, first_name, last_name, jersey_number, position, photo_url')
-      .eq('user_account_id', user.id)
-      .eq('season_id', workingSeason.id)
-      .limit(1);
+  const loadPlayerData = useCallback(async () => {
+    if (!user?.id || !workingSeason?.id) return;
+    try {
+      setError(null);
 
-    if (selfPlayers && selfPlayers.length > 0) {
-      return { playerId: selfPlayers[0].id, playerData: selfPlayers[0] };
-    }
+      // 1. Resolve player record
+      let playerRecord: PlayerRecord | null = null;
 
-    // 2. Check parent_account_id
-    const { data: directPlayers } = await supabase
-      .from('players')
-      .select('id, first_name, last_name, jersey_number, position, photo_url')
-      .eq('parent_account_id', user.id)
-      .eq('season_id', workingSeason.id)
-      .limit(1);
-
-    if (directPlayers && directPlayers.length > 0) {
-      return { playerId: directPlayers[0].id, playerData: directPlayers[0] };
-    }
-
-    // 3. Check player_guardians
-    const { data: guardianLinks } = await supabase
-      .from('player_guardians')
-      .select('player_id')
-      .eq('guardian_id', user.id);
-
-    if (guardianLinks && guardianLinks.length > 0) {
-      const playerIds = guardianLinks.map((g) => g.player_id);
-      const { data } = await supabase
+      const { data: selfPlayers } = await supabase
         .from('players')
-        .select('id, first_name, last_name, jersey_number, position, photo_url')
-        .in('id', playerIds)
+        .select('id, first_name, last_name, jersey_number, position, photo_url, avatar_url')
+        .eq('user_account_id', user.id)
         .eq('season_id', workingSeason.id)
         .limit(1);
 
-      if (data && data.length > 0) {
-        return { playerId: data[0].id, playerData: data[0] };
-      }
-    }
-
-    return { playerId: null, playerData: null };
-  };
-
-  // -----------------------------------------------
-  // Data fetching — all queries preserved
-  // -----------------------------------------------
-  const fetchAll = async () => {
-    if (!refreshing) setLoading(true);
-    try {
-      const { playerId, playerData } = await resolvePlayerId();
-
-      if (playerId && playerData) {
-        // Get team info
-        const { data: teamLink } = await supabase
-          .from('team_players')
-          .select('teams(name, color)')
-          .eq('player_id', playerId)
-          .limit(1)
-          .maybeSingle();
-
-        const team = (teamLink as any)?.teams;
-        const resolvedPlayer = {
-          ...playerData,
-          team_name: team?.name || null,
-          team_color: team?.color || null,
-        };
-        setPlayer(resolvedPlayer);
-
-        // Fetch stats, achievements, events, and recent game in parallel
-        await Promise.all([
-          fetchStats(playerId),
-          fetchAchievements(playerId),
-          fetchEvents(),
-          fetchRecentGame(playerId),
-        ]);
+      if (selfPlayers && selfPlayers.length > 0) {
+        playerRecord = selfPlayers[0] as PlayerRecord;
       } else {
+        const { data: parentPlayers } = await supabase
+          .from('players')
+          .select('id, first_name, last_name, jersey_number, position, photo_url, avatar_url')
+          .eq('parent_account_id', user.id)
+          .eq('season_id', workingSeason.id)
+          .limit(1);
+
+        if (parentPlayers && parentPlayers.length > 0) {
+          playerRecord = parentPlayers[0] as PlayerRecord;
+        }
+      }
+
+      if (!playerRecord) {
         setPlayer(null);
+        setTeam(null);
         setStats(null);
         setAchievements([]);
-        setRecentGame(null);
-        await fetchEvents();
+        setUpcomingEvents([]);
+        setRecentGames([]);
+        setPlayerGameStats([]);
+        return;
       }
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
 
-  const fetchStats = async (playerId: string) => {
-    if (!workingSeason?.id) return;
+      setPlayer(playerRecord);
+      const playerId = playerRecord.id;
 
-    const { data } = await supabase
-      .from('player_season_stats')
-      .select('*')
-      .eq('player_id', playerId)
-      .eq('season_id', workingSeason.id)
-      .limit(1)
-      .maybeSingle();
-
-    if (data) {
-      setStats({
-        games_played: data.games_played || 0,
-        total_kills: data.total_kills || 0,
-        total_aces: data.total_aces || 0,
-        total_digs: data.total_digs || 0,
-        total_blocks: data.total_blocks || 0,
-        total_assists: data.total_assists || 0,
-        total_points: data.total_points || 0,
-      });
-    } else {
-      setStats(null);
-    }
-  };
-
-  const fetchAchievements = async (playerId: string) => {
-    const { data } = await supabase
-      .from('player_achievements')
-      .select('id, earned_at, achievement:achievements(name, icon, rarity, color_primary)')
-      .eq('player_id', playerId)
-      .order('earned_at', { ascending: false })
-      .limit(10);
-
-    if (data) setAchievements(data as any);
-  };
-
-  const fetchEvents = async () => {
-    if (!workingSeason?.id) return;
-    const today = new Date().toISOString().split('T')[0];
-
-    const { data } = await supabase
-      .from('schedule_events')
-      .select('id, title, event_type, event_date, start_time, opponent, opponent_name, location')
-      .eq('season_id', workingSeason.id)
-      .gte('event_date', today)
-      .order('event_date')
-      .limit(5);
-
-    if (data) setEvents(data);
-  };
-
-  const fetchRecentGame = async (playerId: string) => {
-    if (!workingSeason?.id) return;
-    const today = new Date().toISOString().split('T')[0];
-
-    // Get most recent completed game
-    const { data: gameData } = await supabase
-      .from('schedule_events')
-      .select('id, title, event_date, opponent_name, game_result, our_score, opponent_score, set_scores')
-      .eq('season_id', workingSeason.id)
-      .eq('event_type', 'game')
-      .lte('event_date', today)
-      .not('game_result', 'is', null)
-      .order('event_date', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (gameData) {
-      // Get player's individual stats for this game
-      const { data: playerStatData } = await supabase
-        .from('game_player_stats')
-        .select('kills, aces, blocks, digs, assists, points')
-        .eq('schedule_event_id', gameData.id)
+      // 2. Get team info
+      const { data: teamLink } = await supabase
+        .from('team_players')
+        .select('teams(id, name, color)')
         .eq('player_id', playerId)
         .limit(1)
         .maybeSingle();
 
-      setRecentGame({
-        ...gameData,
-        playerStats: playerStatData
-          ? {
-              kills: playerStatData.kills || 0,
-              aces: playerStatData.aces || 0,
-              blocks: playerStatData.blocks || 0,
-              digs: playerStatData.digs || 0,
-              assists: playerStatData.assists || 0,
-              points: playerStatData.points || 0,
-            }
-          : null,
-      });
-    } else {
-      setRecentGame(null);
+      const teamData = (teamLink as any)?.teams as TeamInfo | null;
+      setTeam(teamData || null);
+      const teamId = teamData?.id || null;
+
+      // 3-7. Parallel data fetches
+      const today = new Date().toISOString().split('T')[0];
+
+      const promises: Promise<void>[] = [];
+
+      // 3. Season stats
+      promises.push(
+        (async () => {
+          const { data } = await supabase
+            .from('player_season_stats')
+            .select('games_played, total_kills, total_aces, total_digs, total_blocks, total_assists, total_points, total_service_errors')
+            .eq('player_id', playerId)
+            .eq('season_id', workingSeason.id)
+            .limit(1)
+            .maybeSingle();
+          if (data) {
+            setStats({
+              games_played: data.games_played || 0,
+              total_kills: data.total_kills || 0,
+              total_aces: data.total_aces || 0,
+              total_digs: data.total_digs || 0,
+              total_blocks: data.total_blocks || 0,
+              total_assists: data.total_assists || 0,
+              total_points: data.total_points || 0,
+              total_service_errors: data.total_service_errors || 0,
+            });
+          } else {
+            setStats(null);
+          }
+        })()
+      );
+
+      // 4. Achievements
+      promises.push(
+        (async () => {
+          const { data } = await supabase
+            .from('player_achievements')
+            .select('id, earned_at, achievement:achievements(*)')
+            .eq('player_id', playerId)
+            .order('earned_at', { ascending: false });
+          if (data) setAchievements(data as any);
+        })()
+      );
+
+      // 5. Upcoming events
+      if (teamId) {
+        promises.push(
+          (async () => {
+            const { data } = await supabase
+              .from('schedule_events')
+              .select('id, title, event_type, event_date, start_time, opponent_name, location')
+              .eq('team_id', teamId)
+              .gte('event_date', today)
+              .order('event_date')
+              .limit(3);
+            if (data) setUpcomingEvents(data);
+          })()
+        );
+
+        // 6. Recent games
+        promises.push(
+          (async () => {
+            const { data } = await supabase
+              .from('schedule_events')
+              .select('id, event_date, opponent_name, game_result, our_score, opponent_score, set_scores')
+              .eq('team_id', teamId)
+              .eq('event_type', 'game')
+              .not('game_result', 'is', null)
+              .order('event_date', { ascending: false })
+              .limit(5);
+            if (data) setRecentGames(data);
+          })()
+        );
+      }
+
+      // 7. Player game stats
+      promises.push(
+        (async () => {
+          const { data } = await supabase
+            .from('player_game_stats')
+            .select('id, created_at, kills, aces, digs, blocks, assists, points')
+            .eq('player_id', playerId)
+            .order('created_at', { ascending: false })
+            .limit(5);
+          if (data) setPlayerGameStats(data as any);
+        })()
+      );
+
+      await Promise.all(promises);
+    } catch (err: any) {
+      console.error('PlayerDashboard loadPlayerData error:', err);
+      setError(err.message || 'Failed to load player data');
     }
-  };
+  }, [user?.id, workingSeason?.id]);
 
-  const onRefresh = () => {
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    loadPlayerData().finally(() => {
+      if (mounted) setLoading(false);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [loadPlayerData]);
+
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    fetchAll();
-  };
+    await loadPlayerData();
+    setRefreshing(false);
+  }, [loadPlayerData]);
 
   // -----------------------------------------------
-  // Computed values
+  // COMPUTED
   // -----------------------------------------------
-  const xp = calculateLevel(stats);
+
   const playerName = player ? `${player.first_name} ${player.last_name}` : 'Player';
   const initials = player
     ? `${player.first_name?.[0] || ''}${player.last_name?.[0] || ''}`
     : 'P';
-  const nextEvent = events.length > 0 ? events[0] : null;
-  const nextEventCountdown = nextEvent ? getCountdown(nextEvent.event_date) : null;
-  const isWin = recentGame?.game_result === 'win';
-  const isLoss = recentGame?.game_result === 'loss';
-
-  // Parse set scores for display
-  const parseSetScores = (setScores: any): string => {
-    if (!setScores) return '';
-    try {
-      const scores = typeof setScores === 'string' ? JSON.parse(setScores) : setScores;
-      if (Array.isArray(scores)) {
-        return scores.map((s: any) => `${s.our ?? s.home ?? '-'}-${s.their ?? s.away ?? '-'}`).join(', ');
-      }
-      return '';
-    } catch {
-      return '';
-    }
-  };
-
-  // Season journey
-  const totalSeasonGames = events.length + (stats?.games_played || 0);
-  const gamesPlayed = stats?.games_played || 0;
+  const teamColor = team?.color || colors.primary;
+  const xp = calculateLevel(stats);
+  const ovr = calculateOVR(stats);
+  const ovrTier = getOVRTier(ovr);
+  const heroImage = player?.photo_url || player?.avatar_url || null;
 
   const s = createStyles(colors);
 
@@ -415,11 +419,74 @@ export default function PlayerDashboard() {
   if (loading) {
     return (
       <View style={s.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={s.loadingText}>Entering your Arena...</Text>
+        <ActivityIndicator size="large" color={DARK.gold} />
+        <Text style={s.loadingText}>Loading your arena...</Text>
       </View>
     );
   }
+
+  // -----------------------------------------------
+  // ERROR STATE
+  // -----------------------------------------------
+  if (error) {
+    return (
+      <View style={s.loadingContainer}>
+        <Ionicons name="warning" size={48} color={DARK.neonRed} />
+        <Text style={s.loadingText}>Something went wrong</Text>
+        <Text style={[s.loadingSubtext, { marginBottom: 20 }]}>{error}</Text>
+        <TouchableOpacity
+          style={s.retryButton}
+          onPress={() => {
+            setError(null);
+            setLoading(true);
+            loadPlayerData().finally(() => setLoading(false));
+          }}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="reload" size={18} color={DARK.text} />
+          <Text style={s.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // -----------------------------------------------
+  // NO PLAYER STATE
+  // -----------------------------------------------
+  if (!player) {
+    return (
+      <View style={s.loadingContainer}>
+        <View style={s.noPlayerIcon}>
+          <Ionicons name="person-add" size={48} color={DARK.accent} />
+        </View>
+        <Text style={s.noPlayerTitle}>Link Your Player Profile</Text>
+        <Text style={s.noPlayerSubtext}>
+          Your account is not linked to a player in this season. Ask your coach or admin to connect your profile.
+        </Text>
+        {actualRoles.length > 1 && (
+          <View style={{ marginTop: 20 }}>
+            <RoleSelector />
+          </View>
+        )}
+      </View>
+    );
+  }
+
+  // -----------------------------------------------
+  // PER-GAME AVERAGES
+  // -----------------------------------------------
+  const gp = stats?.games_played || 0;
+  const perGame = (val: number) => (gp > 0 ? (val / gp).toFixed(1) : '0.0');
+
+  // Percentage cards
+  const hitPct =
+    stats && (stats.total_kills + stats.total_service_errors) > 0
+      ? Math.round((stats.total_kills / (stats.total_kills + stats.total_service_errors)) * 100)
+      : 0;
+  const servePct =
+    stats && (stats.total_aces + stats.total_service_errors) > 0
+      ? Math.round((stats.total_aces / (stats.total_aces + stats.total_service_errors)) * 100)
+      : 0;
 
   // -----------------------------------------------
   // RENDER
@@ -427,77 +494,116 @@ export default function PlayerDashboard() {
   return (
     <ScrollView
       style={s.container}
-      contentContainerStyle={s.content}
+      contentContainerStyle={s.contentContainer}
       showsVerticalScrollIndicator={false}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
           onRefresh={onRefresh}
-          tintColor={colors.primary}
-          colors={[colors.primary]}
+          tintColor={DARK.gold}
+          colors={[DARK.gold]}
         />
       }
     >
       {/* ============================================ */}
-      {/* HERO SECTION */}
+      {/* HERO SECTION                                */}
       {/* ============================================ */}
       <View style={s.heroSection}>
+        {/* Background image or gradient */}
+        {heroImage ? (
+          <View style={s.heroImageWrap}>
+            <Image source={{ uri: heroImage }} style={s.heroImage} resizeMode="cover" />
+            <View style={s.heroOverlayTop} />
+            <View style={s.heroOverlayBottom} />
+          </View>
+        ) : (
+          <View style={[s.heroGradientBg, { backgroundColor: teamColor + '18' }]}>
+            <View style={[s.heroInitialsCircle, { backgroundColor: teamColor }]}>
+              <Text style={s.heroInitialsText}>{initials}</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Role selector top-right */}
         {actualRoles.length > 1 && (
-          <View style={{ alignItems: 'flex-end', paddingHorizontal: 20, paddingTop: 8 }}>
+          <View style={[s.roleSelectorWrap, { top: insets.top + 8 }]}>
             <RoleSelector />
           </View>
         )}
-        <View style={[s.heroGradient, { backgroundColor: colors.primary + '15' }]}>
-          {/* Avatar */}
-          <View style={[s.heroAvatar, { backgroundColor: colors.primary }]}>
-            <Text style={s.heroInitials}>{initials}</Text>
+
+        {/* Hero content overlay */}
+        <View style={s.heroContent}>
+          {/* OVR Diamond */}
+          <View style={s.ovrWrap}>
+            <View style={[s.ovrDiamond, { borderColor: ovrTier.borderColor }]}>
+              <View style={s.ovrInner}>
+                <Text style={s.ovrNumber}>{ovr}</Text>
+              </View>
+            </View>
+            <Text style={[s.ovrLabel, { color: ovrTier.borderColor }]}>{ovrTier.label}</Text>
           </View>
 
-          {/* Player Name */}
-          <Text style={[s.heroName, { color: colors.text }]}>{playerName}</Text>
+          {/* Player name */}
+          <Text style={s.heroName} numberOfLines={1} adjustsFontSizeToFit>
+            {playerName}
+          </Text>
 
           {/* Badges row */}
-          <View style={s.badgesRow}>
-            {player?.team_name && (
-              <View style={[s.badge, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}>
-                <Ionicons name="people" size={12} color={colors.textSecondary} />
-                <Text style={[s.badgeText, { color: colors.textSecondary }]}>{player.team_name}</Text>
+          <View style={s.heroBadgesRow}>
+            {team && (
+              <View style={[s.heroBadge, { backgroundColor: teamColor + '30' }]}>
+                <Text style={[s.heroBadgeText, { color: teamColor }]}>{team.name}</Text>
               </View>
             )}
-            {player?.jersey_number && (
-              <View style={[s.badge, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}>
-                <Text style={[s.badgeText, { color: colors.textSecondary }]}>#{player.jersey_number}</Text>
+            {player.position && (
+              <View style={[s.heroBadge, { backgroundColor: teamColor }]}>
+                <Text style={s.heroBadgeTextWhite}>{player.position}</Text>
               </View>
             )}
-            {player?.position && (
-              <View style={[s.badge, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}>
-                <Ionicons name="locate" size={12} color={colors.textSecondary} />
-                <Text style={[s.badgeText, { color: colors.textSecondary }]}>{player.position}</Text>
+            {player.jersey_number && (
+              <View style={[s.heroBadge, { backgroundColor: DARK.cardAlt }]}>
+                <Text style={s.heroBadgeTextWhite}>#{player.jersey_number}</Text>
               </View>
             )}
           </View>
 
-          {/* Level Badge */}
-          <View style={[s.levelBadge, { backgroundColor: colors.primary }]}>
-            <Text style={s.levelText}>LEVEL {xp.level}</Text>
-          </View>
-
-          {/* XP Progress Bar */}
-          <View style={s.xpContainer}>
-            <View style={[s.xpTrack, { backgroundColor: colors.glassCard }]}>
-              <View
-                style={[
-                  s.xpFill,
-                  {
-                    width: `${Math.min(xp.currentXP, 100)}%`,
-                    backgroundColor: colors.primary,
-                  },
-                ]}
-              />
+          {/* Level + XP bar */}
+          <View style={s.levelRow}>
+            <View style={[s.levelCircle, { borderColor: DARK.gold }]}>
+              <Text style={s.levelNumber}>{xp.level}</Text>
             </View>
-            <Text style={[s.xpText, { color: colors.textMuted }]}>
-              {xp.xpToNext} XP to Level {xp.level + 1}
-            </Text>
+            <View style={s.xpBarWrap}>
+              <View style={s.xpBarTrack}>
+                <View
+                  style={[
+                    s.xpBarFill,
+                    {
+                      width: `${Math.min((xp.currentXP / xp.xpForNext) * 100, 100)}%`,
+                      backgroundColor: teamColor,
+                    },
+                  ]}
+                />
+              </View>
+              <Text style={s.xpText}>
+                {xp.currentXP} / {xp.xpForNext} XP to Level {xp.level + 1}
+              </Text>
+            </View>
+          </View>
+
+          {/* Mini stat counters */}
+          <View style={s.miniCountersRow}>
+            <View style={[s.miniCounter, { backgroundColor: DARK.neonBlue + '20' }]}>
+              <Text style={[s.miniCounterNumber, { color: DARK.neonBlue }]}>{stats?.games_played || 0}</Text>
+              <Text style={s.miniCounterLabel}>Games</Text>
+            </View>
+            <View style={[s.miniCounter, { backgroundColor: DARK.gold + '20' }]}>
+              <Text style={[s.miniCounterNumber, { color: DARK.gold }]}>{achievements.length}</Text>
+              <Text style={s.miniCounterLabel}>Trophies</Text>
+            </View>
+            <View style={[s.miniCounter, { backgroundColor: DARK.neonPink + '20' }]}>
+              <Text style={[s.miniCounterNumber, { color: DARK.neonPink }]}>{stats?.total_points || 0}</Text>
+              <Text style={s.miniCounterLabel}>Points</Text>
+            </View>
           </View>
         </View>
       </View>
@@ -505,370 +611,301 @@ export default function PlayerDashboard() {
       <ReenrollmentBanner />
 
       {/* ============================================ */}
-      {/* NEXT UP */}
+      {/* STAT HUD                                    */}
       {/* ============================================ */}
-      <View style={s.sectionWrapper}>
-        <Text style={[s.sectionLabel, { color: colors.textMuted }]}>NEXT UP</Text>
-        {nextEvent ? (
-          <TouchableOpacity activeOpacity={0.7} onPress={() => router.push('/(tabs)/gameday')}>
-          <View
-            style={[
-              s.card,
-              {
-                backgroundColor: colors.glassCard,
-                borderColor: colors.primary + '40',
-                borderWidth: 1.5,
-              },
-            ]}
-          >
-            <View style={s.nextUpHeader}>
-              <Ionicons
-                name={nextEvent.event_type === 'game' ? 'trophy' : 'fitness'}
-                size={28}
-                color={colors.primary}
-              />
-              <Text style={[s.nextUpType, { color: colors.text }]}>
-                {nextEvent.event_type === 'game' ? 'GAME DAY' : 'PRACTICE'}
-              </Text>
-            </View>
+      <View style={s.section}>
+        <View style={s.sectionHeaderRow}>
+          <Text style={s.sectionHeader}>STAT HUD</Text>
+          <Text style={s.sectionHeaderRight}>{workingSeason?.name || ''}</Text>
+        </View>
 
-            {nextEventCountdown && (
-              <Text style={[s.countdown, { color: colors.primary }]}>{nextEventCountdown}</Text>
-            )}
+        <View style={s.statHudCard}>
+          {STAT_DEFS.map((def) => {
+            const value = stats ? stats[def.key] || 0 : 0;
+            const avg = perGame(value);
+            const pct = Math.min((value / def.max) * 100, 100);
 
-            {nextEvent.event_type === 'game' && (nextEvent.opponent_name || nextEvent.opponent) && (
-              <Text style={[s.nextUpOpponent, { color: colors.text }]}>
-                vs {nextEvent.opponent_name || nextEvent.opponent}
-              </Text>
-            )}
-
-            <View style={s.nextUpMeta}>
-              <View style={s.nextUpMetaRow}>
-                <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
-                <Text style={[s.nextUpMetaText, { color: colors.textMuted }]}>
-                  {formatDate(nextEvent.event_date)}
-                  {nextEvent.start_time ? ` at ${formatTime(nextEvent.start_time)}` : ''}
-                </Text>
-              </View>
-              {nextEvent.location && (
-                <View style={s.nextUpMetaRow}>
-                  <Ionicons name="location-outline" size={14} color={colors.textMuted} />
-                  <Text style={[s.nextUpMetaText, { color: colors.textMuted }]}>{nextEvent.location}</Text>
-                </View>
-              )}
-            </View>
-          </View>
-          </TouchableOpacity>
-        ) : (
-          <View style={[s.card, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}>
-            <View style={s.emptyState}>
-              <Ionicons name="calendar-outline" size={40} color={colors.textMuted} />
-              <Text style={[s.emptyTitle, { color: colors.textMuted }]}>No upcoming events</Text>
-              <Text style={[s.emptySubtext, { color: colors.textMuted }]}>
-                Your schedule is clear. Rest up, champ!
-              </Text>
-            </View>
-          </View>
-        )}
-      </View>
-
-      {/* ============================================ */}
-      {/* RECENT GLORY */}
-      {/* ============================================ */}
-      <View style={s.sectionWrapper}>
-        <Text style={[s.sectionLabel, { color: colors.textMuted }]}>RECENT GLORY</Text>
-        {recentGame ? (
-          <View
-            style={[
-              s.card,
-              {
-                backgroundColor: colors.glassCard,
-                borderColor: isWin
-                  ? colors.success + '30'
-                  : isLoss
-                  ? colors.danger + '30'
-                  : colors.glassBorder,
-              },
-            ]}
-          >
-            {/* W/L Badge */}
-            <View style={s.gloryHeader}>
-              <View
-                style={[
-                  s.resultBadge,
-                  {
-                    backgroundColor: isWin ? colors.success + '20' : isLoss ? colors.danger + '20' : colors.glassCard,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    s.resultBadgeText,
-                    { color: isWin ? colors.success : isLoss ? colors.danger : colors.textMuted },
-                  ]}
-                >
-                  {isWin ? 'W' : isLoss ? 'L' : '-'}
-                </Text>
-              </View>
-              <View style={s.gloryTitleBlock}>
-                <Text style={[s.gloryTitle, { color: colors.text }]}>
-                  {recentGame.opponent_name ? `vs ${recentGame.opponent_name}` : recentGame.title}
-                </Text>
-                <Text style={[s.gloryDate, { color: colors.textMuted }]}>
-                  {formatDate(recentGame.event_date)}
-                </Text>
-              </View>
-            </View>
-
-            {/* Score */}
-            {(recentGame.our_score !== null || recentGame.opponent_score !== null) && (
-              <View style={s.scoreContainer}>
-                <Text style={[s.scoreBig, { color: isWin ? colors.success : isLoss ? colors.danger : colors.text }]}>
-                  {recentGame.our_score ?? '-'} - {recentGame.opponent_score ?? '-'}
-                </Text>
-                {recentGame.set_scores && (
-                  <Text style={[s.setScores, { color: colors.textMuted }]}>
-                    {parseSetScores(recentGame.set_scores)}
-                  </Text>
-                )}
-              </View>
-            )}
-
-            {/* Player individual stats */}
-            {recentGame.playerStats ? (
-              <View style={s.gloryStatsRow}>
-                {[
-                  { label: 'Kills', value: recentGame.playerStats.kills },
-                  { label: 'Aces', value: recentGame.playerStats.aces },
-                  { label: 'Blocks', value: recentGame.playerStats.blocks },
-                  { label: 'Digs', value: recentGame.playerStats.digs },
-                ].map((stat) => (
-                  <View key={stat.label} style={s.gloryStat}>
-                    <Text style={[s.gloryStatNumber, { color: colors.text }]}>{stat.value}</Text>
-                    <Text style={[s.gloryStatLabel, { color: colors.textMuted }]}>{stat.label}</Text>
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <Text style={[s.noIndividualStats, { color: colors.textMuted }]}>
-                No individual stats recorded
-              </Text>
-            )}
-          </View>
-        ) : (
-          <View style={[s.card, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}>
-            <View style={s.emptyState}>
-              <Ionicons name="sparkles" size={40} color={colors.textMuted} />
-              <Text style={[s.emptyTitle, { color: colors.textMuted }]}>No games played yet</Text>
-              <Text style={[s.emptySubtext, { color: colors.textMuted }]}>
-                Your glory awaits. Get out there and dominate!
-              </Text>
-            </View>
-          </View>
-        )}
-      </View>
-
-      {/* ============================================ */}
-      {/* TROPHY SHELF */}
-      {/* ============================================ */}
-      <View style={s.sectionWrapper}>
-        <Text style={[s.sectionLabel, { color: colors.textMuted }]}>TROPHY SHELF</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={s.trophyScroll}
-        >
-          {TROPHY_DEFINITIONS.map((trophy) => {
-            const earned = stats ? trophy.check(stats) : false;
             return (
-              <View key={trophy.id} style={s.trophyItem}>
-                <View
-                  style={[
-                    s.trophyCircle,
-                    earned
-                      ? {
-                          backgroundColor: colors.primary,
-                          ...Platform.select({
-                            ios: {
-                              shadowColor: colors.primary,
-                              shadowOffset: { width: 0, height: 0 },
-                              shadowOpacity: 0.5,
-                              shadowRadius: 12,
-                            },
-                            android: { elevation: 8 },
-                          }),
-                        }
-                      : {
-                          backgroundColor: colors.glassCard,
-                          borderWidth: 1,
-                          borderColor: colors.glassBorder,
-                        },
-                  ]}
-                >
-                  {earned ? (
-                    <Ionicons name={trophy.ionicon as any} size={28} color="#FFFFFF" />
-                  ) : (
-                    <View style={s.lockedTrophy}>
-                      <Ionicons name={trophy.ionicon as any} size={28} color={colors.textMuted} style={{ opacity: 0.3 }} />
-                      <View style={s.lockOverlay}>
-                        <Ionicons name="lock-closed" size={14} color={colors.textMuted} />
-                      </View>
-                    </View>
-                  )}
+              <View key={def.key} style={s.statRow}>
+                <View style={[s.statIconWrap, { backgroundColor: def.color + '20' }]}>
+                  <Ionicons name={def.icon} size={16} color={def.color} />
                 </View>
-                <Text
-                  style={[
-                    s.trophyLabel,
-                    { color: earned ? colors.text : colors.textMuted },
-                  ]}
-                  numberOfLines={2}
-                >
-                  {trophy.name}
-                </Text>
+                <View style={s.statInfo}>
+                  <View style={s.statNameRow}>
+                    <Text style={s.statName}>{def.label}</Text>
+                    <Text style={s.statAvg}>{avg}/g</Text>
+                  </View>
+                  <View style={s.statBarTrack}>
+                    <View style={[s.statBarFill, { width: `${pct}%`, backgroundColor: def.color }]} />
+                  </View>
+                </View>
+                <Text style={[s.statValue, { color: def.color }]}>{value}</Text>
               </View>
             );
           })}
-        </ScrollView>
-      </View>
+        </View>
 
-      {/* ============================================ */}
-      {/* TEAM PULSE */}
-      {/* ============================================ */}
-      <View style={s.sectionWrapper}>
-        <Text style={[s.sectionLabel, { color: colors.textMuted }]}>TEAM PULSE</Text>
-        <View style={[s.card, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}>
-          {recentGame && isWin ? (
-            <View style={s.pulseItem}>
-              <Ionicons name="happy" size={22} color={colors.success} />
-              <Text style={[s.pulseText, { color: colors.text }]}>
-                Your team won their last game! Keep the momentum going!
-              </Text>
-            </View>
-          ) : recentGame && isLoss ? (
-            <View style={s.pulseItem}>
-              <Ionicons name="fitness" size={22} color={colors.primary} />
-              <Text style={[s.pulseText, { color: colors.text }]}>
-                Tough loss last game. Time to bounce back stronger!
-              </Text>
-            </View>
-          ) : (
-            <View style={s.pulseItem}>
-              <Ionicons name="people" size={22} color={colors.primary} />
-              <Text style={[s.pulseText, { color: colors.text }]}>
-                The season is underway. Stay focused and support your team!
-              </Text>
-            </View>
-          )}
-
-          {nextEvent && (
-            <View style={[s.pulseItem, s.pulseItemBorder, { borderTopColor: colors.glassBorder }]}>
-              <Ionicons name="calendar" size={22} color={colors.info} />
-              <Text style={[s.pulseText, { color: colors.text }]}>
-                {nextEvent.event_type === 'game'
-                  ? `Next game ${nextEventCountdown?.toLowerCase() || 'coming up'}. Be ready!`
-                  : `Practice ${nextEventCountdown?.toLowerCase() || 'coming up'}. Sharpen your skills!`}
-              </Text>
-            </View>
-          )}
-
-          {stats && stats.games_played > 0 && (
-            <View style={[s.pulseItem, s.pulseItemBorder, { borderTopColor: colors.glassBorder }]}>
-              <Ionicons name="trending-up" size={22} color={colors.warning} />
-              <Text style={[s.pulseText, { color: colors.text }]}>
-                {stats.games_played} games played this season. Level {xp.level} and climbing!
-              </Text>
-            </View>
-          )}
+        {/* Bottom percentage cards */}
+        <View style={s.pctCardsRow}>
+          <View style={s.pctCard}>
+            <Text style={s.pctValue}>{hitPct}%</Text>
+            <Text style={s.pctLabel}>Hit %</Text>
+          </View>
+          <View style={s.pctCard}>
+            <Text style={s.pctValue}>{servePct}%</Text>
+            <Text style={s.pctLabel}>Serve %</Text>
+          </View>
+          <View style={s.pctCard}>
+            <Text style={s.pctValue}>{stats?.games_played || 0}</Text>
+            <Text style={s.pctLabel}>Games</Text>
+          </View>
         </View>
       </View>
 
       {/* ============================================ */}
-      {/* QUICK ACTIONS */}
+      {/* TROPHY CASE                                 */}
       {/* ============================================ */}
-      <View style={s.sectionWrapper}>
-        <Text style={[s.sectionLabel, { color: colors.textMuted }]}>QUICK ACTIONS</Text>
-        <View style={s.quickActionsRow}>
+      <View style={s.section}>
+        <View style={s.sectionHeaderRow}>
+          <Text style={s.sectionHeader}>TROPHY CASE</Text>
+          <Text style={s.sectionHeaderRight}>{achievements.length} earned</Text>
+        </View>
+
+        {achievements.length > 0 ? (
+          <>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={s.trophyScroll}
+            >
+              {achievements.map((a) => {
+                const badgeColor = a.achievement?.color_primary || DARK.gold;
+                const earnedDate = a.earned_at ? formatShortDate(a.earned_at.split('T')[0]) : '';
+                return (
+                  <View key={a.id} style={s.trophyItem}>
+                    <View
+                      style={[
+                        s.trophyCircle,
+                        {
+                          backgroundColor: badgeColor + '25',
+                          ...Platform.select({
+                            ios: {
+                              shadowColor: badgeColor,
+                              shadowOffset: { width: 0, height: 0 },
+                              shadowOpacity: 0.5,
+                              shadowRadius: 10,
+                            },
+                            android: { elevation: 6 },
+                          }),
+                        },
+                      ]}
+                    >
+                      <Text style={s.trophyEmoji}>{a.achievement?.icon || '?'}</Text>
+                    </View>
+                    <Text style={s.trophyName} numberOfLines={2}>
+                      {a.achievement?.name || 'Badge'}
+                    </Text>
+                    {earnedDate ? <Text style={s.trophyDate}>{earnedDate}</Text> : null}
+                  </View>
+                );
+              })}
+            </ScrollView>
+            <TouchableOpacity
+              style={s.viewAllButton}
+              onPress={() => router.push('/achievements' as any)}
+              activeOpacity={0.7}
+            >
+              <Text style={s.viewAllText}>View All</Text>
+              <Ionicons name="chevron-forward" size={16} color={DARK.accent} />
+            </TouchableOpacity>
+          </>
+        ) : (
+          <View style={s.trophyEmptyCard}>
+            <Ionicons name="trophy-outline" size={48} color={DARK.gold} />
+            <Text style={s.trophyEmptyTitle}>START EARNING TROPHIES</Text>
+            <Text style={s.trophyEmptySubtext}>
+              Play games and hit milestones to unlock achievements
+            </Text>
+            <TouchableOpacity
+              style={s.viewAllButton}
+              onPress={() => router.push('/achievements' as any)}
+              activeOpacity={0.7}
+            >
+              <Text style={s.viewAllText}>View All Trophies</Text>
+              <Ionicons name="chevron-forward" size={16} color={DARK.accent} />
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+
+      {/* ============================================ */}
+      {/* BATTLE LOG                                  */}
+      {/* ============================================ */}
+      <View style={s.section}>
+        <View style={s.sectionHeaderRow}>
+          <Text style={s.sectionHeader}>BATTLE LOG</Text>
+        </View>
+
+        {recentGames.length > 0 ? (
+          <>
+            {recentGames.map((game) => {
+              const isWin = game.game_result === 'win';
+              const isLoss = game.game_result === 'loss';
+              const accentColor = isWin ? DARK.neonGreen : isLoss ? DARK.neonRed : DARK.textMuted;
+              const resultLetter = isWin ? 'W' : isLoss ? 'L' : 'T';
+              const scoreText =
+                game.our_score != null && game.opponent_score != null
+                  ? `${game.our_score}-${game.opponent_score}`
+                  : '';
+
+              return (
+                <TouchableOpacity
+                  key={game.id}
+                  style={s.battleCard}
+                  activeOpacity={0.7}
+                  onPress={() => router.push(`/(tabs)/gameday` as any)}
+                >
+                  <View style={[s.battleAccent, { backgroundColor: accentColor }]} />
+                  <View style={s.battleContent}>
+                    <Text style={s.battleDate}>{formatShortDate(game.event_date)}</Text>
+                    <View style={s.battleMainRow}>
+                      <Text style={[s.battleResult, { color: accentColor }]}>{resultLetter}</Text>
+                      <View style={s.battleOpponentWrap}>
+                        <Text style={s.battleOpponent} numberOfLines={1}>
+                          vs {game.opponent_name || 'Opponent'}
+                        </Text>
+                        {scoreText ? <Text style={s.battleScore}>{scoreText}</Text> : null}
+                      </View>
+                    </View>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={DARK.textMuted} />
+                </TouchableOpacity>
+              );
+            })}
+            <TouchableOpacity
+              style={s.viewAllButton}
+              onPress={() => router.push('/(tabs)/schedule' as any)}
+              activeOpacity={0.7}
+            >
+              <Text style={s.viewAllText}>See All Games</Text>
+              <Ionicons name="chevron-forward" size={16} color={DARK.accent} />
+            </TouchableOpacity>
+          </>
+        ) : (
+          <View style={s.trophyEmptyCard}>
+            <Ionicons name="game-controller-outline" size={44} color={DARK.textMuted} />
+            <Text style={s.trophyEmptyTitle}>NO BATTLES YET</Text>
+            <Text style={s.trophyEmptySubtext}>
+              Your battle log will fill up once you start competing
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {/* ============================================ */}
+      {/* UPCOMING BATTLES                            */}
+      {/* ============================================ */}
+      <View style={s.section}>
+        <View style={s.sectionHeaderRow}>
+          <Text style={s.sectionHeader}>UPCOMING BATTLES</Text>
+        </View>
+
+        {upcomingEvents.length > 0 ? (
+          <>
+            {upcomingEvents.map((event) => {
+              const countdown = getCountdown(event.event_date);
+              return (
+                <TouchableOpacity
+                  key={event.id}
+                  style={s.missionCard}
+                  activeOpacity={0.7}
+                  onPress={() => router.push('/(tabs)/gameday' as any)}
+                >
+                  <View style={s.missionAccent} />
+                  <View style={s.missionContent}>
+                    {countdown && <Text style={s.missionCountdown}>{countdown}</Text>}
+                    <Text style={s.missionTitle} numberOfLines={1}>
+                      {event.event_type === 'game' && event.opponent_name
+                        ? `vs ${event.opponent_name}`
+                        : event.title || 'Event'}
+                    </Text>
+                    <View style={s.missionMeta}>
+                      <Ionicons name="calendar-outline" size={12} color={DARK.textMuted} />
+                      <Text style={s.missionMetaText}>
+                        {formatDate(event.event_date)}
+                        {event.start_time ? ` at ${formatTime(event.start_time)}` : ''}
+                      </Text>
+                    </View>
+                    {event.location && (
+                      <View style={s.missionMeta}>
+                        <Ionicons name="location-outline" size={12} color={DARK.textMuted} />
+                        <Text style={s.missionMetaText}>{event.location}</Text>
+                      </View>
+                    )}
+                    {team && (
+                      <View style={s.missionMeta}>
+                        <Ionicons name="people-outline" size={12} color={DARK.textMuted} />
+                        <Text style={s.missionMetaText}>{team.name}</Text>
+                      </View>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </>
+        ) : (
+          <View style={s.trophyEmptyCard}>
+            <Ionicons name="telescope-outline" size={44} color={DARK.textMuted} />
+            <Text style={s.trophyEmptyTitle}>NO UPCOMING BATTLES</Text>
+            <Text style={s.trophyEmptySubtext}>
+              Check back later for new missions and matches
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {/* ============================================ */}
+      {/* QUICK ACTIONS                               */}
+      {/* ============================================ */}
+      <View style={s.section}>
+        <View style={s.quickActionsGrid}>
           <TouchableOpacity
             style={s.quickActionCard}
-            onPress={() => router.push('/(tabs)/gameday')}
+            onPress={() => router.push('/team-wall' as any)}
             activeOpacity={0.7}
           >
-            <Ionicons name="calendar" size={24} color={colors.primary} />
-            <Text style={s.quickActionLabel}>Schedule</Text>
+            <Ionicons name="people" size={26} color={DARK.neonBlue} />
+            <Text style={s.quickActionLabel}>Team Hub</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={s.quickActionCard}
-            onPress={() => router.push('/(tabs)/my-teams' as any)}
+            onPress={() => router.push('/standings' as any)}
             activeOpacity={0.7}
           >
-            <Ionicons name="shirt" size={24} color={colors.success} />
-            <Text style={s.quickActionLabel}>My Teams</Text>
+            <Ionicons name="podium" size={26} color={DARK.neonGreen} />
+            <Text style={s.quickActionLabel}>Leaderboards</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={s.quickActionCard}
             onPress={() => router.push('/achievements' as any)}
             activeOpacity={0.7}
           >
-            <Ionicons name="ribbon" size={24} color={colors.warning} />
+            <Ionicons name="trophy" size={26} color={DARK.gold} />
             <Text style={s.quickActionLabel}>Trophies</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={s.quickActionCard}
+            onPress={() => router.push('/(tabs)/schedule' as any)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="calendar" size={26} color={DARK.neonPurple} />
+            <Text style={s.quickActionLabel}>Schedule</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* ============================================ */}
-      {/* SEASON JOURNEY */}
-      {/* ============================================ */}
-      <View style={s.sectionWrapper}>
-        <Text style={[s.sectionLabel, { color: colors.textMuted }]}>SEASON JOURNEY</Text>
-
-        {/* Progress bar */}
-        {totalSeasonGames > 0 && (
-          <View style={[s.card, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder, marginBottom: 12 }]}>
-            <Text style={[s.journeyProgress, { color: colors.text }]}>
-              Game {gamesPlayed} of {totalSeasonGames}
-            </Text>
-            <View style={[s.journeyTrack, { backgroundColor: colors.border }]}>
-              <View
-                style={[
-                  s.journeyFill,
-                  {
-                    width: `${totalSeasonGames > 0 ? Math.min((gamesPlayed / totalSeasonGames) * 100, 100) : 0}%`,
-                    backgroundColor: colors.primary,
-                  },
-                ]}
-              />
-            </View>
-          </View>
-        )}
-
-        {/* Season stats 2x2 grid */}
-        <View style={s.seasonGrid}>
-          {[
-            { label: 'Games', value: stats?.games_played || 0, icon: 'game-controller' as const },
-            { label: 'Total Kills', value: stats?.total_kills || 0, icon: 'flash' as const },
-            { label: 'Total Aces', value: stats?.total_aces || 0, icon: 'star' as const },
-            { label: 'Total Digs', value: stats?.total_digs || 0, icon: 'shield' as const },
-          ].map((item) => (
-            <View
-              key={item.label}
-              style={[
-                s.seasonStatCard,
-                {
-                  backgroundColor: colors.glassCard,
-                  borderColor: colors.glassBorder,
-                },
-              ]}
-            >
-              <Ionicons name={item.icon} size={20} color={colors.primary} style={{ marginBottom: 6 }} />
-              <Text style={[s.seasonStatNumber, { color: colors.text }]}>{item.value}</Text>
-              <Text style={[s.seasonStatLabel, { color: colors.textMuted }]}>{item.label}</Text>
-            </View>
-          ))}
-        </View>
-      </View>
-
       {/* Bottom spacing for tab bar */}
-      <View style={{ height: 100 }} />
+      <View style={{ height: 120 }} />
     </ScrollView>
   );
 }
@@ -879,26 +916,77 @@ export default function PlayerDashboard() {
 
 const createStyles = (colors: any) =>
   StyleSheet.create({
+    // ========================
+    // CONTAINER
+    // ========================
     container: {
       flex: 1,
-      backgroundColor: 'transparent',
+      backgroundColor: DARK.bg,
     },
-    content: {
+    contentContainer: {
       paddingBottom: 0,
     },
 
-    // Loading
+    // ========================
+    // LOADING / ERROR / EMPTY
+    // ========================
     loadingContainer: {
       flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
-      backgroundColor: 'transparent',
+      backgroundColor: DARK.bg,
+      paddingHorizontal: 40,
     },
     loadingText: {
-      color: colors.textMuted,
+      color: DARK.textSecondary,
       marginTop: 16,
+      fontSize: 16,
+      fontWeight: '700',
+      textAlign: 'center',
+    },
+    loadingSubtext: {
+      color: DARK.textMuted,
+      marginTop: 8,
+      fontSize: 13,
+      textAlign: 'center',
+      lineHeight: 18,
+    },
+    retryButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      backgroundColor: DARK.neonRed,
+      paddingHorizontal: 24,
+      paddingVertical: 12,
+      borderRadius: 12,
+    },
+    retryButtonText: {
+      color: DARK.text,
       fontSize: 15,
-      fontWeight: '600',
+      fontWeight: '700',
+    },
+    noPlayerIcon: {
+      width: 96,
+      height: 96,
+      borderRadius: 48,
+      backgroundColor: DARK.accent + '15',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 20,
+    },
+    noPlayerTitle: {
+      color: DARK.text,
+      fontSize: 22,
+      fontWeight: '800',
+      marginBottom: 10,
+      textAlign: 'center',
+    },
+    noPlayerSubtext: {
+      color: DARK.textMuted,
+      fontSize: 14,
+      textAlign: 'center',
+      lineHeight: 20,
+      paddingHorizontal: 20,
     },
 
     // ========================
@@ -906,258 +994,343 @@ const createStyles = (colors: any) =>
     // ========================
     heroSection: {
       width: '100%',
-      marginBottom: 28,
+      minHeight: SCREEN_WIDTH * 1.0,
+      position: 'relative',
     },
-    heroGradient: {
-      paddingVertical: 32,
-      paddingHorizontal: 24,
-      alignItems: 'center',
+    heroImageWrap: {
+      ...StyleSheet.absoluteFillObject,
     },
-    heroAvatar: {
-      width: 100,
-      height: 100,
-      borderRadius: 50,
+    heroImage: {
+      width: '100%',
+      height: '100%',
+    },
+    heroOverlayTop: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      height: '40%',
+      backgroundColor: 'rgba(10,15,26,0.6)',
+    },
+    heroOverlayBottom: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: '60%',
+      backgroundColor: DARK.bg,
+      opacity: 0.95,
+    },
+    heroGradientBg: {
+      ...StyleSheet.absoluteFillObject,
       justifyContent: 'center',
       alignItems: 'center',
-      marginBottom: 16,
+    },
+    heroInitialsCircle: {
+      width: 120,
+      height: 120,
+      borderRadius: 60,
+      justifyContent: 'center',
+      alignItems: 'center',
+      position: 'absolute',
+      top: '15%',
       ...Platform.select({
         ios: {
-          shadowColor: colors.primary,
-          shadowOffset: { width: 0, height: 0 },
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 8 },
           shadowOpacity: 0.4,
-          shadowRadius: 16,
+          shadowRadius: 20,
         },
-        android: {
-          elevation: 8,
-        },
+        android: { elevation: 12 },
       }),
     },
-    heroInitials: {
-      fontSize: 40,
+    heroInitialsText: {
+      fontSize: 48,
       fontWeight: '900',
-      color: '#FFFFFF',
+      color: DARK.text,
     },
-    heroName: {
-      fontSize: 32,
-      fontWeight: '900',
-      letterSpacing: -1,
-      textAlign: 'center',
+    roleSelectorWrap: {
+      position: 'absolute',
+      right: 16,
+      zIndex: 10,
+    },
+    heroContent: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      paddingHorizontal: 20,
+      paddingBottom: 24,
+      alignItems: 'center',
+    },
+
+    // OVR Diamond
+    ovrWrap: {
+      alignItems: 'center',
       marginBottom: 12,
     },
-    badgesRow: {
+    ovrDiamond: {
+      width: 56,
+      height: 56,
+      borderWidth: 2.5,
+      borderRadius: 8,
+      transform: [{ rotate: '45deg' }],
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: DARK.card,
+    },
+    ovrInner: {
+      transform: [{ rotate: '-45deg' }],
+      alignItems: 'center',
+    },
+    ovrNumber: {
+      fontSize: 22,
+      fontWeight: '900',
+      color: DARK.text,
+    },
+    ovrLabel: {
+      fontSize: 10,
+      fontWeight: '800',
+      letterSpacing: 2,
+      marginTop: 8,
+    },
+
+    // Hero Name
+    heroName: {
+      fontSize: 38,
+      fontWeight: '900',
+      color: DARK.text,
+      textTransform: 'uppercase',
+      letterSpacing: 2,
+      textAlign: 'center',
+      marginBottom: 10,
+    },
+
+    // Badges row
+    heroBadgesRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
       justifyContent: 'center',
       gap: 8,
       marginBottom: 16,
     },
-    badge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 5,
+    heroBadge: {
       paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 12,
-      borderWidth: 1,
+      paddingVertical: 5,
+      borderRadius: 20,
     },
-    badgeText: {
+    heroBadgeText: {
       fontSize: 12,
       fontWeight: '700',
     },
-    levelBadge: {
-      paddingHorizontal: 20,
-      paddingVertical: 8,
-      borderRadius: 20,
-      marginBottom: 16,
-      ...Platform.select({
-        ios: {
-          shadowColor: colors.primary,
-          shadowOffset: { width: 0, height: 0 },
-          shadowOpacity: 0.5,
-          shadowRadius: 12,
-        },
-        android: {
-          elevation: 6,
-        },
-      }),
+    heroBadgeTextWhite: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: DARK.text,
     },
-    levelText: {
-      fontSize: 14,
-      fontWeight: '900',
-      color: '#FFFFFF',
-      letterSpacing: 2,
-    },
-    xpContainer: {
+
+    // Level + XP
+    levelRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
       width: '100%',
+      gap: 12,
+      marginBottom: 16,
+    },
+    levelCircle: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      borderWidth: 2,
+      backgroundColor: DARK.card,
+      justifyContent: 'center',
       alignItems: 'center',
     },
-    xpTrack: {
-      width: '100%',
-      height: 10,
-      borderRadius: 5,
-      overflow: 'hidden',
-      marginBottom: 8,
+    levelNumber: {
+      fontSize: 16,
+      fontWeight: '900',
+      color: DARK.gold,
     },
-    xpFill: {
+    xpBarWrap: {
+      flex: 1,
+    },
+    xpBarTrack: {
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: DARK.cardAlt,
+      overflow: 'hidden',
+      marginBottom: 4,
+    },
+    xpBarFill: {
       height: '100%',
-      borderRadius: 5,
+      borderRadius: 4,
     },
     xpText: {
-      fontSize: 12,
+      fontSize: 11,
       fontWeight: '600',
+      color: DARK.textMuted,
+    },
+
+    // Mini counters
+    miniCountersRow: {
+      flexDirection: 'row',
+      gap: 10,
+      width: '100%',
+    },
+    miniCounter: {
+      flex: 1,
+      borderRadius: 12,
+      paddingVertical: 10,
+      alignItems: 'center',
+    },
+    miniCounterNumber: {
+      fontSize: 22,
+      fontWeight: '900',
+    },
+    miniCounterLabel: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: DARK.textMuted,
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+      marginTop: 2,
     },
 
     // ========================
-    // SHARED SECTION STYLES
+    // SHARED SECTION
     // ========================
-    sectionWrapper: {
+    section: {
       paddingHorizontal: 20,
       marginBottom: 28,
     },
-    sectionLabel: {
-      fontSize: 12,
-      fontWeight: '700',
-      textTransform: 'uppercase' as const,
-      letterSpacing: 2,
-      marginBottom: 16,
+    sectionHeaderRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 14,
     },
-    card: {
-      borderRadius: 20,
+    sectionHeader: {
+      fontSize: 13,
+      fontWeight: '800',
+      letterSpacing: 3,
+      color: DARK.gold,
+      textTransform: 'uppercase',
+    },
+    sectionHeaderRight: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: DARK.textMuted,
+    },
+
+    // ========================
+    // STAT HUD
+    // ========================
+    statHudCard: {
+      backgroundColor: DARK.card,
+      borderRadius: 16,
       borderWidth: 1,
-      padding: 20,
+      borderColor: DARK.border,
+      padding: 16,
+      gap: 14,
       ...Platform.select({
         ios: {
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.15,
+          shadowOpacity: 0.2,
           shadowRadius: 12,
         },
-        android: {
-          elevation: 6,
-        },
+        android: { elevation: 6 },
       }),
     },
-
-    // ========================
-    // NEXT UP
-    // ========================
-    nextUpHeader: {
+    statRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 12,
-      marginBottom: 8,
+      gap: 10,
     },
-    nextUpType: {
-      fontSize: 24,
-      fontWeight: '900',
-      letterSpacing: 1,
-    },
-    countdown: {
-      fontSize: 20,
-      fontWeight: '800',
-      marginBottom: 8,
-    },
-    nextUpOpponent: {
-      fontSize: 18,
-      fontWeight: '700',
-      marginBottom: 12,
-    },
-    nextUpMeta: {
-      gap: 6,
-    },
-    nextUpMetaRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-    },
-    nextUpMetaText: {
-      fontSize: 14,
-      fontWeight: '500',
-    },
-
-    // ========================
-    // RECENT GLORY
-    // ========================
-    gloryHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 14,
-      marginBottom: 16,
-    },
-    resultBadge: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
+    statIconWrap: {
+      width: 32,
+      height: 32,
+      borderRadius: 8,
       justifyContent: 'center',
       alignItems: 'center',
     },
-    resultBadgeText: {
-      fontSize: 20,
-      fontWeight: '900',
-    },
-    gloryTitleBlock: {
+    statInfo: {
       flex: 1,
     },
-    gloryTitle: {
-      fontSize: 17,
-      fontWeight: '700',
-    },
-    gloryDate: {
-      fontSize: 13,
-      marginTop: 2,
-    },
-    scoreContainer: {
-      alignItems: 'center',
-      marginBottom: 16,
-    },
-    scoreBig: {
-      fontSize: 36,
-      fontWeight: '900',
-      letterSpacing: 2,
-    },
-    setScores: {
-      fontSize: 13,
-      marginTop: 4,
-      fontWeight: '500',
-    },
-    gloryStatsRow: {
+    statNameRow: {
       flexDirection: 'row',
-      justifyContent: 'space-around',
-      paddingTop: 16,
-      borderTopWidth: 1,
-      borderTopColor: colors.glassBorder,
+      alignItems: 'baseline',
+      gap: 6,
+      marginBottom: 4,
     },
-    gloryStat: {
+    statName: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: DARK.text,
+    },
+    statAvg: {
+      fontSize: 11,
+      fontWeight: '500',
+      fontStyle: 'italic',
+      color: DARK.textMuted,
+    },
+    statBarTrack: {
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: DARK.cardAlt,
+      overflow: 'hidden',
+    },
+    statBarFill: {
+      height: '100%',
+      borderRadius: 3,
+    },
+    statValue: {
+      fontSize: 20,
+      fontWeight: '800',
+      minWidth: 40,
+      textAlign: 'right',
+    },
+
+    // Pct cards
+    pctCardsRow: {
+      flexDirection: 'row',
+      gap: 10,
+      marginTop: 12,
+    },
+    pctCard: {
+      flex: 1,
+      backgroundColor: DARK.card,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: DARK.border,
+      paddingVertical: 14,
       alignItems: 'center',
     },
-    gloryStatNumber: {
-      fontSize: 32,
-      fontWeight: '800',
+    pctValue: {
+      fontSize: 24,
+      fontWeight: '900',
+      color: DARK.text,
     },
-    gloryStatLabel: {
+    pctLabel: {
       fontSize: 11,
-      fontWeight: '600',
-      textTransform: 'uppercase' as const,
+      fontWeight: '700',
+      color: DARK.textMuted,
+      textTransform: 'uppercase',
       letterSpacing: 1,
       marginTop: 2,
     },
-    noIndividualStats: {
-      textAlign: 'center',
-      fontSize: 13,
-      fontWeight: '500',
-      paddingTop: 12,
-    },
 
     // ========================
-    // TROPHY SHELF
+    // TROPHY CASE
     // ========================
     trophyScroll: {
       paddingRight: 20,
+      paddingBottom: 4,
     },
     trophyItem: {
       alignItems: 'center',
-      marginRight: 16,
-      width: 76,
+      marginRight: 14,
+      width: 78,
     },
     trophyCircle: {
       width: 70,
@@ -1165,150 +1338,194 @@ const createStyles = (colors: any) =>
       borderRadius: 35,
       justifyContent: 'center',
       alignItems: 'center',
-      marginBottom: 8,
+      marginBottom: 6,
     },
-    lockedTrophy: {
-      position: 'relative',
-      justifyContent: 'center',
-      alignItems: 'center',
+    trophyEmoji: {
+      fontSize: 30,
     },
-    lockOverlay: {
-      position: 'absolute',
-      bottom: -4,
-      right: -4,
-    },
-    trophyLabel: {
+    trophyName: {
       fontSize: 11,
       fontWeight: '600',
+      color: DARK.textSecondary,
       textAlign: 'center',
       lineHeight: 14,
     },
-
-    // ========================
-    // TEAM PULSE
-    // ========================
-    pulseItem: {
+    trophyDate: {
+      fontSize: 9,
+      fontWeight: '500',
+      color: DARK.textMuted,
+      marginTop: 2,
+    },
+    trophyEmptyCard: {
+      backgroundColor: DARK.card,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: DARK.border,
+      padding: 30,
+      alignItems: 'center',
+    },
+    trophyEmptyTitle: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: DARK.textSecondary,
+      letterSpacing: 1,
+      marginTop: 14,
+    },
+    trophyEmptySubtext: {
+      fontSize: 13,
+      fontWeight: '500',
+      color: DARK.textMuted,
+      textAlign: 'center',
+      lineHeight: 18,
+      marginTop: 6,
+    },
+    viewAllButton: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 12,
-      paddingVertical: 10,
+      justifyContent: 'center',
+      gap: 4,
+      marginTop: 14,
+      paddingVertical: 8,
     },
-    pulseItemBorder: {
-      borderTopWidth: 1,
-      marginTop: 4,
-      paddingTop: 14,
+    viewAllText: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: DARK.accent,
     },
-    pulseText: {
+
+    // ========================
+    // BATTLE LOG
+    // ========================
+    battleCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: DARK.card,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: DARK.border,
+      marginBottom: 8,
+      overflow: 'hidden',
+      paddingRight: 14,
+    },
+    battleAccent: {
+      width: 4,
+      alignSelf: 'stretch',
+    },
+    battleContent: {
       flex: 1,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+    },
+    battleDate: {
+      fontSize: 10,
+      fontWeight: '600',
+      color: DARK.textMuted,
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+      marginBottom: 4,
+    },
+    battleMainRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    battleResult: {
+      fontSize: 24,
+      fontWeight: '900',
+    },
+    battleOpponentWrap: {
+      flex: 1,
+    },
+    battleOpponent: {
       fontSize: 15,
-      lineHeight: 22,
+      fontWeight: '700',
+      color: DARK.text,
+    },
+    battleScore: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: DARK.textSecondary,
+      marginTop: 1,
+    },
+
+    // ========================
+    // UPCOMING BATTLES
+    // ========================
+    missionCard: {
+      flexDirection: 'row',
+      backgroundColor: DARK.card,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: DARK.border,
+      marginBottom: 8,
+      overflow: 'hidden',
+    },
+    missionAccent: {
+      width: 4,
+      alignSelf: 'stretch',
+      backgroundColor: DARK.accent,
+    },
+    missionContent: {
+      flex: 1,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+    },
+    missionCountdown: {
+      fontSize: 11,
+      fontWeight: '800',
+      color: DARK.accent,
+      letterSpacing: 2,
+      marginBottom: 4,
+    },
+    missionTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: DARK.text,
+      marginBottom: 6,
+    },
+    missionMeta: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginTop: 3,
+    },
+    missionMetaText: {
+      fontSize: 12,
       fontWeight: '500',
+      color: DARK.textMuted,
     },
 
     // ========================
     // QUICK ACTIONS
     // ========================
-    quickActionsRow: {
+    quickActionsGrid: {
       flexDirection: 'row',
-      gap: 12,
+      flexWrap: 'wrap',
+      gap: 10,
     },
     quickActionCard: {
-      flex: 1,
-      backgroundColor: colors.glassCard,
+      width: (SCREEN_WIDTH - 40 - 10) / 2 - 0.5,
+      height: 80,
+      backgroundColor: DARK.card,
       borderRadius: 16,
       borderWidth: 1,
-      borderColor: colors.glassBorder,
-      paddingVertical: 16,
+      borderColor: DARK.border,
+      justifyContent: 'center',
       alignItems: 'center',
+      gap: 6,
       ...Platform.select({
         ios: {
           shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
+          shadowOffset: { width: 0, height: 2 },
           shadowOpacity: 0.15,
-          shadowRadius: 12,
+          shadowRadius: 8,
         },
-        android: {
-          elevation: 6,
-        },
+        android: { elevation: 4 },
       }),
     },
     quickActionLabel: {
-      color: colors.text,
       fontSize: 13,
-      fontWeight: '600',
-      marginTop: 6,
-    },
-
-    // ========================
-    // SEASON JOURNEY
-    // ========================
-    journeyProgress: {
-      fontSize: 16,
       fontWeight: '700',
-      marginBottom: 10,
-      textAlign: 'center',
-    },
-    journeyTrack: {
-      height: 12,
-      borderRadius: 6,
-      overflow: 'hidden',
-    },
-    journeyFill: {
-      height: '100%',
-      borderRadius: 6,
-    },
-    seasonGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 12,
-    },
-    seasonStatCard: {
-      width: (SCREEN_WIDTH - 40 - 12) / 2 - 1,
-      borderRadius: 20,
-      borderWidth: 1,
-      padding: 16,
-      alignItems: 'center',
-      ...Platform.select({
-        ios: {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.15,
-          shadowRadius: 12,
-        },
-        android: {
-          elevation: 6,
-        },
-      }),
-    },
-    seasonStatNumber: {
-      fontSize: 32,
-      fontWeight: '800',
-    },
-    seasonStatLabel: {
-      fontSize: 11,
-      fontWeight: '600',
-      textTransform: 'uppercase' as const,
-      letterSpacing: 1,
-      marginTop: 2,
-    },
-
-    // ========================
-    // EMPTY STATES
-    // ========================
-    emptyState: {
-      alignItems: 'center',
-      paddingVertical: 20,
-    },
-    emptyTitle: {
-      fontSize: 16,
-      fontWeight: '700',
-      marginTop: 12,
-    },
-    emptySubtext: {
-      fontSize: 13,
-      fontWeight: '500',
-      marginTop: 4,
-      textAlign: 'center',
-      lineHeight: 18,
+      color: DARK.text,
     },
   });

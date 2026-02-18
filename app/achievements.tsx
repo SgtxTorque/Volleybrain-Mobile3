@@ -4,9 +4,12 @@ import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Dimensions,
+  FlatList,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -15,6 +18,21 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+// =============================================================================
+// DARK MODE COLORS
+// =============================================================================
+
+const DARK = {
+  bg: '#0A0F1A',
+  card: '#111827',
+  cardAlt: '#1A2235',
+  border: 'rgba(255,255,255,0.08)',
+  text: '#FFFFFF',
+  textSecondary: '#CBD5E1',
+  textMuted: '#64748B',
+  gold: '#FFD700',
+};
 
 // =============================================================================
 // TYPES
@@ -49,6 +67,8 @@ type CategoryConfig = {
   color: string;
 };
 
+type PlayerSeasonStats = Record<string, number>;
+
 // =============================================================================
 // CONSTANTS
 // =============================================================================
@@ -69,12 +89,52 @@ const RARITY_COLORS: Record<string, { bg: string; text: string; label: string }>
   legendary: { bg: '#F59E0B20', text: '#F59E0B', label: 'Legendary' },
 };
 
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const GRID_PADDING = 16;
+const GRID_GAP = 10;
+const NUM_COLUMNS = 3;
+const CELL_WIDTH = (SCREEN_WIDTH - GRID_PADDING * 2 - GRID_GAP * (NUM_COLUMNS - 1)) / NUM_COLUMNS;
+
+// =============================================================================
+// HELPERS
+// =============================================================================
+
+function getProgressForAchievement(
+  achievement: Achievement,
+  playerAchievement: PlayerAchievement | undefined,
+  seasonStats: PlayerSeasonStats,
+): { current: number; target: number; pct: number } {
+  const target = achievement.threshold ?? 1;
+  // If we have a player_achievement record with progress, use it
+  if (playerAchievement?.progress != null) {
+    const current = playerAchievement.progress;
+    return { current, target, pct: target > 0 ? Math.min((current / target) * 100, 100) : 0 };
+  }
+  // Otherwise try to derive from season stats via stat_key
+  if (achievement.stat_key && seasonStats[achievement.stat_key] != null) {
+    const current = seasonStats[achievement.stat_key];
+    return { current, target, pct: target > 0 ? Math.min((current / target) * 100, 100) : 0 };
+  }
+  return { current: 0, target, pct: 0 };
+}
+
+function getRarityPercentageLabel(rarity: string): string | null {
+  switch (rarity) {
+    case 'legendary':
+      return 'Only 2% of players earn this badge';
+    case 'epic':
+      return 'Only 5% of players earn this badge';
+    default:
+      return null;
+  }
+}
+
 // =============================================================================
 // COMPONENT
 // =============================================================================
 
 export default function AchievementsScreen() {
-  const { colors } = useTheme();
+  useTheme(); // keep hook call for consistency
   const { user } = useAuth();
   const { workingSeason } = useSeason();
   const router = useRouter();
@@ -84,6 +144,9 @@ export default function AchievementsScreen() {
   const [earnedMap, setEarnedMap] = useState<Record<string, PlayerAchievement>>({});
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [playerId, setPlayerId] = useState<string | null>(null);
+  const [seasonStats, setSeasonStats] = useState<PlayerSeasonStats>({});
+  const [earnedCounts, setEarnedCounts] = useState<Record<string, number>>({});
+  const [selectedAchievement, setSelectedAchievement] = useState<Achievement | null>(null);
 
   useEffect(() => {
     if (user?.id && workingSeason?.id) {
@@ -118,7 +181,7 @@ export default function AchievementsScreen() {
       .select('player_id')
       .eq('guardian_id', user.id);
     if (guardianLinks && guardianLinks.length > 0) {
-      const playerIds = guardianLinks.map(g => g.player_id);
+      const playerIds = guardianLinks.map((g: { player_id: string }) => g.player_id);
       const { data } = await supabase
         .from('players')
         .select('id')
@@ -158,10 +221,44 @@ export default function AchievementsScreen() {
         if (earned) {
           const map: Record<string, PlayerAchievement> = {};
           for (const pa of earned) {
-            map[pa.achievement_id] = pa as any;
+            map[pa.achievement_id] = pa as PlayerAchievement;
           }
           setEarnedMap(map);
         }
+
+        // Fetch player_season_stats for progress calculation
+        if (workingSeason?.id) {
+          const { data: stats } = await supabase
+            .from('player_season_stats')
+            .select('*')
+            .eq('player_id', resolvedPlayerId)
+            .eq('season_id', workingSeason.id)
+            .limit(1)
+            .maybeSingle();
+
+          if (stats) {
+            const statsObj: PlayerSeasonStats = {};
+            for (const key of Object.keys(stats)) {
+              if (typeof stats[key] === 'number') {
+                statsObj[key] = stats[key];
+              }
+            }
+            setSeasonStats(statsObj);
+          }
+        }
+      }
+
+      // Fetch how many players have earned each achievement
+      const { data: countData } = await supabase
+        .from('player_achievements')
+        .select('achievement_id');
+
+      if (countData) {
+        const counts: Record<string, number> = {};
+        for (const row of countData) {
+          counts[row.achievement_id] = (counts[row.achievement_id] || 0) + 1;
+        }
+        setEarnedCounts(counts);
       }
     } catch (error) {
       console.error('Error loading achievements:', error);
@@ -170,50 +267,195 @@ export default function AchievementsScreen() {
     }
   };
 
-  // Group achievements by category
-  const categories = Object.keys(CATEGORIES);
-  const filteredAchievements = activeCategory
-    ? allAchievements.filter(a => a.category === activeCategory)
-    : allAchievements;
-
-  // Count earned per category
-  const earnedCountByCategory: Record<string, number> = {};
-  const totalCountByCategory: Record<string, number> = {};
-  for (const ach of allAchievements) {
-    const cat = ach.category || 'Other';
-    totalCountByCategory[cat] = (totalCountByCategory[cat] || 0) + 1;
-    if (earnedMap[ach.id]) {
-      earnedCountByCategory[cat] = (earnedCountByCategory[cat] || 0) + 1;
-    }
-  }
+  // Derived data
+  const filteredAchievements = useMemo(() => {
+    return activeCategory
+      ? allAchievements.filter((a) => a.category === activeCategory)
+      : allAchievements;
+  }, [allAchievements, activeCategory]);
 
   const totalEarned = Object.keys(earnedMap).length;
+  const completePct =
+    allAchievements.length > 0 ? Math.round((totalEarned / allAchievements.length) * 100) : 0;
 
-  const s = createStyles(colors);
+  // Earned count by category
+  const earnedCountByCategory = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const ach of allAchievements) {
+      const cat = ach.category || 'Other';
+      if (earnedMap[ach.id]) {
+        map[cat] = (map[cat] || 0) + 1;
+      }
+    }
+    return map;
+  }, [allAchievements, earnedMap]);
+
+  const totalCountByCategory = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const ach of allAchievements) {
+      const cat = ach.category || 'Other';
+      map[cat] = (map[cat] || 0) + 1;
+    }
+    return map;
+  }, [allAchievements]);
+
+  // "Next to earn" recommendation: unearned with highest progress %
+  const nextToEarn = useMemo(() => {
+    let best: Achievement | null = null;
+    let bestPct = -1;
+    for (const ach of allAchievements) {
+      if (earnedMap[ach.id]?.earned_at) continue;
+      const prog = getProgressForAchievement(ach, earnedMap[ach.id], seasonStats);
+      if (prog.pct > bestPct) {
+        bestPct = prog.pct;
+        best = ach;
+      }
+    }
+    return best;
+  }, [allAchievements, earnedMap, seasonStats]);
+
+  // Pad data for 3-column grid
+  const gridData = useMemo(() => {
+    const padded = [...filteredAchievements];
+    const remainder = padded.length % NUM_COLUMNS;
+    if (remainder !== 0) {
+      for (let i = 0; i < NUM_COLUMNS - remainder; i++) {
+        padded.push(null as unknown as Achievement);
+      }
+    }
+    return padded;
+  }, [filteredAchievements]);
+
+  const handleBadgePress = useCallback((ach: Achievement) => {
+    setSelectedAchievement(ach);
+  }, []);
+
+  const s = createStyles();
+
+  // =========================================================================
+  // LOADING STATE
+  // =========================================================================
 
   if (loading) {
     return (
       <SafeAreaView style={s.container}>
         <View style={s.centered}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={DARK.gold} />
           <Text style={s.loadingText}>Loading achievements...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  return (
-    <SafeAreaView style={s.container}>
-      {/* Header */}
-      <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={s.headerTitle}>Achievements</Text>
-        <View style={s.backBtn} />
-      </View>
+  // =========================================================================
+  // EMPTY STATE: no achievements in DB
+  // =========================================================================
 
-      <ScrollView style={s.scroll} contentContainerStyle={s.scrollContent}>
+  if (allAchievements.length === 0) {
+    return (
+      <SafeAreaView style={s.container}>
+        <View style={s.header}>
+          <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+            <Ionicons name="arrow-back" size={24} color={DARK.text} />
+          </TouchableOpacity>
+          <Text style={s.headerTitle}>ACHIEVEMENTS</Text>
+          <View style={s.backBtn} />
+        </View>
+        <View style={s.centered}>
+          <Ionicons name="trophy-outline" size={64} color={DARK.textMuted} />
+          <Text style={s.emptyTitle}>Achievements are being prepared</Text>
+          <Text style={s.emptySubtitle}>for your league!</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // =========================================================================
+  // RENDER HELPERS
+  // =========================================================================
+
+  const renderBadgeCell = ({ item }: { item: Achievement }) => {
+    // Null items are padding for grid alignment
+    if (!item) {
+      return <View style={s.badgeCellEmpty} />;
+    }
+
+    const isEarned = Boolean(earnedMap[item.id]?.earned_at);
+    const catConfig = CATEGORIES[item.category] || {
+      color: DARK.textMuted,
+      icon: 'star' as keyof typeof Ionicons.glyphMap,
+    };
+    const rarityConfig = RARITY_COLORS[item.rarity] || RARITY_COLORS.common;
+    const isLegendary = item.rarity === 'legendary';
+
+    return (
+      <TouchableOpacity
+        style={[
+          s.badgeCell,
+          isEarned
+            ? { backgroundColor: catConfig.color + '33' }
+            : { backgroundColor: DARK.cardAlt },
+          isLegendary &&
+            isEarned && {
+              ...Platform.select({
+                ios: {
+                  shadowColor: DARK.gold,
+                  shadowOffset: { width: 0, height: 0 },
+                  shadowOpacity: 0.6,
+                  shadowRadius: 12,
+                },
+                android: { elevation: 8 },
+              }),
+            },
+        ]}
+        activeOpacity={0.7}
+        onPress={() => handleBadgePress(item)}
+      >
+        {/* Icon container */}
+        <View
+          style={[
+            s.badgeIconWrap,
+            isEarned
+              ? { backgroundColor: catConfig.color + '40' }
+              : { backgroundColor: 'rgba(255,255,255,0.05)' },
+          ]}
+        >
+          <Text style={[s.badgeEmoji, !isEarned && { opacity: 0.3 }]}>
+            {item.icon || '\uD83C\uDFC6'}
+          </Text>
+          {/* Overlay: checkmark or lock */}
+          {isEarned ? (
+            <View style={s.badgeCheckOverlay}>
+              <Ionicons name="checkmark-circle" size={14} color="#10B981" />
+            </View>
+          ) : (
+            <View style={s.badgeLockOverlay}>
+              <Ionicons name="lock-closed" size={10} color={DARK.textMuted} />
+            </View>
+          )}
+        </View>
+
+        {/* Badge name */}
+        <Text
+          style={[s.badgeName, !isEarned && { color: DARK.textMuted }]}
+          numberOfLines={2}
+        >
+          {item.name}
+        </Text>
+
+        {/* Rarity dot */}
+        <View style={[s.rarityDot, { backgroundColor: rarityConfig.text }]} />
+      </TouchableOpacity>
+    );
+  };
+
+  const renderListHeader = () => {
+    const nextProg = nextToEarn
+      ? getProgressForAchievement(nextToEarn, earnedMap[nextToEarn.id], seasonStats)
+      : null;
+
+    return (
+      <View>
         {/* Summary Card */}
         <View style={s.summaryCard}>
           <View style={s.summaryRow}>
@@ -221,21 +463,48 @@ export default function AchievementsScreen() {
               <Text style={s.summaryNumber}>{totalEarned}</Text>
               <Text style={s.summaryLabel}>Earned</Text>
             </View>
-            <View style={[s.summaryDivider, { backgroundColor: colors.border }]} />
+            <View style={s.summaryDivider} />
             <View style={s.summaryItem}>
               <Text style={s.summaryNumber}>{allAchievements.length}</Text>
               <Text style={s.summaryLabel}>Total</Text>
             </View>
-            <View style={[s.summaryDivider, { backgroundColor: colors.border }]} />
+            <View style={s.summaryDivider} />
             <View style={s.summaryItem}>
-              <Text style={[s.summaryNumber, { color: colors.primary }]}>
-                {allAchievements.length > 0
-                  ? Math.round((totalEarned / allAchievements.length) * 100)
-                  : 0}%
-              </Text>
+              <Text style={[s.summaryNumber, { color: DARK.gold }]}>{completePct}%</Text>
               <Text style={s.summaryLabel}>Complete</Text>
             </View>
           </View>
+
+          {/* Progress bar */}
+          <View style={s.summaryProgressBarBg}>
+            <View
+              style={[
+                s.summaryProgressBarFill,
+                { width: `${completePct}%` as any },
+              ]}
+            />
+          </View>
+
+          {/* Next to earn */}
+          {totalEarned === 0 && (
+            <View style={s.nextToEarnRow}>
+              <Ionicons name="arrow-forward-circle" size={16} color={DARK.gold} />
+              <Text style={s.nextToEarnText}>
+                START EARNING TROPHIES — Play games and hit milestones
+              </Text>
+            </View>
+          )}
+          {nextToEarn && totalEarned > 0 && (
+            <View style={s.nextToEarnRow}>
+              <Text style={s.nextToEarnLabel}>Next to earn:</Text>
+              <Text style={s.nextToEarnBadge}>
+                {nextToEarn.icon || '\uD83C\uDFC6'} {nextToEarn.name}
+              </Text>
+              {nextProg && nextProg.pct > 0 && (
+                <Text style={s.nextToEarnProgress}>({Math.round(nextProg.pct)}%)</Text>
+              )}
+            </View>
+          )}
         </View>
 
         {/* Category Filter */}
@@ -248,15 +517,25 @@ export default function AchievementsScreen() {
           <TouchableOpacity
             style={[
               s.categoryChip,
-              !activeCategory && { backgroundColor: colors.primary + '25', borderColor: colors.primary },
+              !activeCategory && {
+                backgroundColor: DARK.gold + '25',
+                borderColor: DARK.gold,
+              },
             ]}
             onPress={() => setActiveCategory(null)}
           >
-            <Text style={[s.categoryChipText, !activeCategory && { color: colors.primary }]}>
+            <Text
+              style={[s.categoryChipText, !activeCategory && { color: DARK.gold }]}
+            >
               All
             </Text>
+            <Text
+              style={[s.categoryCount, !activeCategory && { color: DARK.gold }]}
+            >
+              {totalEarned}/{allAchievements.length}
+            </Text>
           </TouchableOpacity>
-          {categories.map(cat => {
+          {Object.keys(CATEGORIES).map((cat) => {
             const config = CATEGORIES[cat];
             const isActive = activeCategory === cat;
             return (
@@ -264,19 +543,26 @@ export default function AchievementsScreen() {
                 key={cat}
                 style={[
                   s.categoryChip,
-                  isActive && { backgroundColor: config.color + '25', borderColor: config.color },
+                  isActive && {
+                    backgroundColor: config.color + '25',
+                    borderColor: config.color,
+                  },
                 ]}
                 onPress={() => setActiveCategory(isActive ? null : cat)}
               >
                 <Ionicons
                   name={config.icon}
                   size={14}
-                  color={isActive ? config.color : colors.textMuted}
+                  color={isActive ? config.color : DARK.textMuted}
                 />
-                <Text style={[s.categoryChipText, isActive && { color: config.color }]}>
+                <Text
+                  style={[s.categoryChipText, isActive && { color: config.color }]}
+                >
                   {config.label}
                 </Text>
-                <Text style={[s.categoryCount, isActive && { color: config.color }]}>
+                <Text
+                  style={[s.categoryCount, isActive && { color: config.color }]}
+                >
                   {earnedCountByCategory[cat] || 0}/{totalCountByCategory[cat] || 0}
                 </Text>
               </TouchableOpacity>
@@ -284,112 +570,269 @@ export default function AchievementsScreen() {
           })}
         </ScrollView>
 
-        {/* Achievement Cards */}
-        {filteredAchievements.length === 0 ? (
+        {/* Empty for filtered */}
+        {filteredAchievements.length === 0 && (
           <View style={s.emptyBox}>
-            <Ionicons name="trophy-outline" size={48} color={colors.textMuted} />
-            <Text style={s.emptyText}>No achievements found</Text>
+            <Ionicons name="trophy-outline" size={48} color={DARK.textMuted} />
+            <Text style={s.emptyFilterText}>No achievements in this category</Text>
           </View>
-        ) : (
-          filteredAchievements.map(ach => {
-            const earned = earnedMap[ach.id];
-            const isEarned = Boolean(earned?.earned_at);
-            const progress = earned?.progress ?? 0;
-            const threshold = ach.threshold ?? 1;
-            const progressPct = threshold > 0 ? Math.min((progress / threshold) * 100, 100) : 0;
-            const catConfig = CATEGORIES[ach.category] || { color: colors.textMuted, icon: 'star' as any };
-            const rarityConfig = RARITY_COLORS[ach.rarity] || RARITY_COLORS.common;
-
-            return (
-              <View
-                key={ach.id}
-                style={[
-                  s.achievementCard,
-                  !isEarned && s.achievementCardLocked,
-                ]}
-              >
-                <View style={s.achievementRow}>
-                  {/* Icon */}
-                  <View
-                    style={[
-                      s.achievementIcon,
-                      {
-                        backgroundColor: isEarned ? catConfig.color + '20' : colors.border + '40',
-                      },
-                    ]}
-                  >
-                    <Text style={[s.achievementEmoji, !isEarned && { opacity: 0.4 }]}>
-                      {ach.icon || '🏆'}
-                    </Text>
-                  </View>
-
-                  {/* Info */}
-                  <View style={s.achievementInfo}>
-                    <View style={s.achievementNameRow}>
-                      <Text
-                        style={[
-                          s.achievementName,
-                          !isEarned && { color: colors.textMuted },
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {ach.name}
-                      </Text>
-                      {/* Rarity Badge */}
-                      <View style={[s.rarityBadge, { backgroundColor: rarityConfig.bg }]}>
-                        <Text style={[s.rarityText, { color: rarityConfig.text }]}>
-                          {rarityConfig.label}
-                        </Text>
-                      </View>
-                    </View>
-
-                    <Text
-                      style={[s.achievementDesc, !isEarned && { color: colors.textMuted }]}
-                      numberOfLines={2}
-                    >
-                      {ach.description || 'Complete this achievement to earn it!'}
-                    </Text>
-
-                    {isEarned ? (
-                      <View style={s.earnedRow}>
-                        <Ionicons name="checkmark-circle" size={14} color="#10B981" />
-                        <Text style={s.earnedText}>
-                          Earned {earned.earned_at
-                            ? new Date(earned.earned_at).toLocaleDateString('en-US', {
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric',
-                              })
-                            : ''}
-                        </Text>
-                      </View>
-                    ) : (
-                      <View style={s.progressSection}>
-                        <View style={s.progressBarBg}>
-                          <View
-                            style={[
-                              s.progressBarFill,
-                              {
-                                width: `${progressPct}%`,
-                                backgroundColor: catConfig.color,
-                              },
-                            ]}
-                          />
-                        </View>
-                        <Text style={s.progressText}>
-                          {progress}/{threshold}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                </View>
-              </View>
-            );
-          })
         )}
+      </View>
+    );
+  };
 
-        <View style={{ height: 40 }} />
-      </ScrollView>
+  // =========================================================================
+  // DETAIL MODAL
+  // =========================================================================
+
+  const renderDetailModal = () => {
+    if (!selectedAchievement) return null;
+
+    const ach = selectedAchievement;
+    const pa = earnedMap[ach.id];
+    const isEarned = Boolean(pa?.earned_at);
+    const catConfig = CATEGORIES[ach.category] || {
+      color: DARK.textMuted,
+      icon: 'star' as keyof typeof Ionicons.glyphMap,
+      label: ach.category,
+    };
+    const rarityConfig = RARITY_COLORS[ach.rarity] || RARITY_COLORS.common;
+    const prog = getProgressForAchievement(ach, pa, seasonStats);
+    const playersEarned = earnedCounts[ach.id] || 0;
+    const rarityLabel = getRarityPercentageLabel(ach.rarity);
+
+    return (
+      <Modal
+        visible={true}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setSelectedAchievement(null)}
+      >
+        <SafeAreaView style={s.modalContainer}>
+          {/* Close button */}
+          <TouchableOpacity
+            style={s.modalCloseBtn}
+            onPress={() => setSelectedAchievement(null)}
+          >
+            <Ionicons name="close" size={28} color={DARK.text} />
+          </TouchableOpacity>
+
+          <ScrollView
+            contentContainerStyle={s.modalScrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Large badge icon */}
+            <View
+              style={[
+                s.modalBadgeCircle,
+                {
+                  backgroundColor: isEarned ? catConfig.color + '30' : DARK.cardAlt,
+                },
+                isEarned && {
+                  ...Platform.select({
+                    ios: {
+                      shadowColor: catConfig.color,
+                      shadowOffset: { width: 0, height: 0 },
+                      shadowOpacity: 0.6,
+                      shadowRadius: 20,
+                    },
+                    android: { elevation: 12 },
+                  }),
+                },
+              ]}
+            >
+              <Text style={[s.modalBadgeEmoji, !isEarned && { opacity: 0.35 }]}>
+                {ach.icon || '\uD83C\uDFC6'}
+              </Text>
+              {!isEarned && (
+                <View style={s.modalLockOverlay}>
+                  <Ionicons name="lock-closed" size={24} color={DARK.textMuted} />
+                </View>
+              )}
+            </View>
+
+            {/* Badge name */}
+            <Text style={s.modalBadgeName}>{ach.name}</Text>
+
+            {/* Rarity pill */}
+            <View
+              style={[s.modalRarityPill, { backgroundColor: rarityConfig.bg }]}
+            >
+              <View
+                style={[
+                  s.modalRarityDot,
+                  { backgroundColor: rarityConfig.text },
+                ]}
+              />
+              <Text style={[s.modalRarityText, { color: rarityConfig.text }]}>
+                {rarityConfig.label}
+              </Text>
+            </View>
+
+            {/* Description */}
+            <Text style={s.modalDescription}>
+              {ach.description || 'Complete this achievement to earn it!'}
+            </Text>
+
+            {/* HOW TO EARN section */}
+            <View style={s.modalSection}>
+              <Text style={s.modalSectionTitle}>HOW TO EARN</Text>
+              <View style={s.modalHowToEarnRow}>
+                <View
+                  style={[
+                    s.modalCategoryIconWrap,
+                    { backgroundColor: catConfig.color + '20' },
+                  ]}
+                >
+                  <Ionicons
+                    name={catConfig.icon}
+                    size={18}
+                    color={catConfig.color}
+                  />
+                </View>
+                <Text style={s.modalHowToEarnText}>
+                  {ach.description || 'Complete the required objective'}
+                </Text>
+              </View>
+
+              {/* Progress bar (if not earned or partially complete) */}
+              {ach.threshold != null && ach.threshold > 0 && (
+                <View style={s.modalProgressWrap}>
+                  <View style={s.modalProgressBarBg}>
+                    <View
+                      style={[
+                        s.modalProgressBarFill,
+                        {
+                          width: `${prog.pct}%` as any,
+                          backgroundColor: isEarned ? '#10B981' : catConfig.color,
+                        },
+                      ]}
+                    />
+                  </View>
+                  <Text style={s.modalProgressLabel}>
+                    {prog.current} / {prog.target}
+                    {ach.stat_key
+                      ? ` ${ach.stat_key.replace('total_', '').replace(/_/g, ' ')}`
+                      : ''}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {/* STATUS section */}
+            <View style={s.modalSection}>
+              <Text style={s.modalSectionTitle}>STATUS</Text>
+              {isEarned ? (
+                <View style={s.modalStatusEarned}>
+                  <View style={s.modalStatusBanner}>
+                    <Ionicons name="checkmark-circle" size={24} color="#10B981" />
+                    <Text style={s.modalStatusEarnedText}>EARNED</Text>
+                  </View>
+                  {pa?.earned_at && (
+                    <Text style={s.modalStatusDate}>
+                      Unlocked on{' '}
+                      {new Date(pa.earned_at).toLocaleDateString('en-US', {
+                        month: 'long',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })}
+                    </Text>
+                  )}
+                </View>
+              ) : (
+                <View style={s.modalStatusLocked}>
+                  <View style={s.modalStatusBanner}>
+                    <Ionicons name="lock-closed" size={20} color={DARK.textMuted} />
+                    <Text style={s.modalStatusLockedText}>LOCKED</Text>
+                  </View>
+                  {prog.pct > 50 ? (
+                    <Text style={s.modalMotivation}>
+                      Keep going! You{"'"}re almost there!
+                    </Text>
+                  ) : prog.pct > 0 ? (
+                    <Text style={s.modalMotivation}>
+                      You{"'"}re making progress. Keep it up!
+                    </Text>
+                  ) : (
+                    <Text style={s.modalMotivation}>
+                      Start playing to unlock this badge.
+                    </Text>
+                  )}
+                </View>
+              )}
+            </View>
+
+            {/* STATS section */}
+            <View style={s.modalSection}>
+              <Text style={s.modalSectionTitle}>STATS</Text>
+              <View style={s.modalStatRow}>
+                <Ionicons name="people-outline" size={18} color={DARK.textSecondary} />
+                <Text style={s.modalStatText}>
+                  {playersEarned === 0
+                    ? 'No players have earned this yet'
+                    : playersEarned === 1
+                      ? '1 player in your league has earned this'
+                      : `${playersEarned} players in your league have earned this`}
+                </Text>
+              </View>
+              {rarityLabel && (
+                <View style={s.modalStatRow}>
+                  <Ionicons name="diamond-outline" size={18} color={rarityConfig.text} />
+                  <Text style={[s.modalStatText, { color: rarityConfig.text }]}>
+                    {rarityLabel}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {/* Close button at bottom */}
+            <TouchableOpacity
+              style={s.modalBottomCloseBtn}
+              onPress={() => setSelectedAchievement(null)}
+            >
+              <Text style={s.modalBottomCloseBtnText}>Close</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+    );
+  };
+
+  // =========================================================================
+  // MAIN RENDER
+  // =========================================================================
+
+  return (
+    <SafeAreaView style={s.container}>
+      {/* Header */}
+      <View style={s.header}>
+        <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+          <Ionicons name="arrow-back" size={24} color={DARK.text} />
+        </TouchableOpacity>
+        <View style={s.headerCenter}>
+          <Text style={s.headerTitle}>ACHIEVEMENTS</Text>
+          <View style={s.headerCountBadge}>
+            <Text style={s.headerCountText}>{totalEarned}</Text>
+          </View>
+        </View>
+        <View style={s.backBtn} />
+      </View>
+
+      {/* Badge Grid */}
+      <FlatList
+        data={filteredAchievements.length > 0 ? gridData : []}
+        renderItem={renderBadgeCell}
+        keyExtractor={(item, index) => (item ? item.id : `pad-${index}`)}
+        numColumns={NUM_COLUMNS}
+        columnWrapperStyle={s.gridRow}
+        contentContainerStyle={s.gridContent}
+        ListHeaderComponent={renderListHeader}
+        ListFooterComponent={<View style={{ height: 40 }} />}
+        showsVerticalScrollIndicator={false}
+      />
+
+      {/* Detail Modal */}
+      {renderDetailModal()}
     </SafeAreaView>
   );
 }
@@ -398,19 +841,20 @@ export default function AchievementsScreen() {
 // STYLES
 // =============================================================================
 
-const createStyles = (colors: any) =>
+const createStyles = () =>
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: 'transparent',
+      backgroundColor: DARK.bg,
     },
     centered: {
       flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
+      paddingHorizontal: 32,
     },
     loadingText: {
-      color: colors.textMuted,
+      color: DARK.textMuted,
       marginTop: 12,
       fontSize: 14,
     },
@@ -420,9 +864,10 @@ const createStyles = (colors: any) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      padding: 16,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
       borderBottomWidth: 1,
-      borderBottomColor: colors.border,
+      borderBottomColor: DARK.border,
     },
     backBtn: {
       width: 40,
@@ -430,26 +875,49 @@ const createStyles = (colors: any) =>
       justifyContent: 'center',
       alignItems: 'center',
     },
+    headerCenter: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
     headerTitle: {
-      fontSize: 28,
+      fontSize: 20,
       fontWeight: '800',
-      color: colors.text,
+      color: DARK.gold,
+      textTransform: 'uppercase',
+      letterSpacing: 3,
+    },
+    headerCountBadge: {
+      backgroundColor: DARK.gold + '25',
+      borderRadius: 12,
+      paddingHorizontal: 10,
+      paddingVertical: 3,
+      borderWidth: 1,
+      borderColor: DARK.gold + '50',
+    },
+    headerCountText: {
+      fontSize: 13,
+      fontWeight: '800',
+      color: DARK.gold,
     },
 
-    // Scroll
-    scroll: { flex: 1 },
-    scrollContent: { padding: 16 },
-
-    // Summary
+    // Summary Card
     summaryCard: {
-      backgroundColor: colors.glassCard,
+      backgroundColor: DARK.card,
       borderRadius: 16,
       padding: 20,
+      marginHorizontal: 16,
+      marginTop: 16,
       marginBottom: 16,
       borderWidth: 1,
-      borderColor: colors.glassBorder,
+      borderColor: DARK.border,
       ...Platform.select({
-        ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
+        ios: {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.25,
+          shadowRadius: 12,
+        },
         android: { elevation: 6 },
       }),
     },
@@ -464,12 +932,12 @@ const createStyles = (colors: any) =>
     summaryNumber: {
       fontSize: 28,
       fontWeight: '900',
-      color: colors.text,
+      color: DARK.text,
     },
     summaryLabel: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: colors.textMuted,
+      fontSize: 11,
+      fontWeight: '700',
+      color: DARK.textMuted,
       marginTop: 4,
       textTransform: 'uppercase',
       letterSpacing: 1,
@@ -477,13 +945,55 @@ const createStyles = (colors: any) =>
     summaryDivider: {
       width: 1,
       height: 40,
+      backgroundColor: DARK.border,
+    },
+    summaryProgressBarBg: {
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: 'rgba(255,255,255,0.08)',
+      overflow: 'hidden',
+      marginTop: 16,
+    },
+    summaryProgressBarFill: {
+      height: '100%',
+      borderRadius: 3,
+      backgroundColor: DARK.gold,
+    },
+    nextToEarnRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 14,
+      gap: 8,
+      flexWrap: 'wrap',
+    },
+    nextToEarnLabel: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: DARK.textMuted,
+    },
+    nextToEarnBadge: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: DARK.gold,
+    },
+    nextToEarnProgress: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: DARK.textSecondary,
+    },
+    nextToEarnText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: DARK.gold,
+      flex: 1,
     },
 
     // Category Filter
     categoryScroll: {
-      marginBottom: 16,
+      marginBottom: 12,
     },
     categoryScrollContent: {
+      paddingHorizontal: 16,
       gap: 8,
     },
     categoryChip: {
@@ -494,131 +1004,321 @@ const createStyles = (colors: any) =>
       paddingVertical: 8,
       borderRadius: 20,
       borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.glassCard,
+      borderColor: DARK.border,
+      backgroundColor: DARK.card,
     },
     categoryChipText: {
       fontSize: 13,
       fontWeight: '600',
-      color: colors.textMuted,
+      color: DARK.textMuted,
     },
     categoryCount: {
       fontSize: 11,
       fontWeight: '500',
-      color: colors.textMuted,
+      color: DARK.textMuted,
     },
 
-    // Achievement Cards
-    achievementCard: {
-      backgroundColor: colors.glassCard,
-      borderRadius: 16,
-      padding: 16,
-      marginBottom: 12,
+    // Badge Grid
+    gridContent: {
+      paddingBottom: 16,
+    },
+    gridRow: {
+      paddingHorizontal: GRID_PADDING,
+      gap: GRID_GAP,
+      marginBottom: GRID_GAP,
+    },
+    badgeCell: {
+      width: CELL_WIDTH,
+      borderRadius: 14,
+      padding: 10,
+      alignItems: 'center',
       borderWidth: 1,
-      borderColor: colors.glassBorder,
-      ...Platform.select({
-        ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-        android: { elevation: 6 },
-      }),
+      borderColor: DARK.border,
     },
-    achievementCardLocked: {
-      opacity: 0.7,
+    badgeCellEmpty: {
+      width: CELL_WIDTH,
     },
-    achievementRow: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-    },
-    achievementIcon: {
+    badgeIconWrap: {
       width: 52,
       height: 52,
-      borderRadius: 14,
+      borderRadius: 26,
       justifyContent: 'center',
       alignItems: 'center',
-      marginRight: 14,
+      marginBottom: 6,
+      position: 'relative',
     },
-    achievementEmoji: {
-      fontSize: 24,
+    badgeEmoji: {
+      fontSize: 32,
     },
-    achievementInfo: {
-      flex: 1,
+    badgeCheckOverlay: {
+      position: 'absolute',
+      bottom: -2,
+      right: -2,
+      backgroundColor: DARK.card,
+      borderRadius: 8,
+      padding: 1,
     },
-    achievementNameRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: 4,
+    badgeLockOverlay: {
+      position: 'absolute',
+      bottom: -1,
+      right: -1,
+      backgroundColor: DARK.cardAlt,
+      borderRadius: 8,
+      padding: 2,
     },
-    achievementName: {
-      fontSize: 15,
-      fontWeight: '700',
-      color: colors.text,
-      flex: 1,
-      marginRight: 8,
+    badgeName: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: DARK.text,
+      textAlign: 'center',
+      lineHeight: 14,
+      height: 28,
     },
-    rarityBadge: {
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 6,
-    },
-    rarityText: {
-      fontSize: 10,
-      fontWeight: '700',
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
-    },
-    achievementDesc: {
-      fontSize: 13,
-      color: colors.textSecondary,
-      lineHeight: 18,
-      marginBottom: 8,
+    rarityDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      marginTop: 4,
     },
 
-    // Earned
-    earnedRow: {
+    // Empty states
+    emptyBox: {
+      alignItems: 'center',
+      paddingVertical: 40,
+      paddingHorizontal: 32,
+    },
+    emptyTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: DARK.textSecondary,
+      marginTop: 16,
+      textAlign: 'center',
+    },
+    emptySubtitle: {
+      fontSize: 14,
+      color: DARK.textMuted,
+      marginTop: 6,
+      textAlign: 'center',
+    },
+    emptyFilterText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: DARK.textMuted,
+      marginTop: 12,
+    },
+
+    // =========================================================================
+    // MODAL STYLES
+    // =========================================================================
+    modalContainer: {
+      flex: 1,
+      backgroundColor: DARK.bg,
+    },
+    modalCloseBtn: {
+      position: 'absolute',
+      top: Platform.OS === 'ios' ? 56 : 16,
+      right: 16,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: DARK.cardAlt,
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 10,
+      borderWidth: 1,
+      borderColor: DARK.border,
+    },
+    modalScrollContent: {
+      paddingHorizontal: 24,
+      paddingTop: 40,
+      paddingBottom: 40,
+      alignItems: 'center',
+    },
+    modalBadgeCircle: {
+      width: 100,
+      height: 100,
+      borderRadius: 50,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginTop: 20,
+      borderWidth: 2,
+      borderColor: DARK.border,
+      position: 'relative',
+    },
+    modalBadgeEmoji: {
+      fontSize: 48,
+    },
+    modalLockOverlay: {
+      position: 'absolute',
+      bottom: 0,
+      right: 0,
+      backgroundColor: DARK.cardAlt,
+      borderRadius: 14,
+      padding: 4,
+      borderWidth: 1,
+      borderColor: DARK.border,
+    },
+    modalBadgeName: {
+      fontSize: 24,
+      fontWeight: '800',
+      color: DARK.text,
+      marginTop: 16,
+      textAlign: 'center',
+    },
+    modalRarityPill: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
+      paddingHorizontal: 14,
+      paddingVertical: 6,
+      borderRadius: 20,
+      marginTop: 10,
     },
-    earnedText: {
-      fontSize: 12,
-      fontWeight: '600',
-      color: '#10B981',
+    modalRarityDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+    },
+    modalRarityText: {
+      fontSize: 13,
+      fontWeight: '700',
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+    },
+    modalDescription: {
+      fontSize: 15,
+      color: DARK.textSecondary,
+      lineHeight: 22,
+      textAlign: 'center',
+      marginTop: 20,
+      paddingHorizontal: 8,
     },
 
-    // Progress
-    progressSection: {
+    // Modal sections
+    modalSection: {
+      width: '100%',
+      marginTop: 28,
+      backgroundColor: DARK.card,
+      borderRadius: 14,
+      padding: 18,
+      borderWidth: 1,
+      borderColor: DARK.border,
+    },
+    modalSectionTitle: {
+      fontSize: 12,
+      fontWeight: '800',
+      color: DARK.textMuted,
+      textTransform: 'uppercase',
+      letterSpacing: 2,
+      marginBottom: 14,
+    },
+
+    // How to earn
+    modalHowToEarnRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    modalCategoryIconWrap: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    modalHowToEarnText: {
+      flex: 1,
+      fontSize: 14,
+      color: DARK.textSecondary,
+      lineHeight: 20,
+    },
+
+    // Modal progress
+    modalProgressWrap: {
+      marginTop: 14,
+    },
+    modalProgressBarBg: {
+      height: 10,
+      borderRadius: 5,
+      backgroundColor: 'rgba(255,255,255,0.08)',
+      overflow: 'hidden',
+    },
+    modalProgressBarFill: {
+      height: '100%',
+      borderRadius: 5,
+    },
+    modalProgressLabel: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: DARK.textSecondary,
+      marginTop: 8,
+      textAlign: 'center',
+    },
+
+    // Status section
+    modalStatusEarned: {
+      alignItems: 'center',
+      gap: 8,
+    },
+    modalStatusLocked: {
+      alignItems: 'center',
+      gap: 8,
+    },
+    modalStatusBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    modalStatusEarnedText: {
+      fontSize: 18,
+      fontWeight: '900',
+      color: '#10B981',
+      letterSpacing: 2,
+    },
+    modalStatusLockedText: {
+      fontSize: 18,
+      fontWeight: '900',
+      color: DARK.textMuted,
+      letterSpacing: 2,
+    },
+    modalStatusDate: {
+      fontSize: 13,
+      color: DARK.textSecondary,
+    },
+    modalMotivation: {
+      fontSize: 13,
+      color: DARK.textSecondary,
+      fontStyle: 'italic',
+      textAlign: 'center',
+    },
+
+    // Stats section
+    modalStatRow: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 10,
+      marginBottom: 10,
     },
-    progressBarBg: {
+    modalStatText: {
+      fontSize: 14,
+      color: DARK.textSecondary,
       flex: 1,
-      height: 8,
-      borderRadius: 4,
-      backgroundColor: colors.border,
-      overflow: 'hidden',
-    },
-    progressBarFill: {
-      height: '100%',
-      borderRadius: 4,
-    },
-    progressText: {
-      fontSize: 11,
-      fontWeight: '600',
-      color: colors.textMuted,
-      minWidth: 40,
-      textAlign: 'right',
     },
 
-    // Empty
-    emptyBox: {
-      alignItems: 'center',
-      padding: 40,
+    // Bottom close
+    modalBottomCloseBtn: {
+      marginTop: 32,
+      backgroundColor: DARK.cardAlt,
+      borderRadius: 14,
+      paddingVertical: 14,
+      paddingHorizontal: 48,
+      borderWidth: 1,
+      borderColor: DARK.border,
     },
-    emptyText: {
+    modalBottomCloseBtnText: {
       fontSize: 16,
-      fontWeight: '600',
-      color: colors.textMuted,
-      marginTop: 12,
+      fontWeight: '700',
+      color: DARK.text,
+      textAlign: 'center',
     },
   });

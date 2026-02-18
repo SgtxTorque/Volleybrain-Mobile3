@@ -687,7 +687,11 @@ export default function ParentDashboard() {
         </View>
       ) : children.length === 1 ? (
         /* Single child -- large hero card */
-        <View style={s.heroChildCard}>
+        <TouchableOpacity
+          style={s.heroChildCard}
+          onPress={() => router.push(('/child-detail?playerId=' + activeChild?.id) as any)}
+          activeOpacity={0.8}
+        >
           <View style={s.heroChildTop}>
             <View style={[s.heroAvatar, activeChild?.sport_color ? { borderColor: activeChild.sport_color } : {}]}>
               {activeChild?.sport_icon ? (
@@ -725,7 +729,7 @@ export default function ParentDashboard() {
             </View>
           </View>
           <Text style={s.proudParentText}>Proud parent of 1 athlete</Text>
-        </View>
+        </TouchableOpacity>
       ) : (
         /* Multiple children -- horizontal scroll */
         <View>
@@ -743,7 +747,13 @@ export default function ParentDashboard() {
                     s.multiChildCard,
                     isActive && { borderColor: colors.primary, borderWidth: 2 },
                   ]}
-                  onPress={() => setActiveChildIndex(index)}
+                  onPress={() => {
+                    if (isActive) {
+                      router.push(('/child-detail?playerId=' + child.id) as any);
+                    } else {
+                      setActiveChildIndex(index);
+                    }
+                  }}
                   activeOpacity={0.8}
                 >
                   <View style={[s.multiChildAvatar, child.sport_color ? { borderColor: child.sport_color } : {}]}>
@@ -772,6 +782,19 @@ export default function ParentDashboard() {
             Proud parent of {children.length} athlete{children.length !== 1 ? 's' : ''}
           </Text>
         </View>
+      )}
+
+      {/* View Profile Link */}
+      {activeChild && (
+        <TouchableOpacity
+          style={s.viewProfileLink}
+          onPress={() => router.push(('/child-detail?playerId=' + activeChild.id) as any)}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="person-outline" size={15} color={colors.primary} />
+          <Text style={s.viewProfileLinkText}>View {activeChild.first_name}'s Full Profile</Text>
+          <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+        </TouchableOpacity>
       )}
 
       {/* ================================================================ */}
@@ -1307,6 +1330,19 @@ const createStyles = (colors: any) => StyleSheet.create({
     textAlign: 'center',
     marginTop: 12,
     marginBottom: 8,
+  },
+  viewProfileLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginBottom: 20,
+    paddingVertical: 8,
+  },
+  viewProfileLinkText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary,
   },
 
   // ========== HERO -- Multiple Children ==========
