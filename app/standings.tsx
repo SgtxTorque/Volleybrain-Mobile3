@@ -1,3 +1,4 @@
+import { getSportDisplay, StatConfig } from '@/constants/sport-display';
 import { useAuth } from '@/lib/auth';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
@@ -43,7 +44,6 @@ type PlayerLeaderboardEntry = {
 };
 
 type MainTab = 'standings' | 'leaderboards';
-type StatCategory = 'kills' | 'aces' | 'digs' | 'blocks' | 'assists';
 
 // ============================================
 // CONSTANTS
@@ -52,14 +52,6 @@ type StatCategory = 'kills' | 'aces' | 'digs' | 'blocks' | 'assists';
 const MAIN_TABS: { key: MainTab; label: string }[] = [
   { key: 'standings', label: 'Team Standings' },
   { key: 'leaderboards', label: 'Player Leaderboards' },
-];
-
-const STAT_CATEGORIES: { key: StatCategory; label: string; color: string }[] = [
-  { key: 'kills', label: 'Kills', color: '#FF3B3B' },
-  { key: 'aces', label: 'Aces', color: '#A855F7' },
-  { key: 'digs', label: 'Digs', color: '#3B82F6' },
-  { key: 'blocks', label: 'Blocks', color: '#F59E0B' },
-  { key: 'assists', label: 'Assists', color: '#10B981' },
 ];
 
 const MEDAL_COLORS = ['#FFD700', '#C0C0C0', '#CD7F32']; // gold, silver, bronze
@@ -75,9 +67,10 @@ export default function StandingsScreen() {
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState<MainTab>('standings');
-  const [activeStat, setActiveStat] = useState<StatCategory>('kills');
+  const [activeStat, setActiveStat] = useState<string>(''); // will be set once sport is detected
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [detectedSport, setDetectedSport] = useState<string | null>(null);
 
   // Data
   const [standings, setStandings] = useState<TeamStanding[]>([]);
@@ -85,6 +78,19 @@ export default function StandingsScreen() {
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
 
   const s = useMemo(() => createStyles(colors), [colors]);
+
+  // Sport-aware stat categories
+  const sportDisplay = useMemo(() => getSportDisplay(detectedSport), [detectedSport]);
+  const STAT_CATEGORIES = useMemo(() =>
+    sportDisplay.primaryStats.map(stat => ({
+      key: stat.seasonColumn,
+      label: stat.label,
+      color: stat.color,
+      dbColumn: stat.dbColumn,
+      seasonColumn: stat.seasonColumn,
+    })),
+    [sportDisplay]
+  );
 
   // -----------------------------------------------
   // Load team standings
@@ -99,9 +105,17 @@ export default function StandingsScreen() {
     try {
       const { data: teams, error: teamsError } = await supabase
         .from('teams')
-        .select('id, name, color')
+        .select('id, name, color, sports(name)')
         .eq('season_id', workingSeason.id)
         .order('name');
+
+      // Detect sport from first team that has a sport
+      if (teams && teams.length > 0) {
+        const firstSport = (teams as any[]).find(t => t.sports?.name)?.sports?.name || null;
+        if (firstSport && !detectedSport) {
+          setDetectedSport(firstSport);
+        }
+      }
 
       if (teamsError || !teams || teams.length === 0) {
         setStandings([]);
@@ -182,7 +196,7 @@ export default function StandingsScreen() {
   // -----------------------------------------------
   // Load player leaderboard
   // -----------------------------------------------
-  const loadLeaderboard = useCallback(async (stat: StatCategory) => {
+  const loadLeaderboard = useCallback(async (stat: string) => {
     if (!workingSeason?.id) {
       setLeaderboard([]);
       return;
@@ -216,12 +230,14 @@ export default function StandingsScreen() {
         return;
       }
 
-      // Fallback: aggregate from game_player_stats
+      // Fallback: aggregate from game_player_stats using dbColumn
+      const matchingCat = STAT_CATEGORIES.find(c => c.seasonColumn === stat);
+      const dbCol = matchingCat?.dbColumn || stat;
       const { data: gameStats, error: gameError } = await supabase
         .from('game_player_stats')
         .select(`
           player_id,
-          ${stat},
+          ${dbCol},
           players(first_name, last_name, jersey_number, photo_url),
           schedule_events!inner(season_id)
         `)
@@ -246,7 +262,7 @@ export default function StandingsScreen() {
         const pid = row.player_id;
         if (!pid) continue;
         const existing = playerMap.get(pid);
-        const val = row[stat] || 0;
+        const val = row[dbCol] || 0;
         if (existing) {
           existing.total += val;
         } else {
@@ -289,8 +305,15 @@ export default function StandingsScreen() {
     loadStandings();
   }, [loadStandings]);
 
+  // Set default stat category once sport is detected
   useEffect(() => {
-    if (activeTab === 'leaderboards') {
+    if (STAT_CATEGORIES.length > 0 && !activeStat) {
+      setActiveStat(STAT_CATEGORIES[0].key);
+    }
+  }, [STAT_CATEGORIES]);
+
+  useEffect(() => {
+    if (activeTab === 'leaderboards' && activeStat) {
       loadLeaderboard(activeStat);
     }
   }, [activeTab, activeStat, loadLeaderboard]);
@@ -302,7 +325,7 @@ export default function StandingsScreen() {
     setRefreshing(true);
     if (activeTab === 'standings') {
       await loadStandings();
-    } else {
+    } else if (activeStat) {
       await loadLeaderboard(activeStat);
     }
     setRefreshing(false);
@@ -317,8 +340,8 @@ export default function StandingsScreen() {
   }, [leaderboard]);
 
   const currentStatCategory = useMemo(
-    () => STAT_CATEGORIES.find((c) => c.key === activeStat)!,
-    [activeStat]
+    () => STAT_CATEGORIES.find((c) => c.key === activeStat) || STAT_CATEGORIES[0] || { key: '', label: '', color: '#888' },
+    [activeStat, STAT_CATEGORIES]
   );
 
   const formatWinPct = (pct: number): string => {

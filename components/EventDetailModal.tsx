@@ -1,5 +1,6 @@
 import { useAuth } from '@/lib/auth';
 import { promoteBackupVolunteer, sendVolunteerBlast } from '@/lib/notifications';
+import { usePermissions } from '@/lib/permissions-context';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -73,6 +74,7 @@ export default function EventDetailModal({
 }: Props) {
   const { colors } = useTheme();
   const { user, profile } = useAuth();
+  const { isPlayer } = usePermissions();
   const router = useRouter();
   const s = createStyles(colors);
 
@@ -150,8 +152,23 @@ export default function EventDetailModal({
     if (__DEV__) console.log('[EventDetailModal] teamPlayers for team', event.team_id, teamPlayers);
 
     const teamPlayerIds = (teamPlayers?.map(tp => String(tp.player_id)) || []);
-    const filteredPlayers = uniquePlayers.filter(p => teamPlayerIds.includes(String(p.id)));
+    let filteredPlayers = uniquePlayers.filter(p => teamPlayerIds.includes(String(p.id)));
     if (__DEV__) console.log('[EventDetailModal] filteredPlayers', filteredPlayers);
+
+    // Player self-RSVP: if no children found and user is a player, look up self
+    if (filteredPlayers.length === 0 && isPlayer) {
+      const { data: selfPlayers } = await supabase
+        .from('players')
+        .select('id, first_name, last_name, jersey_number')
+        .eq('user_account_id', user.id);
+
+      if (selfPlayers && selfPlayers.length > 0) {
+        const selfOnTeam = selfPlayers.filter(p => teamPlayerIds.includes(String(p.id)));
+        if (selfOnTeam.length > 0) {
+          filteredPlayers = selfOnTeam;
+        }
+      }
+    }
 
     setMyPlayers(filteredPlayers);
   };

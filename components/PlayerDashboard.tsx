@@ -1,20 +1,26 @@
+import { getSportDisplay, getPositionInfo } from '@/constants/sport-display';
 import { useAuth } from '@/lib/auth';
+import { pickImage, takePhoto, uploadMedia } from '@/lib/media-utils';
 import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Dimensions,
   Image,
   Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -43,6 +49,62 @@ const DARK = {
   neonRed: '#FF3B3B',
 };
 
+const CLEAN = {
+  bg: '#F8FAFC',
+  card: '#FFFFFF',
+  cardAlt: '#F1F5F9',
+  border: 'rgba(0,0,0,0.08)',
+  text: '#1E293B',
+  textSecondary: '#475569',
+  textMuted: '#94A3B8',
+  accent: '#F97316',
+  gold: '#D97706',
+  neonGreen: '#059669',
+  neonBlue: '#0284C7',
+  neonPurple: '#7C3AED',
+  neonPink: '#DB2777',
+  neonRed: '#DC2626',
+};
+
+const FIRE = {
+  bg: '#1A0A0A',
+  card: '#2D1111',
+  cardAlt: '#3D1A1A',
+  border: 'rgba(255,100,50,0.12)',
+  text: '#FFF5F0',
+  textSecondary: '#FBBF90',
+  textMuted: '#8B6050',
+  accent: '#FF6B35',
+  gold: '#FFB84D',
+  neonGreen: '#FF8C42',
+  neonBlue: '#FF6B35',
+  neonPurple: '#E8553D',
+  neonPink: '#FF4757',
+  neonRed: '#FF3B3B',
+};
+
+type ThemeVariant = 'midnight' | 'clean' | 'fire';
+const THEME_VARIANTS: Record<ThemeVariant, typeof DARK> = {
+  midnight: DARK,
+  clean: CLEAN,
+  fire: FIRE,
+};
+
+// Calling card definitions (client-side, no DB table)
+const CALLING_CARDS = [
+  { id: 0, name: 'Default', gradient: ['#1A2235', '#0A0F1A'], pattern: 'none' },
+  { id: 1, name: 'Gold Rush', gradient: ['#F59E0B', '#D97706'], pattern: 'diagonal' },
+  { id: 2, name: 'Ocean', gradient: ['#06B6D4', '#0284C7'], pattern: 'wave' },
+  { id: 3, name: 'Ember', gradient: ['#EF4444', '#B91C1C'], pattern: 'flame' },
+  { id: 4, name: 'Neon', gradient: ['#A855F7', '#7C3AED'], pattern: 'pulse' },
+  { id: 5, name: 'Forest', gradient: ['#10B981', '#059669'], pattern: 'leaf' },
+  { id: 6, name: 'Sunset', gradient: ['#F97316', '#EA580C'], pattern: 'horizon' },
+  { id: 7, name: 'Ice', gradient: ['#38BDF8', '#0EA5E9'], pattern: 'frost' },
+];
+
+type LayoutPreference = 'default' | 'stats_first' | 'games_first';
+const ACCENT_COLORS = ['#F97316', '#3B82F6', '#A855F7', '#10B981', '#F43F5E', '#64748B'];
+
 // ============================================
 // TYPES
 // ============================================
@@ -55,6 +117,9 @@ type PlayerRecord = {
   position: string | null;
   photo_url: string | null;
   avatar_url: string | null;
+  show_achievements_publicly?: boolean;
+  equipped_calling_card_id?: number | null;
+  user_account_id?: string | null;
 };
 
 type TeamInfo = {
@@ -63,16 +128,7 @@ type TeamInfo = {
   color: string | null;
 };
 
-type SeasonStats = {
-  games_played: number;
-  total_kills: number;
-  total_aces: number;
-  total_digs: number;
-  total_blocks: number;
-  total_assists: number;
-  total_points: number;
-  total_service_errors: number;
-};
+type SeasonStats = Record<string, number>;
 
 type Achievement = {
   id: string;
@@ -109,34 +165,21 @@ type RecentGame = {
 type PlayerGameStat = {
   id: string;
   created_at: string;
-  kills: number;
-  aces: number;
-  digs: number;
-  blocks: number;
-  assists: number;
-  points: number;
+  [key: string]: any;
 };
 
-// ============================================
-// STAT DEFINITIONS
-// ============================================
-
-type StatDef = {
-  key: keyof SeasonStats;
-  label: string;
-  color: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  max: number;
+type CoachNote = {
+  id: string;
+  content: string;
+  note_type: string;
+  is_private: boolean;
+  created_at: string;
 };
 
-const STAT_DEFS: StatDef[] = [
-  { key: 'total_kills', label: 'Kills', color: '#FF3B3B', icon: 'flash', max: 100 },
-  { key: 'total_aces', label: 'Aces', color: '#A855F7', icon: 'star', max: 50 },
-  { key: 'total_digs', label: 'Digs', color: '#00D4FF', icon: 'shield', max: 100 },
-  { key: 'total_blocks', label: 'Blocks', color: '#F97316', icon: 'hand-left', max: 50 },
-  { key: 'total_assists', label: 'Assists', color: '#10B981', icon: 'git-merge', max: 80 },
-  { key: 'total_points', label: 'Points', color: '#EC4899', icon: 'trophy', max: 150 },
-];
+type LeagueRank = {
+  rank: number;
+  total: number;
+};
 
 // ============================================
 // HELPERS
@@ -152,19 +195,13 @@ const calculateLevel = (stats: SeasonStats | null): { level: number; currentXP: 
   return { level, currentXP, xpForNext: 1000 };
 };
 
-const calculateOVR = (stats: SeasonStats | null): number => {
+const calculateOVR = (stats: SeasonStats | null, statKeys: string[]): number => {
   if (!stats) return 50;
-  return Math.min(
-    99,
-    Math.round(
-      50 +
-        (stats.total_kills || 0) * 0.3 +
-        (stats.total_aces || 0) * 0.5 +
-        (stats.total_blocks || 0) * 0.3 +
-        (stats.total_digs || 0) * 0.2 +
-        (stats.total_assists || 0) * 0.2
-    )
-  );
+  let sum = 0;
+  for (const key of statKeys) {
+    sum += (stats[key] || 0);
+  }
+  return Math.min(99, Math.round(50 + sum * 0.15));
 };
 
 const getOVRTier = (ovr: number): { borderColor: string; label: string } => {
@@ -209,7 +246,7 @@ export default function PlayerDashboard() {
   const { colors } = useTheme();
   const { user, profile } = useAuth();
   const { workingSeason } = useSeason();
-  const { actualRoles, viewAs } = usePermissions();
+  const { actualRoles, viewAs, isCoach } = usePermissions();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -225,6 +262,39 @@ export default function PlayerDashboard() {
   const [recentGames, setRecentGames] = useState<RecentGame[]>([]);
   const [playerGameStats, setPlayerGameStats] = useState<PlayerGameStat[]>([]);
 
+  const [playerSport, setPlayerSport] = useState<string | null>(null);
+  const [leagueRanks, setLeagueRanks] = useState<Record<string, LeagueRank>>({});
+  const [themeVariant, setThemeVariant] = useState<ThemeVariant>('midnight');
+  const [playerAccent, setPlayerAccent] = useState<string>(DARK.accent);
+  const [layoutPref, setLayoutPref] = useState<LayoutPreference>('default');
+  const [equippedCard, setEquippedCard] = useState<number>(0);
+  const [coachNotes, setCoachNotes] = useState<CoachNote[]>([]);
+  const [showSettings, setShowSettings] = useState(false);
+  const [newNoteContent, setNewNoteContent] = useState('');
+  const [newNoteType, setNewNoteType] = useState('general');
+  const [newNotePrivate, setNewNotePrivate] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
+  const P = THEME_VARIANTS[themeVariant];
+
+  // Load preferences from AsyncStorage on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const [variant, accent, layout, card] = await Promise.all([
+          AsyncStorage.getItem('vb_player_theme_variant'),
+          AsyncStorage.getItem('vb_player_accent'),
+          AsyncStorage.getItem('vb_player_layout'),
+          AsyncStorage.getItem('vb_player_calling_card'),
+        ]);
+        if (variant && THEME_VARIANTS[variant as ThemeVariant]) setThemeVariant(variant as ThemeVariant);
+        if (accent) setPlayerAccent(accent);
+        if (layout) setLayoutPref(layout as LayoutPreference);
+        if (card) setEquippedCard(parseInt(card) || 0);
+      } catch {}
+    })();
+  }, []);
+
   // -----------------------------------------------
   // LOAD ALL DATA
   // -----------------------------------------------
@@ -239,7 +309,7 @@ export default function PlayerDashboard() {
 
       const { data: selfPlayers } = await supabase
         .from('players')
-        .select('id, first_name, last_name, jersey_number, position, photo_url, avatar_url')
+        .select('id, first_name, last_name, jersey_number, position, photo_url, avatar_url, show_achievements_publicly, equipped_calling_card_id, user_account_id')
         .eq('user_account_id', user.id)
         .eq('season_id', workingSeason.id)
         .limit(1);
@@ -249,7 +319,7 @@ export default function PlayerDashboard() {
       } else {
         const { data: parentPlayers } = await supabase
           .from('players')
-          .select('id, first_name, last_name, jersey_number, position, photo_url, avatar_url')
+          .select('id, first_name, last_name, jersey_number, position, photo_url, avatar_url, show_achievements_publicly, equipped_calling_card_id, user_account_id')
           .eq('parent_account_id', user.id)
           .eq('season_id', workingSeason.id)
           .limit(1);
@@ -285,32 +355,42 @@ export default function PlayerDashboard() {
       setTeam(teamData || null);
       const teamId = teamData?.id || null;
 
+      // Detect sport
+      let sport = 'volleyball';
+      if (teamData?.id) {
+        const { data: sportData } = await supabase
+          .from('teams')
+          .select('sports(name)')
+          .eq('id', teamData.id)
+          .single();
+        sport = (sportData as any)?.sports?.name || 'volleyball';
+      }
+      setPlayerSport(sport);
+
+      const sportConfig = getSportDisplay(sport);
+      const seasonColumns = ['games_played', ...sportConfig.primaryStats.map(s => s.seasonColumn)].join(', ');
+
       // 3-7. Parallel data fetches
       const today = new Date().toISOString().split('T')[0];
 
       const promises: Promise<void>[] = [];
 
-      // 3. Season stats
+      // 3. Season stats — dynamic columns
       promises.push(
         (async () => {
           const { data } = await supabase
             .from('player_season_stats')
-            .select('games_played, total_kills, total_aces, total_digs, total_blocks, total_assists, total_points, total_service_errors')
+            .select(seasonColumns)
             .eq('player_id', playerId)
             .eq('season_id', workingSeason.id)
             .limit(1)
             .maybeSingle();
           if (data) {
-            setStats({
-              games_played: data.games_played || 0,
-              total_kills: data.total_kills || 0,
-              total_aces: data.total_aces || 0,
-              total_digs: data.total_digs || 0,
-              total_blocks: data.total_blocks || 0,
-              total_assists: data.total_assists || 0,
-              total_points: data.total_points || 0,
-              total_service_errors: data.total_service_errors || 0,
-            });
+            const statsObj: SeasonStats = {};
+            for (const key of Object.keys(data)) {
+              statsObj[key] = (data as any)[key] || 0;
+            }
+            setStats(statsObj);
           } else {
             setStats(null);
           }
@@ -360,12 +440,13 @@ export default function PlayerDashboard() {
         );
       }
 
-      // 7. Player game stats
+      // 7. Player game stats — dynamic columns
+      const gameStatColumns = ['id', 'created_at', ...sportConfig.primaryStats.map(s => s.dbColumn)].join(', ');
       promises.push(
         (async () => {
           const { data } = await supabase
-            .from('player_game_stats')
-            .select('id, created_at, kills, aces, digs, blocks, assists, points')
+            .from('game_player_stats')
+            .select(gameStatColumns)
             .eq('player_id', playerId)
             .order('created_at', { ascending: false })
             .limit(5);
@@ -373,12 +454,50 @@ export default function PlayerDashboard() {
         })()
       );
 
+      // League rank per stat
+      promises.push(
+        (async () => {
+          const ranks: Record<string, LeagueRank> = {};
+          const allStatData = await supabase
+            .from('player_season_stats')
+            .select('player_id, ' + seasonColumns)
+            .eq('season_id', workingSeason.id);
+
+          if (allStatData.data) {
+            for (const statConfig of sportConfig.primaryStats) {
+              const col = statConfig.seasonColumn;
+              const myRow = allStatData.data.find((r: any) => r.player_id === playerId) as any;
+              const myVal = (myRow ? myRow[col] : 0) || 0;
+              const higher = allStatData.data.filter((r: any) => ((r as any)[col] || 0) > myVal).length;
+              ranks[statConfig.key] = { rank: higher + 1, total: allStatData.data.length };
+            }
+          }
+          setLeagueRanks(ranks);
+        })()
+      );
+
+      // Coach notes — only if viewer is a coach
+      if (isCoach) {
+        promises.push(
+          (async () => {
+            const { data } = await supabase
+              .from('player_coach_notes')
+              .select('id, content, note_type, is_private, created_at')
+              .eq('player_id', playerId)
+              .or(`coach_id.eq.${user.id},is_private.eq.false`)
+              .order('created_at', { ascending: false })
+              .limit(10);
+            if (data) setCoachNotes(data);
+          })()
+        );
+      }
+
       await Promise.all(promises);
     } catch (err: any) {
       if (__DEV__) console.error('PlayerDashboard loadPlayerData error:', err);
       setError(err.message || 'Failed to load player data');
     }
-  }, [user?.id, workingSeason?.id]);
+  }, [user?.id, workingSeason?.id, isCoach]);
 
   useEffect(() => {
     let mounted = true;
@@ -401,26 +520,84 @@ export default function PlayerDashboard() {
   // COMPUTED
   // -----------------------------------------------
 
+  const sportDisplay = getSportDisplay(playerSport);
+  const statDefs = sportDisplay.primaryStats.map(s => ({
+    key: s.seasonColumn,
+    sportKey: s.key,
+    label: s.label,
+    color: s.color,
+    icon: s.ionicon as keyof typeof Ionicons.glyphMap,
+    max: 100,
+  }));
+
   const playerName = player ? `${player.first_name} ${player.last_name}` : 'Player';
   const initials = player
     ? `${player.first_name?.[0] || ''}${player.last_name?.[0] || ''}`
     : 'P';
   const teamColor = team?.color || colors.primary;
   const xp = calculateLevel(stats);
-  const ovr = calculateOVR(stats);
+  const statKeys = sportDisplay.primaryStats.map(s => s.seasonColumn);
+  const ovr = calculateOVR(stats, statKeys);
   const ovrTier = getOVRTier(ovr);
   const heroImage = player?.photo_url || player?.avatar_url || null;
+  const isOwnProfile = player?.user_account_id === user?.id;
+  const activeCard = CALLING_CARDS.find(c => c.id === equippedCard) || CALLING_CARDS[0];
 
   const s = createStyles(colors);
+
+  // -----------------------------------------------
+  // PHOTO UPLOAD HANDLER
+  // -----------------------------------------------
+  const handlePhotoUpload = async () => {
+    if (uploadingPhoto) return;
+
+    Alert.alert('Update Photo', 'Choose an option', [
+      {
+        text: 'Take Photo',
+        onPress: async () => {
+          setUploadingPhoto(true);
+          try {
+            const media = await takePhoto();
+            if (media) {
+              const url = await uploadMedia(media, `player-photos/${player!.id}`, 'player-photos');
+              if (url) {
+                await supabase.from('players').update({ photo_url: url }).eq('id', player!.id);
+                setPlayer(prev => prev ? { ...prev, photo_url: url } : prev);
+              }
+            }
+          } catch (e) { if (__DEV__) console.error('Photo upload error:', e); }
+          setUploadingPhoto(false);
+        }
+      },
+      {
+        text: 'Choose from Library',
+        onPress: async () => {
+          setUploadingPhoto(true);
+          try {
+            const media = await pickImage();
+            if (media) {
+              const url = await uploadMedia(media, `player-photos/${player!.id}`, 'player-photos');
+              if (url) {
+                await supabase.from('players').update({ photo_url: url }).eq('id', player!.id);
+                setPlayer(prev => prev ? { ...prev, photo_url: url } : prev);
+              }
+            }
+          } catch (e) { if (__DEV__) console.error('Photo upload error:', e); }
+          setUploadingPhoto(false);
+        }
+      },
+      { text: 'Cancel', style: 'cancel' }
+    ]);
+  };
 
   // -----------------------------------------------
   // LOADING STATE
   // -----------------------------------------------
   if (loading) {
     return (
-      <View style={s.loadingContainer}>
-        <ActivityIndicator size="large" color={DARK.gold} />
-        <Text style={s.loadingText}>Loading your arena...</Text>
+      <View style={[s.loadingContainer, { backgroundColor: P.bg }]}>
+        <ActivityIndicator size="large" color={P.gold} />
+        <Text style={[s.loadingText, { color: P.textSecondary }]}>Loading your arena...</Text>
       </View>
     );
   }
@@ -430,12 +607,12 @@ export default function PlayerDashboard() {
   // -----------------------------------------------
   if (error) {
     return (
-      <View style={s.loadingContainer}>
-        <Ionicons name="warning" size={48} color={DARK.neonRed} />
-        <Text style={s.loadingText}>Something went wrong</Text>
-        <Text style={[s.loadingSubtext, { marginBottom: 20 }]}>{error}</Text>
+      <View style={[s.loadingContainer, { backgroundColor: P.bg }]}>
+        <Ionicons name="warning" size={48} color={P.neonRed} />
+        <Text style={[s.loadingText, { color: P.textSecondary }]}>Something went wrong</Text>
+        <Text style={[s.loadingSubtext, { marginBottom: 20, color: P.textMuted }]}>{error}</Text>
         <TouchableOpacity
-          style={s.retryButton}
+          style={[s.retryButton, { backgroundColor: P.neonRed }]}
           onPress={() => {
             setError(null);
             setLoading(true);
@@ -443,8 +620,8 @@ export default function PlayerDashboard() {
           }}
           activeOpacity={0.7}
         >
-          <Ionicons name="reload" size={18} color={DARK.text} />
-          <Text style={s.retryButtonText}>Retry</Text>
+          <Ionicons name="reload" size={18} color={P.text} />
+          <Text style={[s.retryButtonText, { color: P.text }]}>Retry</Text>
         </TouchableOpacity>
       </View>
     );
@@ -455,12 +632,12 @@ export default function PlayerDashboard() {
   // -----------------------------------------------
   if (!player) {
     return (
-      <View style={s.loadingContainer}>
-        <View style={s.noPlayerIcon}>
-          <Ionicons name="person-add" size={48} color={DARK.accent} />
+      <View style={[s.loadingContainer, { backgroundColor: P.bg }]}>
+        <View style={[s.noPlayerIcon, { backgroundColor: P.accent + '15' }]}>
+          <Ionicons name="person-add" size={48} color={P.accent} />
         </View>
-        <Text style={s.noPlayerTitle}>Link Your Player Profile</Text>
-        <Text style={s.noPlayerSubtext}>
+        <Text style={[s.noPlayerTitle, { color: P.text }]}>Link Your Player Profile</Text>
+        <Text style={[s.noPlayerSubtext, { color: P.textMuted }]}>
           Your account is not linked to a player in this season. Ask your coach or admin to connect your profile.
         </Text>
         {actualRoles.length > 1 && (
@@ -478,30 +655,317 @@ export default function PlayerDashboard() {
   const gp = stats?.games_played || 0;
   const perGame = (val: number) => (gp > 0 ? (val / gp).toFixed(1) : '0.0');
 
-  // Percentage cards
+  // Percentage cards (sport-aware: only show for volleyball or fallback)
+  const isVolleyball = (playerSport || 'volleyball').toLowerCase() === 'volleyball';
   const hitPct =
-    stats && (stats.total_kills + stats.total_service_errors) > 0
-      ? Math.round((stats.total_kills / (stats.total_kills + stats.total_service_errors)) * 100)
+    isVolleyball && stats && ((stats.total_kills || 0) + (stats.total_service_errors || 0)) > 0
+      ? Math.round(((stats.total_kills || 0) / ((stats.total_kills || 0) + (stats.total_service_errors || 0))) * 100)
       : 0;
   const servePct =
-    stats && (stats.total_aces + stats.total_service_errors) > 0
-      ? Math.round((stats.total_aces / (stats.total_aces + stats.total_service_errors)) * 100)
+    isVolleyball && stats && ((stats.total_aces || 0) + (stats.total_service_errors || 0)) > 0
+      ? Math.round(((stats.total_aces || 0) / ((stats.total_aces || 0) + (stats.total_service_errors || 0))) * 100)
       : 0;
+
+  // -----------------------------------------------
+  // SECTION RENDERERS
+  // -----------------------------------------------
+
+  const renderStatHud = () => (
+    <View style={s.section}>
+      <View style={s.sectionHeaderRow}>
+        <Text style={[s.sectionHeader, { color: P.gold }]}>STAT HUD</Text>
+        <Text style={[s.sectionHeaderRight, { color: P.textMuted }]}>{workingSeason?.name || ''}</Text>
+      </View>
+
+      <View style={[s.statHudCard, { backgroundColor: P.card, borderColor: P.border }]}>
+        {statDefs.map((def) => {
+          const value = stats ? stats[def.key] || 0 : 0;
+          const avg = perGame(value);
+          const pct = Math.min((value / def.max) * 100, 100);
+
+          return (
+            <View key={def.key} style={s.statRow}>
+              <View style={[s.statIconWrap, { backgroundColor: def.color + '20' }]}>
+                <Ionicons name={def.icon} size={16} color={def.color} />
+              </View>
+              <View style={s.statInfo}>
+                <View style={s.statNameRow}>
+                  <Text style={[s.statName, { color: P.text }]}>{def.label}</Text>
+                  <Text style={[s.statAvg, { color: P.textMuted }]}>{avg}/g</Text>
+                </View>
+                <View style={[s.statBarTrack, { backgroundColor: P.cardAlt }]}>
+                  <View style={[s.statBarFill, { width: `${pct}%`, backgroundColor: def.color }]} />
+                </View>
+              </View>
+              <Text style={[s.statValue, { color: def.color }]}>{value}</Text>
+              {leagueRanks[def.sportKey] && (
+                <View style={{ backgroundColor: def.color + '20', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8, marginLeft: 4 }}>
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: def.color }}>
+                    #{leagueRanks[def.sportKey].rank}
+                  </Text>
+                </View>
+              )}
+            </View>
+          );
+        })}
+      </View>
+
+      {/* Bottom percentage cards */}
+      <View style={s.pctCardsRow}>
+        {isVolleyball ? (
+          <>
+            <View style={[s.pctCard, { backgroundColor: P.card, borderColor: P.border }]}>
+              <Text style={[s.pctValue, { color: P.text }]}>{hitPct}%</Text>
+              <Text style={[s.pctLabel, { color: P.textMuted }]}>Hit %</Text>
+            </View>
+            <View style={[s.pctCard, { backgroundColor: P.card, borderColor: P.border }]}>
+              <Text style={[s.pctValue, { color: P.text }]}>{servePct}%</Text>
+              <Text style={[s.pctLabel, { color: P.textMuted }]}>Serve %</Text>
+            </View>
+          </>
+        ) : (
+          <View style={[s.pctCard, { backgroundColor: P.card, borderColor: P.border }]}>
+            <Text style={[s.pctValue, { color: P.text }]}>{ovr}</Text>
+            <Text style={[s.pctLabel, { color: P.textMuted }]}>OVR</Text>
+          </View>
+        )}
+        <View style={[s.pctCard, { backgroundColor: P.card, borderColor: P.border }]}>
+          <Text style={[s.pctValue, { color: P.text }]}>{stats?.games_played || 0}</Text>
+          <Text style={[s.pctLabel, { color: P.textMuted }]}>Games</Text>
+        </View>
+      </View>
+    </View>
+  );
+
+  const renderTrophyCase = () => (
+    <View style={s.section}>
+      <View style={s.sectionHeaderRow}>
+        <Text style={[s.sectionHeader, { color: P.gold }]}>TROPHY CASE</Text>
+        <Text style={[s.sectionHeaderRight, { color: P.textMuted }]}>{achievements.length} earned</Text>
+      </View>
+
+      {achievements.length > 0 ? (
+        <>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={s.trophyScroll}
+          >
+            {achievements.map((a) => {
+              const badgeColor = a.achievement?.color_primary || P.gold;
+              const earnedDate = a.earned_at ? formatShortDate(a.earned_at.split('T')[0]) : '';
+              return (
+                <View key={a.id} style={s.trophyItem}>
+                  <View
+                    style={[
+                      s.trophyCircle,
+                      {
+                        backgroundColor: badgeColor + '25',
+                        ...Platform.select({
+                          ios: {
+                            shadowColor: badgeColor,
+                            shadowOffset: { width: 0, height: 0 },
+                            shadowOpacity: 0.5,
+                            shadowRadius: 10,
+                          },
+                          android: { elevation: 6 },
+                        }),
+                      },
+                    ]}
+                  >
+                    <Text style={s.trophyEmoji}>{a.achievement?.icon || '?'}</Text>
+                  </View>
+                  <Text style={[s.trophyName, { color: P.textSecondary }]} numberOfLines={2}>
+                    {a.achievement?.name || 'Badge'}
+                  </Text>
+                  {earnedDate ? <Text style={[s.trophyDate, { color: P.textMuted }]}>{earnedDate}</Text> : null}
+                </View>
+              );
+            })}
+          </ScrollView>
+          <TouchableOpacity
+            style={s.viewAllButton}
+            onPress={() => router.push('/achievements' as any)}
+            activeOpacity={0.7}
+          >
+            <Text style={[s.viewAllText, { color: P.accent }]}>View All</Text>
+            <Ionicons name="chevron-forward" size={16} color={P.accent} />
+          </TouchableOpacity>
+        </>
+      ) : (
+        <View style={[s.trophyEmptyCard, { backgroundColor: P.card, borderColor: P.border }]}>
+          <Ionicons name="trophy-outline" size={48} color={P.gold} />
+          <Text style={[s.trophyEmptyTitle, { color: P.textSecondary }]}>START EARNING TROPHIES</Text>
+          <Text style={[s.trophyEmptySubtext, { color: P.textMuted }]}>
+            Play games and hit milestones to unlock achievements
+          </Text>
+          <TouchableOpacity
+            style={s.viewAllButton}
+            onPress={() => router.push('/achievements' as any)}
+            activeOpacity={0.7}
+          >
+            <Text style={[s.viewAllText, { color: P.accent }]}>View All Trophies</Text>
+            <Ionicons name="chevron-forward" size={16} color={P.accent} />
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
+  );
+
+  const renderBattleLog = () => (
+    <View style={s.section}>
+      <View style={s.sectionHeaderRow}>
+        <Text style={[s.sectionHeader, { color: P.gold }]}>BATTLE LOG</Text>
+      </View>
+
+      {recentGames.length > 0 ? (
+        <>
+          {recentGames.map((game) => {
+            const isWin = game.game_result === 'win';
+            const isLoss = game.game_result === 'loss';
+            const accentColor = isWin ? P.neonGreen : isLoss ? P.neonRed : P.textMuted;
+            const resultLetter = isWin ? 'W' : isLoss ? 'L' : 'T';
+            const scoreText =
+              game.our_score != null && game.opponent_score != null
+                ? `${game.our_score}-${game.opponent_score}`
+                : '';
+
+            return (
+              <TouchableOpacity
+                key={game.id}
+                style={[s.battleCard, { backgroundColor: P.card, borderColor: P.border }]}
+                activeOpacity={0.7}
+                onPress={() => router.push(`/game-results?eventId=${game.id}` as any)}
+              >
+                <View style={[s.battleAccent, { backgroundColor: accentColor }]} />
+                <View style={s.battleContent}>
+                  <Text style={[s.battleDate, { color: P.textMuted }]}>{formatShortDate(game.event_date)}</Text>
+                  <View style={s.battleMainRow}>
+                    <Text style={[s.battleResult, { color: accentColor }]}>{resultLetter}</Text>
+                    <View style={s.battleOpponentWrap}>
+                      <Text style={[s.battleOpponent, { color: P.text }]} numberOfLines={1}>
+                        vs {game.opponent_name || 'Opponent'}
+                      </Text>
+                      {scoreText ? <Text style={[s.battleScore, { color: P.textSecondary }]}>{scoreText}</Text> : null}
+                    </View>
+                  </View>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={P.textMuted} />
+              </TouchableOpacity>
+            );
+          })}
+          <TouchableOpacity
+            style={s.viewAllButton}
+            onPress={() => router.push('/(tabs)/schedule' as any)}
+            activeOpacity={0.7}
+          >
+            <Text style={[s.viewAllText, { color: P.accent }]}>See All Games</Text>
+            <Ionicons name="chevron-forward" size={16} color={P.accent} />
+          </TouchableOpacity>
+        </>
+      ) : (
+        <View style={[s.trophyEmptyCard, { backgroundColor: P.card, borderColor: P.border }]}>
+          <Ionicons name="game-controller-outline" size={44} color={P.textMuted} />
+          <Text style={[s.trophyEmptyTitle, { color: P.textSecondary }]}>NO BATTLES YET</Text>
+          <Text style={[s.trophyEmptySubtext, { color: P.textMuted }]}>
+            Your battle log will fill up once you start competing
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+
+  const renderUpcomingBattles = () => (
+    <View style={s.section}>
+      <View style={s.sectionHeaderRow}>
+        <Text style={[s.sectionHeader, { color: P.gold }]}>UPCOMING BATTLES</Text>
+      </View>
+
+      {upcomingEvents.length > 0 ? (
+        <>
+          {upcomingEvents.map((event) => {
+            const countdown = getCountdown(event.event_date);
+            return (
+              <TouchableOpacity
+                key={event.id}
+                style={[s.missionCard, { backgroundColor: P.card, borderColor: P.border }]}
+                activeOpacity={0.7}
+                onPress={() => router.push('/(tabs)/gameday' as any)}
+              >
+                <View style={[s.missionAccent, { backgroundColor: P.accent }]} />
+                <View style={s.missionContent}>
+                  {countdown && <Text style={[s.missionCountdown, { color: P.accent }]}>{countdown}</Text>}
+                  <Text style={[s.missionTitle, { color: P.text }]} numberOfLines={1}>
+                    {event.event_type === 'game' && event.opponent_name
+                      ? `vs ${event.opponent_name}`
+                      : event.title || 'Event'}
+                  </Text>
+                  <View style={s.missionMeta}>
+                    <Ionicons name="calendar-outline" size={12} color={P.textMuted} />
+                    <Text style={[s.missionMetaText, { color: P.textMuted }]}>
+                      {formatDate(event.event_date)}
+                      {event.start_time ? ` at ${formatTime(event.start_time)}` : ''}
+                    </Text>
+                  </View>
+                  {event.location && (
+                    <View style={s.missionMeta}>
+                      <Ionicons name="location-outline" size={12} color={P.textMuted} />
+                      <Text style={[s.missionMetaText, { color: P.textMuted }]}>{event.location}</Text>
+                    </View>
+                  )}
+                  {team && (
+                    <View style={s.missionMeta}>
+                      <Ionicons name="people-outline" size={12} color={P.textMuted} />
+                      <Text style={[s.missionMetaText, { color: P.textMuted }]}>{team.name}</Text>
+                    </View>
+                  )}
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </>
+      ) : (
+        <View style={[s.trophyEmptyCard, { backgroundColor: P.card, borderColor: P.border }]}>
+          <Ionicons name="telescope-outline" size={44} color={P.textMuted} />
+          <Text style={[s.trophyEmptyTitle, { color: P.textSecondary }]}>NO UPCOMING BATTLES</Text>
+          <Text style={[s.trophyEmptySubtext, { color: P.textMuted }]}>
+            Check back later for new missions and matches
+          </Text>
+        </View>
+      )}
+    </View>
+  );
+
+  // Section ordering
+  const SECTION_ORDER: Record<LayoutPreference, string[]> = {
+    default: ['stats', 'trophies', 'battle', 'upcoming'],
+    stats_first: ['stats', 'battle', 'trophies', 'upcoming'],
+    games_first: ['battle', 'stats', 'trophies', 'upcoming'],
+  };
+
+  const sectionMap: Record<string, () => React.ReactNode> = {
+    stats: renderStatHud,
+    trophies: renderTrophyCase,
+    battle: renderBattleLog,
+    upcoming: renderUpcomingBattles,
+  };
+
+  const orderedSections = SECTION_ORDER[layoutPref];
 
   // -----------------------------------------------
   // RENDER
   // -----------------------------------------------
   return (
     <ScrollView
-      style={s.container}
+      style={[s.container, { backgroundColor: P.bg }]}
       contentContainerStyle={s.contentContainer}
       showsVerticalScrollIndicator={false}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
           onRefresh={onRefresh}
-          tintColor={DARK.gold}
-          colors={[DARK.gold]}
+          tintColor={P.gold}
+          colors={[P.gold]}
         />
       }
     >
@@ -514,12 +978,12 @@ export default function PlayerDashboard() {
           <View style={s.heroImageWrap}>
             <Image source={{ uri: heroImage }} style={s.heroImage} resizeMode="cover" />
             <View style={s.heroOverlayTop} />
-            <View style={s.heroOverlayBottom} />
+            <View style={[s.heroOverlayBottom, { backgroundColor: P.bg }]} />
           </View>
         ) : (
-          <View style={[s.heroGradientBg, { backgroundColor: teamColor + '18' }]}>
+          <View style={[s.heroGradientBg, { backgroundColor: activeCard.gradient[0] + '30' }]}>
             <View style={[s.heroInitialsCircle, { backgroundColor: teamColor }]}>
-              <Text style={s.heroInitialsText}>{initials}</Text>
+              <Text style={[s.heroInitialsText, { color: P.text }]}>{initials}</Text>
             </View>
           </View>
         )}
@@ -531,20 +995,41 @@ export default function PlayerDashboard() {
           </View>
         )}
 
+        {/* Photo upload button */}
+        {isOwnProfile && (
+          <TouchableOpacity
+            style={{
+              position: 'absolute',
+              bottom: heroImage ? 140 : 20,
+              right: 20,
+              backgroundColor: P.accent,
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              justifyContent: 'center',
+              alignItems: 'center',
+              zIndex: 10,
+            }}
+            onPress={handlePhotoUpload}
+          >
+            <Ionicons name="camera" size={20} color="#fff" />
+          </TouchableOpacity>
+        )}
+
         {/* Hero content overlay */}
         <View style={s.heroContent}>
           {/* OVR Diamond */}
           <View style={s.ovrWrap}>
-            <View style={[s.ovrDiamond, { borderColor: ovrTier.borderColor }]}>
+            <View style={[s.ovrDiamond, { borderColor: ovrTier.borderColor, backgroundColor: P.card }]}>
               <View style={s.ovrInner}>
-                <Text style={s.ovrNumber}>{ovr}</Text>
+                <Text style={[s.ovrNumber, { color: P.text }]}>{ovr}</Text>
               </View>
             </View>
             <Text style={[s.ovrLabel, { color: ovrTier.borderColor }]}>{ovrTier.label}</Text>
           </View>
 
           {/* Player name */}
-          <Text style={s.heroName} numberOfLines={1} adjustsFontSizeToFit>
+          <Text style={[s.heroName, { color: P.text }]} numberOfLines={1} adjustsFontSizeToFit>
             {playerName}
           </Text>
 
@@ -556,24 +1041,24 @@ export default function PlayerDashboard() {
               </View>
             )}
             {player.position && (
-              <View style={[s.heroBadge, { backgroundColor: teamColor }]}>
-                <Text style={s.heroBadgeTextWhite}>{player.position}</Text>
+              <View style={[s.heroBadge, { backgroundColor: getPositionInfo(player.position, playerSport)?.color || teamColor }]}>
+                <Text style={[s.heroBadgeTextWhite, { color: P.text }]}>{player.position}</Text>
               </View>
             )}
             {player.jersey_number && (
-              <View style={[s.heroBadge, { backgroundColor: DARK.cardAlt }]}>
-                <Text style={s.heroBadgeTextWhite}>#{player.jersey_number}</Text>
+              <View style={[s.heroBadge, { backgroundColor: P.cardAlt }]}>
+                <Text style={[s.heroBadgeTextWhite, { color: P.text }]}>#{player.jersey_number}</Text>
               </View>
             )}
           </View>
 
           {/* Level + XP bar */}
           <View style={s.levelRow}>
-            <View style={[s.levelCircle, { borderColor: DARK.gold }]}>
-              <Text style={s.levelNumber}>{xp.level}</Text>
+            <View style={[s.levelCircle, { borderColor: P.gold, backgroundColor: P.card }]}>
+              <Text style={[s.levelNumber, { color: P.gold }]}>{xp.level}</Text>
             </View>
             <View style={s.xpBarWrap}>
-              <View style={s.xpBarTrack}>
+              <View style={[s.xpBarTrack, { backgroundColor: P.cardAlt }]}>
                 <View
                   style={[
                     s.xpBarFill,
@@ -584,7 +1069,7 @@ export default function PlayerDashboard() {
                   ]}
                 />
               </View>
-              <Text style={s.xpText}>
+              <Text style={[s.xpText, { color: P.textMuted }]}>
                 {xp.currentXP} / {xp.xpForNext} XP to Level {xp.level + 1}
               </Text>
             </View>
@@ -592,17 +1077,17 @@ export default function PlayerDashboard() {
 
           {/* Mini stat counters */}
           <View style={s.miniCountersRow}>
-            <View style={[s.miniCounter, { backgroundColor: DARK.neonBlue + '20' }]}>
-              <Text style={[s.miniCounterNumber, { color: DARK.neonBlue }]}>{stats?.games_played || 0}</Text>
-              <Text style={s.miniCounterLabel}>Games</Text>
+            <View style={[s.miniCounter, { backgroundColor: P.neonBlue + '20' }]}>
+              <Text style={[s.miniCounterNumber, { color: P.neonBlue }]}>{stats?.games_played || 0}</Text>
+              <Text style={[s.miniCounterLabel, { color: P.textMuted }]}>Games</Text>
             </View>
-            <View style={[s.miniCounter, { backgroundColor: DARK.gold + '20' }]}>
-              <Text style={[s.miniCounterNumber, { color: DARK.gold }]}>{achievements.length}</Text>
-              <Text style={s.miniCounterLabel}>Trophies</Text>
+            <View style={[s.miniCounter, { backgroundColor: P.gold + '20' }]}>
+              <Text style={[s.miniCounterNumber, { color: P.gold }]}>{achievements.length}</Text>
+              <Text style={[s.miniCounterLabel, { color: P.textMuted }]}>Trophies</Text>
             </View>
-            <View style={[s.miniCounter, { backgroundColor: DARK.neonPink + '20' }]}>
-              <Text style={[s.miniCounterNumber, { color: DARK.neonPink }]}>{stats?.total_points || 0}</Text>
-              <Text style={s.miniCounterLabel}>Points</Text>
+            <View style={[s.miniCounter, { backgroundColor: P.neonPink + '20' }]}>
+              <Text style={[s.miniCounterNumber, { color: P.neonPink }]}>{stats?.total_points || 0}</Text>
+              <Text style={[s.miniCounterLabel, { color: P.textMuted }]}>Points</Text>
             </View>
           </View>
         </View>
@@ -611,258 +1096,11 @@ export default function PlayerDashboard() {
       <ReenrollmentBanner />
 
       {/* ============================================ */}
-      {/* STAT HUD                                    */}
+      {/* ORDERED SECTIONS                             */}
       {/* ============================================ */}
-      <View style={s.section}>
-        <View style={s.sectionHeaderRow}>
-          <Text style={s.sectionHeader}>STAT HUD</Text>
-          <Text style={s.sectionHeaderRight}>{workingSeason?.name || ''}</Text>
-        </View>
-
-        <View style={s.statHudCard}>
-          {STAT_DEFS.map((def) => {
-            const value = stats ? stats[def.key] || 0 : 0;
-            const avg = perGame(value);
-            const pct = Math.min((value / def.max) * 100, 100);
-
-            return (
-              <View key={def.key} style={s.statRow}>
-                <View style={[s.statIconWrap, { backgroundColor: def.color + '20' }]}>
-                  <Ionicons name={def.icon} size={16} color={def.color} />
-                </View>
-                <View style={s.statInfo}>
-                  <View style={s.statNameRow}>
-                    <Text style={s.statName}>{def.label}</Text>
-                    <Text style={s.statAvg}>{avg}/g</Text>
-                  </View>
-                  <View style={s.statBarTrack}>
-                    <View style={[s.statBarFill, { width: `${pct}%`, backgroundColor: def.color }]} />
-                  </View>
-                </View>
-                <Text style={[s.statValue, { color: def.color }]}>{value}</Text>
-              </View>
-            );
-          })}
-        </View>
-
-        {/* Bottom percentage cards */}
-        <View style={s.pctCardsRow}>
-          <View style={s.pctCard}>
-            <Text style={s.pctValue}>{hitPct}%</Text>
-            <Text style={s.pctLabel}>Hit %</Text>
-          </View>
-          <View style={s.pctCard}>
-            <Text style={s.pctValue}>{servePct}%</Text>
-            <Text style={s.pctLabel}>Serve %</Text>
-          </View>
-          <View style={s.pctCard}>
-            <Text style={s.pctValue}>{stats?.games_played || 0}</Text>
-            <Text style={s.pctLabel}>Games</Text>
-          </View>
-        </View>
-      </View>
-
-      {/* ============================================ */}
-      {/* TROPHY CASE                                 */}
-      {/* ============================================ */}
-      <View style={s.section}>
-        <View style={s.sectionHeaderRow}>
-          <Text style={s.sectionHeader}>TROPHY CASE</Text>
-          <Text style={s.sectionHeaderRight}>{achievements.length} earned</Text>
-        </View>
-
-        {achievements.length > 0 ? (
-          <>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={s.trophyScroll}
-            >
-              {achievements.map((a) => {
-                const badgeColor = a.achievement?.color_primary || DARK.gold;
-                const earnedDate = a.earned_at ? formatShortDate(a.earned_at.split('T')[0]) : '';
-                return (
-                  <View key={a.id} style={s.trophyItem}>
-                    <View
-                      style={[
-                        s.trophyCircle,
-                        {
-                          backgroundColor: badgeColor + '25',
-                          ...Platform.select({
-                            ios: {
-                              shadowColor: badgeColor,
-                              shadowOffset: { width: 0, height: 0 },
-                              shadowOpacity: 0.5,
-                              shadowRadius: 10,
-                            },
-                            android: { elevation: 6 },
-                          }),
-                        },
-                      ]}
-                    >
-                      <Text style={s.trophyEmoji}>{a.achievement?.icon || '?'}</Text>
-                    </View>
-                    <Text style={s.trophyName} numberOfLines={2}>
-                      {a.achievement?.name || 'Badge'}
-                    </Text>
-                    {earnedDate ? <Text style={s.trophyDate}>{earnedDate}</Text> : null}
-                  </View>
-                );
-              })}
-            </ScrollView>
-            <TouchableOpacity
-              style={s.viewAllButton}
-              onPress={() => router.push('/achievements' as any)}
-              activeOpacity={0.7}
-            >
-              <Text style={s.viewAllText}>View All</Text>
-              <Ionicons name="chevron-forward" size={16} color={DARK.accent} />
-            </TouchableOpacity>
-          </>
-        ) : (
-          <View style={s.trophyEmptyCard}>
-            <Ionicons name="trophy-outline" size={48} color={DARK.gold} />
-            <Text style={s.trophyEmptyTitle}>START EARNING TROPHIES</Text>
-            <Text style={s.trophyEmptySubtext}>
-              Play games and hit milestones to unlock achievements
-            </Text>
-            <TouchableOpacity
-              style={s.viewAllButton}
-              onPress={() => router.push('/achievements' as any)}
-              activeOpacity={0.7}
-            >
-              <Text style={s.viewAllText}>View All Trophies</Text>
-              <Ionicons name="chevron-forward" size={16} color={DARK.accent} />
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
-
-      {/* ============================================ */}
-      {/* BATTLE LOG                                  */}
-      {/* ============================================ */}
-      <View style={s.section}>
-        <View style={s.sectionHeaderRow}>
-          <Text style={s.sectionHeader}>BATTLE LOG</Text>
-        </View>
-
-        {recentGames.length > 0 ? (
-          <>
-            {recentGames.map((game) => {
-              const isWin = game.game_result === 'win';
-              const isLoss = game.game_result === 'loss';
-              const accentColor = isWin ? DARK.neonGreen : isLoss ? DARK.neonRed : DARK.textMuted;
-              const resultLetter = isWin ? 'W' : isLoss ? 'L' : 'T';
-              const scoreText =
-                game.our_score != null && game.opponent_score != null
-                  ? `${game.our_score}-${game.opponent_score}`
-                  : '';
-
-              return (
-                <TouchableOpacity
-                  key={game.id}
-                  style={s.battleCard}
-                  activeOpacity={0.7}
-                  onPress={() => router.push(`/(tabs)/gameday` as any)}
-                >
-                  <View style={[s.battleAccent, { backgroundColor: accentColor }]} />
-                  <View style={s.battleContent}>
-                    <Text style={s.battleDate}>{formatShortDate(game.event_date)}</Text>
-                    <View style={s.battleMainRow}>
-                      <Text style={[s.battleResult, { color: accentColor }]}>{resultLetter}</Text>
-                      <View style={s.battleOpponentWrap}>
-                        <Text style={s.battleOpponent} numberOfLines={1}>
-                          vs {game.opponent_name || 'Opponent'}
-                        </Text>
-                        {scoreText ? <Text style={s.battleScore}>{scoreText}</Text> : null}
-                      </View>
-                    </View>
-                  </View>
-                  <Ionicons name="chevron-forward" size={18} color={DARK.textMuted} />
-                </TouchableOpacity>
-              );
-            })}
-            <TouchableOpacity
-              style={s.viewAllButton}
-              onPress={() => router.push('/(tabs)/schedule' as any)}
-              activeOpacity={0.7}
-            >
-              <Text style={s.viewAllText}>See All Games</Text>
-              <Ionicons name="chevron-forward" size={16} color={DARK.accent} />
-            </TouchableOpacity>
-          </>
-        ) : (
-          <View style={s.trophyEmptyCard}>
-            <Ionicons name="game-controller-outline" size={44} color={DARK.textMuted} />
-            <Text style={s.trophyEmptyTitle}>NO BATTLES YET</Text>
-            <Text style={s.trophyEmptySubtext}>
-              Your battle log will fill up once you start competing
-            </Text>
-          </View>
-        )}
-      </View>
-
-      {/* ============================================ */}
-      {/* UPCOMING BATTLES                            */}
-      {/* ============================================ */}
-      <View style={s.section}>
-        <View style={s.sectionHeaderRow}>
-          <Text style={s.sectionHeader}>UPCOMING BATTLES</Text>
-        </View>
-
-        {upcomingEvents.length > 0 ? (
-          <>
-            {upcomingEvents.map((event) => {
-              const countdown = getCountdown(event.event_date);
-              return (
-                <TouchableOpacity
-                  key={event.id}
-                  style={s.missionCard}
-                  activeOpacity={0.7}
-                  onPress={() => router.push('/(tabs)/gameday' as any)}
-                >
-                  <View style={s.missionAccent} />
-                  <View style={s.missionContent}>
-                    {countdown && <Text style={s.missionCountdown}>{countdown}</Text>}
-                    <Text style={s.missionTitle} numberOfLines={1}>
-                      {event.event_type === 'game' && event.opponent_name
-                        ? `vs ${event.opponent_name}`
-                        : event.title || 'Event'}
-                    </Text>
-                    <View style={s.missionMeta}>
-                      <Ionicons name="calendar-outline" size={12} color={DARK.textMuted} />
-                      <Text style={s.missionMetaText}>
-                        {formatDate(event.event_date)}
-                        {event.start_time ? ` at ${formatTime(event.start_time)}` : ''}
-                      </Text>
-                    </View>
-                    {event.location && (
-                      <View style={s.missionMeta}>
-                        <Ionicons name="location-outline" size={12} color={DARK.textMuted} />
-                        <Text style={s.missionMetaText}>{event.location}</Text>
-                      </View>
-                    )}
-                    {team && (
-                      <View style={s.missionMeta}>
-                        <Ionicons name="people-outline" size={12} color={DARK.textMuted} />
-                        <Text style={s.missionMetaText}>{team.name}</Text>
-                      </View>
-                    )}
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </>
-        ) : (
-          <View style={s.trophyEmptyCard}>
-            <Ionicons name="telescope-outline" size={44} color={DARK.textMuted} />
-            <Text style={s.trophyEmptyTitle}>NO UPCOMING BATTLES</Text>
-            <Text style={s.trophyEmptySubtext}>
-              Check back later for new missions and matches
-            </Text>
-          </View>
-        )}
-      </View>
+      {orderedSections.map(key => (
+        <React.Fragment key={key}>{sectionMap[key]()}</React.Fragment>
+      ))}
 
       {/* ============================================ */}
       {/* QUICK ACTIONS                               */}
@@ -870,39 +1108,299 @@ export default function PlayerDashboard() {
       <View style={s.section}>
         <View style={s.quickActionsGrid}>
           <TouchableOpacity
-            style={s.quickActionCard}
+            style={[s.quickActionCard, { backgroundColor: P.card, borderColor: P.border }]}
             onPress={() => router.push('/(tabs)/connect' as any)}
             activeOpacity={0.7}
           >
-            <Ionicons name="people" size={26} color={DARK.neonBlue} />
-            <Text style={s.quickActionLabel}>Team Hub</Text>
+            <Ionicons name="people" size={26} color={P.neonBlue} />
+            <Text style={[s.quickActionLabel, { color: P.text }]}>Team Hub</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={s.quickActionCard}
+            style={[s.quickActionCard, { backgroundColor: P.card, borderColor: P.border }]}
             onPress={() => router.push('/standings' as any)}
             activeOpacity={0.7}
           >
-            <Ionicons name="podium" size={26} color={DARK.neonGreen} />
-            <Text style={s.quickActionLabel}>Leaderboards</Text>
+            <Ionicons name="podium" size={26} color={P.neonGreen} />
+            <Text style={[s.quickActionLabel, { color: P.text }]}>Leaderboards</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={s.quickActionCard}
+            style={[s.quickActionCard, { backgroundColor: P.card, borderColor: P.border }]}
             onPress={() => router.push('/achievements' as any)}
             activeOpacity={0.7}
           >
-            <Ionicons name="trophy" size={26} color={DARK.gold} />
-            <Text style={s.quickActionLabel}>Trophies</Text>
+            <Ionicons name="trophy" size={26} color={P.gold} />
+            <Text style={[s.quickActionLabel, { color: P.text }]}>Trophies</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={s.quickActionCard}
+            style={[s.quickActionCard, { backgroundColor: P.card, borderColor: P.border }]}
             onPress={() => router.push('/(tabs)/schedule' as any)}
             activeOpacity={0.7}
           >
-            <Ionicons name="calendar" size={26} color={DARK.neonPurple} />
-            <Text style={s.quickActionLabel}>Schedule</Text>
+            <Ionicons name="calendar" size={26} color={P.neonPurple} />
+            <Text style={[s.quickActionLabel, { color: P.text }]}>Schedule</Text>
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* ============================================ */}
+      {/* SETTINGS                                    */}
+      {/* ============================================ */}
+      {isOwnProfile && (
+        <View style={s.section}>
+          <TouchableOpacity
+            style={s.sectionHeaderRow}
+            onPress={() => setShowSettings(!showSettings)}
+          >
+            <Text style={[s.sectionHeader, { color: P.gold }]}>SETTINGS</Text>
+            <Ionicons name={showSettings ? 'chevron-up' : 'chevron-down'} size={18} color={P.textMuted} />
+          </TouchableOpacity>
+
+          {showSettings && (
+            <View style={[s.statHudCard, { backgroundColor: P.card, borderColor: P.border }]}>
+              {/* Achievements Publicity Toggle */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 }}>
+                <Text style={{ color: P.text, fontSize: 14, fontWeight: '600' }}>Show Achievements Publicly</Text>
+                <Switch
+                  value={player?.show_achievements_publicly !== false}
+                  onValueChange={async (val) => {
+                    await supabase.from('players').update({ show_achievements_publicly: val }).eq('id', player!.id);
+                    setPlayer(prev => prev ? { ...prev, show_achievements_publicly: val } : prev);
+                  }}
+                  trackColor={{ false: P.cardAlt, true: P.accent + '60' }}
+                  thumbColor={player?.show_achievements_publicly !== false ? P.accent : P.textMuted}
+                />
+              </View>
+
+              {/* Theme Variant Selector */}
+              <View style={{ marginTop: 16 }}>
+                <Text style={{ color: P.textMuted, fontSize: 12, fontWeight: '700', letterSpacing: 1, marginBottom: 10 }}>THEME</Text>
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  {([
+                    { key: 'midnight' as ThemeVariant, label: 'Midnight', colors: ['#0A0F1A', '#111827'] },
+                    { key: 'clean' as ThemeVariant, label: 'Clean', colors: ['#F8FAFC', '#FFFFFF'] },
+                    { key: 'fire' as ThemeVariant, label: 'Fire', colors: ['#1A0A0A', '#2D1111'] },
+                  ]).map(v => (
+                    <TouchableOpacity
+                      key={v.key}
+                      style={{
+                        flex: 1,
+                        padding: 12,
+                        borderRadius: 12,
+                        borderWidth: 2,
+                        borderColor: themeVariant === v.key ? P.accent : P.border,
+                        alignItems: 'center',
+                        backgroundColor: v.colors[0],
+                      }}
+                      onPress={async () => {
+                        setThemeVariant(v.key);
+                        await AsyncStorage.setItem('vb_player_theme_variant', v.key);
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', gap: 4, marginBottom: 6 }}>
+                        <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: v.colors[0] }} />
+                        <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: v.colors[1] }} />
+                      </View>
+                      <Text style={{ color: themeVariant === v.key ? (v.key === 'clean' ? '#1E293B' : '#fff') : (v.key === 'clean' ? '#64748B' : '#888'), fontSize: 11, fontWeight: '700' }}>{v.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Accent Color Picker */}
+              <View style={{ marginTop: 16 }}>
+                <Text style={{ color: P.textMuted, fontSize: 12, fontWeight: '700', letterSpacing: 1, marginBottom: 10 }}>ACCENT COLOR</Text>
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  {ACCENT_COLORS.map(color => (
+                    <TouchableOpacity
+                      key={color}
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 18,
+                        backgroundColor: color,
+                        borderWidth: playerAccent === color ? 3 : 0,
+                        borderColor: '#fff',
+                      }}
+                      onPress={async () => {
+                        setPlayerAccent(color);
+                        await AsyncStorage.setItem('vb_player_accent', color);
+                      }}
+                    />
+                  ))}
+                </View>
+              </View>
+
+              {/* Layout Preference */}
+              <View style={{ marginTop: 16 }}>
+                <Text style={{ color: P.textMuted, fontSize: 12, fontWeight: '700', letterSpacing: 1, marginBottom: 10 }}>LAYOUT</Text>
+                {([
+                  { key: 'default' as LayoutPreference, label: 'Default (Stats \u2192 Trophies \u2192 Battle \u2192 Schedule)' },
+                  { key: 'stats_first' as LayoutPreference, label: 'Stats First (Stats \u2192 Battle \u2192 Trophies \u2192 Schedule)' },
+                  { key: 'games_first' as LayoutPreference, label: 'Games First (Battle \u2192 Stats \u2192 Trophies \u2192 Schedule)' },
+                ]).map(opt => (
+                  <TouchableOpacity
+                    key={opt.key}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingVertical: 8,
+                      gap: 10,
+                    }}
+                    onPress={async () => {
+                      setLayoutPref(opt.key);
+                      await AsyncStorage.setItem('vb_player_layout', opt.key);
+                    }}
+                  >
+                    <View style={{
+                      width: 20, height: 20, borderRadius: 10,
+                      borderWidth: 2, borderColor: layoutPref === opt.key ? P.accent : P.textMuted,
+                      backgroundColor: layoutPref === opt.key ? P.accent : 'transparent',
+                    }} />
+                    <Text style={{ color: P.text, fontSize: 13, flex: 1 }}>{opt.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Calling Card */}
+              <View style={{ marginTop: 16 }}>
+                <Text style={{ color: P.textMuted, fontSize: 12, fontWeight: '700', letterSpacing: 1, marginBottom: 10 }}>CALLING CARD</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {CALLING_CARDS.map(card => (
+                    <TouchableOpacity
+                      key={card.id}
+                      style={{
+                        width: '23%',
+                        aspectRatio: 1.5,
+                        borderRadius: 10,
+                        backgroundColor: card.gradient[0],
+                        borderWidth: equippedCard === card.id ? 2 : 1,
+                        borderColor: equippedCard === card.id ? P.accent : P.border,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                      }}
+                      onPress={async () => {
+                        setEquippedCard(card.id);
+                        await AsyncStorage.setItem('vb_player_calling_card', String(card.id));
+                        if (player) {
+                          await supabase.from('players').update({ equipped_calling_card_id: card.id }).eq('id', player.id);
+                        }
+                      }}
+                    >
+                      <Text style={{ color: '#fff', fontSize: 9, fontWeight: '700' }}>{card.name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </View>
+          )}
+        </View>
+      )}
+
+      {/* ============================================ */}
+      {/* COACH NOTES                                 */}
+      {/* ============================================ */}
+      {isCoach && player && (
+        <View style={s.section}>
+          <View style={s.sectionHeaderRow}>
+            <Text style={[s.sectionHeader, { color: P.gold }]}>COACH NOTES</Text>
+            <Text style={[s.sectionHeaderRight, { color: P.textMuted }]}>{coachNotes.length} notes</Text>
+          </View>
+
+          {/* Add Note */}
+          <View style={[s.statHudCard, { backgroundColor: P.card, borderColor: P.border, marginBottom: 12 }]}>
+            <TextInput
+              value={newNoteContent}
+              onChangeText={setNewNoteContent}
+              placeholder="Add a note about this player..."
+              placeholderTextColor={P.textMuted}
+              multiline
+              style={{ color: P.text, fontSize: 14, minHeight: 60, textAlignVertical: 'top' }}
+            />
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 }}>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                {['general', 'performance', 'behavior'].map(type => (
+                  <TouchableOpacity
+                    key={type}
+                    onPress={() => setNewNoteType(type)}
+                    style={{
+                      paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12,
+                      backgroundColor: newNoteType === type ? P.accent + '20' : P.cardAlt,
+                    }}
+                  >
+                    <Text style={{ fontSize: 11, color: newNoteType === type ? P.accent : P.textMuted, fontWeight: '600' }}>
+                      {type.charAt(0).toUpperCase() + type.slice(1)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Text style={{ fontSize: 11, color: P.textMuted }}>Private</Text>
+                <Switch
+                  value={newNotePrivate}
+                  onValueChange={setNewNotePrivate}
+                  trackColor={{ false: P.cardAlt, true: P.accent + '60' }}
+                  thumbColor={newNotePrivate ? P.accent : P.textMuted}
+                />
+              </View>
+            </View>
+            <TouchableOpacity
+              style={{
+                backgroundColor: P.accent,
+                borderRadius: 10,
+                paddingVertical: 10,
+                alignItems: 'center',
+                marginTop: 10,
+                opacity: newNoteContent.trim() ? 1 : 0.5,
+              }}
+              disabled={!newNoteContent.trim()}
+              onPress={async () => {
+                if (!newNoteContent.trim() || !player) return;
+                await supabase.from('player_coach_notes').insert({
+                  player_id: player.id,
+                  coach_id: user!.id,
+                  season_id: workingSeason?.id,
+                  note_type: newNoteType,
+                  content: newNoteContent.trim(),
+                  is_private: newNotePrivate,
+                });
+                setNewNoteContent('');
+                // Refresh notes
+                const { data } = await supabase
+                  .from('player_coach_notes')
+                  .select('id, content, note_type, is_private, created_at')
+                  .eq('player_id', player.id)
+                  .or(`coach_id.eq.${user!.id},is_private.eq.false`)
+                  .order('created_at', { ascending: false })
+                  .limit(10);
+                if (data) setCoachNotes(data);
+              }}
+            >
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Save Note</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Notes List */}
+          {coachNotes.map(note => (
+            <View key={note.id} style={[s.battleCard, { backgroundColor: P.card, borderColor: P.border }]}>
+              <View style={[s.battleAccent, { backgroundColor: note.is_private ? P.neonPurple : P.neonBlue }]} />
+              <View style={s.battleContent}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                  <View style={{ backgroundColor: P.accent + '20', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: P.accent }}>{note.note_type.toUpperCase()}</Text>
+                  </View>
+                  {note.is_private && (
+                    <Ionicons name="lock-closed" size={12} color={P.neonPurple} />
+                  )}
+                </View>
+                <Text style={{ color: P.text, fontSize: 13 }}>{note.content}</Text>
+                <Text style={{ color: P.textMuted, fontSize: 10, marginTop: 4 }}>
+                  {new Date(note.created_at).toLocaleDateString()}
+                </Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
 
       {/* Bottom spacing for tab bar */}
       <View style={{ height: 120 }} />

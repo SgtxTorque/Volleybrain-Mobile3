@@ -1,6 +1,8 @@
+import { getSportDisplay } from '@/constants/sport-display';
 import { useAuth } from '@/lib/auth';
+import { usePermissions } from '@/lib/permissions-context';
 import { supabase } from '@/lib/supabase';
-import { createGlassStyle, useTheme } from '@/lib/theme';
+import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -34,27 +36,20 @@ type GameEvent = {
   our_score: number | null;
   opponent_score: number | null;
   set_scores: any;
+  sport?: string | null;
   teams: {
     name: string;
     color: string | null;
+    sport_id?: string | null;
+    sports?: { name: string } | null;
   } | null;
 };
 
 type PlayerStats = {
   id: string;
   player_id: string;
-  aces: number;
-  kills: number;
-  assists: number;
-  digs: number;
-  blocks: number;
-  serves: number;
-  service_errors: number;
-  attacks: number;
-  attack_errors: number;
-  receptions: number;
-  reception_errors: number;
-  points: number;
+  sport?: string;
+  [key: string]: any;
 };
 
 type ChildInfo = {
@@ -70,12 +65,14 @@ type ChildInfo = {
 export default function GameResultsScreen() {
   const { colors } = useTheme();
   const { user } = useAuth();
+  const { isPlayer } = usePermissions();
   const { eventId } = useLocalSearchParams();
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
   const [game, setGame] = useState<GameEvent | null>(null);
   const [childStats, setChildStats] = useState<(PlayerStats & { child: ChildInfo })[]>([]);
+  const [sportName, setSportName] = useState<string | null>(null);
 
   const s = createStyles(colors);
 
@@ -87,10 +84,10 @@ export default function GameResultsScreen() {
     if (!eventId || !user?.id) return;
 
     try {
-      // Fetch game event
+      // Fetch game event with sport info via team
       const { data: gameData, error: gameError } = await supabase
         .from('schedule_events')
-        .select('*, teams!schedule_events_team_id_fkey(name, color)')
+        .select('*, teams!schedule_events_team_id_fkey(name, color, sports(name))')
         .eq('id', eventId)
         .single();
 
@@ -102,24 +99,43 @@ export default function GameResultsScreen() {
 
       setGame(gameData);
 
+      // Detect sport from team → sports join
+      const detectedSport = (gameData?.teams as any)?.sports?.name || null;
+      setSportName(detectedSport);
+
       // Fetch children linked to parent
       const { data: children } = await supabase
         .from('players')
         .select('id, first_name, last_name')
         .eq('parent_account_id', user.id);
 
-      const childIds = (children || []).map(c => c.id);
+      let playerIds = (children || []).map(c => c.id);
+      let playerInfos = children || [];
 
-      if (childIds.length > 0) {
-        // Fetch child's stats for this game
+      // Player self-access: if no children found and user is a player, look up self
+      if (playerIds.length === 0 && isPlayer) {
+        const { data: selfPlayers } = await supabase
+          .from('players')
+          .select('id, first_name, last_name')
+          .eq('user_account_id', user.id)
+          .limit(1);
+
+        if (selfPlayers && selfPlayers.length > 0) {
+          playerIds = selfPlayers.map(p => p.id);
+          playerInfos = selfPlayers;
+        }
+      }
+
+      if (playerIds.length > 0) {
+        // Fetch stats for this game
         const { data: stats } = await supabase
           .from('game_player_stats')
           .select('*')
           .eq('event_id', eventId as string)
-          .in('player_id', childIds);
+          .in('player_id', playerIds);
 
         const statsWithChild = (stats || []).map((stat: any) => {
-          const child = (children || []).find(c => c.id === stat.player_id);
+          const child = playerInfos.find(c => c.id === stat.player_id);
           return {
             ...stat,
             child: child || { id: stat.player_id, first_name: 'Unknown', last_name: '' },
@@ -327,92 +343,31 @@ export default function GameResultsScreen() {
           )}
         </View>
 
-        {/* Child Stats */}
+        {/* Player Stats — Sport-Aware */}
         {childStats.length > 0 && (
           <>
-            {childStats.map(statEntry => (
-              <View key={statEntry.id}>
-                <Text style={s.sectionTitle}>
-                  {statEntry.child.first_name.toUpperCase()}'S PERFORMANCE
-                </Text>
+            {childStats.map(statEntry => {
+              const sportDisplay = getSportDisplay(sportName);
+              return (
+                <View key={statEntry.id}>
+                  <Text style={s.sectionTitle}>
+                    {statEntry.child.first_name.toUpperCase()}'S PERFORMANCE
+                  </Text>
 
-                <View style={s.statsGrid}>
-                  <StatCard
-                    label="Kills"
-                    value={statEntry.kills || 0}
-                    icon="flash"
-                    color="#FF3B3B"
-                  />
-                  <StatCard
-                    label="Aces"
-                    value={statEntry.aces || 0}
-                    icon="star"
-                    color="#A855F7"
-                  />
-                  <StatCard
-                    label="Digs"
-                    value={statEntry.digs || 0}
-                    icon="hand-left"
-                    color="#3B82F6"
-                  />
-                  <StatCard
-                    label="Blocks"
-                    value={statEntry.blocks || 0}
-                    icon="shield"
-                    color="#F59E0B"
-                  />
-                  <StatCard
-                    label="Assists"
-                    value={statEntry.assists || 0}
-                    icon="people"
-                    color="#10B981"
-                  />
-                  <StatCard
-                    label="Points"
-                    value={statEntry.points || 0}
-                    icon="trophy"
-                    color={colors.primary}
-                  />
-                </View>
-
-                {/* Additional Stats */}
-                <View style={s.additionalStats}>
-                  <Text style={s.additionalStatsTitle}>DETAILED STATS</Text>
-                  <View style={s.additionalStatsGrid}>
-                    <View style={s.additionalStatRow}>
-                      <Text style={s.additionalStatLabel}>Serves</Text>
-                      <Text style={s.additionalStatValue}>{statEntry.serves || 0}</Text>
-                    </View>
-                    <View style={s.additionalStatRow}>
-                      <Text style={s.additionalStatLabel}>Service Errors</Text>
-                      <Text style={[s.additionalStatValue, { color: colors.danger }]}>
-                        {statEntry.service_errors || 0}
-                      </Text>
-                    </View>
-                    <View style={s.additionalStatRow}>
-                      <Text style={s.additionalStatLabel}>Attacks</Text>
-                      <Text style={s.additionalStatValue}>{statEntry.attacks || 0}</Text>
-                    </View>
-                    <View style={s.additionalStatRow}>
-                      <Text style={s.additionalStatLabel}>Attack Errors</Text>
-                      <Text style={[s.additionalStatValue, { color: colors.danger }]}>
-                        {statEntry.attack_errors || 0}
-                      </Text>
-                    </View>
-                    <View style={s.additionalStatRow}>
-                      <Text style={s.additionalStatLabel}>Receptions</Text>
-                      <Text style={s.additionalStatValue}>{statEntry.receptions || 0}</Text>
-                    </View>
-                    <View style={s.additionalStatRow}>
-                      <Text style={s.additionalStatLabel}>Reception Errors</Text>
-                      <Text style={[s.additionalStatValue, { color: colors.danger }]}>
-                        {statEntry.reception_errors || 0}
-                      </Text>
-                    </View>
+                  <View style={s.statsGrid}>
+                    {sportDisplay.primaryStats.map(stat => (
+                      <StatCard
+                        key={stat.key}
+                        label={stat.label}
+                        value={statEntry[stat.dbColumn] || 0}
+                        icon={stat.ionicon}
+                        color={stat.color}
+                      />
+                    ))}
                   </View>
                 </View>
-              </View>
-            ))}
+              );
+            })}
           </>
         )}
 
@@ -673,52 +628,6 @@ const createStyles = (colors: any) =>
       marginTop: 2,
       textTransform: 'uppercase' as const,
       letterSpacing: 0.5,
-    },
-
-    // Additional Stats
-    additionalStats: {
-      backgroundColor: colors.glassCard,
-      borderWidth: 1,
-      borderColor: colors.glassBorder,
-      borderRadius: 16,
-      padding: 16,
-      marginBottom: 16,
-      ...Platform.select({
-        ios: {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.15,
-          shadowRadius: 12,
-        },
-        android: { elevation: 6 },
-      }),
-    },
-    additionalStatsTitle: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: colors.textMuted,
-      letterSpacing: 1.2,
-      marginBottom: 12,
-    },
-    additionalStatsGrid: {
-      gap: 0,
-    },
-    additionalStatRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingVertical: 10,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: colors.glassBorder,
-    },
-    additionalStatLabel: {
-      fontSize: 14,
-      color: colors.textSecondary,
-    },
-    additionalStatValue: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: colors.text,
     },
 
     // No Stats

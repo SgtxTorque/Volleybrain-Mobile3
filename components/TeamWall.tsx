@@ -1,3 +1,4 @@
+import { getPositionInfo } from '@/constants/sport-display';
 import { useAuth } from '@/lib/auth';
 import { pickImage, takePhoto, uploadMedia } from '@/lib/media-utils';
 import { useSeason } from '@/lib/season';
@@ -477,7 +478,7 @@ export default function TeamWall({ teamId: propTeamId, embedded = false }: TeamW
     try {
       const { data: teamData } = await supabase
         .from('teams')
-        .select('id, name, color, season_id')
+        .select('id, name, color, season_id, sports(name)')
         .eq('id', teamId)
         .single();
 
@@ -784,6 +785,7 @@ export default function TeamWall({ teamId: propTeamId, embedded = false }: TeamW
 
   const s = createStyles(colors);
   const teamColor = team?.color || colors.primary;
+  const teamSport = (team as any)?.sports?.name || null;
 
   // =============================================================================
   // TEAM PICKER VIEW (no team selected)
@@ -980,7 +982,15 @@ export default function TeamWall({ teamId: propTeamId, embedded = false }: TeamW
         <View style={s.rosterInfo}>
           <Text style={s.rosterName}>{fullName}</Text>
           {player.position && (
-            <Text style={s.rosterPosition}>{player.position}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+              <View style={{
+                width: 8,
+                height: 8,
+                borderRadius: 4,
+                backgroundColor: getPositionInfo(player.position, teamSport)?.color || colors.textMuted,
+              }} />
+              <Text style={s.rosterPosition}>{player.position}</Text>
+            </View>
           )}
         </View>
         <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />

@@ -75,7 +75,7 @@ export default function RoleSelector() {
             style={s.overlay} 
             activeOpacity={1} 
             onPress={() => setShowPicker(false)}
-            pointerEvents={showPicker ? 'auto' : 'none'}
+            {...{ pointerEvents: showPicker ? 'auto' : 'none' } as any}
           >
             <View style={s.modal}>
             <Text style={s.modalTitle}>Switch View</Text>
