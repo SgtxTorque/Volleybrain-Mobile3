@@ -86,7 +86,7 @@ export default function MyKidsScreen() {
       // Fetch children linked to this parent
       const { data: players, error: playersError } = await supabase
         .from('players')
-        .select('*, team_players(team_id, jersey_number, position, teams(id, name, color))')
+        .select('*, team_players(team_id, jersey_number, teams(id, name, color))')
         .eq('parent_account_id', user.id);
 
       if (playersError) {
@@ -109,7 +109,7 @@ export default function MyKidsScreen() {
           name: tp.teams?.name || '',
           color: tp.teams?.color || null,
           jersey_number: tp.jersey_number,
-          position: tp.position,
+          position: p.position || null,
         })),
       }));
 

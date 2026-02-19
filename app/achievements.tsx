@@ -50,6 +50,7 @@ type Achievement = {
   threshold: number | null;
   display_order: number | null;
   is_active: boolean;
+  requires_verification?: boolean;
 };
 
 type PlayerAchievement = {
@@ -155,11 +156,12 @@ export default function AchievementsScreen() {
   }, [user?.id, workingSeason?.id]);
 
   // Auto-unlock after data loads
+  const seasonStatsCount = Object.keys(seasonStats).length;
   useEffect(() => {
-    if (!loading && playerId && allAchievements.length > 0 && Object.keys(seasonStats).length > 0) {
+    if (!loading && playerId && allAchievements.length > 0 && seasonStatsCount > 0) {
       unlockNewAchievements();
     }
-  }, [loading, playerId, allAchievements.length, Object.keys(seasonStats).length]);
+  }, [loading, playerId, allAchievements.length, seasonStatsCount]);
 
   const resolvePlayerId = async (): Promise<string | null> => {
     if (!user?.id || !workingSeason?.id) return null;
@@ -284,7 +286,7 @@ export default function AchievementsScreen() {
       // Skip if already earned, no stat_key/threshold, or requires verification
       if (earnedMap[ach.id]) continue;
       if (!ach.stat_key || ach.threshold == null) continue;
-      if ((ach as any).requires_verification) continue;
+      if (ach.requires_verification) continue;
 
       const currentVal = seasonStats[ach.stat_key];
       if (currentVal != null && currentVal >= ach.threshold) {
