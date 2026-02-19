@@ -205,7 +205,7 @@ export default function ParentDashboard() {
   const [rsvpLoading, setRsvpLoading] = useState(false);
   const [totalTeamEvents, setTotalTeamEvents] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [modalStage, setModalStage] = useState<'loading' | 'onboarding' | 'none'>('loading');
+  const [modalStage, setModalStage] = useState<'loading' | 'onboarding' | 'none'>('none');
   const [onboardingMounted, setOnboardingMounted] = useState(false);
   const [onboardingVisible, setOnboardingVisible] = useState(false);
   const [shareMounted, setShareMounted] = useState(false);
@@ -270,22 +270,8 @@ export default function ParentDashboard() {
     }
   }, [activeChildIndex]);
 
-  // Check if onboarding is done
-  useEffect(() => {
-    let isMounted = true;
-    AsyncStorage.getItem('vb_parent_onboarded')
-      .then(val => {
-        if (!isMounted) return;
-        setModalStage(val === 'true' ? 'none' : 'onboarding');
-      })
-      .catch(() => {
-        if (!isMounted) return;
-        setModalStage('none');
-      });
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  // Onboarding modal disabled — users are already set up
+  // modalStage stays 'none' so the overlay never appears
 
   useEffect(() => {
     fetchParentData();

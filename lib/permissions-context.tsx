@@ -101,7 +101,7 @@ export const PermissionsProvider = ({ children }: { children: React.ReactNode })
       const { data } = await supabase
         .from('players')
         .select('id')
-        .eq('user_account_id', user.id)
+        .eq('parent_account_id', user.id)
         .limit(1);
       return Boolean(data && data.length > 0);
     } catch { return false; }

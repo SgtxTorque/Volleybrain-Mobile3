@@ -122,21 +122,13 @@ export default function DashboardRouter() {
     if (!user?.id) return false;
 
     try {
-      // Check user_account_id (player IS this user)
+      // Check parent_account_id (player linked to this user)
       const { data: selfPlayers } = await supabase
-        .from('players')
-        .select('id')
-        .eq('user_account_id', user.id)
-        .limit(1);
-      if (selfPlayers && selfPlayers.length > 0) return true;
-
-      // Check parent_account_id where the user is also the player
-      const { data: parentPlayers } = await supabase
         .from('players')
         .select('id')
         .eq('parent_account_id', user.id)
         .limit(1);
-      if (parentPlayers && parentPlayers.length > 0) return true;
+      if (selfPlayers && selfPlayers.length > 0) return true;
 
       return false;
     } catch {

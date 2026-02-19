@@ -44,12 +44,12 @@ export default function TabLayout() {
           setUnreadChatCount(totalUnread);
         }
 
-        // Unread alerts: count message_recipients where read_at is null
+        // Unread alerts: count message_recipients where not yet acknowledged
         const { count: alertCount } = await supabase
           .from('message_recipients')
           .select('*', { count: 'exact', head: true })
-          .eq('recipient_id', profile.id)
-          .is('read_at', null);
+          .eq('profile_id', profile.id)
+          .is('acknowledged', false);
 
         setUnreadAlertCount(alertCount || 0);
       } catch (error) {
