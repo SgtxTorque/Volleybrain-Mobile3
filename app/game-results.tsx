@@ -90,7 +90,7 @@ export default function GameResultsScreen() {
       // Fetch game event
       const { data: gameData, error: gameError } = await supabase
         .from('schedule_events')
-        .select('*, teams!team_id(name, color)')
+        .select('*, teams!schedule_events_team_id_fkey(name, color)')
         .eq('id', eventId)
         .single();
 

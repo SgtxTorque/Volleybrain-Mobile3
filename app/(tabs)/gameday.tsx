@@ -834,6 +834,64 @@ export default function GameDayScreen() {
           </View>
         )}
 
+        {/* ─── RECENT RESULTS ─────────────────────────── */}
+        {(() => {
+          const completedGames = events.filter(
+            (e) =>
+              e.event_type === 'game' &&
+              e.event_date < todayStr &&
+              e.our_score != null &&
+              e.opponent_score != null
+          ).slice(-5).reverse();
+
+          if (completedGames.length === 0) return null;
+
+          return (
+            <View style={s.section}>
+              <Text style={[s.sectionLabel, { color: colors.textMuted }]}>RECENT RESULTS</Text>
+              {completedGames.map((game) => {
+                const won = (game.our_score ?? 0) > (game.opponent_score ?? 0);
+                const team = teams.find((t) => t.id === game.team_id);
+                return (
+                  <TouchableOpacity
+                    key={game.id}
+                    activeOpacity={0.8}
+                    onPress={() => router.push(`/game-results?eventId=${game.id}` as any)}
+                    style={[
+                      s.compactCard,
+                      {
+                        backgroundColor: colors.glassCard,
+                        borderColor: colors.glassBorder,
+                      },
+                    ]}
+                  >
+                    <View style={[s.compactIcon, { backgroundColor: (won ? '#10B981' : '#EF4444') + '20' }]}>
+                      <Ionicons
+                        name={won ? 'trophy' : 'close-circle'}
+                        size={16}
+                        color={won ? '#10B981' : '#EF4444'}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[s.compactTitle, { color: colors.text }]} numberOfLines={1}>
+                        vs {game.opponent_name || game.opponent || 'TBD'}
+                      </Text>
+                      <Text style={[s.compactMeta, { color: colors.textMuted }]}>
+                        {formatEventDate(game.event_date)}
+                        {team ? ` · ${team.name}` : ''}
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 16, fontWeight: '800', color: won ? '#10B981' : '#EF4444', marginRight: 8 }}>
+                      {game.our_score} - {game.opponent_score}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          );
+        })()}
+
         {/* ─── COACH TOOLS ──────────────────────────── */}
         {isCoachOrAdmin && (
           <View style={s.section}>

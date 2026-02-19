@@ -1162,6 +1162,17 @@ export default function GamePrepScreen() {
                         <Ionicons name="chevron-forward" size={14} color="#F59E0B" />
                       </TouchableOpacity>
                     )}
+
+                    {isCompleted && game.stats_entered && (
+                      <TouchableOpacity
+                        onPress={(e) => { e.stopPropagation(); startStatsEntry(game); }}
+                        style={gs.enterStatsBtnWrap}
+                      >
+                        <Ionicons name="create" size={14} color="#6366F1" />
+                        <Text style={[gs.enterStatsBtnText, { color: '#6366F1' }]}>EDIT STATS</Text>
+                        <Ionicons name="chevron-forward" size={14} color="#6366F1" />
+                      </TouchableOpacity>
+                    )}
                   </TouchableOpacity>
                 </View>
               );

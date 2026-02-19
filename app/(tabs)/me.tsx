@@ -329,24 +329,6 @@ export default function MeScreen() {
           </View>
         </CollapsibleSection>
 
-        {/* ===== MY STUFF SECTION (role-specific) ===== */}
-        {myStuffItems.length > 0 && (
-          <CollapsibleSection title="My Stuff" defaultOpen={true} colors={colors}>
-            <View style={s.menuCard}>
-              {myStuffItems.map((item, i) => renderMenuItem(item, i))}
-            </View>
-          </CollapsibleSection>
-        )}
-
-        {/* ===== ADMIN TOOLS SECTION (only for admins, default collapsed) ===== */}
-        {isAdmin && (
-          <CollapsibleSection title="Admin Tools" defaultOpen={false} colors={colors}>
-            <View style={s.menuCard}>
-              {adminToolsItems.map((item, i) => renderMenuItem(item, i))}
-            </View>
-          </CollapsibleSection>
-        )}
-
         {/* ===== SIGN OUT ===== */}
         <TouchableOpacity
           style={s.signOutButton}

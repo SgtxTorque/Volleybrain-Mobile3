@@ -50,6 +50,10 @@ export default function ChatsScreen() {
   const [newChannelName, setNewChannelName] = useState('');
   const [newChannelType, setNewChannelType] = useState('custom');
   const [creating, setCreating] = useState(false);
+  const [channelMembers, setChannelMembers] = useState<User[]>([]);
+  const [memberSearchQuery, setMemberSearchQuery] = useState('');
+  const [memberSearchResults, setMemberSearchResults] = useState<User[]>([]);
+  const [searchingMembers, setSearchingMembers] = useState(false);
 
   // Typing indicators: channelId -> array of display names
   const [typingMap, setTypingMap] = useState<Record<string, string[]>>({});
@@ -201,6 +205,24 @@ export default function ChatsScreen() {
     setSearching(false);
   };
 
+  const searchMembersForChannel = async (query: string) => {
+    if (query.length < 2) {
+      setMemberSearchResults([]);
+      return;
+    }
+    setSearchingMembers(true);
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, full_name, email, account_type')
+      .or(`full_name.ilike.%${query}%,email.ilike.%${query}%`)
+      .neq('id', profile?.id)
+      .limit(20);
+    // Filter out already-added members
+    const addedIds = new Set(channelMembers.map(m => m.id));
+    setMemberSearchResults((data || []).filter((u: User) => !addedIds.has(u.id)));
+    setSearchingMembers(false);
+  };
+
   const startDM = async (user: User) => {
     if (!profile || !workingSeason) return;
 
@@ -297,19 +319,33 @@ export default function ChatsScreen() {
       return;
     }
 
-    // Add creator as admin member
-    await supabase.from('channel_members').insert({
-      channel_id: newChannel.id,
-      user_id: profile.id,
-      display_name: profile.full_name,
-      member_role: 'admin',
-      can_post: true,
-      can_moderate: true,
-    });
+    // Add creator as admin member + selected members
+    const memberInserts = [
+      {
+        channel_id: newChannel.id,
+        user_id: profile.id,
+        display_name: profile.full_name,
+        member_role: 'admin',
+        can_post: true,
+        can_moderate: true,
+      },
+      ...channelMembers.map((m) => ({
+        channel_id: newChannel.id,
+        user_id: m.id,
+        display_name: m.full_name,
+        member_role: m.account_type || 'parent',
+        can_post: true,
+        can_moderate: false,
+      })),
+    ];
+    await supabase.from('channel_members').insert(memberInserts);
 
     setCreating(false);
     setShowNewChat(false);
     setNewChannelName('');
+    setChannelMembers([]);
+    setMemberSearchQuery('');
+    setMemberSearchResults([]);
     fetchChannels();
     router.push({ pathname: '/chat/[id]', params: { id: newChannel.id } });
   };
@@ -499,8 +535,67 @@ export default function ChatsScreen() {
               ))}
             </View>
 
-            <TouchableOpacity 
-              style={[s.createBtn, creating && s.disabled]} 
+            <Text style={s.label}>Add Members</Text>
+            <View style={s.searchContainer}>
+              <Ionicons name="search" size={18} color={colors.textMuted} />
+              <TextInput
+                style={s.searchInput}
+                placeholder="Search by name or email..."
+                placeholderTextColor={colors.textMuted}
+                value={memberSearchQuery}
+                onChangeText={(q) => { setMemberSearchQuery(q); searchMembersForChannel(q); }}
+              />
+              {memberSearchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => { setMemberSearchQuery(''); setMemberSearchResults([]); }}>
+                  <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* Selected members chips */}
+            {channelMembers.length > 0 && (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                {channelMembers.map((m) => (
+                  <TouchableOpacity
+                    key={m.id}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.primary + '20', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16 }}
+                    onPress={() => setChannelMembers(prev => prev.filter(p => p.id !== m.id))}
+                  >
+                    <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>{m.full_name}</Text>
+                    <Ionicons name="close" size={14} color={colors.primary} />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            {/* Member search results */}
+            {memberSearchResults.length > 0 && (
+              <ScrollView style={{ maxHeight: 150, marginBottom: 12 }}>
+                {memberSearchResults.map((u) => (
+                  <TouchableOpacity
+                    key={u.id}
+                    style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}
+                    onPress={() => {
+                      setChannelMembers(prev => [...prev, u]);
+                      setMemberSearchResults(prev => prev.filter(r => r.id !== u.id));
+                      setMemberSearchQuery('');
+                    }}
+                  >
+                    <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.primary + '20', justifyContent: 'center', alignItems: 'center', marginRight: 10 }}>
+                      <Ionicons name="person" size={18} color={colors.primary} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>{u.full_name}</Text>
+                      <Text style={{ color: colors.textMuted, fontSize: 12 }}>{u.email}</Text>
+                    </View>
+                    <Ionicons name="add-circle" size={22} color={colors.primary} />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+
+            <TouchableOpacity
+              style={[s.createBtn, creating && s.disabled]}
               onPress={createChannel}
               disabled={creating}
             >

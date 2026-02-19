@@ -949,9 +949,9 @@ export default function LineupBuilderScreen() {
   // ============================================================================
 
   return (
-    <View style={[styles.container, { backgroundColor: '#0A0E1A' }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: '#0D1117' }]}>
+      <View style={[styles.header, { backgroundColor: colors.bgSecondary }]}>
         <TouchableOpacity
           onPress={() => {
             if (!params.eventId && selectedGame) {
@@ -963,12 +963,12 @@ export default function LineupBuilderScreen() {
           }}
           style={styles.headerBtn}
         >
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>LINEUP BUILDER</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>LINEUP BUILDER</Text>
           {(selectedGame || params.eventId) && (
-            <Text style={styles.headerSubtitle}>
+            <Text style={[styles.headerSubtitle, { color: colors.textMuted }]}>
               {selectedGame
                 ? `vs ${selectedGame.opponent_name || 'TBD'} - ${formatDate(selectedGame.event_date)}`
                 : 'Game Lineup'}
@@ -990,7 +990,7 @@ export default function LineupBuilderScreen() {
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            style={[styles.teamTabsInline, { borderBottomColor: '#1E293B' }]}
+            style={[styles.teamTabsInline, { borderBottomColor: colors.border }]}
             contentContainerStyle={{ paddingHorizontal: 16 }}
           >
             {teams.map((team) => (
@@ -1005,7 +1005,7 @@ export default function LineupBuilderScreen() {
                 <Text
                   style={[
                     styles.teamTabText,
-                    { color: '#64748B' },
+                    { color: colors.textMuted },
                     selectedTeam?.id === team.id && { color: '#F97316' },
                   ]}
                 >
@@ -1018,7 +1018,7 @@ export default function LineupBuilderScreen() {
 
         {/* Formation Selector */}
         <View style={styles.formationBar}>
-          <Text style={styles.formationLabel}>FORMATION</Text>
+          <Text style={[styles.formationLabel, { color: colors.textMuted }]}>FORMATION</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.formationBtns}>
             {formations.map((f) => (
               <TouchableOpacity
@@ -1101,7 +1101,7 @@ export default function LineupBuilderScreen() {
                           {
                             width: dynamicSlotWidth,
                             borderColor: slot.color + '80',
-                            backgroundColor: slot.player ? slot.color + '20' : '#131924',
+                            backgroundColor: slot.player ? slot.color + '20' : colors.bgSecondary,
                           },
                           slot.isLibero && styles.positionSlotLibero,
                         ]}
@@ -1904,6 +1904,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 8,
     paddingHorizontal: 4,
+    backgroundColor: 'rgba(30, 41, 59, 0.3)',
   },
   positionSlotLibero: {
     borderStyle: 'dashed',

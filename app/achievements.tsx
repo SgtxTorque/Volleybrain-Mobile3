@@ -154,6 +154,13 @@ export default function AchievementsScreen() {
     }
   }, [user?.id, workingSeason?.id]);
 
+  // Auto-unlock after data loads
+  useEffect(() => {
+    if (!loading && playerId && allAchievements.length > 0 && Object.keys(seasonStats).length > 0) {
+      unlockNewAchievements();
+    }
+  }, [loading, playerId, allAchievements.length, Object.keys(seasonStats).length]);
+
   const resolvePlayerId = async (): Promise<string | null> => {
     if (!user?.id || !workingSeason?.id) return null;
 
@@ -264,6 +271,44 @@ export default function AchievementsScreen() {
       if (__DEV__) console.error('Error loading achievements:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Auto-unlock achievements when season stats meet thresholds
+  const unlockNewAchievements = async () => {
+    if (!playerId || !workingSeason?.id || allAchievements.length === 0 || Object.keys(seasonStats).length === 0) return;
+
+    const toUnlock: { achievement_id: string; stat_value_at_unlock: number }[] = [];
+
+    for (const ach of allAchievements) {
+      // Skip if already earned, no stat_key/threshold, or requires verification
+      if (earnedMap[ach.id]) continue;
+      if (!ach.stat_key || ach.threshold == null) continue;
+      if ((ach as any).requires_verification) continue;
+
+      const currentVal = seasonStats[ach.stat_key];
+      if (currentVal != null && currentVal >= ach.threshold) {
+        toUnlock.push({ achievement_id: ach.id, stat_value_at_unlock: currentVal });
+      }
+    }
+
+    if (toUnlock.length === 0) return;
+
+    const rows = toUnlock.map((u) => ({
+      player_id: playerId,
+      achievement_id: u.achievement_id,
+      earned_at: new Date().toISOString(),
+      season_id: workingSeason.id,
+      stat_value_at_unlock: u.stat_value_at_unlock,
+    }));
+
+    const { error } = await supabase
+      .from('player_achievements')
+      .upsert(rows, { onConflict: 'player_id,achievement_id', ignoreDuplicates: true });
+
+    if (!error && rows.length > 0) {
+      // Refresh to show newly unlocked
+      await loadData();
     }
   };
 

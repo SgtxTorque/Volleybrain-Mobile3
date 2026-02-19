@@ -966,13 +966,17 @@ export default function TeamWall({ teamId: propTeamId, embedded = false }: TeamW
         activeOpacity={0.7}
         onPress={() => router.push({ pathname: '/child-detail', params: { playerId: player.id } } as any)}
       >
-        <View style={[s.rosterAvatar, { backgroundColor: avatarColor }]}>
-          {player.jersey_number !== null ? (
-            <Text style={s.rosterJerseyNumber}>#{player.jersey_number}</Text>
-          ) : (
-            <Text style={s.postAvatarText}>{initials}</Text>
-          )}
-        </View>
+        {player.photo_url ? (
+          <Image source={{ uri: player.photo_url }} style={{ width: 44, height: 44, borderRadius: 22 }} />
+        ) : (
+          <View style={[s.rosterAvatar, { backgroundColor: avatarColor }]}>
+            {player.jersey_number !== null ? (
+              <Text style={s.rosterJerseyNumber}>#{player.jersey_number}</Text>
+            ) : (
+              <Text style={s.postAvatarText}>{initials}</Text>
+            )}
+          </View>
+        )}
         <View style={s.rosterInfo}>
           <Text style={s.rosterName}>{fullName}</Text>
           {player.position && (

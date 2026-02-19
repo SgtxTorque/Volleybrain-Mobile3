@@ -74,6 +74,8 @@ export default function CoachDashboard() {
   const [gamesPlayed, setGamesPlayed] = useState(0);
   const [totalGames, setTotalGames] = useState(0);
   const [pendingStatsCount, setPendingStatsCount] = useState(0);
+  const [badgesEarnedCount, setBadgesEarnedCount] = useState(0);
+  const [nextEventId, setNextEventId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchCoachData();
@@ -228,7 +230,8 @@ export default function CoachDashboard() {
       // Fetch upcoming events for these teams
       const teamIds = teamsWithCounts.map(t => t.id);
       if (teamIds.length > 0) {
-        const today = new Date().toISOString().split('T')[0];
+        const now = new Date();
+        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
         const { data: events } = await supabase
           .from('schedule_events')
@@ -247,7 +250,7 @@ export default function CoachDashboard() {
           .gte('event_date', today)
           .order('event_date', { ascending: true })
           .order('start_time', { ascending: true })
-          .limit(5);
+          .limit(20);
 
         const formattedEvents: UpcomingEvent[] = (events || []).map(e => ({
           id: e.id,
@@ -303,7 +306,8 @@ export default function CoachDashboard() {
       }
 
       // Fetch availability for next event
-      const today = new Date().toISOString().split('T')[0];
+      const nowLocal = new Date();
+      const today = `${nowLocal.getFullYear()}-${String(nowLocal.getMonth() + 1).padStart(2, '0')}-${String(nowLocal.getDate()).padStart(2, '0')}`;
       const { data: nextEvents } = await supabase
         .from('schedule_events')
         .select('id')
@@ -313,6 +317,7 @@ export default function CoachDashboard() {
         .limit(1);
 
       if (nextEvents && nextEvents.length > 0) {
+        setNextEventId(nextEvents[0].id);
         const { data: rsvps } = await supabase
           .from('event_rsvps')
           .select('status')
@@ -326,6 +331,7 @@ export default function CoachDashboard() {
         const available = (rsvps || []).filter(r => r.status === 'yes' || r.status === 'attending').length;
         setAvailableCount({ available, total: rosterCount || 0 });
       } else {
+        setNextEventId(null);
         setAvailableCount(null);
       }
 
@@ -428,6 +434,23 @@ export default function CoachDashboard() {
         setTopPerformers(performers.slice(0, 3));
       } else {
         setTopPerformers([]);
+      }
+
+      // Fetch badges earned by team players this season
+      const { data: teamPlayerIds } = await supabase
+        .from('team_players')
+        .select('player_id')
+        .eq('team_id', teamId);
+
+      if (teamPlayerIds && teamPlayerIds.length > 0) {
+        const pIds = teamPlayerIds.map(tp => tp.player_id);
+        const { count: badgeCount } = await supabase
+          .from('player_achievements')
+          .select('*', { count: 'exact', head: true })
+          .in('player_id', pIds);
+        setBadgesEarnedCount(badgeCount || 0);
+      } else {
+        setBadgesEarnedCount(0);
       }
     } catch (error) {
       if (__DEV__) console.error('Error fetching team-specific data:', error);
@@ -679,7 +702,7 @@ export default function CoachDashboard() {
       {/* TEAM HEALTH - Quick Indicators */}
       <Text style={s.sectionLabel}>TEAM HEALTH</Text>
       <View style={s.healthRow}>
-        <View style={s.healthCard}>
+        <TouchableOpacity style={s.healthCard} activeOpacity={0.7} onPress={() => router.push('/attendance' as any)}>
           <Ionicons
             name="checkmark-circle"
             size={24}
@@ -692,38 +715,23 @@ export default function CoachDashboard() {
             {attendanceRate !== null ? `${attendanceRate}%` : '--'}
           </Text>
           <Text style={s.healthLabel}>Attendance</Text>
-        </View>
+        </TouchableOpacity>
 
-        <View style={s.healthCard}>
+        <TouchableOpacity style={s.healthCard} activeOpacity={0.7} onPress={() => router.push(nextEventId ? `/attendance?eventId=${nextEventId}` as any : '/attendance' as any)}>
           <Ionicons name="hand-left" size={24} color={colors.info} />
           <Text style={s.healthNum}>
             {availableCount ? `${availableCount.available}/${availableCount.total}` : '--'}
           </Text>
           <Text style={s.healthLabel}>Available</Text>
-        </View>
+        </TouchableOpacity>
 
-        <View style={s.healthCard}>
-          {(() => {
-            const lowRoster = activeTeam && activeTeam.player_count < 6;
-            const lowAttendance = attendanceRate !== null && attendanceRate < 60;
-            const hasAlert = lowRoster || lowAttendance;
-            return (
-              <>
-                <Ionicons
-                  name={hasAlert ? 'warning' : 'checkmark-done-circle'}
-                  size={24}
-                  color={hasAlert ? colors.warning : colors.success}
-                />
-                <Text style={[s.healthNum, { color: hasAlert ? colors.warning : colors.success }]}>
-                  {hasAlert
-                    ? lowRoster ? 'Low Roster' : 'Low Att.'
-                    : 'All good'}
-                </Text>
-                <Text style={s.healthLabel}>Alerts</Text>
-              </>
-            );
-          })()}
-        </View>
+        <TouchableOpacity style={s.healthCard} activeOpacity={0.7} onPress={() => router.push('/achievements' as any)}>
+          <Ionicons name="ribbon" size={24} color={colors.warning} />
+          <Text style={[s.healthNum, { color: colors.warning }]}>
+            {badgesEarnedCount}
+          </Text>
+          <Text style={s.healthLabel}>Badges</Text>
+        </TouchableOpacity>
       </View>
 
       {/* TOP PERFORMERS */}
