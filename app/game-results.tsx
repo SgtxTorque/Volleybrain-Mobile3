@@ -1,6 +1,5 @@
 import { getSportDisplay } from '@/constants/sport-display';
 import { useAuth } from '@/lib/auth';
-import { usePermissions } from '@/lib/permissions-context';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -40,8 +39,7 @@ type GameEvent = {
   teams: {
     name: string;
     color: string | null;
-    sport_id?: string | null;
-    sports?: { name: string } | null;
+    season_id?: string | null;
   } | null;
 };
 
@@ -65,7 +63,6 @@ type ChildInfo = {
 export default function GameResultsScreen() {
   const { colors } = useTheme();
   const { user } = useAuth();
-  const { isPlayer } = usePermissions();
   const { eventId } = useLocalSearchParams();
   const router = useRouter();
 
@@ -84,10 +81,10 @@ export default function GameResultsScreen() {
     if (!eventId || !user?.id) return;
 
     try {
-      // Fetch game event with sport info via team
+      // Fetch game event with team info
       const { data: gameData, error: gameError } = await supabase
         .from('schedule_events')
-        .select('*, teams!schedule_events_team_id_fkey(name, color, sports(name))')
+        .select('*, teams!schedule_events_team_id_fkey(name, color, season_id)')
         .eq('id', eventId)
         .single();
 
@@ -99,9 +96,16 @@ export default function GameResultsScreen() {
 
       setGame(gameData);
 
-      // Detect sport from team → sports join
-      const detectedSport = (gameData?.teams as any)?.sports?.name || null;
-      setSportName(detectedSport);
+      // Detect sport via season
+      const seasonId = (gameData?.teams as any)?.season_id || gameData?.season_id;
+      if (seasonId) {
+        const { data: seasonData } = await supabase
+          .from('seasons')
+          .select('sport')
+          .eq('id', seasonId)
+          .single();
+        setSportName((seasonData as any)?.sport || null);
+      }
 
       // Fetch children linked to parent
       const { data: children } = await supabase
@@ -112,17 +116,24 @@ export default function GameResultsScreen() {
       let playerIds = (children || []).map(c => c.id);
       let playerInfos = children || [];
 
-      // Player self-access: if no children found and user is a player, look up self
-      if (playerIds.length === 0 && isPlayer) {
-        const { data: selfPlayers } = await supabase
-          .from('players')
-          .select('id, first_name, last_name')
-          .eq('user_account_id', user.id)
-          .limit(1);
+      // Player self-access: if no children found, also check player_guardians
+      if (playerIds.length === 0) {
+        const { data: guardianLinks } = await supabase
+          .from('player_guardians')
+          .select('player_id')
+          .eq('guardian_id', user.id);
 
-        if (selfPlayers && selfPlayers.length > 0) {
-          playerIds = selfPlayers.map(p => p.id);
-          playerInfos = selfPlayers;
+        if (guardianLinks && guardianLinks.length > 0) {
+          const gPlayerIds = guardianLinks.map(g => g.player_id);
+          const { data: guardianPlayers } = await supabase
+            .from('players')
+            .select('id, first_name, last_name')
+            .in('id', gPlayerIds);
+
+          if (guardianPlayers && guardianPlayers.length > 0) {
+            playerIds = guardianPlayers.map(p => p.id);
+            playerInfos = guardianPlayers;
+          }
         }
       }
 

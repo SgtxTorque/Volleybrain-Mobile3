@@ -105,15 +105,19 @@ export default function StandingsScreen() {
     try {
       const { data: teams, error: teamsError } = await supabase
         .from('teams')
-        .select('id, name, color, sports(name)')
+        .select('id, name, color')
         .eq('season_id', workingSeason.id)
         .order('name');
 
-      // Detect sport from first team that has a sport
-      if (teams && teams.length > 0) {
-        const firstSport = (teams as any[]).find(t => t.sports?.name)?.sports?.name || null;
-        if (firstSport && !detectedSport) {
-          setDetectedSport(firstSport);
+      // Detect sport from season
+      if (!detectedSport && workingSeason?.id) {
+        const { data: seasonData } = await supabase
+          .from('seasons')
+          .select('sport')
+          .eq('id', workingSeason.id)
+          .single();
+        if ((seasonData as any)?.sport) {
+          setDetectedSport((seasonData as any).sport);
         }
       }
 

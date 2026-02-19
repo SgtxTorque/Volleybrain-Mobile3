@@ -116,10 +116,9 @@ type PlayerRecord = {
   jersey_number: string | null;
   position: string | null;
   photo_url: string | null;
-  avatar_url: string | null;
   show_achievements_publicly?: boolean;
   equipped_calling_card_id?: number | null;
-  user_account_id?: string | null;
+  parent_account_id?: string | null;
 };
 
 type TeamInfo = {
@@ -242,7 +241,13 @@ const formatTime = (time: string | null): string => {
 // COMPONENT
 // ============================================
 
-export default function PlayerDashboard() {
+type PlayerDashboardProps = {
+  playerId?: string | null;
+  playerName?: string | null;
+  onSwitchChild?: () => void;
+};
+
+export default function PlayerDashboard({ playerId: propPlayerId, playerName: propPlayerName, onSwitchChild }: PlayerDashboardProps = {}) {
   const { colors } = useTheme();
   const { user, profile } = useAuth();
   const { workingSeason } = useSeason();
@@ -307,25 +312,47 @@ export default function PlayerDashboard() {
       // 1. Resolve player record
       let playerRecord: PlayerRecord | null = null;
 
-      const { data: selfPlayers } = await supabase
-        .from('players')
-        .select('id, first_name, last_name, jersey_number, position, photo_url, avatar_url, show_achievements_publicly, equipped_calling_card_id, user_account_id')
-        .eq('user_account_id', user.id)
-        .eq('season_id', workingSeason.id)
-        .limit(1);
+      const playerCols = 'id, first_name, last_name, jersey_number, position, photo_url, show_achievements_publicly, equipped_calling_card_id, parent_account_id';
 
-      if (selfPlayers && selfPlayers.length > 0) {
-        playerRecord = selfPlayers[0] as PlayerRecord;
+      if (propPlayerId) {
+        // Direct load — playerId was passed from parent (child picker or single child)
+        const { data } = await supabase
+          .from('players')
+          .select(playerCols)
+          .eq('id', propPlayerId)
+          .limit(1)
+          .maybeSingle();
+        if (data) playerRecord = data as PlayerRecord;
       } else {
+        // Self-detection fallback — find via parent_account_id or player_guardians
         const { data: parentPlayers } = await supabase
           .from('players')
-          .select('id, first_name, last_name, jersey_number, position, photo_url, avatar_url, show_achievements_publicly, equipped_calling_card_id, user_account_id')
+          .select(playerCols)
           .eq('parent_account_id', user.id)
           .eq('season_id', workingSeason.id)
           .limit(1);
 
         if (parentPlayers && parentPlayers.length > 0) {
           playerRecord = parentPlayers[0] as PlayerRecord;
+        } else {
+          const { data: guardianLinks } = await supabase
+            .from('player_guardians')
+            .select('player_id')
+            .eq('guardian_id', user.id);
+
+          if (guardianLinks && guardianLinks.length > 0) {
+            const guardianPlayerIds = guardianLinks.map(g => g.player_id);
+            const { data: guardianPlayers } = await supabase
+              .from('players')
+              .select(playerCols)
+              .in('id', guardianPlayerIds)
+              .eq('season_id', workingSeason.id)
+              .limit(1);
+
+            if (guardianPlayers && guardianPlayers.length > 0) {
+              playerRecord = guardianPlayers[0] as PlayerRecord;
+            }
+          }
         }
       }
 
@@ -355,15 +382,15 @@ export default function PlayerDashboard() {
       setTeam(teamData || null);
       const teamId = teamData?.id || null;
 
-      // Detect sport
+      // Detect sport via season
       let sport = 'volleyball';
-      if (teamData?.id) {
-        const { data: sportData } = await supabase
-          .from('teams')
-          .select('sports(name)')
-          .eq('id', teamData.id)
+      if (workingSeason?.id) {
+        const { data: seasonData } = await supabase
+          .from('seasons')
+          .select('sport')
+          .eq('id', workingSeason.id)
           .single();
-        sport = (sportData as any)?.sports?.name || 'volleyball';
+        sport = (seasonData as any)?.sport || 'volleyball';
       }
       setPlayerSport(sport);
 
@@ -497,7 +524,7 @@ export default function PlayerDashboard() {
       if (__DEV__) console.error('PlayerDashboard loadPlayerData error:', err);
       setError(err.message || 'Failed to load player data');
     }
-  }, [user?.id, workingSeason?.id, isCoach]);
+  }, [user?.id, workingSeason?.id, isCoach, propPlayerId]);
 
   useEffect(() => {
     let mounted = true;
@@ -539,8 +566,8 @@ export default function PlayerDashboard() {
   const statKeys = sportDisplay.primaryStats.map(s => s.seasonColumn);
   const ovr = calculateOVR(stats, statKeys);
   const ovrTier = getOVRTier(ovr);
-  const heroImage = player?.photo_url || player?.avatar_url || null;
-  const isOwnProfile = player?.user_account_id === user?.id;
+  const heroImage = player?.photo_url || null;
+  const isOwnProfile = player?.parent_account_id === user?.id;
   const activeCard = CALLING_CARDS.find(c => c.id === equippedCard) || CALLING_CARDS[0];
 
   const s = createStyles(colors);
@@ -969,6 +996,31 @@ export default function PlayerDashboard() {
         />
       }
     >
+      {/* VIEWING AS INDICATOR */}
+      {propPlayerName && onSwitchChild && (
+        <TouchableOpacity
+          onPress={onSwitchChild}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingVertical: 8,
+            paddingHorizontal: 16,
+            backgroundColor: P.accent + '18',
+            borderBottomWidth: 1,
+            borderBottomColor: P.accent + '30',
+            gap: 8,
+          }}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="person" size={14} color={P.accent} />
+          <Text style={{ color: P.textSecondary, fontSize: 13, fontWeight: '500' }}>
+            Viewing as: <Text style={{ color: P.accent, fontWeight: '700' }}>{propPlayerName}</Text>
+          </Text>
+          <Ionicons name="swap-horizontal" size={14} color={P.accent} />
+        </TouchableOpacity>
+      )}
+
       {/* ============================================ */}
       {/* HERO SECTION                                */}
       {/* ============================================ */}

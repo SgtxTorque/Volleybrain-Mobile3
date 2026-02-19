@@ -290,6 +290,7 @@ export default function TeamWall({ teamId: propTeamId, embedded = false }: TeamW
   const [coachCount, setCoachCount] = useState(0);
   const [isCoachOrAdmin, setIsCoachOrAdmin] = useState(false);
   const [loadingTeams, setLoadingTeams] = useState(!resolvedTeamId);
+  const [teamSportName, setTeamSportName] = useState<string | null>(null);
 
   // Tab state
   const [activeTab, setActiveTab] = useState<TabKey>('feed');
@@ -478,11 +479,22 @@ export default function TeamWall({ teamId: propTeamId, embedded = false }: TeamW
     try {
       const { data: teamData } = await supabase
         .from('teams')
-        .select('id, name, color, season_id, sports(name)')
+        .select('id, name, color, season_id')
         .eq('id', teamId)
         .single();
 
-      if (teamData) setTeam(teamData);
+      if (teamData) {
+        setTeam(teamData);
+        // Detect sport via season
+        if ((teamData as any).season_id) {
+          const { data: seasonData } = await supabase
+            .from('seasons')
+            .select('sport')
+            .eq('id', (teamData as any).season_id)
+            .single();
+          setTeamSportName((seasonData as any)?.sport || null);
+        }
+      }
 
       const { count: pCount } = await supabase
         .from('team_players')
@@ -785,7 +797,7 @@ export default function TeamWall({ teamId: propTeamId, embedded = false }: TeamW
 
   const s = createStyles(colors);
   const teamColor = team?.color || colors.primary;
-  const teamSport = (team as any)?.sports?.name || null;
+  const teamSport = teamSportName;
 
   // =============================================================================
   // TEAM PICKER VIEW (no team selected)
