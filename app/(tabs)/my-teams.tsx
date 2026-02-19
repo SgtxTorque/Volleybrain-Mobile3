@@ -257,7 +257,7 @@ export default function ParentMyTeamsScreen() {
 
       setTeams(teamsData);
     } catch (error) {
-      console.error('Error fetching teams:', error);
+      if (__DEV__) console.error('Error fetching teams:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);

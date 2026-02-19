@@ -1,15 +1,18 @@
+import { getFormationsForSport, getCourtRows, type FormationConfig } from '@/constants/formations';
 import { useAuth } from '@/lib/auth';
 import { useSeason } from '@/lib/season';
+import { useSport } from '@/lib/sport';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Dimensions,
   FlatList,
+  Image,
   Modal,
   Platform,
   ScrollView,
@@ -50,14 +53,6 @@ type RosterPlayer = {
   photo_url: string | null;
 };
 
-type FormationType = '5-1' | '6-2' | '4-2' | '6-6';
-
-type PositionSlot = {
-  position: number; // 1-6
-  label: string;
-  color: string;
-};
-
 type LineupSlot = {
   position: number;
   label: string;
@@ -76,51 +71,6 @@ type GameLineupRecord = {
   position: string;
 };
 
-// ============================================================================
-// FORMATION DEFINITIONS
-// ============================================================================
-
-const FORMATIONS: Record<FormationType, PositionSlot[]> = {
-  '5-1': [
-    { position: 1, label: 'OH', color: '#EF4444' },
-    { position: 2, label: 'OPP', color: '#6366F1' },
-    { position: 3, label: 'MB', color: '#F59E0B' },
-    { position: 4, label: 'OH', color: '#EF4444' },
-    { position: 5, label: 'MB', color: '#F59E0B' },
-    { position: 6, label: 'S', color: '#10B981' },
-  ],
-  '6-2': [
-    { position: 1, label: 'S', color: '#10B981' },
-    { position: 2, label: 'OH', color: '#EF4444' },
-    { position: 3, label: 'MB', color: '#F59E0B' },
-    { position: 4, label: 'OH', color: '#EF4444' },
-    { position: 5, label: 'MB', color: '#F59E0B' },
-    { position: 6, label: 'S', color: '#10B981' },
-  ],
-  '4-2': [
-    { position: 1, label: 'S', color: '#10B981' },
-    { position: 2, label: 'H', color: '#EF4444' },
-    { position: 3, label: 'H', color: '#EF4444' },
-    { position: 4, label: 'S', color: '#10B981' },
-    { position: 5, label: 'H', color: '#EF4444' },
-    { position: 6, label: 'H', color: '#EF4444' },
-  ],
-  '6-6': [
-    { position: 1, label: 'P1', color: '#EF4444' },
-    { position: 2, label: 'P2', color: '#6366F1' },
-    { position: 3, label: 'P3', color: '#F59E0B' },
-    { position: 4, label: 'P4', color: '#10B981' },
-    { position: 5, label: 'P5', color: '#0EA5E9' },
-    { position: 6, label: 'P6', color: '#A855F7' },
-  ],
-};
-
-const FORMATION_KEYS: FormationType[] = ['5-1', '6-2', '4-2', '6-6'];
-
-// Court layout: front row is P4, P3, P2 (left to right), back row is P5, P6, P1
-const FRONT_ROW_POSITIONS = [4, 3, 2]; // left to right
-const BACK_ROW_POSITIONS = [5, 6, 1]; // left to right
-
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const COURT_WIDTH = Math.min(SCREEN_WIDTH - 32, 400);
 const COURT_HEIGHT = COURT_WIDTH * 0.7;
@@ -134,8 +84,14 @@ export default function LineupBuilderScreen() {
   const { colors } = useTheme();
   const { user } = useAuth();
   const { workingSeason } = useSeason();
+  const { activeSport } = useSport();
   const router = useRouter();
   const params = useLocalSearchParams<{ eventId?: string; teamId?: string }>();
+
+  // Sport-aware formations
+  const sportName = activeSport?.name || 'volleyball';
+  const formations = useMemo(() => getFormationsForSport(sportName), [sportName]);
+  const isVolleyball = sportName.toLowerCase() === 'volleyball';
 
   // State: team selection
   const [teams, setTeams] = useState<Team[]>([]);
@@ -149,7 +105,7 @@ export default function LineupBuilderScreen() {
   const [showGameSelector, setShowGameSelector] = useState(!params.eventId);
 
   // State: formation & lineup
-  const [formation, setFormation] = useState<FormationType>('5-1');
+  const [formation, setFormation] = useState<string>(formations[0]?.id || '5-1');
   const [lineup, setLineup] = useState<LineupSlot[]>([]);
   const [roster, setRoster] = useState<RosterPlayer[]>([]);
   const [loadingRoster, setLoadingRoster] = useState(false);
@@ -173,22 +129,61 @@ export default function LineupBuilderScreen() {
   const [rsvpPlayerIds, setRsvpPlayerIds] = useState<Set<string>>(new Set());
   const [loadingRsvps, setLoadingRsvps] = useState(false);
 
+  // State: per-set lineup management (volleyball best-of-5, others single set)
+  const maxSets = isVolleyball ? 5 : 1;
+  const [currentSetNum, setCurrentSetNum] = useState(1);
+  const [perSetLineups, setPerSetLineups] = useState<Record<number, LineupSlot[]>>({});
+  const [perSetSubs, setPerSetSubs] = useState<Record<number, Record<number, string>>>({});
+  const perSetLineupsRef = useRef(perSetLineups);
+  perSetLineupsRef.current = perSetLineups;
+  const perSetSubsRef = useRef(perSetSubs);
+  perSetSubsRef.current = perSetSubs;
+
   // Resolved event ID
   const eventId = params.eventId || selectedGame?.id || null;
+
+  // Active formation config
+  const activeFormation = useMemo(
+    () => formations.find(f => f.id === formation) || formations[0],
+    [formations, formation]
+  );
+
+  // Court row layout from formation config
+  const courtRows = useMemo(
+    () => activeFormation ? getCourtRows(activeFormation) : [[4, 3, 2], [5, 6, 1]],
+    [activeFormation]
+  );
+
+  // Dynamic slot width based on max positions per row (prevents overflow for soccer 5-wide rows)
+  const maxRowSize = useMemo(() => Math.max(...courtRows.map(r => r.length), 3), [courtRows]);
+  const dynamicSlotWidth = useMemo(() => {
+    const courtInnerWidth = Math.min(SCREEN_WIDTH - 32, 400) - 32; // court padding
+    const gapTotal = (maxRowSize - 1) * 8;
+    return Math.min(SLOT_SIZE + 36, Math.floor((courtInnerWidth - gapTotal) / maxRowSize));
+  }, [maxRowSize]);
 
   // ============================================================================
   // INITIALIZATION — build empty lineup from formation
   // ============================================================================
 
-  const buildEmptyLineup = useCallback((formationType: FormationType): LineupSlot[] => {
-    return FORMATIONS[formationType].map((slot) => ({
+  const buildEmptyLineup = useCallback((formationId: string): LineupSlot[] => {
+    const config = formations.find(f => f.id === formationId) || formations[0];
+    if (!config) return [];
+    return config.positions.map((slot) => ({
       position: slot.position,
       label: slot.label,
       color: slot.color,
       player: null,
       isLibero: false,
     }));
-  }, []);
+  }, [formations]);
+
+  // When sport changes, reset to first formation for that sport
+  useEffect(() => {
+    if (formations.length > 0 && !formations.some(f => f.id === formation)) {
+      setFormation(formations[0].id);
+    }
+  }, [formations]);
 
   // When formation changes, rebuild lineup preserving assigned players
   useEffect(() => {
@@ -276,7 +271,7 @@ export default function LineupBuilderScreen() {
         setSelectedTeam(teamList[0]);
       }
     } catch (err) {
-      console.error('Error loading teams:', err);
+      if (__DEV__) console.error('Error loading teams:', err);
     } finally {
       setLoadingTeams(false);
     }
@@ -299,7 +294,7 @@ export default function LineupBuilderScreen() {
 
       setGames(data || []);
     } catch (err) {
-      console.error('Error loading games:', err);
+      if (__DEV__) console.error('Error loading games:', err);
     } finally {
       setLoadingGames(false);
     }
@@ -337,7 +332,7 @@ export default function LineupBuilderScreen() {
         setRoster(players);
       }
     } catch (err) {
-      console.error('Error loading roster:', err);
+      if (__DEV__) console.error('Error loading roster:', err);
     } finally {
       setLoadingRoster(false);
     }
@@ -353,28 +348,60 @@ export default function LineupBuilderScreen() {
         .order('rotation_order');
 
       if (data && data.length > 0) {
-        setLineup((prev) => {
-          const newLineup = [...prev];
-          for (const record of data as GameLineupRecord[]) {
-            const slotIndex = newLineup.findIndex(
-              (s) => s.position === record.rotation_order
-            );
+        // Group records by set: rotation_type null = set 1, 'set_2' = set 2, etc.
+        const setGroups: Record<number, GameLineupRecord[]> = {};
+        for (const record of data as (GameLineupRecord & { rotation_type?: string | null })[]) {
+          let setNum = 1;
+          if (record.rotation_type && record.rotation_type.startsWith('set_')) {
+            setNum = parseInt(record.rotation_type.replace('set_', '')) || 1;
+          }
+          if (!setGroups[setNum]) setGroups[setNum] = [];
+          setGroups[setNum].push(record);
+        }
+
+        // Build lineup + subs for each set
+        const loadedSetLineups: Record<number, LineupSlot[]> = {};
+        const loadedSetSubs: Record<number, Record<number, string>> = {};
+        for (const [setNumStr, records] of Object.entries(setGroups)) {
+          const setNum = parseInt(setNumStr);
+          const setLineup = buildEmptyLineup(formation);
+          const setSubsMap: Record<number, string> = {};
+          for (const record of records) {
+            const slotIndex = setLineup.findIndex(s => s.position === record.rotation_order);
             if (slotIndex >= 0) {
-              const player = roster.find((r) => r.id === record.player_id);
+              const player = roster.find(r => r.id === record.player_id);
               if (player) {
-                newLineup[slotIndex] = {
-                  ...newLineup[slotIndex],
+                setLineup[slotIndex] = {
+                  ...setLineup[slotIndex],
                   player,
                   isLibero: record.is_libero,
                 };
               }
             }
+            // Load sub metadata
+            const meta = (record as any).metadata;
+            if (meta?.sub_player_id && record.rotation_order) {
+              setSubsMap[record.rotation_order] = meta.sub_player_id;
+            }
           }
-          return newLineup;
-        });
+          loadedSetLineups[setNum] = setLineup;
+          loadedSetSubs[setNum] = setSubsMap;
+        }
+
+        setPerSetLineups(loadedSetLineups);
+        setPerSetSubs(loadedSetSubs);
+
+        // Load set 1 into active state
+        if (loadedSetLineups[1]) {
+          setLineup(loadedSetLineups[1]);
+        }
+        if (loadedSetSubs[1]) {
+          setSubs(loadedSetSubs[1]);
+        }
+        setCurrentSetNum(1);
       }
     } catch (err) {
-      console.error('Error loading existing lineup:', err);
+      if (__DEV__) console.error('Error loading existing lineup:', err);
     } finally {
       setLoadingLineup(false);
     }
@@ -394,7 +421,7 @@ export default function LineupBuilderScreen() {
         setRsvpPlayerIds(new Set(data.map((r: { player_id: string }) => r.player_id)));
       }
     } catch (err) {
-      console.error('Error loading RSVPs:', err);
+      if (__DEV__) console.error('Error loading RSVPs:', err);
     } finally {
       setLoadingRsvps(false);
     }
@@ -407,38 +434,49 @@ export default function LineupBuilderScreen() {
     }
   }, [eventId, loadRsvpPlayers]);
 
-  // Load subs metadata from existing lineup
-  const loadExistingSubstitutions = useCallback(async (evtId: string) => {
-    try {
-      const { data } = await supabase
-        .from('game_lineups')
-        .select('rotation_order, metadata')
-        .eq('event_id', evtId)
-        .not('metadata', 'is', null);
+  // Note: sub metadata is now loaded as part of loadExistingLineup (per-set)
 
-      if (data && data.length > 0) {
-        const subsMap: Record<number, string> = {};
-        for (const record of data) {
-          const meta = record.metadata as any;
-          if (meta?.sub_player_id && record.rotation_order) {
-            subsMap[record.rotation_order] = meta.sub_player_id;
+  // ============================================================================
+  // PER-SET SWITCHING
+  // ============================================================================
+
+  const switchToSet = useCallback((targetSet: number) => {
+    if (targetSet === currentSetNum) return;
+    // Save current set state
+    setPerSetLineups(prev => ({ ...prev, [currentSetNum]: lineup.map(s => ({ ...s })) }));
+    setPerSetSubs(prev => ({ ...prev, [currentSetNum]: { ...subs } }));
+    // Load target set
+    const targetLineup = perSetLineupsRef.current[targetSet];
+    const targetSubs = perSetSubsRef.current[targetSet];
+    if (targetLineup && targetLineup.length > 0) {
+      setLineup(targetLineup.map(s => ({ ...s })));
+    } else {
+      setLineup(buildEmptyLineup(formation));
+    }
+    setSubs(targetSubs ? { ...targetSubs } : {});
+    setCurrentSetNum(targetSet);
+  }, [currentSetNum, lineup, subs, formation, buildEmptyLineup]);
+
+  const copyToAllSets = useCallback(() => {
+    Alert.alert('Copy Lineup', `Copy Set ${currentSetNum} lineup to all other sets?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Copy',
+        onPress: () => {
+          const currentLineup = lineup.map(s => ({ ...s }));
+          const currentSubs = { ...subs };
+          const newSetLineups: Record<number, LineupSlot[]> = {};
+          const newSetSubs: Record<number, Record<number, string>> = {};
+          for (let i = 1; i <= maxSets; i++) {
+            newSetLineups[i] = currentLineup.map(s => ({ ...s }));
+            newSetSubs[i] = { ...currentSubs };
           }
-        }
-        if (Object.keys(subsMap).length > 0) {
-          setSubs(subsMap);
-        }
-      }
-    } catch (err) {
-      console.error('Error loading substitution metadata:', err);
-    }
-  }, []);
-
-  // Load subs when eventId is available and roster loaded
-  useEffect(() => {
-    if (eventId && roster.length > 0) {
-      loadExistingSubstitutions(eventId);
-    }
-  }, [eventId, roster.length, loadExistingSubstitutions]);
+          setPerSetLineups(newSetLineups);
+          setPerSetSubs(newSetSubs);
+        },
+      },
+    ]);
+  }, [currentSetNum, lineup, subs, maxSets]);
 
   // ============================================================================
   // ROTATION PREVIEW HELPERS
@@ -610,46 +648,72 @@ export default function LineupBuilderScreen() {
 
     setSaving(true);
     try {
+      // Snapshot current set into state maps
+      const allSetLineups = { ...perSetLineupsRef.current, [currentSetNum]: lineup.map(s => ({ ...s })) };
+      const allSetSubs = { ...perSetSubsRef.current, [currentSetNum]: { ...subs } };
+
       // Delete existing lineup for this event
       await supabase.from('game_lineups').delete().eq('event_id', eventId);
 
-      // Insert starter records (with sub metadata if assigned)
-      const records: Record<string, any>[] = filledSlots.map((slot) => {
-        const record: Record<string, any> = {
-          event_id: eventId,
-          player_id: slot.player!.id,
-          rotation_order: slot.position,
-          is_starter: true,
-          is_libero: slot.isLibero,
-          position: slot.label,
-        };
-        // Attach sub metadata if a substitute is assigned for this position
-        if (subs[slot.position]) {
-          record.metadata = { sub_player_id: subs[slot.position] };
+      const allRecords: Record<string, any>[] = [];
+      let totalStarters = 0;
+      let totalSubs = 0;
+      const setsWithData: number[] = [];
+
+      for (let setNum = 1; setNum <= maxSets; setNum++) {
+        const setLineup = allSetLineups[setNum];
+        const setSub = allSetSubs[setNum] || {};
+        if (!setLineup) continue;
+
+        const filled = setLineup.filter(s => s.player);
+        if (filled.length === 0) continue;
+
+        setsWithData.push(setNum);
+        totalStarters += filled.length;
+
+        const rotationType = setNum === 1 ? null : `set_${setNum}`;
+
+        for (const slot of filled) {
+          const record: Record<string, any> = {
+            event_id: eventId,
+            player_id: slot.player!.id,
+            rotation_order: slot.position,
+            is_starter: true,
+            is_libero: slot.isLibero,
+            position: slot.label,
+            rotation_type: rotationType,
+          };
+          if (setSub[slot.position]) {
+            record.metadata = { sub_player_id: setSub[slot.position] };
+            totalSubs++;
+          }
+          allRecords.push(record);
         }
-        return record;
-      });
 
-      // Also save bench subs that are designated but whose starter position has no player
-      // (unlikely but defensive)
-      const benchSubRecords = Object.entries(subs)
-        .filter(([posNum]) => !filledSlots.some((s) => s.position === parseInt(posNum)))
-        .map(([posNum, subPlayerId]) => ({
-          event_id: eventId,
-          player_id: subPlayerId,
-          rotation_order: parseInt(posNum),
-          is_starter: false,
-          is_libero: false,
-          position: 'SUB',
-          metadata: { is_sub_for_position: parseInt(posNum) },
-        }));
+        // Bench subs without a starter
+        for (const [posNum, subPlayerId] of Object.entries(setSub)) {
+          if (!filled.some(s => s.position === parseInt(posNum))) {
+            allRecords.push({
+              event_id: eventId,
+              player_id: subPlayerId,
+              rotation_order: parseInt(posNum),
+              is_starter: false,
+              is_libero: false,
+              position: 'SUB',
+              rotation_type: rotationType,
+              metadata: { is_sub_for_position: parseInt(posNum) },
+            });
+          }
+        }
+      }
 
-      const allRecords = [...records, ...benchSubRecords];
-      const { error } = await supabase.from('game_lineups').insert(allRecords);
+      if (allRecords.length > 0) {
+        const { error } = await supabase.from('game_lineups').insert(allRecords);
+        if (error) throw error;
+      }
 
-      if (error) throw error;
-
-      Alert.alert('Lineup Saved', `${filledSlots.length} starters${Object.keys(subs).length > 0 ? ` + ${Object.keys(subs).length} subs` : ''} saved.`);
+      const setInfo = setsWithData.length > 1 ? ` across ${setsWithData.length} sets` : '';
+      Alert.alert('Lineup Saved', `${totalStarters} starters${totalSubs > 0 ? ` + ${totalSubs} subs` : ''}${setInfo} saved.`);
     } catch (err: any) {
       Alert.alert('Save Failed', err.message || 'Please try again.');
     } finally {
@@ -955,147 +1019,140 @@ export default function LineupBuilderScreen() {
         {/* Formation Selector */}
         <View style={styles.formationBar}>
           <Text style={styles.formationLabel}>FORMATION</Text>
-          <View style={styles.formationBtns}>
-            {FORMATION_KEYS.map((f) => (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.formationBtns}>
+            {formations.map((f) => (
               <TouchableOpacity
-                key={f}
+                key={f.id}
                 style={[
                   styles.formationBtn,
-                  formation === f && styles.formationBtnActive,
+                  formation === f.id && styles.formationBtnActive,
                 ]}
-                onPress={() => setFormation(f)}
+                onPress={() => setFormation(f.id)}
               >
                 <Text
                   style={[
                     styles.formationBtnText,
-                    formation === f && styles.formationBtnTextActive,
+                    formation === f.id && styles.formationBtnTextActive,
                   ]}
                 >
-                  {f}
+                  {f.name}
                 </Text>
               </TouchableOpacity>
             ))}
-          </View>
+          </ScrollView>
         </View>
+
+        {/* Set Tabs (volleyball best-of-5) */}
+        {maxSets > 1 && (
+          <View style={styles.setTabBar}>
+            {Array.from({ length: maxSets }, (_, i) => i + 1).map((setNum) => (
+              <TouchableOpacity
+                key={setNum}
+                style={[
+                  styles.setTab,
+                  currentSetNum === setNum && styles.setTabActive,
+                ]}
+                onPress={() => switchToSet(setNum)}
+              >
+                <Text
+                  style={[
+                    styles.setTabText,
+                    currentSetNum === setNum && styles.setTabTextActive,
+                  ]}
+                >
+                  S{setNum}
+                </Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity style={styles.copyAllBtn} onPress={copyToAllSets}>
+              <Ionicons name="copy-outline" size={14} color="#6366F1" />
+              <Text style={styles.copyAllBtnText}>COPY ALL</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Court Visualization */}
         <View style={styles.courtContainer}>
           <View style={styles.courtCard}>
-            {/* Net indicator */}
-            <View style={styles.netLine}>
-              <View style={styles.netDash} />
-              <Text style={styles.netLabel}>NET</Text>
-              <View style={styles.netDash} />
-            </View>
+            {/* Net indicator (volleyball/basketball) or field header (soccer) */}
+            {activeFormation?.courtType !== 'soccer' && (
+              <View style={styles.netLine}>
+                <View style={styles.netDash} />
+                <Text style={styles.netLabel}>
+                  {activeFormation?.courtType === 'basketball' ? 'BASKET' : 'NET'}
+                </Text>
+                <View style={styles.netDash} />
+              </View>
+            )}
 
-            {/* Front Row: P4, P3, P2 */}
-            <View style={styles.courtRow}>
-              {FRONT_ROW_POSITIONS.map((pos) => {
-                const slot = lineup.find((s) => s.position === pos);
-                if (!slot) return null;
-                return (
-                  <TouchableOpacity
-                    key={pos}
-                    style={[
-                      styles.positionSlot,
-                      {
-                        borderColor: slot.color + '80',
-                        backgroundColor: slot.player ? slot.color + '20' : '#131924',
-                      },
-                      slot.isLibero && styles.positionSlotLibero,
-                    ]}
-                    onPress={() => handlePositionTap(pos)}
-                    onLongPress={() => slot.player && handleToggleLibero(pos)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.positionLabel, { color: slot.color }]}>
-                      P{pos} - {slot.label}
-                    </Text>
-                    {slot.player ? (
-                      <View style={styles.assignedPlayerInfo}>
-                        <View style={[styles.playerDot, { backgroundColor: slot.color }]}>
-                          <Text style={styles.playerDotText}>
-                            {slot.player.jersey_number || getPositionInitials(slot.player)}
-                          </Text>
-                        </View>
-                        <Text style={styles.assignedName} numberOfLines={1}>
-                          {slot.player.first_name.charAt(0)}. {slot.player.last_name}
+            {/* Dynamic court rows from formation config */}
+            {courtRows.map((rowPositions, rowIdx) => (
+              <React.Fragment key={rowIdx}>
+                {rowIdx > 0 && <View style={styles.midCourtLine} />}
+                <View style={styles.courtRow}>
+                  {rowPositions.map((pos) => {
+                    const slot = lineup.find((s) => s.position === pos);
+                    if (!slot) return null;
+                    return (
+                      <TouchableOpacity
+                        key={pos}
+                        style={[
+                          styles.positionSlot,
+                          {
+                            width: dynamicSlotWidth,
+                            borderColor: slot.color + '80',
+                            backgroundColor: slot.player ? slot.color + '20' : '#131924',
+                          },
+                          slot.isLibero && styles.positionSlotLibero,
+                        ]}
+                        onPress={() => handlePositionTap(pos)}
+                        onLongPress={() => slot.player && handleToggleLibero(pos)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.positionLabel, { color: slot.color }]}>
+                          P{pos} - {slot.label}
                         </Text>
-                        {slot.isLibero && (
-                          <View style={styles.liberoBadge}>
-                            <Text style={styles.liberoBadgeText}>L</Text>
+                        {slot.player ? (
+                          <View style={styles.assignedPlayerInfo}>
+                            <View style={[styles.playerDot, { backgroundColor: slot.color }]}>
+                              <Text style={styles.playerDotText}>
+                                {slot.player.jersey_number || getPositionInitials(slot.player)}
+                              </Text>
+                            </View>
+                            <Text style={styles.assignedName} numberOfLines={1}>
+                              {slot.player.first_name.charAt(0)}. {slot.player.last_name}
+                            </Text>
+                            {slot.isLibero && (
+                              <View style={styles.liberoBadge}>
+                                <Text style={styles.liberoBadgeText}>L</Text>
+                              </View>
+                            )}
                           </View>
+                        ) : (
+                          <Text style={styles.tapToAssign}>TAP TO{'\n'}ASSIGN</Text>
                         )}
-                      </View>
-                    ) : (
-                      <Text style={styles.tapToAssign}>TAP TO{'\n'}ASSIGN</Text>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </React.Fragment>
+            ))}
 
-            {/* Mid-court divider */}
-            <View style={styles.midCourtLine} />
-
-            {/* Back Row: P5, P6, P1 */}
-            <View style={styles.courtRow}>
-              {BACK_ROW_POSITIONS.map((pos) => {
-                const slot = lineup.find((s) => s.position === pos);
-                if (!slot) return null;
-                return (
-                  <TouchableOpacity
-                    key={pos}
-                    style={[
-                      styles.positionSlot,
-                      {
-                        borderColor: slot.color + '80',
-                        backgroundColor: slot.player ? slot.color + '20' : '#131924',
-                      },
-                      slot.isLibero && styles.positionSlotLibero,
-                    ]}
-                    onPress={() => handlePositionTap(pos)}
-                    onLongPress={() => slot.player && handleToggleLibero(pos)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.positionLabel, { color: slot.color }]}>
-                      P{pos} - {slot.label}
-                    </Text>
-                    {slot.player ? (
-                      <View style={styles.assignedPlayerInfo}>
-                        <View style={[styles.playerDot, { backgroundColor: slot.color }]}>
-                          <Text style={styles.playerDotText}>
-                            {slot.player.jersey_number || getPositionInitials(slot.player)}
-                          </Text>
-                        </View>
-                        <Text style={styles.assignedName} numberOfLines={1}>
-                          {slot.player.first_name.charAt(0)}. {slot.player.last_name}
-                        </Text>
-                        {slot.isLibero && (
-                          <View style={styles.liberoBadge}>
-                            <Text style={styles.liberoBadgeText}>L</Text>
-                          </View>
-                        )}
-                      </View>
-                    ) : (
-                      <Text style={styles.tapToAssign}>TAP TO{'\n'}ASSIGN</Text>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            {/* Serving area indicator */}
-            <View style={styles.serveArea}>
-              <Ionicons name="arrow-up-circle" size={14} color="#64748B" />
-              <Text style={styles.serveAreaText}>SERVICE ZONE (P1)</Text>
-            </View>
+            {/* Serving area indicator (volleyball only) */}
+            {isVolleyball && (
+              <View style={styles.serveArea}>
+                <Ionicons name="arrow-up-circle" size={14} color="#64748B" />
+                <Text style={styles.serveAreaText}>SERVICE ZONE (P1)</Text>
+              </View>
+            )}
           </View>
 
-          {/* Long-press hint */}
-          <Text style={styles.longPressHint}>
-            Long-press a player to toggle Libero
-          </Text>
+          {/* Long-press hint (volleyball only — libero is volleyball concept) */}
+          {isVolleyball && (
+            <Text style={styles.longPressHint}>
+              Long-press a player to toggle Libero
+            </Text>
+          )}
         </View>
 
         {/* Action Buttons */}
@@ -1140,118 +1197,120 @@ export default function LineupBuilderScreen() {
           </View>
         )}
 
-        {/* Rotation Preview */}
-        <View style={styles.rotationSection}>
-          <TouchableOpacity
-            style={styles.rotationToggle}
-            onPress={() => setShowRotationPreview(!showRotationPreview)}
-          >
-            <Ionicons name="sync" size={18} color="#6366F1" />
-            <Text style={styles.rotationToggleText}>
-              {showRotationPreview ? 'HIDE ROTATION PREVIEW' : 'ROTATION PREVIEW'}
-            </Text>
-            <Ionicons
-              name={showRotationPreview ? 'chevron-up' : 'chevron-down'}
-              size={16}
-              color="#6366F1"
-            />
-          </TouchableOpacity>
+        {/* Rotation Preview (volleyball only — rotations are a volleyball concept) */}
+        {isVolleyball && (
+          <View style={styles.rotationSection}>
+            <TouchableOpacity
+              style={styles.rotationToggle}
+              onPress={() => setShowRotationPreview(!showRotationPreview)}
+            >
+              <Ionicons name="sync" size={18} color="#6366F1" />
+              <Text style={styles.rotationToggleText}>
+                {showRotationPreview ? 'HIDE ROTATION PREVIEW' : 'ROTATION PREVIEW'}
+              </Text>
+              <Ionicons
+                name={showRotationPreview ? 'chevron-up' : 'chevron-down'}
+                size={16}
+                color="#6366F1"
+              />
+            </TouchableOpacity>
 
-          {showRotationPreview && (
-            <View style={styles.rotationPreviewContainer}>
-              {/* Rotation Navigation */}
-              <View style={styles.rotationNav}>
-                <TouchableOpacity
-                  style={styles.rotationNavBtn}
-                  onPress={() => setPreviewRotation((prev) => (prev - 1 + 6) % 6)}
-                >
-                  <Ionicons name="chevron-back" size={20} color="#94A3B8" />
-                </TouchableOpacity>
-                <View style={styles.rotationNavCenter}>
-                  <Text style={styles.rotationNavLabel}>
-                    ROTATION {previewRotation + 1} / 6
-                  </Text>
-                  {previewRotation > 0 && (
-                    <TouchableOpacity onPress={() => setPreviewRotation(0)}>
-                      <Text style={styles.rotationResetText}>Reset</Text>
-                    </TouchableOpacity>
-                  )}
+            {showRotationPreview && (
+              <View style={styles.rotationPreviewContainer}>
+                {/* Rotation Navigation */}
+                <View style={styles.rotationNav}>
+                  <TouchableOpacity
+                    style={styles.rotationNavBtn}
+                    onPress={() => setPreviewRotation((prev) => (prev - 1 + 6) % 6)}
+                  >
+                    <Ionicons name="chevron-back" size={20} color="#94A3B8" />
+                  </TouchableOpacity>
+                  <View style={styles.rotationNavCenter}>
+                    <Text style={styles.rotationNavLabel}>
+                      ROTATION {previewRotation + 1} / 6
+                    </Text>
+                    {previewRotation > 0 && (
+                      <TouchableOpacity onPress={() => setPreviewRotation(0)}>
+                        <Text style={styles.rotationResetText}>Reset</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  <TouchableOpacity
+                    style={styles.rotationNavBtn}
+                    onPress={() => setPreviewRotation((prev) => (prev + 1) % 6)}
+                  >
+                    <Ionicons name="chevron-forward" size={20} color="#94A3B8" />
+                  </TouchableOpacity>
                 </View>
-                <TouchableOpacity
-                  style={styles.rotationNavBtn}
-                  onPress={() => setPreviewRotation((prev) => (prev + 1) % 6)}
-                >
-                  <Ionicons name="chevron-forward" size={20} color="#94A3B8" />
-                </TouchableOpacity>
-              </View>
 
-              {/* All 6 Rotations Mini-View */}
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.rotationScrollContent}
-              >
-                {[0, 1, 2, 3, 4, 5].map((rotIdx) => {
-                  const rotatedLineup = getRotatedLineup(rotIdx);
-                  const isActive = rotIdx === previewRotation;
-                  return (
-                    <TouchableOpacity
-                      key={rotIdx}
-                      style={[
-                        styles.rotationMiniCard,
-                        isActive && styles.rotationMiniCardActive,
-                      ]}
-                      onPress={() => setPreviewRotation(rotIdx)}
-                    >
-                      <Text
+                {/* All 6 Rotations Mini-View */}
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.rotationScrollContent}
+                >
+                  {[0, 1, 2, 3, 4, 5].map((rotIdx) => {
+                    const rotatedLineup = getRotatedLineup(rotIdx);
+                    const isActive = rotIdx === previewRotation;
+                    return (
+                      <TouchableOpacity
+                        key={rotIdx}
                         style={[
-                          styles.rotationMiniTitle,
-                          isActive && styles.rotationMiniTitleActive,
+                          styles.rotationMiniCard,
+                          isActive && styles.rotationMiniCardActive,
                         ]}
+                        onPress={() => setPreviewRotation(rotIdx)}
                       >
-                        R{rotIdx + 1}
-                      </Text>
-                      {/* Mini court: front row */}
-                      <View style={styles.rotationMiniRow}>
-                        {[4, 3, 2].map((pos) => {
-                          const slot = rotatedLineup.find((s) => s.position === pos);
-                          return (
-                            <View key={pos} style={[styles.rotationMiniSlot, { borderColor: slot?.color || '#334155' }]}>
-                              <Text style={styles.rotationMiniSlotText}>
-                                {slot?.player
-                                  ? slot.player.jersey_number || slot.player.first_name.charAt(0)
-                                  : '-'}
-                              </Text>
-                            </View>
-                          );
-                        })}
-                      </View>
-                      {/* Mini court: back row */}
-                      <View style={styles.rotationMiniRow}>
-                        {[5, 6, 1].map((pos) => {
-                          const slot = rotatedLineup.find((s) => s.position === pos);
-                          return (
-                            <View key={pos} style={[styles.rotationMiniSlot, { borderColor: slot?.color || '#334155' }]}>
-                              <Text style={styles.rotationMiniSlotText}>
-                                {slot?.player
-                                  ? slot.player.jersey_number || slot.player.first_name.charAt(0)
-                                  : '-'}
-                              </Text>
-                            </View>
-                          );
-                        })}
-                      </View>
-                      {/* Serve indicator */}
-                      {rotIdx === 0 && (
-                        <Text style={styles.rotationServeLabel}>SERVE</Text>
-                      )}
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            </View>
-          )}
-        </View>
+                        <Text
+                          style={[
+                            styles.rotationMiniTitle,
+                            isActive && styles.rotationMiniTitleActive,
+                          ]}
+                        >
+                          R{rotIdx + 1}
+                        </Text>
+                        {/* Mini court: front row */}
+                        <View style={styles.rotationMiniRow}>
+                          {courtRows[0]?.map((pos) => {
+                            const slot = rotatedLineup.find((s) => s.position === pos);
+                            return (
+                              <View key={pos} style={[styles.rotationMiniSlot, { borderColor: slot?.color || '#334155' }]}>
+                                <Text style={styles.rotationMiniSlotText}>
+                                  {slot?.player
+                                    ? slot.player.jersey_number || slot.player.first_name.charAt(0)
+                                    : '-'}
+                                </Text>
+                              </View>
+                            );
+                          })}
+                        </View>
+                        {/* Mini court: back row */}
+                        <View style={styles.rotationMiniRow}>
+                          {courtRows[1]?.map((pos) => {
+                            const slot = rotatedLineup.find((s) => s.position === pos);
+                            return (
+                              <View key={pos} style={[styles.rotationMiniSlot, { borderColor: slot?.color || '#334155' }]}>
+                                <Text style={styles.rotationMiniSlotText}>
+                                  {slot?.player
+                                    ? slot.player.jersey_number || slot.player.first_name.charAt(0)
+                                    : '-'}
+                                </Text>
+                              </View>
+                            );
+                          })}
+                        </View>
+                        {/* Serve indicator */}
+                        {rotIdx === 0 && (
+                          <Text style={styles.rotationServeLabel}>SERVE</Text>
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Substitution Management */}
         {lineup.some((s) => s.player) && (
@@ -1324,11 +1383,15 @@ export default function LineupBuilderScreen() {
             <View style={styles.benchGrid}>
               {benchPlayers.map((player) => (
                 <View key={player.id} style={styles.benchPlayer}>
-                  <View style={styles.benchJersey}>
-                    <Text style={styles.benchJerseyText}>
-                      {player.jersey_number || '--'}
-                    </Text>
-                  </View>
+                  {player.photo_url ? (
+                    <Image source={{ uri: player.photo_url }} style={styles.benchPhoto} />
+                  ) : (
+                    <View style={styles.benchJersey}>
+                      <Text style={styles.benchJerseyText}>
+                        {player.jersey_number || '--'}
+                      </Text>
+                    </View>
+                  )}
                   <Text style={styles.benchPlayerName} numberOfLines={1}>
                     {player.first_name.charAt(0)}. {player.last_name}
                   </Text>
@@ -1410,11 +1473,15 @@ export default function LineupBuilderScreen() {
                     onPress={() => handleAssignPlayer(player)}
                     activeOpacity={0.7}
                   >
-                    <View style={styles.assignJersey}>
-                      <Text style={styles.assignJerseyText}>
-                        {player.jersey_number || '--'}
-                      </Text>
-                    </View>
+                    {player.photo_url ? (
+                      <Image source={{ uri: player.photo_url }} style={styles.assignPhoto} />
+                    ) : (
+                      <View style={styles.assignJersey}>
+                        <Text style={styles.assignJerseyText}>
+                          {player.jersey_number || '--'}
+                        </Text>
+                      </View>
+                    )}
                     <View style={styles.assignPlayerInfo}>
                       <Text style={styles.assignPlayerName}>
                         {player.first_name} {player.last_name}
@@ -1695,12 +1762,12 @@ const styles = StyleSheet.create({
   },
   formationBtns: {
     flexDirection: 'row',
-    flex: 1,
     gap: 8,
+    paddingRight: 16,
   },
   formationBtn: {
-    flex: 1,
     paddingVertical: 10,
+    paddingHorizontal: 16,
     borderRadius: 12,
     backgroundColor: 'rgba(30, 41, 59, 0.7)',
     borderWidth: 1,
@@ -1718,6 +1785,54 @@ const styles = StyleSheet.create({
   },
   formationBtnTextActive: {
     color: '#F97316',
+  },
+
+  // ── Set Tab Bar ──
+  setTabBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 10,
+    gap: 8,
+  },
+  setTab: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    backgroundColor: '#131924',
+    borderWidth: 1,
+    borderColor: '#1E293B',
+  },
+  setTabActive: {
+    backgroundColor: '#F9731625',
+    borderColor: '#F97316',
+  },
+  setTabText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#64748B',
+    letterSpacing: 1,
+  },
+  setTabTextActive: {
+    color: '#F97316',
+  },
+  copyAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginLeft: 'auto',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: '#6366F115',
+    borderWidth: 1,
+    borderColor: '#6366F140',
+  },
+  copyAllBtnText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#6366F1',
+    letterSpacing: 0.5,
   },
 
   // ── Court Visualization ──
@@ -1951,6 +2066,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.08)',
   },
+  benchPhoto: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    marginBottom: 6,
+  },
   benchJersey: {
     width: 36,
     height: 36,
@@ -2080,6 +2201,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9731615',
     borderWidth: 1,
     borderColor: '#F9731640',
+  },
+  assignPhoto: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    marginRight: 14,
   },
   assignJersey: {
     width: 48,

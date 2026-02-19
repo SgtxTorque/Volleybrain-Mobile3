@@ -72,7 +72,7 @@ export default function OrgDirectoryScreen() {
       setOrgs(data || []);
       setFiltered(data || []);
     } catch (error) {
-      console.error('Error fetching organizations:', error);
+      if (__DEV__) console.error('Error fetching organizations:', error);
     } finally {
       setLoading(false);
     }

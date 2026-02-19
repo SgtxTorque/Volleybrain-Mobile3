@@ -53,7 +53,7 @@ export default function TabLayout() {
 
         setUnreadAlertCount(alertCount || 0);
       } catch (error) {
-        console.error('Error fetching unread counts:', error);
+        if (__DEV__) console.error('Error fetching unread counts:', error);
       }
     };
 
@@ -171,14 +171,14 @@ export default function TabLayout() {
         }}
       />
 
-      {/* CONNECT */}
+      {/* TEAM */}
       <Tabs.Screen
         name="connect"
         options={{
-          title: 'Connect',
+          title: 'Team',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
-              name={focused ? 'chatbubbles' : 'chatbubbles-outline'}
+              name={focused ? 'people' : 'people-outline'}
               size={24}
               color={color}
             />

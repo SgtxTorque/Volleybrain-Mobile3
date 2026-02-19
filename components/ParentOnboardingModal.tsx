@@ -214,7 +214,7 @@ export default function ParentOnboardingModal({
   };
 
   if (!user || !profile || !visible) {
-    console.log('[ParentOnboardingModal] Return null - user:', !!user, 'profile:', !!profile, 'visible:', visible);
+    if (__DEV__) console.log('[ParentOnboardingModal] Return null - user:', !!user, 'profile:', !!profile, 'visible:', visible);
     return null;
   }
 
@@ -225,7 +225,7 @@ export default function ParentOnboardingModal({
     <View
       style={styles.overlay}
       onTouchStart={() => {
-        console.log('[ParentOnboardingModal] OVERLAY TAP CAPTURED');
+        if (__DEV__) console.log('[ParentOnboardingModal] OVERLAY TAP CAPTURED');
       }}
     >
       <View style={styles.container}>

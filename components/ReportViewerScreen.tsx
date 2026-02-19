@@ -181,7 +181,7 @@ export default function ReportViewerScreen() {
 
       setData(result);
     } catch (err: any) {
-      console.error('Error loading report:', err);
+      if (__DEV__) console.error('Error loading report:', err);
       setError(err.message || 'Failed to load report');
     } finally {
       setLoading(false);

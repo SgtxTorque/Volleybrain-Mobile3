@@ -83,7 +83,7 @@ export default function SeasonFeesManager({ seasonId, seasonName }: Props) {
       if (error) throw error;
       setFees(data || []);
     } catch (error) {
-      console.error('Error fetching fees:', error);
+      if (__DEV__) console.error('Error fetching fees:', error);
     } finally {
       setLoading(false);
     }
@@ -170,7 +170,7 @@ export default function SeasonFeesManager({ seasonId, seasonName }: Props) {
       resetForm();
       fetchFees();
     } catch (error) {
-      console.error('Error saving fee:', error);
+      if (__DEV__) console.error('Error saving fee:', error);
       Alert.alert('Error', 'Failed to save fee. Please try again.');
     } finally {
       setSaving(false);
@@ -196,7 +196,7 @@ export default function SeasonFeesManager({ seasonId, seasonName }: Props) {
               if (error) throw error;
               fetchFees();
             } catch (error) {
-              console.error('Error deleting fee:', error);
+              if (__DEV__) console.error('Error deleting fee:', error);
               Alert.alert('Error', 'Failed to delete fee.');
             }
           },

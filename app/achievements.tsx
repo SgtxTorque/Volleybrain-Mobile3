@@ -261,7 +261,7 @@ export default function AchievementsScreen() {
         setEarnedCounts(counts);
       }
     } catch (error) {
-      console.error('Error loading achievements:', error);
+      if (__DEV__) console.error('Error loading achievements:', error);
     } finally {
       setLoading(false);
     }

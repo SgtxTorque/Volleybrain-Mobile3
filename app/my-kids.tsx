@@ -90,7 +90,7 @@ export default function MyKidsScreen() {
         .eq('parent_account_id', user.id);
 
       if (playersError) {
-        console.error('Error fetching children:', playersError);
+        if (__DEV__) console.error('Error fetching children:', playersError);
         setLoading(false);
         return;
       }
@@ -143,7 +143,7 @@ export default function MyKidsScreen() {
         setUpcomingEvents(events || []);
       }
     } catch (err) {
-      console.error('Error in MyKids fetch:', err);
+      if (__DEV__) console.error('Error in MyKids fetch:', err);
     } finally {
       setLoading(false);
     }

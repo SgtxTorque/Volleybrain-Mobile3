@@ -56,7 +56,7 @@ const POLICY_SECTIONS: PolicySection[] = [
     ],
   },
   {
-    title: '4. Children\'s Privacy (COPPA Compliance)',
+    title: '4. Children\'s Privacy',
     content: '',
     bullets: [
       'VolleyBrain collects information about children under 13 only with verified parental consent',

@@ -149,7 +149,7 @@ export default function ReenrollmentBanner() {
       })));
 
     } catch (error) {
-      console.error('Error fetching re-enrollment data:', error);
+      if (__DEV__) console.error('Error fetching re-enrollment data:', error);
     } finally {
       setLoading(false);
     }
@@ -200,14 +200,12 @@ export default function ReenrollmentBanner() {
             emergency_contact_phone: child.emergency_contact_phone,
             emergency_contact_relationship: child.emergency_contact_relationship,
             status: 'registered',
-            coppa_consent_given: true,
-            coppa_consent_date: new Date().toISOString(),
           })
           .select()
           .single();
 
         if (playerError) {
-          console.error('Error creating player:', playerError);
+          if (__DEV__) console.error('Error creating player:', playerError);
           continue;
         }
 
@@ -229,7 +227,7 @@ export default function ReenrollmentBanner() {
       );
 
     } catch (error: any) {
-      console.error('Re-enrollment error:', error);
+      if (__DEV__) console.error('Re-enrollment error:', error);
       Alert.alert('Error', 'Failed to complete re-enrollment. Please try again.');
     } finally {
       setEnrolling(false);
@@ -256,8 +254,6 @@ export default function ReenrollmentBanner() {
           parent_name: profile?.full_name,
           parent_email: profile?.email,
           status: 'registered',
-          coppa_consent_given: true,
-          coppa_consent_date: new Date().toISOString(),
         })
         .select()
         .single();
@@ -292,7 +288,7 @@ export default function ReenrollmentBanner() {
       );
 
     } catch (error: any) {
-      console.error('Add child error:', error);
+      if (__DEV__) console.error('Add child error:', error);
       Alert.alert('Error', 'Failed to register child. Please try again.');
     } finally {
       setEnrolling(false);

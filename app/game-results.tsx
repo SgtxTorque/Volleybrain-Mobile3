@@ -32,7 +32,7 @@ type GameEvent = {
   game_status: string | null;
   game_result: string | null;
   our_score: number | null;
-  their_score: number | null;
+  opponent_score: number | null;
   set_scores: any;
   teams: {
     name: string;
@@ -90,12 +90,12 @@ export default function GameResultsScreen() {
       // Fetch game event
       const { data: gameData, error: gameError } = await supabase
         .from('schedule_events')
-        .select('*, teams(name, color)')
+        .select('*, teams!team_id(name, color)')
         .eq('id', eventId)
         .single();
 
       if (gameError) {
-        console.error('Error fetching game:', gameError);
+        if (__DEV__) console.error('Error fetching game:', gameError);
         setLoading(false);
         return;
       }
@@ -115,7 +115,7 @@ export default function GameResultsScreen() {
         const { data: stats } = await supabase
           .from('game_player_stats')
           .select('*')
-          .eq('schedule_event_id', eventId as string)
+          .eq('event_id', eventId as string)
           .in('player_id', childIds);
 
         const statsWithChild = (stats || []).map((stat: any) => {
@@ -129,7 +129,7 @@ export default function GameResultsScreen() {
         setChildStats(statsWithChild);
       }
     } catch (err) {
-      console.error('Error fetching game results:', err);
+      if (__DEV__) console.error('Error fetching game results:', err);
     } finally {
       setLoading(false);
     }
@@ -294,7 +294,7 @@ export default function GameResultsScreen() {
                 </Text>
                 <Text style={s.scoreDash}>:</Text>
                 <Text style={[s.scoreBig, isLoss && { color: colors.danger }]}>
-                  {game.their_score ?? '-'}
+                  {game.opponent_score ?? '-'}
                 </Text>
               </View>
               <Text style={s.scoreSubtext}>FINAL SCORE</Text>

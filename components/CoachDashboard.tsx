@@ -73,6 +73,7 @@ export default function CoachDashboard() {
   const [availableCount, setAvailableCount] = useState<{ available: number; total: number } | null>(null);
   const [gamesPlayed, setGamesPlayed] = useState(0);
   const [totalGames, setTotalGames] = useState(0);
+  const [pendingStatsCount, setPendingStatsCount] = useState(0);
 
   useEffect(() => {
     fetchCoachData();
@@ -86,15 +87,31 @@ export default function CoachDashboard() {
         fetchTeamSpecificData(activeTeam.id);
       }
     }
-  }, [activeTeamIndex, teams]);
+  }, [activeTeamIndex, teams, workingSeason?.id]);
 
   const fetchCoachData = async () => {
     if (!user?.id || !workingSeason?.id) return;
 
     try {
-      // Get ALL teams where user is on staff (head_coach or assistant_coach)
+      // Get ALL teams where user is on staff
       const { data: allStaffTeams } = await supabase
         .from('team_staff')
+        .select(`
+          team_id,
+          staff_role,
+          teams (
+            id,
+            name,
+            season_id,
+            seasons (name),
+            age_groups (name)
+          )
+        `)
+        .eq('user_id', user.id);
+
+      // Also check team_coaches table as fallback
+      const { data: coachTeams } = await supabase
+        .from('team_coaches')
         .select(`
           team_id,
           role,
@@ -106,56 +123,92 @@ export default function CoachDashboard() {
             age_groups (name)
           )
         `)
-        .eq('user_id', user.id)
-        .in('role', ['head_coach', 'assistant_coach']);
+        .eq('coach_id', user.id);
+
+      // Merge both result sets, deduplicating by team_id
+      const mergedTeams: any[] = [...(allStaffTeams || [])];
+      const existingTeamIds = new Set(mergedTeams.map(t => (t.teams as any)?.id).filter(Boolean));
+      for (const ct of (coachTeams || [])) {
+        const teamId = (ct.teams as any)?.id;
+        if (teamId && !existingTeamIds.has(teamId)) {
+          mergedTeams.push({ ...ct, staff_role: ct.role });
+          existingTeamIds.add(teamId);
+        }
+      }
+
+      // Fallback: if no team_staff or team_coaches records found, query teams directly
+      if (mergedTeams.length === 0) {
+        const { data: coachRecord } = await supabase
+          .from('coaches')
+          .select('id')
+          .eq('profile_id', user.id)
+          .limit(1);
+        if (coachRecord && coachRecord.length > 0) {
+          const { data: allTeams } = await supabase
+            .from('teams')
+            .select('id, name, season_id, seasons(name), age_groups(name)')
+            .eq('season_id', workingSeason.id)
+            .order('name');
+          for (const team of (allTeams || [])) {
+            mergedTeams.push({ teams: team, staff_role: 'head_coach' });
+          }
+        }
+      }
 
       // Filter to current season
-      const allTeamData = allStaffTeams || [];
-      const seasonTeams = allTeamData.filter(t => {
+      const seasonTeams = mergedTeams.filter(t => {
         const team = t.teams as any;
         return team?.season_id === workingSeason.id;
       });
 
-      // Get player counts for each team
-      const teamsWithCounts: CoachTeam[] = [];
-      let total = 0;
+      // Batch player counts and game results for all teams at once
+      const staffTeamIds = seasonTeams.map(t => (t.teams as any)?.id).filter(Boolean);
 
-      for (const t of seasonTeams) {
-        const team = t.teams as any;
-        const { count } = await supabase
+      let playerCountMap = new Map<string, number>();
+      let winsMap = new Map<string, number>();
+      let lossesMap = new Map<string, number>();
+
+      if (staffTeamIds.length > 0) {
+        // Batch player counts
+        const { data: allTeamPlayers } = await supabase
           .from('team_players')
-          .select('*', { count: 'exact', head: true })
-          .eq('team_id', team.id);
+          .select('team_id')
+          .in('team_id', staffTeamIds);
 
-        const playerCount = count || 0;
-        total += playerCount;
+        for (const tp of (allTeamPlayers || [])) {
+          playerCountMap.set(tp.team_id, (playerCountMap.get(tp.team_id) || 0) + 1);
+        }
 
-        // Fetch win/loss record from schedule_events
-        const { data: gameResults } = await supabase
+        // Batch game results
+        const { data: allGameResults } = await supabase
           .from('schedule_events')
-          .select('game_result')
-          .eq('team_id', team.id)
+          .select('team_id, game_result')
+          .in('team_id', staffTeamIds)
           .eq('event_type', 'game')
           .not('game_result', 'is', null);
 
-        let wins = 0;
-        let losses = 0;
-        (gameResults || []).forEach((g: any) => {
-          if (g.game_result === 'win') wins++;
-          else if (g.game_result === 'loss') losses++;
-        });
+        for (const g of (allGameResults || [])) {
+          if (g.game_result === 'win') winsMap.set(g.team_id, (winsMap.get(g.team_id) || 0) + 1);
+          else if (g.game_result === 'loss') lossesMap.set(g.team_id, (lossesMap.get(g.team_id) || 0) + 1);
+        }
+      }
 
-        teamsWithCounts.push({
+      let total = 0;
+      const teamsWithCounts: CoachTeam[] = seasonTeams.map(t => {
+        const team = t.teams as any;
+        const playerCount = playerCountMap.get(team.id) || 0;
+        total += playerCount;
+        return {
           id: team.id,
           name: team.name,
-          role: t.role as 'head_coach' | 'assistant_coach',
+          role: (t.staff_role || 'assistant_coach') as 'head_coach' | 'assistant_coach',
           season_name: team.seasons?.name || '',
           player_count: playerCount,
           age_group_name: team.age_groups?.name || null,
-          wins,
-          losses,
-        });
-      }
+          wins: winsMap.get(team.id) || 0,
+          losses: lossesMap.get(team.id) || 0,
+        };
+      });
 
       // Sort: head_coach first, then assistant_coach
       teamsWithCounts.sort((a, b) => {
@@ -214,13 +267,14 @@ export default function CoachDashboard() {
       }
 
     } catch (error) {
-      console.error('Error fetching coach data:', error);
+      if (__DEV__) console.error('Error fetching coach data:', error);
     } finally {
       setLoading(false);
     }
   };
 
   const fetchTeamSpecificData = async (teamId: string) => {
+    if (!workingSeason?.id) return;
     try {
       // Fetch attendance rate for recent events
       const { data: recentEvents } = await supabase
@@ -291,6 +345,16 @@ export default function CoachDashboard() {
 
       setTotalGames(totalGameCount || 0);
       setGamesPlayed(playedGameCount || 0);
+
+      // Pending stats count (completed games without stats entered)
+      const { count: pendingCount } = await supabase
+        .from('schedule_events')
+        .select('*', { count: 'exact', head: true })
+        .eq('team_id', teamId)
+        .eq('event_type', 'game')
+        .eq('game_status', 'completed')
+        .or('stats_entered.is.null,stats_entered.eq.false');
+      setPendingStatsCount(pendingCount || 0);
 
       // Fetch top performers from recent game stats
       const { data: recentGameStats } = await supabase
@@ -366,7 +430,7 @@ export default function CoachDashboard() {
         setTopPerformers([]);
       }
     } catch (error) {
-      console.error('Error fetching team-specific data:', error);
+      if (__DEV__) console.error('Error fetching team-specific data:', error);
     }
   };
 
@@ -639,15 +703,26 @@ export default function CoachDashboard() {
         </View>
 
         <View style={s.healthCard}>
-          <Ionicons
-            name={topPerformers.length > 0 ? 'checkmark-done-circle' : 'alert-circle-outline'}
-            size={24}
-            color={colors.success}
-          />
-          <Text style={[s.healthNum, { color: colors.success }]}>
-            {topPerformers.length > 0 ? 'All good' : '--'}
-          </Text>
-          <Text style={s.healthLabel}>Alerts</Text>
+          {(() => {
+            const lowRoster = activeTeam && activeTeam.player_count < 6;
+            const lowAttendance = attendanceRate !== null && attendanceRate < 60;
+            const hasAlert = lowRoster || lowAttendance;
+            return (
+              <>
+                <Ionicons
+                  name={hasAlert ? 'warning' : 'checkmark-done-circle'}
+                  size={24}
+                  color={hasAlert ? colors.warning : colors.success}
+                />
+                <Text style={[s.healthNum, { color: hasAlert ? colors.warning : colors.success }]}>
+                  {hasAlert
+                    ? lowRoster ? 'Low Roster' : 'Low Att.'
+                    : 'All good'}
+                </Text>
+                <Text style={s.healthLabel}>Alerts</Text>
+              </>
+            );
+          })()}
         </View>
       </View>
 
@@ -691,6 +766,11 @@ export default function CoachDashboard() {
         <TouchableOpacity style={s.actionCard} onPress={() => router.push('/game-prep' as any)}>
           <View style={[s.actionIconCircle, { backgroundColor: colors.info + '26' }]}>
             <Ionicons name="stats-chart" size={32} color={colors.info} />
+            {pendingStatsCount > 0 && (
+              <View style={s.pendingBadge}>
+                <Text style={s.pendingBadgeText}>{pendingStatsCount}</Text>
+              </View>
+            )}
           </View>
           <Text style={s.actionLabel}>Enter Stats</Text>
         </TouchableOpacity>
@@ -707,6 +787,13 @@ export default function CoachDashboard() {
             <Ionicons name="analytics" size={32} color={colors.primary} />
           </View>
           <Text style={s.actionLabel}>Game Prep</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={s.actionCard} onPress={() => router.push('/(tabs)/schedule' as any)}>
+          <View style={[s.actionIconCircle, { backgroundColor: '#6366F1' + '26' }]}>
+            <Ionicons name="calendar" size={32} color="#6366F1" />
+          </View>
+          <Text style={s.actionLabel}>Schedule</Text>
         </TouchableOpacity>
       </View>
 
@@ -1089,6 +1176,23 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontWeight: '700',
     color: colors.text,
     textAlign: 'center',
+  },
+  pendingBadge: {
+    position: 'absolute' as const,
+    top: -4,
+    right: -4,
+    backgroundColor: colors.danger,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    paddingHorizontal: 4,
+  },
+  pendingBadgeText: {
+    fontSize: 11,
+    fontWeight: '800' as const,
+    color: '#fff',
   },
 
   // Season Progress

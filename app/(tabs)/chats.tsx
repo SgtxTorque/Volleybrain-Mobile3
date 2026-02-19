@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Image, Modal, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -50,6 +50,9 @@ export default function ChatsScreen() {
   const [newChannelName, setNewChannelName] = useState('');
   const [newChannelType, setNewChannelType] = useState('custom');
   const [creating, setCreating] = useState(false);
+
+  // Typing indicators: channelId -> array of display names
+  const [typingMap, setTypingMap] = useState<Record<string, string[]>>({});
 
   const fetchChannels = async () => {
     if (!profile || !workingSeason) return;
@@ -147,6 +150,38 @@ export default function ChatsScreen() {
     };
   }, [profile]);
 
+  // Typing indicator polling for all channels
+  useEffect(() => {
+    if (!profile || channels.length === 0) return;
+
+    const fetchAllTyping = async () => {
+      const fiveSecondsAgo = new Date(Date.now() - 5000).toISOString();
+      const channelIds = channels.map(c => c.id);
+      const { data } = await supabase
+        .from('typing_indicators')
+        .select('channel_id, user_id')
+        .in('channel_id', channelIds)
+        .neq('user_id', profile.id)
+        .gte('started_at', fiveSecondsAgo);
+
+      if (data) {
+        const map: Record<string, string[]> = {};
+        for (const t of data) {
+          if (!map[t.channel_id]) map[t.channel_id] = [];
+          // We don't have member names here easily, so just show "typing..."
+          map[t.channel_id].push(t.user_id);
+        }
+        setTypingMap(map);
+      } else {
+        setTypingMap({});
+      }
+    };
+
+    fetchAllTyping();
+    const interval = setInterval(fetchAllTyping, 3000);
+    return () => clearInterval(interval);
+  }, [profile, channels.length]);
+
   const searchUsers = async (query: string) => {
     if (query.length < 2) {
       setSearchResults([]);
@@ -211,7 +246,7 @@ export default function ChatsScreen() {
       .single();
 
     if (error || !newChannel) {
-      console.error('Error creating DM:', error);
+      if (__DEV__) console.error('Error creating DM:', error);
       return;
     }
 
@@ -399,10 +434,12 @@ export default function ChatsScreen() {
                   )}
                 </View>
                 
-                {channel.last_message ? (
+                {typingMap[channel.id]?.length > 0 ? (
+                  <Text style={s.typingPreview}>typing...</Text>
+                ) : channel.last_message ? (
                   <Text style={s.lastMessage} numberOfLines={1}>
                     <Text style={s.senderName}>{channel.last_message.sender_name}: </Text>
-                    {channel.last_message.content}
+                    {channel.last_message.content || '(media)'}
                   </Text>
                 ) : (
                   <Text style={s.noMessages}>No messages yet</Text>
@@ -554,6 +591,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   lastMessage: { fontSize: 14, color: colors.textMuted },
   senderName: { fontWeight: '500' },
   noMessages: { fontSize: 14, color: colors.textMuted, fontStyle: 'italic' },
+  typingPreview: { fontSize: 14, color: colors.primary, fontStyle: 'italic' },
   unreadBadge: { backgroundColor: colors.primary, minWidth: 22, height: 22, borderRadius: 11, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 6 },
   unreadText: { color: colors.background, fontSize: 12, fontWeight: 'bold' },
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },

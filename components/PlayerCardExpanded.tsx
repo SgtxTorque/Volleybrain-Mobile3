@@ -1,3 +1,4 @@
+import { getSportDisplay, getPositionInfo } from '@/constants/sport-display';
 import { useAuth } from '@/lib/auth';
 import { usePermissions } from '@/lib/permissions-context';
 import { supabase } from '@/lib/supabase';
@@ -5,7 +6,7 @@ import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
     Alert,
     Dimensions,
@@ -21,16 +22,7 @@ import EmergencyContactModal from './EmergencyContactModal';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-type PlayerStats = {
-  kills: number;
-  digs: number;
-  assists: number;
-  aces: number;
-  blocks: number;
-  serve_pct: number;
-  attack_pct: number;
-  games_played: number;
-};
+type PlayerStats = Record<string, number>;
 
 type PlayerSkills = {
   passing: number;
@@ -58,6 +50,7 @@ export type PlayerCardPlayer = {
   photo_url: string | null;
   grade: number | null;
   school: string | null;
+  sport_name?: string | null;
   team_id?: string | null;
   team_name?: string | null;
   team_color?: string | null;
@@ -75,26 +68,6 @@ type PlayerCardExpandedProps = {
   visible: boolean;
   onClose: () => void;
   onUpdate?: () => void;
-};
-
-const positionColors: Record<string, string> = {
-  'OH': '#FF6B6B',
-  'S': '#4ECDC4',
-  'MB': '#45B7D1',
-  'OPP': '#96CEB4',
-  'L': '#FFEAA7',
-  'DS': '#DDA0DD',
-  'RS': '#FF9F43',
-};
-
-const positionNames: Record<string, string> = {
-  'OH': 'Outside Hitter',
-  'S': 'Setter',
-  'MB': 'Middle Blocker',
-  'OPP': 'Opposite',
-  'L': 'Libero',
-  'DS': 'Defensive Specialist',
-  'RS': 'Right Side',
 };
 
 const badgeIcons: Record<string, { icon: string; color: string; name: string }> = {
@@ -115,10 +88,11 @@ export default function PlayerCardExpanded({ player, visible, onClose, onUpdate 
   const { isAdmin, isCoach } = usePermissions();
   const { user } = useAuth();
   
-  const [stats, setStats] = useState<PlayerStats>({
-    kills: 0, digs: 0, assists: 0, aces: 0, blocks: 0,
-    serve_pct: 0, attack_pct: 0, games_played: 0,
-  });
+  const sportDisplay = useMemo(() => getSportDisplay(player?.sport_name), [player?.sport_name]);
+  const posInfo = useMemo(() => getPositionInfo(player?.position, player?.sport_name), [player?.position, player?.sport_name]);
+  const isVolleyball = (player?.sport_name?.toLowerCase() || 'volleyball') === 'volleyball';
+
+  const [stats, setStats] = useState<PlayerStats>({});
   const [skills, setSkills] = useState<PlayerSkills>({
     passing: 50, serving: 50, hitting: 50, blocking: 50, setting: 50, defense: 50,
   });
@@ -250,12 +224,12 @@ export default function PlayerCardExpanded({ player, visible, onClose, onUpdate 
 
   if (!player) return null;
 
-  const positionColor = player.position ? positionColors[player.position] || colors.primary : colors.primary;
+  const positionColor = posInfo?.color || colors.primary;
   const teamColor = player.team_color || '#1a1a2e';
   const hasPhoto = player.photo_url && player.photo_url.length > 0;
-  const overallRating = Math.round(
-    (skills.passing + skills.serving + skills.hitting + skills.blocking + skills.setting + skills.defense) / 6
-  );
+  const overallRating = isVolleyball
+    ? Math.round((skills.passing + skills.serving + skills.hitting + skills.blocking + skills.setting + skills.defense) / 6)
+    : null;
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
@@ -284,11 +258,13 @@ export default function PlayerCardExpanded({ player, visible, onClose, onUpdate 
               start={{ x: 0, y: 0 }}
               end={{ x: 0, y: 1 }}
             >
-              {/* Overall Rating */}
-              <View style={s.overallBadge}>
-                <Text style={s.overallLabel}>OVR</Text>
-                <Text style={s.overallNumber}>{overallRating}</Text>
-              </View>
+              {/* Overall Rating (volleyball only - requires skills data) */}
+              {overallRating !== null && (
+                <View style={s.overallBadge}>
+                  <Text style={s.overallLabel}>OVR</Text>
+                  <Text style={s.overallNumber}>{overallRating}</Text>
+                </View>
+              )}
 
               {/* Player Photo */}
               <TouchableOpacity 
@@ -322,7 +298,7 @@ export default function PlayerCardExpanded({ player, visible, onClose, onUpdate 
               <View style={s.infoRow}>
                 {player.position && (
                   <View style={[s.positionPill, { backgroundColor: positionColor }]}>
-                    <Text style={s.positionPillText}>{positionNames[player.position] || player.position}</Text>
+                    <Text style={s.positionPillText}>{posInfo?.full || player.position}</Text>
                   </View>
                 )}
                 {player.team_name && (
@@ -389,13 +365,15 @@ export default function PlayerCardExpanded({ player, visible, onClose, onUpdate 
                 <Ionicons name="stats-chart" size={18} color={activeTab === 'stats' ? colors.primary : colors.textMuted} />
                 <Text style={[s.tabText, activeTab === 'stats' && { color: colors.primary, fontWeight: '600' }]}>Stats</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[s.tab, activeTab === 'skills' && [s.tabActive, { borderBottomColor: colors.primary }]]}
-                onPress={() => setActiveTab('skills')}
-              >
-                <Ionicons name="fitness" size={18} color={activeTab === 'skills' ? colors.primary : colors.textMuted} />
-                <Text style={[s.tabText, activeTab === 'skills' && { color: colors.primary, fontWeight: '600' }]}>Skills</Text>
-              </TouchableOpacity>
+              {isVolleyball && (
+                <TouchableOpacity
+                  style={[s.tab, activeTab === 'skills' && [s.tabActive, { borderBottomColor: colors.primary }]]}
+                  onPress={() => setActiveTab('skills')}
+                >
+                  <Ionicons name="fitness" size={18} color={activeTab === 'skills' ? colors.primary : colors.textMuted} />
+                  <Text style={[s.tabText, activeTab === 'skills' && { color: colors.primary, fontWeight: '600' }]}>Skills</Text>
+                </TouchableOpacity>
+              )}
               {(isAdmin || isCoach) && (
                 <TouchableOpacity
                   style={[s.tab, activeTab === 'info' && [s.tabActive, { borderBottomColor: colors.primary }]]}
@@ -411,18 +389,19 @@ export default function PlayerCardExpanded({ player, visible, onClose, onUpdate 
             <View style={s.tabContent}>
               {activeTab === 'stats' && (
                 <View style={s.statsGrid}>
-                  <StatBox label="KILLS" value={stats.kills} color="#FF6B6B" />
-                  <StatBox label="DIGS" value={stats.digs} color="#4ECDC4" />
-                  <StatBox label="ASSISTS" value={stats.assists} color="#45B7D1" />
-                  <StatBox label="ACES" value={stats.aces} color="#96CEB4" />
-                  <StatBox label="BLOCKS" value={stats.blocks} color="#DDA0DD" />
-                  <StatBox label="SRV %" value={`${stats.serve_pct}%`} color="#FFEAA7" />
-                  <StatBox label="ATK %" value={`${stats.attack_pct}%`} color="#FF9F43" />
-                  <StatBox label="GAMES" value={stats.games_played} color="#A29BFE" />
+                  {sportDisplay.primaryStats.map((st) => (
+                    <StatBox
+                      key={st.key}
+                      label={st.short}
+                      value={stats[st.key] ?? 0}
+                      color={st.color}
+                    />
+                  ))}
+                  <StatBox label="GAMES" value={stats.games_played ?? 0} color="#A29BFE" />
                 </View>
               )}
 
-              {activeTab === 'skills' && (
+              {activeTab === 'skills' && isVolleyball && (
                 <View style={s.skillsList}>
                   <SkillBar label="Passing" value={skills.passing} color="#4ECDC4" />
                   <SkillBar label="Serving" value={skills.serving} color="#FF6B6B" />

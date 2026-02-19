@@ -104,8 +104,8 @@ export default function CoachParentDashboard() {
     if (!user?.id || !workingSeason?.id) return;
 
     try {
-      // COACHING DATA
-      const { data: headCoachTeams } = await supabase
+      // COACHING DATA — single query for both head_coach and assistant_coach
+      const { data: allStaffTeams } = await supabase
         .from('team_staff')
         .select(`
           team_id,
@@ -113,44 +113,39 @@ export default function CoachParentDashboard() {
           teams (id, name, season_id, age_groups (name))
         `)
         .eq('user_id', user.id)
-        .eq('role', 'head_coach');
+        .in('role', ['head_coach', 'assistant_coach']);
 
-      const { data: assistantTeams } = await supabase
-        .from('team_staff')
-        .select(`
-          team_id,
-          role,
-          teams (id, name, season_id, age_groups (name))
-        `)
-        .eq('user_id', user.id)
-        .eq('role', 'assistant_coach');
-
-      const allTeamData = [...(headCoachTeams || []), ...(assistantTeams || [])];
+      const allTeamData = allStaffTeams || [];
       const seasonTeams = allTeamData.filter(t => {
         const team = t.teams as any;
         return team?.season_id === workingSeason.id;
       });
 
-      const teamsWithCounts: CoachTeam[] = [];
-      const allCoachTeamIds: string[] = [];
+      const allCoachTeamIds: string[] = seasonTeams.map(t => (t.teams as any)?.id).filter(Boolean);
 
-      for (const t of seasonTeams) {
-        const team = t.teams as any;
-        allCoachTeamIds.push(team.id);
-
-        const { count } = await supabase
+      // Batch player counts for all teams at once
+      let playerCountMap = new Map<string, number>();
+      if (allCoachTeamIds.length > 0) {
+        const { data: allTeamPlayers } = await supabase
           .from('team_players')
-          .select('*', { count: 'exact', head: true })
-          .eq('team_id', team.id);
+          .select('team_id')
+          .in('team_id', allCoachTeamIds);
 
-        teamsWithCounts.push({
+        for (const tp of (allTeamPlayers || [])) {
+          playerCountMap.set(tp.team_id, (playerCountMap.get(tp.team_id) || 0) + 1);
+        }
+      }
+
+      const teamsWithCounts: CoachTeam[] = seasonTeams.map(t => {
+        const team = t.teams as any;
+        return {
           id: team.id,
           name: team.name,
           role: t.role as 'head_coach' | 'assistant_coach',
-          player_count: count || 0,
+          player_count: playerCountMap.get(team.id) || 0,
           age_group_name: team.age_groups?.name || null,
-        });
-      }
+        };
+      });
 
       teamsWithCounts.sort((a, b) => {
         if (a.role === 'head_coach' && b.role !== 'head_coach') return -1;
@@ -263,7 +258,7 @@ export default function CoachParentDashboard() {
       }
 
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      if (__DEV__) console.error('Error fetching dashboard data:', error);
     } finally {
       setLoading(false);
     }
@@ -290,7 +285,7 @@ export default function CoachParentDashboard() {
         setChildStats(null);
       }
     } catch (err) {
-      console.error('Error fetching child stats:', err);
+      if (__DEV__) console.error('Error fetching child stats:', err);
       setChildStats(null);
     }
   };
@@ -532,19 +527,19 @@ export default function CoachParentDashboard() {
           <View style={s.sectionBlock}>
             <Text style={s.sectionLabel}>QUICK ACTIONS</Text>
             <View style={s.quickActionsRow}>
-              <TouchableOpacity style={s.quickActionCard} onPress={() => router.push('/(tabs)/players' as any)}>
+              <TouchableOpacity style={s.quickActionCard} onPress={() => router.push('/lineup-builder' as any)}>
                 <View style={[s.quickActionIcon, { backgroundColor: colors.primary + '15' }]}>
                   <Ionicons name="list" size={20} color={colors.primary} />
                 </View>
                 <Text style={s.quickActionText}>Lineup</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={s.quickActionCard} onPress={() => router.push('/(tabs)/schedule' as any)}>
+              <TouchableOpacity style={s.quickActionCard} onPress={() => router.push('/game-prep' as any)}>
                 <View style={[s.quickActionIcon, { backgroundColor: colors.info + '15' }]}>
                   <Ionicons name="clipboard" size={20} color={colors.info} />
                 </View>
                 <Text style={s.quickActionText}>Game Prep</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={s.quickActionCard} onPress={() => router.push('/(tabs)/messages' as any)}>
+              <TouchableOpacity style={s.quickActionCard} onPress={() => router.push('/blast-composer' as any)}>
                 <View style={[s.quickActionIcon, { backgroundColor: colors.success + '15' }]}>
                   <Ionicons name="megaphone" size={20} color={colors.success} />
                 </View>
@@ -720,7 +715,7 @@ export default function CoachParentDashboard() {
             <Text style={s.quickLinkText}>Chat</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={s.quickLinkItem} onPress={() => router.push('/(tabs)/messages' as any)} activeOpacity={0.7}>
+          <TouchableOpacity style={s.quickLinkItem} onPress={() => router.push('/blast-composer' as any)} activeOpacity={0.7}>
             <View style={[s.quickLinkIcon, { backgroundColor: colors.info + '15' }]}>
               <Ionicons name="megaphone" size={22} color={colors.info} />
             </View>

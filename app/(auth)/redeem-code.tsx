@@ -43,7 +43,7 @@ export default function RedeemCodeScreen() {
   setLoading(true);
 
   try {
-    console.log('Searching for code:', cleanCode);
+    if (__DEV__) console.log('Searching for code:', cleanCode);
     
     // First check invitations table (case-insensitive)
     const { data: invitation, error: invError } = await supabase
@@ -52,7 +52,7 @@ export default function RedeemCodeScreen() {
       .ilike('invite_code', cleanCode)
       .single();
 
-    console.log('Invitation query result:', invitation, invError);
+    if (__DEV__) console.log('Invitation query result:', invitation, invError);
 
     if (invitation && !invError) {
       // Check if expired
@@ -115,7 +115,7 @@ export default function RedeemCodeScreen() {
       .ilike('code', cleanCode)
       .single();
 
-    console.log('Team code query result:', teamCode, teamError);
+    if (__DEV__) console.log('Team code query result:', teamCode, teamError);
 
     if (teamCode && !teamError) {
       // Check if active
@@ -158,7 +158,7 @@ export default function RedeemCodeScreen() {
     Alert.alert('Invalid Code', 'This invite code was not found. Please check and try again.');
     
   } catch (error: any) {
-    console.error('Code validation error:', error);
+    if (__DEV__) console.error('Code validation error:', error);
     Alert.alert('Error', 'Failed to validate code. Please try again.');
   } finally {
     setLoading(false);

@@ -1,15 +1,18 @@
 import EmergencyContactModal from '@/components/EmergencyContactModal';
+import GameCompletionWizard, { type GameCompletionResult } from '@/components/GameCompletionWizard';
+import VolleyballCourt, { type CourtSlot } from '@/components/VolleyballCourt';
 import { useAuth } from '@/lib/auth';
 import { useSeason } from '@/lib/season';
+import { useSport } from '@/lib/sport';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Modal,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -37,6 +40,8 @@ type Game = {
   opponent_score: number | null;
   set_scores: { our: number; their: number }[] | null;
   team_id: string;
+  stats_entered?: boolean | null;
+  scoring_format?: string | null;
 };
 
 type RosterPlayer = {
@@ -81,6 +86,11 @@ type StatKey = 'kills' | 'aces' | 'blocks' | 'digs' | 'assists' | 'errors';
 
 type DetailedStatKey = 'kills' | 'aces' | 'digs' | 'blocks' | 'assists' | 'serves' | 'errors';
 
+type UndoAction =
+  | { type: 'stat'; playerId: string; statKey: StatKey; setIndex: number }
+  | { type: 'opp_error'; setIndex: number }
+  | { type: 'sub'; inId: string; outId: string; courtPos: number };
+
 // ============================================================================
 // STAT CONFIG
 // ============================================================================
@@ -112,6 +122,7 @@ export default function GamePrepScreen() {
   const { colors } = useTheme();
   const { user } = useAuth();
   const { workingSeason } = useSeason();
+  const { activeSport } = useSport();
   const router = useRouter();
 
   // List mode state
@@ -132,7 +143,15 @@ export default function GamePrepScreen() {
   const [setScores, setSetScores] = useState<SetScore[]>([{ our: 0, their: 0 }]);
   const [currentSet, setCurrentSet] = useState(0);
   const [saving, setSaving] = useState(false);
-  const [showEndModal, setShowEndModal] = useState(false);
+  const [showWizard, setShowWizard] = useState(false);
+
+  // Mission Control state
+  const [currentRotation, setCurrentRotation] = useState(0);
+  const [undoStack, setUndoStack] = useState<UndoAction[]>([]);
+  const [courtLineup, setCourtLineup] = useState<CourtSlot[]>([]);
+  const [selectedCourtPosition, setSelectedCourtPosition] = useState<number | null>(null);
+  const [benchPlayers, setBenchPlayers] = useState<RosterPlayer[]>([]);
+  const [subHistory, setSubHistory] = useState<{ inId: string; outId: string; set: number }[]>([]);
 
   // Emergency contact modal state
   const [emergencyPlayer, setEmergencyPlayer] = useState<RosterPlayer | null>(null);
@@ -236,11 +255,11 @@ export default function GamePrepScreen() {
       }
       setLineupCounts(counts);
     } catch (err) {
-      console.error('Error loading lineup counts:', err);
+      if (__DEV__) console.error('Error loading lineup counts:', err);
     }
   };
 
-  const loadRoster = async (teamId: string) => {
+  const loadRoster = async (teamId: string): Promise<RosterPlayer[]> => {
     const { data } = await supabase
       .from('team_players')
       .select('*, players(id, first_name, last_name, jersey_number, position, photo_url, medical_conditions, allergies, medications, emergency_contact_name, emergency_contact_phone, emergency_contact_relation)')
@@ -273,7 +292,9 @@ export default function GamePrepScreen() {
         return aNum - bNum;
       });
       setRoster(players);
+      return players;
     }
+    return [];
   };
 
   // ============================================================================
@@ -287,7 +308,58 @@ export default function GamePrepScreen() {
     setCurrentSet(0);
     setPlayerStats({});
     setSelectedPlayerId(null);
-    await loadRoster(game.team_id);
+    setCurrentRotation(0);
+    setUndoStack([]);
+    setSelectedCourtPosition(null);
+    setBenchPlayers([]);
+    setSubHistory([]);
+    const loadedRoster = await loadRoster(game.team_id);
+    await loadCourtLineup(game.id, loadedRoster);
+  };
+
+  const loadCourtLineup = async (eventId: string, rosterPlayers: RosterPlayer[]) => {
+    const { data } = await supabase
+      .from('game_lineups')
+      .select('player_id, position, rotation_order, is_starter, is_libero')
+      .eq('event_id', eventId)
+      .eq('is_starter', true)
+      .order('rotation_order');
+
+    if (data && data.length > 0) {
+      const POSITIONS = [
+        { position: 1, label: 'P1', color: '#3B82F6' },
+        { position: 2, label: 'P2', color: '#10B981' },
+        { position: 3, label: 'P3', color: '#F59E0B' },
+        { position: 4, label: 'P4', color: '#EF4444' },
+        { position: 5, label: 'P5', color: '#8B5CF6' },
+        { position: 6, label: 'P6', color: '#A855F7' },
+      ];
+      const starterIds = new Set<string>();
+      const slots: CourtSlot[] = POSITIONS.map(pos => {
+        const record = data.find(r => r.rotation_order === pos.position);
+        const player = record ? rosterPlayers.find(r => r.id === record.player_id) : null;
+        if (player) starterIds.add(player.id);
+        return {
+          position: pos.position,
+          label: record?.position || pos.label,
+          color: pos.color,
+          player: player ? {
+            id: player.id,
+            first_name: player.first_name,
+            last_name: player.last_name,
+            jersey_number: player.jersey_number,
+            photo_url: player.photo_url,
+          } : null,
+          isLibero: record?.is_libero || false,
+        };
+      });
+      setCourtLineup(slots);
+      // Set bench players (roster members not in starting lineup)
+      setBenchPlayers(rosterPlayers.filter(p => !starterIds.has(p.id)));
+    } else {
+      setCourtLineup([]);
+      setBenchPlayers([]);
+    }
   };
 
   const handleOurPoint = () => {
@@ -327,15 +399,19 @@ export default function GamePrepScreen() {
   };
 
   const recordStat = (statKey: StatKey) => {
-    if (!selectedPlayerId) {
-      Alert.alert('Select Player', 'Tap a player name first, then record a stat.');
+    const pid = selectedPlayerId;
+    if (!pid) {
+      Alert.alert('Select Player', 'Tap a player on the court or roster first.');
       return;
     }
+    // Push onto undo stack
+    setUndoStack(prev => [...prev, { type: 'stat', playerId: pid, statKey, setIndex: currentSet }]);
+
     setPlayerStats(prev => {
-      const existing = prev[selectedPlayerId] || { kills: 0, aces: 0, blocks: 0, digs: 0, assists: 0, errors: 0 };
+      const existing = prev[pid] || { kills: 0, aces: 0, blocks: 0, digs: 0, assists: 0, errors: 0 };
       return {
         ...prev,
-        [selectedPlayerId]: { ...existing, [statKey]: existing[statKey] + 1 },
+        [pid]: { ...existing, [statKey]: existing[statKey] + 1 },
       };
     });
 
@@ -346,6 +422,133 @@ export default function GamePrepScreen() {
     } else if (statConfig && statConfig.points < 0) {
       handleTheirPoint();
     }
+
+    // Deselect court position after stat
+    setSelectedCourtPosition(null);
+  };
+
+  const recordOppError = () => {
+    setUndoStack(prev => [...prev, { type: 'opp_error', setIndex: currentSet }]);
+    handleOurPoint();
+  };
+
+  const performSubstitution = (courtPos: number, benchPlayer: RosterPlayer) => {
+    const courtSlot = courtLineup.find(s => s.position === courtPos);
+    if (!courtSlot?.player) return;
+
+    const outPlayer = courtSlot.player;
+
+    // Push onto undo stack
+    setUndoStack(prev => [...prev, { type: 'sub', inId: benchPlayer.id, outId: outPlayer.id, courtPos }]);
+    setSubHistory(prev => [...prev, { inId: benchPlayer.id, outId: outPlayer.id, set: currentSet }]);
+
+    // Swap court and bench
+    setCourtLineup(prev => prev.map(slot => {
+      if (slot.position !== courtPos) return slot;
+      return {
+        ...slot,
+        player: {
+          id: benchPlayer.id,
+          first_name: benchPlayer.first_name,
+          last_name: benchPlayer.last_name,
+          jersey_number: benchPlayer.jersey_number,
+          photo_url: benchPlayer.photo_url,
+        },
+      };
+    }));
+
+    // Move court player to bench, remove bench player from bench
+    setBenchPlayers(prev => {
+      const withoutIncoming = prev.filter(p => p.id !== benchPlayer.id);
+      const outRosterPlayer = roster.find(r => r.id === outPlayer.id);
+      return outRosterPlayer ? [...withoutIncoming, outRosterPlayer] : withoutIncoming;
+    });
+
+    setSelectedCourtPosition(null);
+    setSelectedPlayerId(benchPlayer.id);
+  };
+
+  const handleBenchTap = (player: RosterPlayer) => {
+    if (selectedCourtPosition !== null) {
+      // Sub mode: court position selected, now tapping bench player completes the swap
+      performSubstitution(selectedCourtPosition, player);
+    } else {
+      // Just select the bench player for stat recording
+      setSelectedPlayerId(selectedPlayerId === player.id ? null : player.id);
+    }
+  };
+
+  const getUndoDescription = (action: UndoAction): string => {
+    if (action.type === 'stat') {
+      const player = roster.find(r => r.id === action.playerId);
+      const statLabel = STAT_BUTTONS.find(s => s.key === action.statKey)?.label || action.statKey;
+      return `${statLabel} #${player?.jersey_number || '?'}`;
+    }
+    if (action.type === 'opp_error') return 'OPP ERR';
+    if (action.type === 'sub') return 'SUB';
+    return '';
+  };
+
+  const undoLast = () => {
+    if (undoStack.length === 0) return;
+    const last = undoStack[undoStack.length - 1];
+    setUndoStack(prev => prev.slice(0, -1));
+
+    if (last.type === 'stat') {
+      // Reverse the stat
+      setPlayerStats(prev => {
+        const existing = prev[last.playerId];
+        if (!existing) return prev;
+        return {
+          ...prev,
+          [last.playerId]: { ...existing, [last.statKey]: Math.max(0, existing[last.statKey] - 1) },
+        };
+      });
+
+      // Reverse the auto-score
+      const statConfig = STAT_BUTTONS.find(s => s.key === last.statKey);
+      if (statConfig && statConfig.points > 0) {
+        undoOurPoint();
+      } else if (statConfig && statConfig.points < 0) {
+        undoTheirPoint();
+      }
+    } else if (last.type === 'opp_error') {
+      undoOurPoint();
+    } else if (last.type === 'sub') {
+      // Reverse substitution
+      const outPlayer = roster.find(r => r.id === last.outId);
+      setCourtLineup(prev => prev.map(slot => {
+        if (slot.position !== last.courtPos) return slot;
+        return {
+          ...slot,
+          player: outPlayer ? {
+            id: outPlayer.id,
+            first_name: outPlayer.first_name,
+            last_name: outPlayer.last_name,
+            jersey_number: outPlayer.jersey_number,
+            photo_url: outPlayer.photo_url,
+          } : null,
+        };
+      }));
+      setBenchPlayers(prev => {
+        const withoutOut = prev.filter(p => p.id !== last.outId);
+        const inPlayer = roster.find(r => r.id === last.inId);
+        return inPlayer ? [...withoutOut, inPlayer] : withoutOut;
+      });
+      setSubHistory(prev => prev.slice(0, -1));
+    }
+  };
+
+  const advanceRotation = () => {
+    setCurrentRotation(prev => (prev + 1) % 6);
+    // Actually rotate court positions: P2→P1, P3→P2, P4→P3, P5→P4, P6→P5, P1→P6
+    setCourtLineup(prev => {
+      if (prev.length === 0) return prev;
+      return prev.map(slot => ({
+        ...slot,
+        position: slot.position === 1 ? 6 : slot.position - 1,
+      }));
+    });
   };
 
   const endSet = () => {
@@ -360,35 +563,48 @@ export default function GamePrepScreen() {
           onPress: () => {
             setSetScores(prev => [...prev, { our: 0, their: 0 }]);
             setCurrentSet(prev => prev + 1);
+            advanceRotation();
           },
         },
       ]
     );
   };
 
-  const endGame = () => setShowEndModal(true);
+  const endGame = () => setShowWizard(true);
 
-  const saveGameResults = async () => {
+  const startStatsEntry = async (game: Game) => {
+    setActiveGame(game);
+    await loadRoster(game.team_id);
+    // Pre-load existing stats if any
+    const { data: existingStats } = await supabase
+      .from('game_player_stats')
+      .select('*')
+      .eq('event_id', game.id);
+    const preloaded: Record<string, DetailedPlayerStats> = {};
+    if (existingStats) {
+      for (const s of existingStats) {
+        preloaded[s.player_id] = {
+          kills: s.kills || 0,
+          aces: s.aces || 0,
+          digs: s.digs || 0,
+          blocks: s.blocks || 0,
+          assists: s.assists || 0,
+          serves: s.serves || 0,
+          errors: s.service_errors || 0,
+        };
+      }
+    }
+    setDetailedStats(preloaded);
+    setStatsEntryIndex(0);
+    setMode('stats-entry');
+  };
+
+  const handleGameComplete = async (result: GameCompletionResult) => {
     if (!activeGame || !user?.id) return;
-    setSaving(true);
 
     try {
-      // Filter out empty last set (e.g., new set started but no points scored)
-      const finalSets = setScores.filter(s => s.our > 0 || s.their > 0);
-
-      // Calculate totals from played sets only
-      const ourTotal = finalSets.reduce((s, set) => s + set.our, 0);
-      const theirTotal = finalSets.reduce((s, set) => s + set.their, 0);
-      const ourSetsWonCount = finalSets.filter(s => s.our > s.their).length;
-      const theirSetsWonCount = finalSets.filter(s => s.their > s.our).length;
-
-      // Determine game result: for volleyball, based on sets won
-      const gameResult: 'win' | 'loss' | 'tie' =
-        ourSetsWonCount > theirSetsWonCount ? 'win' :
-        ourSetsWonCount < theirSetsWonCount ? 'loss' : 'tie';
-
       // Format set_scores with set_number for structured storage
-      const setScoresJson = finalSets.map((s, i) => ({
+      const setScoresJson = result.setScores.map((s, i) => ({
         set_number: i + 1,
         our_score: s.our,
         opponent_score: s.their,
@@ -396,17 +612,21 @@ export default function GamePrepScreen() {
         their: s.their,
       }));
 
-      // Update schedule_events with all required fields
+      // Update schedule_events with wizard result
       const { error: updateError } = await supabase
         .from('schedule_events')
         .update({
           game_status: 'completed',
-          our_score: ourTotal,
-          opponent_score: theirTotal,
-          game_result: gameResult,
-          set_scores: setScoresJson,
-          our_sets_won: ourSetsWonCount,
-          opponent_sets_won: theirSetsWonCount,
+          our_score: result.ourScore,
+          opponent_score: result.opponentScore,
+          game_result: result.gameResult,
+          set_scores: setScoresJson.length > 0 ? setScoresJson : null,
+          period_scores: result.periodScores.length > 0 ? result.periodScores : null,
+          scoring_format: result.scoringFormat,
+          our_sets_won: result.ourSetsWon,
+          opponent_sets_won: result.opponentSetsWon,
+          point_differential: result.pointDifferential,
+          stats_entered: false,
           completed_at: new Date().toISOString(),
           completed_by: user.id,
         })
@@ -437,22 +657,26 @@ export default function GamePrepScreen() {
         await supabase.from('game_player_stats').delete().eq('event_id', activeGame.id);
         const { error: statsError } = await supabase.from('game_player_stats').insert(statRecords);
         if (statsError) {
-          console.error('Failed to save live stats:', statsError);
-          // Don't throw - game completion is the priority, stats can be re-entered
+          if (__DEV__) console.error('Failed to save live stats:', statsError);
         }
       }
 
-      setShowEndModal(false);
-
-      // Refresh game list immediately so list view reflects completion
+      setShowWizard(false);
       loadGames();
 
-      // Show success feedback and prompt for detailed stats entry
-      const resultEmoji = gameResult === 'win' ? 'Victory!' : gameResult === 'loss' ? 'Tough loss.' : 'Tie game.';
+      // Prompt for detailed stats entry
+      const resultEmoji = result.gameResult === 'win' ? 'Victory!' : result.gameResult === 'loss' ? 'Tough loss.' : 'Tie game.';
       Alert.alert(
         `Game Saved! ${resultEmoji}`,
-        `Final: ${ourTotal} - ${theirTotal} (${gameResult.toUpperCase()})\nSets: ${ourSetsWonCount} - ${theirSetsWonCount}\n\nWould you like to enter detailed player stats?`,
+        `Final: ${result.ourScore} - ${result.opponentScore} (${result.gameResult.toUpperCase()})\n\nWould you like to enter detailed player stats?`,
         [
+          {
+            text: 'View Recap',
+            onPress: () => {
+              setMode('list');
+              router.push(`/game-results?eventId=${activeGame.id}&teamId=${activeGame.team_id}` as any);
+            },
+          },
           {
             text: 'Skip',
             style: 'cancel',
@@ -461,7 +685,6 @@ export default function GamePrepScreen() {
           {
             text: 'Enter Stats',
             onPress: () => {
-              // Initialize detailed stats from live stats or empty
               const initial: Record<string, DetailedPlayerStats> = {};
               for (const p of roster) {
                 const live = playerStats[p.id];
@@ -483,10 +706,8 @@ export default function GamePrepScreen() {
         ]
       );
     } catch (error: any) {
-      console.error('Save game error:', error);
-      Alert.alert('Save Failed', error.message || 'Could not save game results. Please check your connection and try again.');
-    } finally {
-      setSaving(false);
+      if (__DEV__) console.error('Save game error:', error);
+      Alert.alert('Save Failed', error.message || 'Could not save game results.');
     }
   };
 
@@ -556,7 +777,7 @@ export default function GamePrepScreen() {
       const statsArray = Object.entries(detailedStats)
         .filter(([_, s]) => s.kills + s.aces + s.digs + s.blocks + s.assists + s.serves + s.errors > 0)
         .map(([playerId, s]) => ({
-          schedule_event_id: activeGame.id,
+          event_id: activeGame.id,
           player_id: playerId,
           season_id: workingSeason!.id,
           team_id: activeGame.team_id,
@@ -577,9 +798,16 @@ export default function GamePrepScreen() {
 
       if (statsArray.length > 0) {
         // Delete any existing stats for this game
-        await supabase.from('game_player_stats').delete().eq('schedule_event_id', activeGame.id);
+        await supabase.from('game_player_stats').delete().eq('event_id', activeGame.id);
         await supabase.from('game_player_stats').insert(statsArray);
       }
+
+      // Mark stats as entered
+      await supabase.from('schedule_events').update({
+        stats_entered: true,
+        stats_entered_at: new Date().toISOString(),
+        stats_entered_by: user.id,
+      }).eq('id', activeGame.id);
 
       Alert.alert('Stats Saved!', `Saved stats for ${statsArray.length} players.`, [
         { text: 'OK', onPress: () => { setMode('list'); loadGames(); } },
@@ -594,6 +822,23 @@ export default function GamePrepScreen() {
   // ============================================================================
   // HELPERS
   // ============================================================================
+
+  // Quick Stats Panel computed values
+  const quickStats = useMemo(() => {
+    let totalKills = 0, totalAces = 0, totalBlocks = 0;
+    let hotPlayer = { jersey: '—', lastName: '—', total: 0 };
+    Object.entries(playerStats).forEach(([pid, stats]) => {
+      totalKills += stats.kills;
+      totalAces += stats.aces;
+      totalBlocks += stats.blocks;
+      const total = stats.kills + stats.aces + stats.blocks;
+      if (total > hotPlayer.total) {
+        const p = roster.find(r => r.id === pid);
+        hotPlayer = { jersey: p?.jersey_number || '?', lastName: p?.last_name || '?', total };
+      }
+    });
+    return { totalKills, totalAces, totalBlocks, hotPlayer };
+  }, [playerStats, roster]);
 
   const formatDate = (d: string) => {
     const date = new Date(d + 'T00:00:00');
@@ -805,8 +1050,13 @@ export default function GamePrepScreen() {
                 <View key={game.id}>
                   <TouchableOpacity
                     style={[gs.gameCard, isToday && gs.gameCardToday]}
-                    onPress={() => !isCompleted && startGameDay(game)}
-                    disabled={isCompleted}
+                    onPress={() => {
+                      if (isCompleted) {
+                        router.push(`/game-results?eventId=${game.id}&teamId=${game.team_id}` as any);
+                      } else {
+                        startGameDay(game);
+                      }
+                    }}
                   >
                     <View style={gs.gameCardTop}>
                       <View style={gs.gameCardDate}>
@@ -826,9 +1076,17 @@ export default function GamePrepScreen() {
                           </View>
                         )}
                         {isCompleted ? (
-                          <View style={gs.completedBadge}>
-                            <Text style={gs.completedBadgeText}>COMPLETED</Text>
-                          </View>
+                          <>
+                            <View style={gs.completedBadge}>
+                              <Text style={gs.completedBadgeText}>COMPLETED</Text>
+                            </View>
+                            {!game.stats_entered && (
+                              <View style={gs.pendingStatsBadge}>
+                                <Text style={gs.pendingStatsBadgeText}>STATS PENDING</Text>
+                              </View>
+                            )}
+                          </>
+
                         ) : isToday ? (
                           <View style={gs.liveBadge}>
                             <View style={gs.liveDot} />
@@ -886,7 +1144,23 @@ export default function GamePrepScreen() {
                     {isCompleted && game.our_score != null && (
                       <View style={gs.scoreDisplay}>
                         <Text style={gs.finalScore}>{game.our_score} - {game.opponent_score}</Text>
+                        <View style={gs.viewRecapWrap}>
+                          <Ionicons name="bar-chart" size={14} color="#6366F1" />
+                          <Text style={gs.viewRecapText}>VIEW RECAP</Text>
+                          <Ionicons name="chevron-forward" size={14} color="#6366F1" />
+                        </View>
                       </View>
+                    )}
+
+                    {isCompleted && !game.stats_entered && (
+                      <TouchableOpacity
+                        onPress={(e) => { e.stopPropagation(); startStatsEntry(game); }}
+                        style={gs.enterStatsBtnWrap}
+                      >
+                        <Ionicons name="create" size={14} color="#F59E0B" />
+                        <Text style={gs.enterStatsBtnText}>ENTER STATS</Text>
+                        <Ionicons name="chevron-forward" size={14} color="#F59E0B" />
+                      </TouchableOpacity>
                     )}
                   </TouchableOpacity>
                 </View>
@@ -915,9 +1189,19 @@ export default function GamePrepScreen() {
           </Text>
           <Text style={gs.liveSetIndicator}>SET {currentSet + 1}</Text>
         </View>
-        <TouchableOpacity onPress={endGame} style={gs.endGameBtn}>
-          <Text style={gs.endGameBtnText}>END</Text>
-        </TouchableOpacity>
+        <View style={gs.headerRight}>
+          {undoStack.length > 0 && (
+            <Text style={gs.undoHint} numberOfLines={1}>
+              {getUndoDescription(undoStack[undoStack.length - 1])}
+            </Text>
+          )}
+          <TouchableOpacity onPress={undoLast} style={gs.undoLastBtn} disabled={undoStack.length === 0}>
+            <Ionicons name="arrow-undo" size={18} color={undoStack.length > 0 ? '#F97316' : '#334155'} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={endGame} style={gs.endGameBtn}>
+            <Text style={gs.endGameBtnText}>END</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Scoreboard */}
@@ -962,6 +1246,54 @@ export default function GamePrepScreen() {
         </View>
       </View>
 
+      {/* Volleyball Court */}
+      {courtLineup.length > 0 && (
+        <VolleyballCourt
+          lineup={courtLineup}
+          selectedPosition={selectedCourtPosition}
+          onPositionTap={(pos) => {
+            const slot = courtLineup.find(s => s.position === pos);
+            if (slot?.player) {
+              setSelectedPlayerId(slot.player.id);
+              setSelectedCourtPosition(pos);
+            }
+          }}
+          rotation={currentRotation}
+          onRotate={advanceRotation}
+          compact
+        />
+      )}
+
+      {/* Bench Players */}
+      {benchPlayers.length > 0 && (
+        <View style={gs.benchRow}>
+          <Text style={gs.benchLabel}>
+            BENCH{selectedCourtPosition !== null ? ' — TAP TO SUB IN' : ''}
+          </Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 8, gap: 8 }}>
+            {benchPlayers.map(player => {
+              const isBenchSelected = selectedPlayerId === player.id;
+              return (
+                <TouchableOpacity
+                  key={player.id}
+                  onPress={() => handleBenchTap(player)}
+                  style={[gs.benchSlot, isBenchSelected && gs.benchSlotActive]}
+                >
+                  {player.photo_url ? (
+                    <Image source={{ uri: player.photo_url }} style={gs.benchPhoto} />
+                  ) : (
+                    <View style={gs.benchJersey}>
+                      <Text style={gs.benchJerseyText}>{player.jersey_number || '—'}</Text>
+                    </View>
+                  )}
+                  <Text style={gs.benchName} numberOfLines={1}>{player.last_name?.slice(0, 5)}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      )}
+
       {/* Stat Buttons */}
       <View style={gs.statButtonsRow}>
         {STAT_BUTTONS.map(stat => (
@@ -974,7 +1306,35 @@ export default function GamePrepScreen() {
             <Text style={[gs.statBtnLabel, { color: stat.color }]}>{stat.label}</Text>
           </TouchableOpacity>
         ))}
+        {/* OPP ERR — no player selection needed */}
+        <TouchableOpacity
+          style={[gs.statBtn, { borderColor: '#10B98160' }]}
+          onPress={recordOppError}
+        >
+          <Ionicons name="add-circle" size={20} color="#10B981" />
+          <Text style={[gs.statBtnLabel, { color: '#10B981' }]}>OPP</Text>
+        </TouchableOpacity>
       </View>
+
+      {/* Quick Stats Panel */}
+      {Object.keys(playerStats).length > 0 && (
+        <View style={gs.quickStatsBar}>
+          <View style={gs.quickStatsTeam}>
+            <Text style={gs.quickStatsLabel}>TEAM</Text>
+            <View style={gs.quickStatsMini}>
+              <Text style={[gs.qsMini, { color: '#FF3B3B' }]}>K:{quickStats.totalKills}</Text>
+              <Text style={[gs.qsMini, { color: '#A855F7' }]}>A:{quickStats.totalAces}</Text>
+              <Text style={[gs.qsMini, { color: '#F59E0B' }]}>B:{quickStats.totalBlocks}</Text>
+            </View>
+          </View>
+          {quickStats.hotPlayer.total > 0 && (
+            <View style={gs.quickStatsHot}>
+              <Text style={gs.quickStatsLabel}>HOT</Text>
+              <Text style={gs.quickStatsHotName}>#{quickStats.hotPlayer.jersey} {quickStats.hotPlayer.lastName}</Text>
+            </View>
+          )}
+        </View>
+      )}
 
       {/* Player Roster */}
       <ScrollView ref={scrollRef} style={gs.rosterScroll} contentContainerStyle={{ paddingBottom: 20 }}>
@@ -990,11 +1350,15 @@ export default function GamePrepScreen() {
               style={[gs.playerRow, isActive && gs.playerRowActive]}
               onPress={() => setSelectedPlayerId(isActive ? null : player.id)}
             >
-              <View style={gs.playerJersey}>
-                <Text style={gs.playerJerseyText}>
-                  {player.jersey_number || '—'}
-                </Text>
-              </View>
+              {player.photo_url ? (
+                <Image source={{ uri: player.photo_url }} style={gs.playerPhoto} />
+              ) : (
+                <View style={gs.playerJersey}>
+                  <Text style={gs.playerJerseyText}>
+                    {player.jersey_number || '—'}
+                  </Text>
+                </View>
+              )}
               <View style={gs.playerInfo}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Text style={[gs.playerName, isActive && gs.playerNameActive]}>
@@ -1044,64 +1408,17 @@ export default function GamePrepScreen() {
         player={emergencyPlayer}
       />
 
-      {/* End Game Modal */}
-      <Modal visible={showEndModal} transparent animationType="fade">
-        <View style={gs.modalOverlay}>
-          <View style={gs.endModal}>
-            <Text style={gs.endModalTitle}>END GAME</Text>
-
-            {/* Final score summary */}
-            <View style={gs.endScoreWrap}>
-              <Text style={gs.endScoreUs}>{totalOur}</Text>
-              <Text style={gs.endScoreDash}>—</Text>
-              <Text style={gs.endScoreThem}>{totalTheir}</Text>
-            </View>
-            <Text style={gs.endSetsText}>Sets: {ourSetsWon} - {theirSetsWon}</Text>
-
-            {/* Set breakdown */}
-            {setScores.filter(s => s.our > 0 || s.their > 0).map((s, i) => (
-              <Text key={i} style={gs.endSetLine}>
-                Set {i + 1}: {s.our} - {s.their} {s.our > s.their ? '✓' : ''}
-              </Text>
-            ))}
-
-            {/* Top performers */}
-            {Object.keys(playerStats).length > 0 && (
-              <View style={gs.topPerformers}>
-                <Text style={gs.topPerfTitle}>TOP PERFORMERS</Text>
-                {Object.entries(playerStats)
-                  .sort(([, a], [, b]) => (b.kills + b.aces + b.blocks) - (a.kills + a.aces + a.blocks))
-                  .slice(0, 3)
-                  .map(([pid, stats]) => {
-                    const p = roster.find(r => r.id === pid);
-                    if (!p) return null;
-                    return (
-                      <View key={pid} style={gs.topPerfRow}>
-                        <Text style={gs.topPerfName}>#{p.jersey_number || '?'} {p.last_name}</Text>
-                        <Text style={gs.topPerfStats}>
-                          {stats.kills}K {stats.aces}A {stats.blocks}B {stats.digs}D
-                        </Text>
-                      </View>
-                    );
-                  })}
-              </View>
-            )}
-
-            <View style={gs.endModalButtons}>
-              <TouchableOpacity style={gs.endModalCancel} onPress={() => setShowEndModal(false)}>
-                <Text style={gs.endModalCancelText}>Continue Playing</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={gs.endModalSave} onPress={saveGameResults} disabled={saving}>
-                {saving ? (
-                  <ActivityIndicator color="#000" />
-                ) : (
-                  <Text style={gs.endModalSaveText}>SAVE & FINISH</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      {/* Game Completion Wizard */}
+      <GameCompletionWizard
+        visible={showWizard}
+        onClose={() => setShowWizard(false)}
+        onComplete={handleGameComplete}
+        game={activeGame!}
+        roster={roster}
+        liveSetScores={setScores}
+        livePlayerStats={playerStats}
+        sportName={activeSport?.name || 'volleyball'}
+      />
     </View>
   );
 }
@@ -1161,6 +1478,10 @@ const gs = StyleSheet.create({
   startBtnText: { fontSize: 14, fontWeight: '800', color: '#F97316', letterSpacing: 1 },
   scoreDisplay: { marginTop: 10, alignItems: 'center' },
   finalScore: { fontSize: 18, fontWeight: '800', color: '#64748B' },
+  viewRecapWrap: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#1E293B' },
+  viewRecapText: { fontSize: 12, fontWeight: '800', color: '#6366F1', letterSpacing: 0.5 },
+  enterStatsBtnWrap: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 8, paddingVertical: 10, borderRadius: 10, backgroundColor: '#F59E0B15', borderWidth: 1, borderColor: '#F59E0B40' },
+  enterStatsBtnText: { fontSize: 12, fontWeight: '800', color: '#F59E0B', letterSpacing: 0.5 },
 
   // ====== LIVE MODE ======
   liveHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingTop: 56, paddingBottom: 8, backgroundColor: '#0D1117' },
@@ -1188,8 +1509,8 @@ const gs = StyleSheet.create({
   endSetBtnText: { fontSize: 11, fontWeight: '800', color: '#F97316', letterSpacing: 0.5 },
 
   // Stat Buttons
-  statButtonsRow: { flexDirection: 'row', paddingHorizontal: 8, paddingVertical: 10, gap: 6, backgroundColor: '#0D1117' },
-  statBtn: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderRadius: 12, backgroundColor: 'rgba(30, 41, 59, 0.7)', borderWidth: 1 },
+  statButtonsRow: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 8, paddingVertical: 6, gap: 6, backgroundColor: '#0D1117' },
+  statBtn: { minWidth: 46, alignItems: 'center', justifyContent: 'center', paddingVertical: 10, paddingHorizontal: 4, borderRadius: 12, backgroundColor: 'rgba(30, 41, 59, 0.7)', borderWidth: 1, flexGrow: 1 },
   statBtnDisabled: { opacity: 0.4 },
   statBtnLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 0.5, marginTop: 2 },
 
@@ -1198,8 +1519,9 @@ const gs = StyleSheet.create({
   rosterTitle: { fontSize: 12, fontWeight: '700', color: '#64748B', letterSpacing: 1.5, textTransform: 'uppercase', textAlign: 'center', paddingVertical: 10 },
   playerRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#1E293B10' },
   playerRowActive: { backgroundColor: '#F9731615' },
-  playerJersey: { width: 44, height: 44, borderRadius: 10, backgroundColor: '#1E293B', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  playerJerseyText: { fontSize: 18, fontWeight: '900', color: '#94A3B8' },
+  playerPhoto: { width: 44, height: 44, borderRadius: 22, marginRight: 12 },
+  playerJersey: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#1E293B', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  playerJerseyText: { fontSize: 18, fontWeight: '900', color: '#94A3B8', textAlign: 'center' },
   playerInfo: { flex: 1 },
   playerName: { fontSize: 16, fontWeight: '700', color: '#CBD5E1' },
   playerNameActive: { color: '#F97316' },
@@ -1207,26 +1529,33 @@ const gs = StyleSheet.create({
   miniStats: { flexDirection: 'row', gap: 6, marginRight: 8 },
   miniStat: { fontSize: 10, fontWeight: '700' },
 
-  // End Game Modal
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-  endModal: { backgroundColor: 'rgba(30, 41, 59, 0.7)', borderRadius: 24, padding: 24, width: '100%', maxWidth: 380, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.08)', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
-  endModalTitle: { fontSize: 22, fontWeight: '900', color: '#fff', textAlign: 'center', letterSpacing: 2, marginBottom: 16 },
-  endScoreWrap: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 16, marginBottom: 8 },
-  endScoreUs: { fontSize: 48, fontWeight: '900', color: '#10B981' },
-  endScoreDash: { fontSize: 36, fontWeight: '300', color: '#64748B' },
-  endScoreThem: { fontSize: 48, fontWeight: '900', color: '#EF4444' },
-  endSetsText: { fontSize: 14, fontWeight: '700', color: '#94A3B8', textAlign: 'center', marginBottom: 16 },
-  endSetLine: { fontSize: 13, color: '#64748B', textAlign: 'center', marginBottom: 4 },
-  topPerformers: { marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#1E293B' },
-  topPerfTitle: { fontSize: 12, fontWeight: '700', color: '#F97316', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 8 },
-  topPerfRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
-  topPerfName: { fontSize: 14, fontWeight: '700', color: '#CBD5E1' },
-  topPerfStats: { fontSize: 12, fontWeight: '600', color: '#64748B' },
-  endModalButtons: { marginTop: 20, gap: 10 },
-  endModalCancel: { padding: 14, borderRadius: 12, alignItems: 'center', backgroundColor: '#1E293B' },
-  endModalCancelText: { fontSize: 15, fontWeight: '600', color: '#94A3B8' },
-  endModalSave: { padding: 16, borderRadius: 12, alignItems: 'center', backgroundColor: '#F97316' },
-  endModalSaveText: { fontSize: 16, fontWeight: '800', color: '#000', letterSpacing: 1 },
+  // Pending Stats Badge
+  pendingStatsBadge: { backgroundColor: '#F59E0B20', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
+  pendingStatsBadgeText: { fontSize: 10, fontWeight: '700', color: '#F59E0B', letterSpacing: 0.5 },
+
+  // Header right group
+  headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  undoLastBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#1E293B', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#334155' },
+  undoHint: { fontSize: 9, fontWeight: '700', color: '#F97316', maxWidth: 60 },
+
+  // Bench
+  benchRow: { backgroundColor: '#0D1117', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#1E293B' },
+  benchLabel: { fontSize: 9, fontWeight: '700', color: '#475569', letterSpacing: 1.5, textAlign: 'center', marginBottom: 4 },
+  benchSlot: { alignItems: 'center', width: 52, gap: 2 },
+  benchSlotActive: { opacity: 1, backgroundColor: '#F9731615', borderRadius: 8, padding: 2 },
+  benchPhoto: { width: 36, height: 36, borderRadius: 18 },
+  benchJersey: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#1E293B', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#334155' },
+  benchJerseyText: { fontSize: 14, fontWeight: '900', color: '#94A3B8' },
+  benchName: { fontSize: 8, fontWeight: '700', color: '#64748B', textAlign: 'center', width: 48 },
+
+  // Quick Stats Panel
+  quickStatsBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, backgroundColor: '#0D1117', borderBottomWidth: 1, borderBottomColor: '#1E293B' },
+  quickStatsTeam: { flex: 1 },
+  quickStatsLabel: { fontSize: 9, fontWeight: '700', color: '#475569', letterSpacing: 1, marginBottom: 2 },
+  quickStatsMini: { flexDirection: 'row', gap: 8 },
+  qsMini: { fontSize: 12, fontWeight: '800' },
+  quickStatsHot: { alignItems: 'flex-end' },
+  quickStatsHotName: { fontSize: 13, fontWeight: '800', color: '#F97316' },
 
   // ====== STATS ENTRY MODE ======
   seProgressBar: { height: 4, backgroundColor: '#1E293B', marginHorizontal: 16, borderRadius: 2, marginTop: 8 },

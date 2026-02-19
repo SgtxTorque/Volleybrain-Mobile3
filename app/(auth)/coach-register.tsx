@@ -114,7 +114,7 @@ export default function CoachRegisterScreen() {
         })
         .eq('id', authData.user.id);
 
-      if (profileError) console.error('Profile update error:', profileError);
+      if (profileError && __DEV__) console.error('Profile update error:', profileError);
 
       // 4. Grant appropriate role
       const roleToGrant = isAdminInvite ? 'league_admin' : 'head_coach';
@@ -169,7 +169,7 @@ export default function CoachRegisterScreen() {
       }
 
     } catch (error: any) {
-      console.error('Registration error:', error);
+      if (__DEV__) console.error('Registration error:', error);
       Alert.alert('Registration Failed', error.message || 'Please try again.');
     } finally {
       setLoading(false);

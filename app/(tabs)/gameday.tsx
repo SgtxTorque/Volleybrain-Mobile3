@@ -147,36 +147,50 @@ export default function GameDayScreen() {
       let eventsWithExtras: ScheduleEvent[] = [];
 
       try {
-        eventsWithExtras = await Promise.all(
-          (eventsData || []).map(async (event: any) => {
-            const { data: rsvps } = await supabase
-              .from('event_rsvps')
-              .select('status')
-              .eq('event_id', event.id);
+        const eventIds = (eventsData || []).map((e: any) => e.id);
+        const eventTeamIds = [...new Set((eventsData || []).map((e: any) => e.team_id).filter(Boolean))];
 
-            const { data: teamPlayers } = await supabase
-              .from('team_players')
-              .select('id')
-              .eq('team_id', event.team_id);
+        // Batch: fetch all RSVPs for all events at once
+        const { data: allRsvps } = eventIds.length > 0
+          ? await supabase.from('event_rsvps').select('event_id, status').in('event_id', eventIds)
+          : { data: [] };
 
-            const yesCount = rsvps?.filter((r: any) => r.status === 'yes').length || 0;
-            const noCount = rsvps?.filter((r: any) => r.status === 'no').length || 0;
-            const maybeCount = rsvps?.filter((r: any) => r.status === 'maybe').length || 0;
-            const totalPlayers = teamPlayers?.length || 0;
-            const pendingCount = Math.max(0, totalPlayers - yesCount - noCount - maybeCount);
+        // Batch: fetch all team player counts at once
+        const { data: allTeamPlayers } = eventTeamIds.length > 0
+          ? await supabase.from('team_players').select('team_id').in('team_id', eventTeamIds)
+          : { data: [] };
 
-            const team = teamsData?.find((t: Team) => t.id === event.team_id);
+        // Build lookup maps
+        const rsvpMap = new Map<string, any[]>();
+        for (const r of (allRsvps || [])) {
+          if (!rsvpMap.has(r.event_id)) rsvpMap.set(r.event_id, []);
+          rsvpMap.get(r.event_id)!.push(r);
+        }
 
-            return {
-              ...event,
-              start_time: event.event_time,
-              duration_minutes: (event.duration_hours || 1.5) * 60,
-              team_name: team?.name,
-              team_color: team?.color,
-              rsvp_count: { yes: yesCount, no: noCount, maybe: maybeCount, pending: pendingCount },
-            } as ScheduleEvent;
-          })
-        );
+        const teamPlayerCountMap = new Map<string, number>();
+        for (const tp of (allTeamPlayers || [])) {
+          teamPlayerCountMap.set(tp.team_id, (teamPlayerCountMap.get(tp.team_id) || 0) + 1);
+        }
+
+        eventsWithExtras = (eventsData || []).map((event: any) => {
+          const rsvps = rsvpMap.get(event.id) || [];
+          const yesCount = rsvps.filter((r: any) => r.status === 'yes').length;
+          const noCount = rsvps.filter((r: any) => r.status === 'no').length;
+          const maybeCount = rsvps.filter((r: any) => r.status === 'maybe').length;
+          const totalPlayers = teamPlayerCountMap.get(event.team_id) || 0;
+          const pendingCount = Math.max(0, totalPlayers - yesCount - noCount - maybeCount);
+
+          const team = teamsData?.find((t: Team) => t.id === event.team_id);
+
+          return {
+            ...event,
+            start_time: event.event_time,
+            duration_minutes: (event.duration_hours || 1.5) * 60,
+            team_name: team?.name,
+            team_color: team?.color,
+            rsvp_count: { yes: yesCount, no: noCount, maybe: maybeCount, pending: pendingCount },
+          } as ScheduleEvent;
+        });
       } catch {
         eventsWithExtras = (eventsData || []).map((event: any) => {
           const team = teamsData?.find((t: Team) => t.id === event.team_id);
@@ -192,7 +206,7 @@ export default function GameDayScreen() {
 
       setEvents(eventsWithExtras);
     } catch (error) {
-      console.error('Error fetching events:', error);
+      if (__DEV__) console.error('Error fetching events:', error);
       Alert.alert('Error', 'Failed to load game day data');
     }
 

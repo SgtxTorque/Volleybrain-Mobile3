@@ -77,7 +77,7 @@ export default function CoachProfileScreen() {
         .maybeSingle();
 
       if (error) {
-        console.error('Error fetching coach profile:', error);
+        if (__DEV__) console.error('Error fetching coach profile:', error);
       }
 
       if (data) {
@@ -90,7 +90,7 @@ export default function CoachProfileScreen() {
         setExperienceLevel(data.experience_level || '');
       }
     } catch (err) {
-      console.error('Error loading coach profile:', err);
+      if (__DEV__) console.error('Error loading coach profile:', err);
     } finally {
       setLoading(false);
     }

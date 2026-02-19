@@ -134,7 +134,7 @@ export default function ProfileScreen() {
       await refreshProfile();
       Alert.alert('Success', 'Profile photo updated!');
     } catch (error: any) {
-      console.error('Avatar upload error:', error);
+      if (__DEV__) console.error('Avatar upload error:', error);
       const message = error.message || 'Failed to upload photo. Please try again later.';
       Alert.alert('Upload Failed', message);
     } finally {
@@ -416,7 +416,7 @@ export default function ProfileScreen() {
               <Ionicons name="lock-closed" size={22} color={colors.info} />
             </View>
             <View style={s.dataRightsContent}>
-              <Text style={s.dataRightsTitle}>Data Rights (COPPA)</Text>
+              <Text style={s.dataRightsTitle}>Data Rights</Text>
               <Text style={s.dataRightsDesc}>Review, export, or request deletion of your child's data</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />

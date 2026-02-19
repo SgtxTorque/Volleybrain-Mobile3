@@ -31,8 +31,7 @@ import QRCode from 'react-native-qrcode-svg';
 // />
 // =============================================================================
 
-// Your GitHub Pages registration URL
-const REGISTRATION_URL = 'https://sgtstorque.github.io/volleyball-registration/';
+const BASE_REGISTRATION_URL = 'https://app.volleybrain.com/register';
 
 type Props = {
   visible: boolean;
@@ -57,22 +56,22 @@ export default function ShareRegistrationModal({
 }: Props) {
   if (!visible) return null;
   const { colors } = useTheme();
-  const { organization } = useAuth();
+  const { organization, profile } = useAuth();
   const [copied, setCopied] = useState(false);
   const orgName = organization?.name || 'our organization';
+  const orgSlug = (organization as any)?.slug || profile?.current_organization_id || '';
+  const dynamicUrl = orgSlug ? `${BASE_REGISTRATION_URL}/${orgSlug}` : BASE_REGISTRATION_URL;
 
   React.useEffect(() => {
     onMount?.();
     onVisibleChange?.(true);
-    console.log('ShareRegistrationModal mounted');
     return () => {
       onUnmount?.();
       onVisibleChange?.(false);
-      console.log('ShareRegistrationModal unmounted');
     };
   }, []);
 
-  const url = customUrl || REGISTRATION_URL;
+  const url = customUrl || dynamicUrl;
 
   const handleCopyLink = async () => {
     try {
@@ -95,7 +94,7 @@ export default function ShareRegistrationModal({
       });
     } catch (error: any) {
       if (error?.message !== 'User did not share') {
-        console.error('Share error:', error);
+        if (__DEV__) console.error('Share error:', error);
       }
     }
   };
@@ -108,7 +107,7 @@ export default function ShareRegistrationModal({
         message: message,
       });
     } catch (error) {
-      console.error('Text share error:', error);
+      if (__DEV__) console.error('Text share error:', error);
     }
   };
 

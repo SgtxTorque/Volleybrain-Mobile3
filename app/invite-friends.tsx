@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import React from 'react';
 import {
   Alert,
+  Linking,
   Platform,
   ScrollView,
   Share,
@@ -22,14 +23,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function InviteFriendsScreen() {
   const { colors } = useTheme();
-  const { profile } = useAuth();
+  const { profile, organization } = useAuth();
   const router = useRouter();
 
   const s = createStyles(colors);
 
-  const organizationId = profile?.current_organization_id || '';
-  const registrationUrl = organizationId
-    ? `https://app.volleybrain.com/register/${organizationId}`
+  const orgSlug = (organization as any)?.slug || profile?.current_organization_id || '';
+  const orgName = (organization as any)?.name || 'our team';
+  const registrationUrl = orgSlug
+    ? `https://app.volleybrain.com/register/${orgSlug}`
     : 'https://app.volleybrain.com/register';
 
   // -----------------------------------------------
@@ -41,7 +43,7 @@ export default function InviteFriendsScreen() {
       await Clipboard.setStringAsync(registrationUrl);
       Alert.alert('Copied!', 'Registration link copied to clipboard.');
     } catch (e) {
-      console.log('Error copying link:', e);
+      if (__DEV__) console.log('Error copying link:', e);
       Alert.alert('Error', 'Could not copy the link. Please try again.');
     }
   };
@@ -49,12 +51,37 @@ export default function InviteFriendsScreen() {
   const handleShare = async () => {
     try {
       await Share.share({
-        message: `Join our volleyball organization on VolleyBrain! Register here: ${registrationUrl}`,
+        message: `Join ${orgName} on VolleyBrain! Register here: ${registrationUrl}`,
         url: registrationUrl,
       });
     } catch (e) {
-      console.log('Error sharing:', e);
+      if (__DEV__) console.log('Error sharing:', e);
     }
+  };
+
+  const shareMessage = `Join ${orgName} on VolleyBrain! Register here: ${registrationUrl}`;
+
+  const handleShareSMS = () => {
+    const url = Platform.OS === 'ios'
+      ? `sms:&body=${encodeURIComponent(shareMessage)}`
+      : `sms:?body=${encodeURIComponent(shareMessage)}`;
+    Linking.openURL(url).catch(() =>
+      Alert.alert('Error', 'Could not open Messages.')
+    );
+  };
+
+  const handleShareWhatsApp = () => {
+    Linking.openURL(`whatsapp://send?text=${encodeURIComponent(shareMessage)}`).catch(() =>
+      Alert.alert('WhatsApp Not Found', 'WhatsApp is not installed on this device.')
+    );
+  };
+
+  const handleShareEmail = () => {
+    const subject = encodeURIComponent(`Join ${orgName} on VolleyBrain!`);
+    const body = encodeURIComponent(shareMessage);
+    Linking.openURL(`mailto:?subject=${subject}&body=${body}`).catch(() =>
+      Alert.alert('Error', 'Could not open email client.')
+    );
   };
 
   // -----------------------------------------------
@@ -84,7 +111,7 @@ export default function InviteFriendsScreen() {
           </View>
           <Text style={s.heroTitle}>Grow Your Team</Text>
           <Text style={s.heroSubtitle}>
-            Share the registration link with other parents to help grow the team!
+            Share the registration link with other parents to help grow {orgName}!
           </Text>
         </View>
 
@@ -120,6 +147,23 @@ export default function InviteFriendsScreen() {
               <Text style={[s.actionBtnText, { color: colors.success }]}>Share</Text>
             </TouchableOpacity>
           </View>
+        </View>
+
+        {/* Share Via Section */}
+        <Text style={s.sectionTitle}>SHARE VIA</Text>
+        <View style={s.socialRow}>
+          <TouchableOpacity style={[s.socialBtn, { backgroundColor: '#25D36620' }]} onPress={handleShareSMS} activeOpacity={0.7}>
+            <Ionicons name="chatbubble" size={22} color="#25D366" />
+            <Text style={[s.socialBtnText, { color: '#25D366' }]}>SMS</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[s.socialBtn, { backgroundColor: '#25D36620' }]} onPress={handleShareWhatsApp} activeOpacity={0.7}>
+            <Ionicons name="logo-whatsapp" size={22} color="#25D366" />
+            <Text style={[s.socialBtnText, { color: '#25D366' }]}>WhatsApp</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[s.socialBtn, { backgroundColor: '#007AFF20' }]} onPress={handleShareEmail} activeOpacity={0.7}>
+            <Ionicons name="mail" size={22} color="#007AFF" />
+            <Text style={[s.socialBtnText, { color: '#007AFF' }]}>Email</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Referral Info Card */}
@@ -318,6 +362,27 @@ const createStyles = (colors: any) =>
     },
     actionBtnText: {
       fontSize: 15,
+      fontWeight: '700',
+    },
+
+    // Social Share Row
+    socialRow: {
+      flexDirection: 'row',
+      gap: 10,
+      marginBottom: 24,
+    },
+    socialBtn: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      paddingVertical: 16,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.glassBorder,
+    },
+    socialBtnText: {
+      fontSize: 12,
       fontWeight: '700',
     },
 

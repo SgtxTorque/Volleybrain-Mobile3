@@ -48,16 +48,6 @@ type PlayerCardProps = {
   teamLogoUrl?: string | null;
 };
 
-const positionColors: Record<string, string> = {
-  'OH': '#FF6B6B',   // Outside Hitter - Red
-  'S': '#4ECDC4',    // Setter - Teal
-  'MB': '#45B7D1',   // Middle Blocker - Blue
-  'OPP': '#96CEB4',  // Opposite - Green
-  'L': '#FFEAA7',    // Libero - Yellow
-  'DS': '#DDA0DD',   // Defensive Specialist - Purple
-  'RS': '#FF9F43',   // Right Side - Orange
-};
-
 export default function PlayerCard({ player, onPress, size = 'medium', teamLogoUrl }: PlayerCardProps) {
   const { colors } = useTheme();
   const { isCoach, isAdmin } = usePermissions();
@@ -67,7 +57,8 @@ export default function PlayerCard({ player, onPress, size = 'medium', teamLogoU
 
   const [showEmergencyModal, setShowEmergencyModal] = useState(false);
 
-  const positionColor = player.position ? positionColors[player.position] || colors.primary : colors.primary;
+  const posInfo = getPositionInfo(player.position, player.sport_name);
+  const positionColor = posInfo?.color || colors.primary;
   const teamColor = player.team_color || (isDark ? '#1a1a2e' : '#2a2a4a');
   const jerseyNumber = player.jersey_number;
   const hasPhoto = player.photo_url && player.photo_url.length > 0;

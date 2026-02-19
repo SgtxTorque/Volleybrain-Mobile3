@@ -41,7 +41,7 @@ export default function GifPicker({ visible, onClose, onSelect }: Props) {
         })));
       }
     } catch (error) {
-      console.error('Error fetching GIFs:', error);
+      if (__DEV__) console.error('Error fetching GIFs:', error);
     }
     setLoading(false);
   };
@@ -66,7 +66,7 @@ export default function GifPicker({ visible, onClose, onSelect }: Props) {
         })));
       }
     } catch (error) {
-      console.error('Error searching GIFs:', error);
+      if (__DEV__) console.error('Error searching GIFs:', error);
     }
     setLoading(false);
   };

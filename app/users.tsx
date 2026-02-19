@@ -96,7 +96,7 @@ export default function UsersScreen() {
       setPendingUsers(pending);
       setUsers(approved);
     } catch (error) {
-      console.error('Error fetching users:', error);
+      if (__DEV__) console.error('Error fetching users:', error);
       Alert.alert('Error', 'Failed to load users');
     } finally {
       setLoading(false);
@@ -154,7 +154,7 @@ export default function UsersScreen() {
               Alert.alert('Approved!', user.full_name + ' has been approved.');
               fetchUsers();
             } catch (error) {
-              console.error('Approve error:', error);
+              if (__DEV__) console.error('Approve error:', error);
               Alert.alert('Error', 'Failed to approve user');
             }
           },
@@ -202,7 +202,7 @@ export default function UsersScreen() {
               Alert.alert('Rejected', 'Registration has been rejected.');
               fetchUsers();
             } catch (error) {
-              console.error('Reject error:', error);
+              if (__DEV__) console.error('Reject error:', error);
               Alert.alert('Error', 'Failed to reject user');
             }
           },
@@ -241,7 +241,7 @@ export default function UsersScreen() {
       setShowUserModal(false);
       setSelectedUser(null);
     } catch (error) {
-      console.error('Update role error:', error);
+      if (__DEV__) console.error('Update role error:', error);
       Alert.alert('Error', 'Failed to update role');
     } finally {
       setUpdatingUser(false);
@@ -262,7 +262,7 @@ export default function UsersScreen() {
             setShowUserModal(false);
             setSelectedUser(null);
           } catch (error) {
-            console.error('Remove role error:', error);
+            if (__DEV__) console.error('Remove role error:', error);
             Alert.alert('Error', 'Failed to remove role');
           }
         },

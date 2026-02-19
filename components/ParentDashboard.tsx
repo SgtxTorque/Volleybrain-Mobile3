@@ -1,19 +1,21 @@
-import CoppaConsentModal from '@/components/CoppaConsentModal';
 import ParentOnboardingModal from '@/components/ParentOnboardingModal';
 import ShareRegistrationModal from '@/components/ShareRegistrationModal';
 import { useAuth } from '@/lib/auth';
 import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
-import { useTeamContext } from '@/lib/team-context';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
+  Dimensions,
+  Image,
   Linking,
   Platform,
   RefreshControl,
@@ -23,7 +25,19 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import AnnouncementBanner from './AnnouncementBanner';
+import EventDetailModal from './EventDetailModal';
+import RegistrationBanner from './RegistrationBanner';
+import { ScheduleEvent } from './EventCard';
 import ReenrollmentBanner from './ReenrollmentBanner';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const HERO_CARD_WIDTH = SCREEN_WIDTH - 48;
+const HERO_CARD_GAP = 12;
+const NEXT_UP_CARD_WIDTH = SCREEN_WIDTH * 0.75;
+const NEXT_UP_CARD_GAP = 12;
+const CHILD_INDEX_KEY = 'vb_parent_active_child_idx';
 import RoleSelector from './RoleSelector';
 
 // ---------------------------------------------------------------------------
@@ -34,6 +48,7 @@ type ChildPlayer = {
   id: string;
   first_name: string;
   last_name: string;
+  photo_url: string | null;
   team_id: string | null;
   team_name: string | null;
   age_group_name: string | null;
@@ -59,12 +74,23 @@ type UpcomingEvent = {
   opponent: string | null;
   team_name: string;
   child_name: string;
-  team_id?: string | null; // included to support filtering by team
+  team_id?: string | null;
+  // Extra fields for EventDetailModal
+  season_id?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
+  opponent_name?: string | null;
+  venue_name?: string | null;
+  venue_address?: string | null;
+  arrival_time?: string | null;
+  notes?: string | null;
+  location_type?: string | null;
 };
 
 type PaymentStatus = {
   total_owed: number;
   total_paid: number;
+  total_pending: number;
   balance: number;
 };
 
@@ -157,80 +183,54 @@ function parseEventStart(e: any): Date | null {
 // Component
 // ---------------------------------------------------------------------------
 
-// Temporary feature flag: disable COPPA flow for development
-const ENABLE_COPPA = false;
-
 export default function ParentDashboard() {
   const { colors } = useTheme();
   const { user, profile } = useAuth();
   const { isParent } = usePermissions();
   const { workingSeason, allSeasons } = useSeason();
-  const { selectedTeamId, setSelectedTeamId } = useTeamContext();
   const router = useRouter();
 
   const [refreshing, setRefreshing] = useState(false);
   const [children, setChildren] = useState<ChildPlayer[]>([]);
   const [activeChildIndex, setActiveChildIndex] = useState(0);
   const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
-  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>({ total_owed: 0, total_paid: 0, balance: 0 });
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>({ total_owed: 0, total_paid: 0, total_pending: 0, balance: 0 });
   const [loading, setLoading] = useState(true);
   const [showShare, setShowShare] = useState(false);
   const [recentGames, setRecentGames] = useState<RecentGame[]>([]);
+  const [latestPost, setLatestPost] = useState<{ id: string; content: string; post_type: string; author_name: string; created_at: string } | null>(null);
   const [todayGame, setTodayGame] = useState<TodayGame | null>(null);
   const [childStats, setChildStats] = useState<PlayerStats | null>(null);
   const [rsvpStatus, setRsvpStatus] = useState<RsvpStatus>(null);
   const [rsvpLoading, setRsvpLoading] = useState(false);
   const [totalTeamEvents, setTotalTeamEvents] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [modalStage, setModalStage] = useState<'loading' | 'onboarding' | 'coppa' | 'none'>('loading');
+  const [modalStage, setModalStage] = useState<'loading' | 'onboarding' | 'none'>('loading');
   const [onboardingMounted, setOnboardingMounted] = useState(false);
   const [onboardingVisible, setOnboardingVisible] = useState(false);
-  const [coppaMounted, setCoppaMounted] = useState(false);
-  const [coppaVisible, setCoppaVisible] = useState(false);
-  const [coppaCompleted, setCoppaCompleted] = useState(false);
   const [shareMounted, setShareMounted] = useState(false);
   const [shareVisible, setShareVisible] = useState(false);
+  const [showEventDetailModal, setShowEventDetailModal] = useState(false);
+  const [selectedModalEvent, setSelectedModalEvent] = useState<ScheduleEvent | null>(null);
+  const [activeNextUpIndex, setActiveNextUpIndex] = useState(0);
+  const [openRegistrationCount, setOpenRegistrationCount] = useState(0);
+  const [activeAlerts, setActiveAlerts] = useState<{ id: string; title: string; body: string; priority: string }[]>([]);
+
+  // Entrance animation
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(20)).current;
+  // Content cross-dissolve when active child changes
+  const contentOpacity = useRef(new Animated.Value(1)).current;
 
   const activeChild = children[activeChildIndex] ?? children[0] ?? null;
 
-  // Extract unique teams from children for team switcher
-  const uniqueTeams = React.useMemo(() => {
-    const teamMap = new Map<string, { id: string; name: string; color: string }>();
-    children.forEach(child => {
-      if (child.team_id && child.team_name) {
-        teamMap.set(child.team_id, {
-          id: child.team_id,
-          name: child.team_name,
-          color: child.sport_color || '#999',
-        });
-      }
-    });
-    return Array.from(teamMap.values());
-  }, [children]);
-
-  // Set default team on first load if none selected
-  useEffect(() => {
-    if (!selectedTeamId && uniqueTeams.length > 0) {
-      console.log('[ParentDashboard] Setting default team:', uniqueTeams[0].id);
-      setSelectedTeamId(uniqueTeams[0].id);
-    }
-  }, [uniqueTeams.length]);
-
-  // log when selection changes
-  useEffect(() => {
-    console.log('[ParentDashboard] selectedTeamId changed to', selectedTeamId);
-  }, [selectedTeamId]);
-
-  // Filter upcoming events by selected team
+  // Filter upcoming events by active child's team
   const filteredUpcomingEvents = React.useMemo(() => {
-    console.log('[ParentDashboard] computing filteredUpcomingEvents', { selectedTeamId, upcomingCount: upcomingEvents.length });
-    if (!selectedTeamId) return upcomingEvents;
-    const filtered = upcomingEvents.filter(evt => String(evt.team_id) === String(selectedTeamId));
-    console.log(`[ParentDashboard] Filtered events: ${filtered.length} of ${upcomingEvents.length} for team ${selectedTeamId}`, filtered);
-    return filtered;
-  }, [upcomingEvents, selectedTeamId]);
+    if (!activeChild?.team_id) return upcomingEvents;
+    return upcomingEvents.filter(evt => String(evt.team_id) === String(activeChild.team_id));
+  }, [upcomingEvents, activeChild?.team_id]);
 
-  const nextEvent = filteredUpcomingEvents[0]; // note: now filtered by selected team
+  const nextEvent = filteredUpcomingEvents[0];
 
   // Reset activeChildIndex if it's out of bounds after children changes
   useEffect(() => {
@@ -239,17 +239,48 @@ export default function ParentDashboard() {
     }
   }, [children.length]);
 
-  // Check if onboarding is done so we can sequence modals (onboarding first, then COPPA)
+  // Restore persisted child index on mount
+  useEffect(() => {
+    if (children.length > 0) {
+      AsyncStorage.getItem(CHILD_INDEX_KEY).then(val => {
+        if (val) {
+          const idx = parseInt(val, 10);
+          if (!isNaN(idx) && idx >= 0 && idx < children.length) {
+            setActiveChildIndex(idx);
+          }
+        }
+      });
+    }
+  }, [children.length]);
+
+  // Persist active child index
+  useEffect(() => {
+    if (children.length > 0) {
+      AsyncStorage.setItem(CHILD_INDEX_KEY, String(activeChildIndex));
+    }
+  }, [activeChildIndex]);
+
+  // Cross-dissolve content when active child changes
+  useEffect(() => {
+    if (children.length > 1) {
+      Animated.sequence([
+        Animated.timing(contentOpacity, { toValue: 0.3, duration: 120, useNativeDriver: true }),
+        Animated.timing(contentOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [activeChildIndex]);
+
+  // Check if onboarding is done
   useEffect(() => {
     let isMounted = true;
     AsyncStorage.getItem('vb_parent_onboarded')
       .then(val => {
         if (!isMounted) return;
-        setModalStage(val === 'true' ? 'coppa' : 'onboarding');
+        setModalStage(val === 'true' ? 'none' : 'onboarding');
       })
       .catch(() => {
         if (!isMounted) return;
-        setModalStage('coppa');
+        setModalStage('none');
       });
     return () => {
       isMounted = false;
@@ -260,20 +291,15 @@ export default function ParentDashboard() {
     fetchParentData();
   }, [user?.id, profile?.email]);
 
+  // Entrance animation — fade+slide in after data loads
   useEffect(() => {
-    if (modalStage === 'coppa' && isParent === false) {
-      setModalStage('none');
+    if (!loading) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: 0, duration: 400, useNativeDriver: true }),
+      ]).start();
     }
-  }, [modalStage, isParent]);
-
-  // Bypass COPPA flow if feature flag is disabled
-  useEffect(() => {
-    if (!ENABLE_COPPA && modalStage === 'coppa') {
-      console.log('[ParentDashboard] COPPA disabled by feature flag, skipping to none');
-      setModalStage('none');
-      setCoppaCompleted(true);
-    }
-  }, [ENABLE_COPPA]);
+  }, [loading]);
 
   // Fetch stats for active child whenever it changes
   useEffect(() => {
@@ -340,7 +366,7 @@ export default function ParentDashboard() {
 
       // Remove duplicates
       playerIds = [...new Set(playerIds)];
-      console.log('[ParentDashboard] derived parent playerIds', playerIds);
+      if (__DEV__) console.log('[ParentDashboard] derived parent playerIds', playerIds);
 
       if (playerIds.length === 0) {
         setChildren([]);
@@ -365,6 +391,7 @@ export default function ParentDashboard() {
           id,
           first_name,
           last_name,
+          photo_url,
           sport_id,
           season_id,
           jersey_number,
@@ -378,7 +405,7 @@ export default function ParentDashboard() {
         .order('created_at', { ascending: false });
 
       if (playersError) {
-        console.error('Players error:', playersError);
+        if (__DEV__) console.error('Players error:', playersError);
       }
 
       // Get registration records for these players
@@ -393,34 +420,23 @@ export default function ParentDashboard() {
         regMap.set(`${reg.player_id}-${reg.season_id}`, reg);
       });
 
-      // Format players
+      // Format players — produce one card per child+team combo
       const formattedChildren: ChildPlayer[] = [];
       const teamIds: string[] = [];
 
-      console.log('[ParentDashboard] starting to format children, player count', (players||[]).length);
-
       (players || []).forEach(player => {
-        const teamPlayer = (player.team_players as any)?.[0];
-        const team = teamPlayer?.teams as any;
+        const teamEntries = (player.team_players as any) || [];
         const season = seasons?.find(s => s.id === player.season_id);
         const sport = sports?.find(s => s.id === player.sport_id);
-
-        // Get registration status
         const regKey = `${player.id}-${player.season_id}`;
         const registration = regMap.get(regKey);
         const regStatus = registration?.status || 'new';
 
-        if (team?.id) {
-          const strId = String(team.id);
-          teamIds.push(strId);
-        }
-
-        formattedChildren.push({
+        const baseFields = {
           id: player.id,
           first_name: player.first_name,
           last_name: player.last_name,
-          team_id: team?.id || null,
-          team_name: team?.name || null,
+          photo_url: (player as any).photo_url || null,
           age_group_name: null,
           season_id: player.season_id,
           season_name: season?.name || '',
@@ -430,87 +446,55 @@ export default function ParentDashboard() {
           sport_color: sport?.color_primary || null,
           registration_status: regStatus,
           registration_id: registration?.id || null,
-          jersey_number: (player as any).jersey_number || null,
           position: (player as any).position || null,
-        });
+        };
+
+        if (teamEntries.length === 0) {
+          // No team yet — still show one card
+          formattedChildren.push({
+            ...baseFields,
+            team_id: null,
+            team_name: null,
+            jersey_number: (player as any).jersey_number || null,
+          });
+        } else {
+          teamEntries.forEach((tp: any) => {
+            const team = tp.teams as any;
+            if (team?.id) teamIds.push(String(team.id));
+            formattedChildren.push({
+              ...baseFields,
+              team_id: team?.id || null,
+              team_name: team?.name || null,
+              jersey_number: tp.jersey_number || (player as any).jersey_number || null,
+            });
+          });
+        }
       });
 
       setChildren(formattedChildren);
-      console.log('[ParentDashboard] formattedChildren', formattedChildren);
-      console.log('[ParentDashboard] computed teamIds', teamIds);
       
       // Fetch upcoming events for teams
       if (teamIds.length > 0) {
         try {
         const today = new Date().toISOString().split('T')[0];
 
-        // ========== DIAGNOSTIC: Simplified query ==========
-        console.log('[EVENTS_QUERY_INPUT]', { teamIds });
-        const { data: eventsSimple, error: errorSimple, count: countSimple } = await supabase
-          .from('schedule_events')
-          .select('id, team_id, title, event_date, event_time, start_time')
-          .in('team_id', teamIds)
-          .limit(50);
-        
-        console.log('[EVENTS_QUERY_RAW]', {
-          count: eventsSimple?.length || 0,
-          first: eventsSimple?.[0],
-          error: errorSimple,
-        });
-
-        // ========== DIAGNOSTIC: Test by-id fetch ==========
-        const { data: oneEvent, error: oneErr } = await supabase
-          .from('schedule_events')
-          .select('id, team_id, title')
-          .eq('id', 'c273b68f-7cad-4721-b24b-0174e1612d54')
-          .maybeSingle();
-        
-        console.log('[EVENTS_QUERY_BY_ID]', { one: oneEvent, oneErr });
-        
-        // ========== END DIAGNOSTIC ==========
-
         const { data: events, error: fetchErr } = await supabase
           .from('schedule_events')
-          .select('id, team_id, title, event_type, event_date, event_time, start_time, location, opponent')
+          .select('id, team_id, season_id, title, event_type, event_date, event_time, start_time, end_time, location, location_type, opponent, opponent_name, venue_name, venue_address, arrival_time, notes')
           .in('team_id', teamIds)
           .gte('event_date', today);
 
-        // Ensure raw is assigned from fetched data immediately
         const raw = events ?? [];
-        
-        console.log("[EVENTS_PIPELINE_CHECK]", {
-          fetchErr,
-          fetchedCount: events?.length ?? 0
-        });
-
-        // Manual parsing with diagnostic logging
         const now = new Date();
 
-        const normalized = raw
-          .map((e: any) => {
-            const effectiveStart = parseEventStart(e);
-            return { ...e, effectiveStart };
-          });
-
-        const invalidCount = normalized.filter(e => !e.effectiveStart).length;
+        const normalized = raw.map((e: any) => {
+          const effectiveStart = parseEventStart(e);
+          return { ...e, effectiveStart };
+        });
 
         const upcoming = normalized
           .filter(e => e.effectiveStart && e.effectiveStart.getTime() >= now.getTime())
           .sort((a, b) => a.effectiveStart.getTime() - b.effectiveStart.getTime());
-
-        console.log("[EVENTS_PARSE_DEBUG]", {
-          raw: normalized.length,
-          invalidCount,
-          now: now.toISOString(),
-          sample: normalized.slice(0, 5).map(e => ({
-            id: e.id,
-            title: e.title,
-            event_date: e.event_date,
-            event_time: e.event_time,
-            start_time: e.start_time,
-            effectiveStart: e.effectiveStart ? e.effectiveStart.toISOString() : null,
-          })),
-        });
 
         const formattedEvents: UpcomingEvent[] = upcoming.map((e: any) => {
           const child = formattedChildren.find(c => c.team_id === e.team_id);
@@ -524,13 +508,21 @@ export default function ParentDashboard() {
             opponent: e.opponent,
             team_name: child?.team_name || '',
             child_name: child ? child.first_name : '',
-            team_id: e.team_id, // persist team for filtering
+            team_id: e.team_id,
+            season_id: e.season_id,
+            start_time: e.start_time,
+            end_time: e.end_time,
+            opponent_name: e.opponent_name,
+            venue_name: e.venue_name,
+            venue_address: e.venue_address,
+            arrival_time: e.arrival_time,
+            notes: e.notes,
+            location_type: e.location_type,
           };
         });
 
         setUpcomingEvents(formattedEvents);
-        console.log('[ParentDashboard] fetched upcoming events', formattedEvents);
-        console.log('[ParentDashboard] current selectedTeamId during fetch', selectedTeamId);
+        if (__DEV__) console.log('[ParentDashboard] fetched upcoming events', formattedEvents.length);
 
         // Fetch recent completed games (last 3)
         const { data: recentGameData } = await supabase
@@ -582,7 +574,7 @@ export default function ParentDashboard() {
           .in('team_id', teamIds);
         setTotalTeamEvents(eventCount || 0);
         } catch (eventsErr) {
-          console.error('Error fetching events:', eventsErr);
+          if (__DEV__) console.error('Error fetching events:', eventsErr);
           // Non-fatal: events section will just show empty
           setUpcomingEvents([]);
           setRecentGames([]);
@@ -594,35 +586,134 @@ export default function ParentDashboard() {
         setTodayGame(null);
       }
 
-      // Calculate payment status across all children
+      // Calculate payment status across all children using actual season_fees
       if (formattedChildren.length > 0) {
         try {
           const childIds = formattedChildren.map(c => c.id);
+          const childSeasonIds = [...new Set(formattedChildren.map(c => c.season_id).filter(Boolean))];
 
+          // Fetch season fees for all children's seasons
+          const { data: seasonFees } = await supabase
+            .from('season_fees')
+            .select('season_id, fee_type, amount')
+            .in('season_id', childSeasonIds);
+
+          // Calculate total owed = sum of all fees for all children
+          let totalOwed = 0;
+          formattedChildren.forEach(child => {
+            const fees = (seasonFees || []).filter(f => f.season_id === child.season_id);
+            totalOwed += fees.reduce((sum, f) => sum + (f.amount || 0), 0);
+          });
+
+          // Get actual payment records with status
           const { data: payments } = await supabase
             .from('payments')
-            .select('amount, paid, player_id')
+            .select('amount, status, player_id')
             .in('player_id', childIds);
 
-          // Count unique player-season combinations for total owed
-          const uniqueRegistrations = new Set(formattedChildren.map(c => `${c.id}-${c.season_id}`));
-          const seasonFee = workingSeason?.fee_registration || 335;
-          const totalOwed = uniqueRegistrations.size * seasonFee;
-          const totalPaid = (payments || []).filter(p => p.paid).reduce((sum, p) => sum + (p.amount || 0), 0);
+          const totalPaid = (payments || [])
+            .filter(p => p.status === 'verified')
+            .reduce((sum, p) => sum + (p.amount || 0), 0);
+
+          const totalPending = (payments || [])
+            .filter(p => p.status === 'pending')
+            .reduce((sum, p) => sum + (p.amount || 0), 0);
 
           setPaymentStatus({
             total_owed: totalOwed,
             total_paid: totalPaid,
+            total_pending: totalPending,
             balance: totalOwed - totalPaid,
           });
         } catch (payErr) {
-          console.error('Error fetching payment status:', payErr);
-          // Non-fatal: payment card will just show $0
+          if (__DEV__) console.error('Error fetching payment status:', payErr);
+        }
+      }
+
+      // Fetch latest team wall post
+      if (teamIds.length > 0) {
+        try {
+          const { data: postData } = await supabase
+            .from('team_posts')
+            .select('id, content, post_type, created_at, profiles:author_id(full_name)')
+            .in('team_id', teamIds)
+            .eq('is_published', true)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (postData) {
+            setLatestPost({
+              id: postData.id,
+              content: postData.content,
+              post_type: postData.post_type,
+              author_name: (postData.profiles as any)?.full_name || 'Coach',
+              created_at: postData.created_at,
+            });
+          }
+        } catch (postErr) {
+          if (__DEV__) console.error('Error fetching latest team post:', postErr);
+        }
+      }
+
+      // Fetch announcements for parent's org
+      if (profile?.current_organization_id) {
+        try {
+          const { data: announcements } = await supabase
+            .from('announcements')
+            .select('id, title, body, announcement_type, priority, target_type, target_team_id, is_pinned, published_at')
+            .eq('organization_id', profile.current_organization_id)
+            .eq('is_active', true)
+            .or('target_type.eq.all,target_type.eq.parents')
+            .order('is_pinned', { ascending: false })
+            .order('published_at', { ascending: false })
+            .limit(10);
+
+          if (announcements && announcements.length > 0) {
+            const announcementIds = announcements.map(a => a.id);
+
+            const { data: reads } = await supabase
+              .from('announcement_reads')
+              .select('announcement_id')
+              .eq('user_id', user.id)
+              .in('announcement_id', announcementIds);
+
+            const readIds = new Set((reads || []).map(r => r.announcement_id));
+
+            const unread = announcements
+              .filter(a => !readIds.has(a.id))
+              .filter(a => {
+                if (!a.target_team_id) return true;
+                return teamIds.includes(String(a.target_team_id));
+              })
+              .map(a => ({ id: a.id, title: a.title, body: a.body || '', priority: a.priority || 'normal' }));
+
+            setActiveAlerts(unread);
+          } else {
+            setActiveAlerts([]);
+          }
+        } catch (alertErr) {
+          if (__DEV__) console.error('Error fetching announcements:', alertErr);
+        }
+      }
+
+      // Count open registrations for banner
+      if (profile?.current_organization_id) {
+        try {
+          const { count } = await supabase
+            .from('seasons')
+            .select('*', { count: 'exact', head: true })
+            .eq('organization_id', profile.current_organization_id)
+            .eq('registration_open', true);
+
+          setOpenRegistrationCount(count || 0);
+        } catch (regErr) {
+          if (__DEV__) console.error('Error fetching open registration count:', regErr);
         }
       }
 
     } catch (err) {
-      console.error('Error fetching parent data:', err);
+      if (__DEV__) console.error('Error fetching parent data:', err);
       setError('We couldn\u2019t load your family data. Please check your connection and try again.');
     } finally {
       setLoading(false);
@@ -654,7 +745,7 @@ export default function ParentDashboard() {
         setChildStats(null);
       }
     } catch (err) {
-      console.error('Error fetching child stats:', err);
+      if (__DEV__) console.error('Error fetching child stats:', err);
       setChildStats(null);
     }
   };
@@ -670,7 +761,7 @@ export default function ParentDashboard() {
 
       setRsvpStatus(existingRsvp?.status as RsvpStatus || null);
     } catch (err) {
-      console.error('Error fetching RSVP:', err);
+      if (__DEV__) console.error('Error fetching RSVP:', err);
     }
   };
 
@@ -694,13 +785,14 @@ export default function ParentDashboard() {
       }, { onConflict: 'event_id,player_id' });
       setRsvpStatus(status);
     } catch (err) {
-      console.error('Error saving RSVP:', err);
+      if (__DEV__) console.error('Error saving RSVP:', err);
     } finally {
       setRsvpLoading(false);
     }
   };
 
   const onRefresh = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setRefreshing(true);
     setError(null);
     try {
@@ -783,6 +875,31 @@ export default function ParentDashboard() {
     return ['active', 'rostered'].includes(activeChild.registration_status);
   };
 
+  const toScheduleEvent = (evt: UpcomingEvent): ScheduleEvent => ({
+    id: evt.id,
+    team_id: evt.team_id || '',
+    season_id: evt.season_id || '',
+    event_type: evt.type,
+    title: evt.title,
+    event_date: evt.date,
+    start_time: evt.start_time || null,
+    end_time: evt.end_time || null,
+    location: evt.location,
+    location_type: evt.location_type as any,
+    opponent: evt.opponent,
+    opponent_name: evt.opponent_name || null,
+    venue_name: evt.venue_name || null,
+    venue_address: evt.venue_address || null,
+    arrival_time: evt.arrival_time || null,
+    notes: evt.notes || null,
+    team_name: evt.team_name,
+  });
+
+  const openEventDetail = (evt: UpcomingEvent) => {
+    setSelectedModalEvent(toScheduleEvent(evt));
+    setShowEventDetailModal(true);
+  };
+
   const getNextEventShortDate = (): string => {
     if (!nextEvent) return 'None';
     return getShortDate(nextEvent.date);
@@ -792,16 +909,10 @@ export default function ParentDashboard() {
     try {
       await AsyncStorage.setItem('vb_parent_onboarded', 'true');
     } catch (e) {
-      console.log('Error saving onboarding status:', e);
+      if (__DEV__) console.log('Error saving onboarding status:', e);
     } finally {
-      setModalStage('coppa');
+      setModalStage('none');
     }
-  };
-
-  const handleCoppaDone = () => {
-    console.log('[ParentDashboard] handleCoppaDone called - setting modalStage to none and marking COPPA as completed');
-    setCoppaCompleted(true);
-    setModalStage('none');
   };
 
   const s = createStyles(colors);
@@ -813,10 +924,65 @@ export default function ParentDashboard() {
 
   if (loading) {
     return (
-      <View style={s.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={s.loadingText}>Loading your family...</Text>
-      </View>
+      <ScrollView style={s.container} contentContainerStyle={s.contentContainer}>
+        {/* Skeleton header */}
+        <View style={s.header}>
+          <View>
+            <View style={{ width: 100, height: 16, borderRadius: 4, backgroundColor: colors.bgSecondary, marginBottom: 8 }} />
+            <View style={{ width: 160, height: 28, borderRadius: 6, backgroundColor: colors.bgSecondary }} />
+          </View>
+        </View>
+        {/* Skeleton trading card */}
+        <View style={{ marginHorizontal: 16, marginBottom: 20 }}>
+          <View style={{ width: 100, height: 12, borderRadius: 4, backgroundColor: colors.bgSecondary, marginBottom: 12 }} />
+          <View style={{
+            height: 180, borderRadius: 20, backgroundColor: colors.glassCard,
+            borderWidth: 1, borderColor: colors.glassBorder, padding: 20,
+          }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+              <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: colors.bgSecondary }} />
+              <View style={{ flex: 1, gap: 8 }}>
+                <View style={{ width: '70%', height: 18, borderRadius: 4, backgroundColor: colors.bgSecondary }} />
+                <View style={{ width: '50%', height: 14, borderRadius: 4, backgroundColor: colors.bgSecondary }} />
+                <View style={{ width: '40%', height: 14, borderRadius: 4, backgroundColor: colors.bgSecondary }} />
+              </View>
+            </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginTop: 20 }}>
+              {[1, 2, 3, 4].map(i => (
+                <View key={i} style={{ alignItems: 'center', gap: 6 }}>
+                  <View style={{ width: 36, height: 20, borderRadius: 4, backgroundColor: colors.bgSecondary }} />
+                  <View style={{ width: 28, height: 10, borderRadius: 4, backgroundColor: colors.bgSecondary }} />
+                </View>
+              ))}
+            </View>
+          </View>
+        </View>
+        {/* Skeleton Next Up */}
+        <View style={{ marginHorizontal: 16, marginBottom: 20 }}>
+          <View style={{ width: 80, height: 12, borderRadius: 4, backgroundColor: colors.bgSecondary, marginBottom: 12 }} />
+          <View style={{
+            height: 140, borderRadius: 20, backgroundColor: colors.glassCard,
+            borderWidth: 1, borderColor: colors.glassBorder, padding: 16,
+          }}>
+            <View style={{ width: '60%', height: 14, borderRadius: 4, backgroundColor: colors.bgSecondary, marginBottom: 10 }} />
+            <View style={{ width: '80%', height: 14, borderRadius: 4, backgroundColor: colors.bgSecondary, marginBottom: 10 }} />
+            <View style={{ width: '45%', height: 12, borderRadius: 4, backgroundColor: colors.bgSecondary, marginBottom: 10 }} />
+            <View style={{ width: '35%', height: 12, borderRadius: 4, backgroundColor: colors.bgSecondary }} />
+          </View>
+        </View>
+        {/* Skeleton stat cards */}
+        <View style={{ marginHorizontal: 16, flexDirection: 'row', gap: 10 }}>
+          {[1, 2].map(i => (
+            <View key={i} style={{
+              flex: 1, height: 90, borderRadius: 16, backgroundColor: colors.glassCard,
+              borderWidth: 1, borderColor: colors.glassBorder, padding: 14, justifyContent: 'space-between',
+            }}>
+              <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: colors.bgSecondary }} />
+              <View style={{ width: '60%', height: 12, borderRadius: 4, backgroundColor: colors.bgSecondary }} />
+            </View>
+          ))}
+        </View>
+      </ScrollView>
     );
   }
 
@@ -857,6 +1023,7 @@ export default function ParentDashboard() {
   // -------------------------------------------------------------------------
 
   return (
+    <Animated.View style={{ flex: 1, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
       <ScrollView
         style={s.container}
         contentContainerStyle={s.contentContainer}
@@ -869,67 +1036,35 @@ export default function ParentDashboard() {
           <Text style={s.greeting}>My Family</Text>
           <Text style={s.heroName}>{firstName}</Text>
         </View>
-        <RoleSelector />
-      </View>
-
-      {/* Debug banner: modal stage and mounted/visible states */}
-      <View style={{
-        backgroundColor: colors.glassCard,
-        borderRadius: 12,
-        padding: 8,
-        marginBottom: 12,
-        borderWidth: 1,
-        borderColor: colors.glassBorder,
-      }}>
-        <Text style={{ fontSize: 12, color: colors.textMuted }}>
-          modalStage: {modalStage} — onboarding(mounted/visible): {onboardingMounted ? '1' : '0'}/{onboardingVisible ? '1' : '0'} — coppa: {coppaMounted ? '1' : '0'}/{coppaVisible ? '1' : '0'} — share: {shareMounted ? '1' : '0'}/{shareVisible ? '1' : '0'}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <TouchableOpacity
+            style={s.headerIconBtn}
+            onPress={() => router.push('/invite-friends' as any)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="share-social-outline" size={20} color={colors.primary} />
+          </TouchableOpacity>
+          <RoleSelector />
+        </View>
       </View>
 
       {/* Re-enrollment Banner */}
       <ReenrollmentBanner />
 
-      {/* TEAM SWITCHER: Show if multiple teams */}
-      {uniqueTeams.length > 1 && (
-        <View style={{ paddingHorizontal: 0, marginBottom: 24 }}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}
-          >
-            {uniqueTeams.map(team => (
-              <TouchableOpacity
-                key={team.id}
-                style={[
-                  s.teamChip,
-                  selectedTeamId === team.id && {
-                    borderWidth: 2,
-                    borderColor: team.color,
-                    backgroundColor: team.color + '15',
-                  },
-                ]}
-                onPress={() => {
-                  setSelectedTeamId(team.id);
-                }}
-              >
-                <View
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: 4,
-                    backgroundColor: team.color,
-                    marginRight: 8,
-                  }}
-                />
-                <Text style={s.teamChipText}>{team.name}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+      {/* Announcement Banner */}
+      {user && (
+        <AnnouncementBanner
+          alerts={activeAlerts}
+          userId={user.id}
+          onDismiss={(id) => setActiveAlerts(prev => prev.filter(a => a.id !== id))}
+        />
       )}
 
+      {/* Registration Banner */}
+      <RegistrationBanner count={openRegistrationCount} />
+
       {/* ================================================================ */}
-      {/* HERO SECTION -- Child Card(s)                                     */}
+      {/* HERO SECTION -- Unified Child Carousel                            */}
       {/* ================================================================ */}
       {children.length === 0 ? (
         <View style={s.emptyHeroCard}>
@@ -943,117 +1078,108 @@ export default function ParentDashboard() {
             <Text style={s.emptyHeroBtnText}>Register a Child</Text>
           </TouchableOpacity>
         </View>
-      ) : children.length === 1 ? (
-        /* Single child -- large hero card */
-        <TouchableOpacity
-          style={s.heroChildCard}
-          onPress={() => router.push(('/child-detail?playerId=' + activeChild?.id) as any)}
-          activeOpacity={0.8}
-        >
-          <View style={s.heroChildTop}>
-            <View style={[s.heroAvatar, activeChild?.sport_color ? { borderColor: activeChild.sport_color } : {}]}>
-              {activeChild?.sport_icon ? (
-                <Text style={s.heroAvatarIcon}>{activeChild.sport_icon}</Text>
-              ) : (
-                <Text style={[s.heroAvatarText, activeChild?.sport_color ? { color: activeChild.sport_color } : {}]}>
-                  {activeChild?.first_name?.charAt(0)}{activeChild?.last_name?.charAt(0)}
-                </Text>
-              )}
-            </View>
-            <View style={s.heroChildInfo}>
-              <Text style={s.heroChildName}>{activeChild?.first_name} {activeChild?.last_name}</Text>
-              {activeChild?.team_name && (
-                <Text style={s.heroChildTeam}>{activeChild.team_name}</Text>
-              )}
-              <View style={s.heroChildBadges}>
-                {activeChild?.jersey_number && (
-                  <View style={s.heroBadge}>
-                    <Text style={s.heroBadgeText}>#{activeChild.jersey_number}</Text>
-                  </View>
-                )}
-                {activeChild?.position && (
-                  <View style={[s.heroBadge, { backgroundColor: colors.info + '20' }]}>
-                    <Text style={[s.heroBadgeText, { color: colors.info }]}>{activeChild.position}</Text>
-                  </View>
-                )}
-                {activeChild?.sport_name && (
-                  <View style={[s.heroBadge, { backgroundColor: (activeChild.sport_color || colors.primary) + '20' }]}>
-                    <Text style={[s.heroBadgeText, { color: activeChild.sport_color || colors.primary }]}>
-                      {activeChild.sport_name}
-                    </Text>
-                  </View>
-                )}
-              </View>
-            </View>
-          </View>
-          <Text style={s.proudParentText}>Proud parent of 1 athlete</Text>
-        </TouchableOpacity>
       ) : (
-        /* Multiple children -- horizontal scroll */
-        <View>
+        <View style={{ marginBottom: 12 }}>
           <ScrollView
             horizontal
+            pagingEnabled={false}
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={s.childScrollContainer}
+            snapToInterval={HERO_CARD_WIDTH + HERO_CARD_GAP}
+            decelerationRate="fast"
+            contentContainerStyle={{ paddingHorizontal: 0 }}
+            onScroll={(e) => {
+              const x = e.nativeEvent.contentOffset.x;
+              const idx = Math.round(x / (HERO_CARD_WIDTH + HERO_CARD_GAP));
+              if (idx >= 0 && idx < children.length && idx !== activeChildIndex) {
+                setActiveChildIndex(idx);
+              }
+            }}
+            scrollEventThrottle={16}
           >
-            {children.map((child, index) => {
-              const isActive = index === activeChildIndex;
-              return (
-                <TouchableOpacity
-                  key={`${child.id}-${child.season_id}`}
-                  style={[
-                    s.multiChildCard,
-                    isActive && { borderColor: colors.primary, borderWidth: 2 },
-                  ]}
-                  onPress={() => {
-                    if (isActive) {
-                      router.push(('/child-detail?playerId=' + child.id) as any);
-                    } else {
-                      setActiveChildIndex(index);
-                    }
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <View style={[s.multiChildAvatar, child.sport_color ? { borderColor: child.sport_color } : {}]}>
-                    {child.sport_icon ? (
-                      <Text style={s.multiChildAvatarIcon}>{child.sport_icon}</Text>
-                    ) : (
-                      <Text style={[s.multiChildAvatarText, child.sport_color ? { color: child.sport_color } : {}]}>
-                        {(child.first_name || '').charAt(0)}{(child.last_name || '').charAt(0)}
+            {children.map((child, idx) => (
+              <TouchableOpacity
+                key={`${child.id}-${child.team_id || child.season_id}`}
+                style={[
+                  s.heroCard,
+                  { width: HERO_CARD_WIDTH },
+                  idx > 0 && { marginLeft: HERO_CARD_GAP },
+                ]}
+                onPress={() => router.push(('/child-detail?playerId=' + child.id) as any)}
+                activeOpacity={0.92}
+              >
+                {child.photo_url ? (
+                  <Image source={{ uri: child.photo_url }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
+                ) : (
+                  <LinearGradient
+                    colors={[child.sport_color || colors.primary, colors.bgSecondary]}
+                    style={StyleSheet.absoluteFillObject}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                  >
+                    <View style={s.tradingCardInitials}>
+                      <Text style={s.tradingCardInitialsText}>
+                        {child.first_name?.charAt(0)}{child.last_name?.charAt(0)}
                       </Text>
+                    </View>
+                  </LinearGradient>
+                )}
+                {child.sport_icon && (
+                  <View style={s.tradingCardSportBadge}>
+                    <Text style={s.tradingCardSportEmoji}>{child.sport_icon}</Text>
+                  </View>
+                )}
+                <LinearGradient
+                  colors={['transparent', 'rgba(0,0,0,0.75)']}
+                  style={s.tradingCardBottomGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 0, y: 1 }}
+                >
+                  <Text style={s.tradingCardName} numberOfLines={1}>
+                    {child.first_name} {child.last_name}
+                  </Text>
+                  <View style={s.tradingCardPills}>
+                    {child.team_name && (
+                      <View style={s.tradingCardPill}>
+                        <Text style={s.tradingCardPillText}>{child.team_name}</Text>
+                      </View>
+                    )}
+                    {child.jersey_number && (
+                      <View style={s.tradingCardPill}>
+                        <Text style={s.tradingCardPillText}>#{child.jersey_number}</Text>
+                      </View>
+                    )}
+                    {child.position && (
+                      <View style={s.tradingCardPill}>
+                        <Text style={s.tradingCardPillText}>{child.position}</Text>
+                      </View>
                     )}
                   </View>
-                  <Text style={s.multiChildName} numberOfLines={1}>{child.first_name} {child.last_name}</Text>
-                  {child.team_name && (
-                    <Text style={s.multiChildTeam} numberOfLines={1}>{child.team_name}</Text>
-                  )}
-                  {child.jersey_number && (
-                    <View style={s.multiChildBadge}>
-                      <Text style={s.multiChildBadgeText}>#{child.jersey_number}</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              );
-            })}
+                </LinearGradient>
+              </TouchableOpacity>
+            ))}
           </ScrollView>
-          <Text style={s.proudParentText}>
-            Proud parent of {children.length} athlete{children.length !== 1 ? 's' : ''}
-          </Text>
+
+          {/* Pagination dots */}
+          {children.length > 1 && (
+            <View style={s.heroDots}>
+              {children.map((_, idx) => (
+                <View
+                  key={idx}
+                  style={[
+                    s.heroDot,
+                    idx === activeChildIndex && s.heroDotActive,
+                  ]}
+                />
+              ))}
+            </View>
+          )}
         </View>
       )}
 
-      {/* View Profile Link */}
-      {activeChild && (
-        <TouchableOpacity
-          style={s.viewProfileLink}
-          onPress={() => router.push(('/child-detail?playerId=' + activeChild.id) as any)}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="person-outline" size={15} color={colors.primary} />
-          <Text style={s.viewProfileLinkText}>View {activeChild.first_name}'s Full Profile</Text>
-          <Ionicons name="chevron-forward" size={14} color={colors.primary} />
-        </TouchableOpacity>
-      )}
+      {/* ================================================================ */}
+      {/* CONTENT — Cross-dissolves when active child changes               */}
+      {/* ================================================================ */}
+      <Animated.View style={{ opacity: contentOpacity }}>
 
       {/* ================================================================ */}
       {/* PRIDE MOMENT -- Latest Achievement/Stat                           */}
@@ -1099,129 +1225,130 @@ export default function ParentDashboard() {
       )}
 
       {/* ================================================================ */}
-      {/* NEXT UP -- Upcoming Event with Countdown & RSVP                   */}
+      {/* NEXT UP -- Horizontal Carousel of Upcoming Events                 */}
       {/* ================================================================ */}
       <View style={s.sectionBlock}>
         <Text style={s.sectionLabel}>NEXT UP</Text>
-      {!nextEvent ? (
+        {filteredUpcomingEvents.length === 0 ? (
           <View style={s.glassCard}>
             <View style={s.emptyNextUp}>
               <Ionicons name="checkmark-circle" size={32} color={colors.success} />
               <Text style={s.emptyNextUpText}>
                 All caught up! No upcoming events
                 {upcomingEvents.length > 0 && filteredUpcomingEvents.length === 0
-                  ? ' for the selected team.'
+                  ? ` for ${activeChild?.first_name || 'this player'}.`
                   : '.'}
               </Text>
-              {upcomingEvents.length > 0 && filteredUpcomingEvents.length === 0 && (
+              {upcomingEvents.length > 0 && filteredUpcomingEvents.length === 0 && children.length > 1 && (
                 <Text style={s.emptyNextUpSubtext}>
-                  There are events for other teams – try switching teams to view them.
+                  Swipe the player cards above to view events for other players.
                 </Text>
               )}
             </View>
           </View>
         ) : (
-          <View style={s.nextUpCard}>
-            {/* Event type badge */}
-            <View style={s.nextUpTop}>
-              <View style={[
-                s.nextUpTypeBadge,
-                nextEvent.type === 'game'
-                  ? { backgroundColor: colors.danger + '20' }
-                  : { backgroundColor: colors.info + '20' },
-              ]}>
-                <Text style={[
-                  s.nextUpTypeBadgeText,
-                  { color: nextEvent.type === 'game' ? colors.danger : colors.info },
-                ]}>
-                  {nextEvent.type === 'game' ? 'GAME' : 'PRACTICE'}
-                </Text>
-              </View>
-              <Text style={s.nextUpTeam}>{nextEvent.team_name}</Text>
-            </View>
-
-            {/* Countdown */}
-            <Text style={s.nextUpCountdown}>{getCountdownText(nextEvent.date)}</Text>
-
-            {/* Title */}
-            <Text style={s.nextUpTitle}>
-              {nextEvent.type === 'game' && nextEvent.opponent
-                ? `vs ${nextEvent.opponent}`
-                : nextEvent.title}
-            </Text>
-
-            {/* Date, time, venue */}
-            <View style={s.nextUpDetails}>
-              <View style={s.nextUpDetailRow}>
-                <Ionicons name="calendar-outline" size={15} color={colors.textMuted} />
-                <Text style={s.nextUpDetailText}>{formatDate(nextEvent.date)}</Text>
-              </View>
-              {nextEvent.time ? (
-                <View style={s.nextUpDetailRow}>
-                  <Ionicons name="time-outline" size={15} color={colors.textMuted} />
-                  <Text style={s.nextUpDetailText}>{formatTime(nextEvent.time)}</Text>
-                </View>
-              ) : null}
-              {nextEvent.location ? (
-                <View style={s.nextUpDetailRow}>
-                  <Ionicons name="location-outline" size={15} color={colors.textMuted} />
-                  <Text style={s.nextUpDetailText}>{nextEvent.location}</Text>
-                </View>
-              ) : null}
-            </View>
-
-            {/* Get Directions */}
-            {nextEvent.location && (
-              <TouchableOpacity style={s.directionsBtn} onPress={() => { const loc = encodeURIComponent(nextEvent.location || ''); Linking.openURL(Platform.OS === 'ios' ? `maps:?q=${loc}` : `geo:0,0?q=${loc}`); }}>
-                <Ionicons name="navigate-outline" size={14} color={colors.primary} />
-                <Text style={s.directionsBtnText}>Get Directions</Text>
-              </TouchableOpacity>
-            )}
-
-            {/* RSVP Buttons or eligibility message */}
-            {activeChild && (
-              <View style={s.rsvpSection}>
-                <Text style={s.rsvpLabel}>RSVP for {activeChild.first_name}</Text>
-                {nextEvent && String(activeChild.team_id) === String(nextEvent.team_id) ? (
-                  <View style={s.rsvpRow}>
-                    <TouchableOpacity
-                      style={[s.rsvpBtn, rsvpStatus === 'yes' && s.rsvpBtnActiveYes]}
-                      onPress={() => handleRsvp('yes')}
-                      disabled={rsvpLoading}
-                    >
-                      <Text style={[s.rsvpBtnText, rsvpStatus === 'yes' && s.rsvpBtnTextActive]}>
-                        Going
+          <>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              snapToInterval={NEXT_UP_CARD_WIDTH + NEXT_UP_CARD_GAP}
+              decelerationRate="fast"
+              contentContainerStyle={{ paddingRight: 20 }}
+              onScroll={(e) => {
+                const x = e.nativeEvent.contentOffset.x;
+                const idx = Math.round(x / (NEXT_UP_CARD_WIDTH + NEXT_UP_CARD_GAP));
+                if (idx !== activeNextUpIndex) setActiveNextUpIndex(idx);
+              }}
+              scrollEventThrottle={16}
+            >
+              {filteredUpcomingEvents.slice(0, 5).map((evt, idx) => (
+                <TouchableOpacity
+                  key={evt.id}
+                  activeOpacity={0.85}
+                  style={[
+                    s.nextUpCard,
+                    { width: NEXT_UP_CARD_WIDTH },
+                    idx > 0 && { marginLeft: NEXT_UP_CARD_GAP },
+                  ]}
+                  onPress={() => openEventDetail(evt)}
+                >
+                  {/* Event type badge + team */}
+                  <View style={s.nextUpTop}>
+                    <View style={[
+                      s.nextUpTypeBadge,
+                      evt.type === 'game'
+                        ? { backgroundColor: colors.danger + '20' }
+                        : { backgroundColor: colors.info + '20' },
+                    ]}>
+                      <Ionicons
+                        name={evt.type === 'game' ? 'shield' : 'fitness'}
+                        size={12}
+                        color={evt.type === 'game' ? colors.danger : colors.info}
+                      />
+                      <Text style={[
+                        s.nextUpTypeBadgeText,
+                        { color: evt.type === 'game' ? colors.danger : colors.info },
+                      ]}>
+                        {evt.type === 'game' ? 'GAME' : 'PRACTICE'}
                       </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[s.rsvpBtn, rsvpStatus === 'no' && s.rsvpBtnActiveNo]}
-                      onPress={() => handleRsvp('no')}
-                      disabled={rsvpLoading}
-                    >
-                      <Text style={[s.rsvpBtnText, rsvpStatus === 'no' && s.rsvpBtnTextActive]}>
-                        Can't Make It
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[s.rsvpBtn, rsvpStatus === 'maybe' && s.rsvpBtnActiveMaybe]}
-                      onPress={() => handleRsvp('maybe')}
-                      disabled={rsvpLoading}
-                    >
-                      <Text style={[s.rsvpBtnText, rsvpStatus === 'maybe' && s.rsvpBtnTextActive]}>
-                        Maybe
-                      </Text>
-                    </TouchableOpacity>
+                    </View>
+                    <Text style={s.nextUpTeam} numberOfLines={1}>{evt.team_name}</Text>
                   </View>
-                ) : (
-                  <Text style={s.rsvpHelpText}>
-                    {nextEvent
-                      ? `${activeChild.first_name} is not on the ${nextEvent.team_name} roster.`
-                      : 'No upcoming event to RSVP for.'}
+
+                  {/* Countdown */}
+                  <Text style={s.nextUpCountdown}>{getCountdownText(evt.date)}</Text>
+
+                  {/* Title */}
+                  <Text style={s.nextUpTitle} numberOfLines={1}>
+                    {evt.type === 'game' && evt.opponent
+                      ? `vs ${evt.opponent}`
+                      : evt.title}
                   </Text>
-                )}
+
+                  {/* Date, time, venue (compact single-row) */}
+                  <View style={s.nextUpDetails}>
+                    <View style={s.nextUpDetailRow}>
+                      <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
+                      <Text style={s.nextUpDetailText}>{formatDate(evt.date)}</Text>
+                      {evt.time ? (
+                        <>
+                          <Ionicons name="time-outline" size={14} color={colors.textMuted} style={{ marginLeft: 10 }} />
+                          <Text style={s.nextUpDetailText}>{formatTime(evt.time)}</Text>
+                        </>
+                      ) : null}
+                    </View>
+                    {(evt.venue_name || evt.location) ? (
+                      <View style={s.nextUpDetailRow}>
+                        <Ionicons name="location-outline" size={14} color={colors.textMuted} />
+                        <Text style={s.nextUpDetailText} numberOfLines={1}>{evt.venue_name || evt.location}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+
+                  {/* Tap hint */}
+                  <View style={s.nextUpTapHint}>
+                    <Text style={s.nextUpTapHintText}>Tap for details</Text>
+                    <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            {/* Dot indicators */}
+            {filteredUpcomingEvents.length > 1 && (
+              <View style={s.nextUpDots}>
+                {filteredUpcomingEvents.slice(0, 5).map((_, idx) => (
+                  <View
+                    key={idx}
+                    style={[
+                      s.nextUpDot,
+                      idx === activeNextUpIndex && s.nextUpDotActive,
+                    ]}
+                  />
+                ))}
               </View>
             )}
-          </View>
+          </>
         )}
       </View>
 
@@ -1232,7 +1359,7 @@ export default function ParentDashboard() {
         <Text style={s.sectionLabel}>AT A GLANCE</Text>
         <View style={s.pulseRow}>
           {/* Registration */}
-          <TouchableOpacity style={s.pulseCard} onPress={() => router.push('/my-kids' as any)} activeOpacity={0.7}>
+          <TouchableOpacity style={s.pulseCard} onPress={() => router.push('/parent-registration-hub' as any)} activeOpacity={0.7}>
             <Ionicons
               name={getRegistrationComplete() ? 'checkmark-circle' : 'time'}
               size={24}
@@ -1252,13 +1379,17 @@ export default function ParentDashboard() {
             <Ionicons
               name="wallet"
               size={24}
-              color={paymentStatus.balance > 0 ? colors.warning : colors.success}
+              color={paymentStatus.balance > 0 ? colors.warning : paymentStatus.total_pending > 0 ? '#FF9500' : colors.success}
             />
             <Text style={[
               s.pulseValue,
-              { color: paymentStatus.balance > 0 ? colors.warning : colors.success },
+              { color: paymentStatus.balance > 0 ? colors.warning : paymentStatus.total_pending > 0 ? '#FF9500' : colors.success },
             ]}>
-              {paymentStatus.balance > 0 ? `$${Number(paymentStatus.balance).toFixed(2)} Due` : '$0.00 Due'}
+              {paymentStatus.balance > 0
+                ? `$${Number(paymentStatus.balance).toFixed(2)} Due`
+                : paymentStatus.total_pending > 0
+                  ? 'Pending'
+                  : '$0.00 Due'}
             </Text>
             <Text style={s.pulseLabel}>Payments</Text>
           </TouchableOpacity>
@@ -1360,31 +1491,99 @@ export default function ParentDashboard() {
       )}
 
       {/* ================================================================ */}
+      {/* TEAM WALL PREVIEW                                                 */}
+      {/* ================================================================ */}
+      {latestPost && (
+        <View style={s.sectionBlock}>
+          <Text style={s.sectionLabel}>TEAM WALL</Text>
+          <TouchableOpacity
+            style={s.teamWallPreviewCard}
+            onPress={() => router.push('/(tabs)/connect' as any)}
+            activeOpacity={0.8}
+          >
+            <View style={s.teamWallPreviewHeader}>
+              <View style={s.teamWallPreviewIconWrap}>
+                <Ionicons name="megaphone" size={18} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.teamWallPreviewAuthor}>{latestPost.author_name}</Text>
+                <Text style={s.teamWallPreviewTime}>
+                  {(() => {
+                    const diffMs = Date.now() - new Date(latestPost.created_at).getTime();
+                    const diffMins = Math.floor(diffMs / 60000);
+                    const diffHours = Math.floor(diffMs / 3600000);
+                    const diffDays = Math.floor(diffMs / 86400000);
+                    if (diffMins < 1) return 'Just now';
+                    if (diffMins < 60) return `${diffMins}m ago`;
+                    if (diffHours < 24) return `${diffHours}h ago`;
+                    if (diffDays < 7) return `${diffDays}d ago`;
+                    return new Date(latestPost.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                  })()}
+                </Text>
+              </View>
+            </View>
+            <Text style={s.teamWallPreviewContent} numberOfLines={2}>
+              {latestPost.content}
+            </Text>
+            <View style={s.teamWallPreviewFooter}>
+              <Text style={s.teamWallPreviewCta}>View Team Wall</Text>
+              <Ionicons name="arrow-forward" size={14} color={colors.primary} />
+            </View>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* ================================================================ */}
       {/* PAYMENT CARD (only if balance > 0)                                */}
       {/* ================================================================ */}
-      {paymentStatus.balance > 0 && (
+      {(paymentStatus.balance > 0 || paymentStatus.total_pending > 0) && (
         <TouchableOpacity
           style={s.paymentCard}
           onPress={() => router.push('/family-payments' as any)}
           activeOpacity={0.8}
         >
           <View style={s.paymentLeft}>
-            <View style={s.paymentIconWrap}>
-              <Ionicons name="wallet-outline" size={22} color={colors.warning} />
+            <View style={[s.paymentIconWrap, {
+              backgroundColor: paymentStatus.balance > 0 ? colors.warning + '20' : '#FF950020',
+            }]}>
+              <Ionicons
+                name={paymentStatus.balance > 0 ? 'wallet-outline' : 'time-outline'}
+                size={22}
+                color={paymentStatus.balance > 0 ? colors.warning : '#FF9500'}
+              />
             </View>
-            <View>
-              <Text style={s.paymentTitle}>Outstanding Balance</Text>
-              <Text style={s.paymentAmount}>${Number(paymentStatus.balance).toFixed(2)}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={s.paymentTitle}>
+                {paymentStatus.balance > 0 ? 'Outstanding Balance' : 'Pending Verification'}
+              </Text>
+              {paymentStatus.balance > 0 && (
+                <Text style={s.paymentAmount}>${Number(paymentStatus.balance).toFixed(2)}</Text>
+              )}
+              {paymentStatus.total_pending > 0 && (
+                <Text style={{ fontSize: 12, color: '#FF9500', marginTop: 2 }}>
+                  ${Number(paymentStatus.total_pending).toFixed(2)} pending verification
+                </Text>
+              )}
             </View>
           </View>
           <TouchableOpacity
             style={s.paymentBtn}
             onPress={() => router.push('/family-payments' as any)}
           >
-            <Text style={s.paymentBtnText}>View Details</Text>
+            <Text style={s.paymentBtnText}>
+              {paymentStatus.balance > 0 ? 'Pay Now' : 'View Details'}
+            </Text>
           </TouchableOpacity>
         </TouchableOpacity>
       )}
+
+      {/* Event Detail Modal */}
+      <EventDetailModal
+        visible={showEventDetailModal}
+        event={selectedModalEvent}
+        onClose={() => setShowEventDetailModal(false)}
+        onRefresh={() => fetchParentData()}
+      />
 
       {/* Share Registration Modal */}
       <ShareRegistrationModal
@@ -1404,32 +1603,12 @@ export default function ParentDashboard() {
         onVisibleChange={(v: boolean) => setOnboardingVisible(v)}
       />
 
-      {/* COPPA Consent Modal — only shows AFTER onboarding is done */}
-      {(() => {
-        const coppaVisible = ENABLE_COPPA && modalStage === 'coppa' && !coppaCompleted;
-        console.log('[ParentDashboard RENDER] CoppaConsentModal visible calculation:', {
-          coppaVisible,
-          ENABLE_COPPA,
-          modalStage,
-          coppaCompleted,
-          isParent,
-          profileId: profile?.id,
-          coppaConsentGiven: profile?.coppa_consent_given,
-        });
-        return (
-          <CoppaConsentModal
-            visible={coppaVisible}
-            onDone={handleCoppaDone}
-            onMount={() => setCoppaMounted(true)}
-            onUnmount={() => setCoppaMounted(false)}
-            onVisibleChange={(v) => setCoppaVisible(v)}
-          />
-        );
-      })()}
+      </Animated.View>
 
       {/* Bottom padding */}
       <View style={{ height: 120 }} />
     </ScrollView>
+    </Animated.View>
   );
 }
 
@@ -1477,6 +1656,14 @@ const createStyles = (colors: any) => StyleSheet.create({
     color: colors.text,
     letterSpacing: -0.5,
     marginTop: 2,
+  },
+  headerIconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.primary + '15',
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
   },
 
   // Section
@@ -1562,154 +1749,96 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontSize: 15,
   },
 
-  // ========== HERO -- Single Child ==========
-  heroChildCard: {
-    backgroundColor: colors.glassCard,
+  // ========== HERO CARD -- Unified Carousel ==========
+  heroCard: {
+    height: 240,
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
-    padding: 20,
-    marginBottom: 28,
+    overflow: 'hidden' as const,
+    position: 'relative' as const,
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 6 },
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16 },
+      android: { elevation: 10 },
     }),
   },
-  heroChildTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  heroAvatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.primary + '15',
-    borderWidth: 2,
-    borderColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  heroAvatarIcon: {
-    fontSize: 36,
-  },
-  heroAvatarText: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: colors.primary,
-  },
-  heroChildInfo: {
-    flex: 1,
-  },
-  heroChildName: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: colors.text,
-    letterSpacing: -0.5,
-  },
-  heroChildTeam: {
-    fontSize: 15,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  heroChildBadges: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  heroDots: {
+    flexDirection: 'row' as const,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
     gap: 6,
-    marginTop: 8,
-  },
-  heroBadge: {
-    backgroundColor: colors.primary + '20',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  heroBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  proudParentText: {
-    fontSize: 13,
-    color: colors.textMuted,
-    textAlign: 'center',
     marginTop: 12,
-    marginBottom: 8,
   },
-  viewProfileLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    marginBottom: 20,
-    paddingVertical: 8,
+  heroDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.textMuted + '40',
   },
-  viewProfileLinkText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.primary,
+  heroDotActive: {
+    width: 20,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.primary,
   },
-
-  // ========== HERO -- Multiple Children ==========
-  childScrollContainer: {
-    paddingRight: 20,
-    gap: 12,
+  tradingCardInitials: {
+    flex: 1,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
   },
-  multiChildCard: {
-    width: 280,
-    backgroundColor: colors.glassCard,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
-    padding: 20,
-    alignItems: 'center',
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 6 },
-    }),
+  tradingCardInitialsText: {
+    fontSize: 56,
+    fontWeight: '900' as const,
+    color: 'rgba(255,255,255,0.3)',
+    letterSpacing: 4,
   },
-  multiChildAvatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: colors.primary + '15',
-    borderWidth: 2,
-    borderColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 10,
+  tradingCardSportBadge: {
+    position: 'absolute' as const,
+    top: 12,
+    right: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    zIndex: 10,
   },
-  multiChildAvatarIcon: {
-    fontSize: 28,
-  },
-  multiChildAvatarText: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: colors.primary,
-  },
-  multiChildName: {
+  tradingCardSportEmoji: {
     fontSize: 18,
-    fontWeight: '700',
-    color: colors.text,
-    textAlign: 'center',
   },
-  multiChildTeam: {
-    fontSize: 13,
-    color: colors.textMuted,
-    marginTop: 2,
-    textAlign: 'center',
+  tradingCardBottomGradient: {
+    position: 'absolute' as const,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingTop: 48,
+    paddingBottom: 16,
+    paddingHorizontal: 16,
   },
-  multiChildBadge: {
-    backgroundColor: colors.primary + '20',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    marginTop: 8,
+  tradingCardName: {
+    fontSize: 24,
+    fontWeight: '900' as const,
+    color: '#FFFFFF',
+    letterSpacing: -0.5,
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
-  multiChildBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.primary,
+  tradingCardPills: {
+    flexDirection: 'row' as const,
+    flexWrap: 'wrap' as const,
+    gap: 6,
+    marginTop: 6,
+  },
+  tradingCardPill: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  tradingCardPillText: {
+    fontSize: 11,
+    fontWeight: '700' as const,
+    color: '#FFFFFF',
   },
 
   // ========== PRIDE MOMENT ==========
@@ -1794,13 +1923,13 @@ const createStyles = (colors: any) => StyleSheet.create({
     marginTop: 2,
   },
 
-  // ========== NEXT UP ==========
+  // ========== NEXT UP CAROUSEL ==========
   nextUpCard: {
     backgroundColor: colors.glassCard,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: colors.glassBorder,
-    padding: 20,
+    padding: 18,
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
       android: { elevation: 6 },
@@ -1809,59 +1938,86 @@ const createStyles = (colors: any) => StyleSheet.create({
   nextUpTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginBottom: 12,
+    gap: 8,
+    marginBottom: 10,
   },
   nextUpTypeBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 8,
+    gap: 4,
   },
   nextUpTypeBadgeText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '800',
     letterSpacing: 1,
   },
   nextUpTeam: {
-    fontSize: 13,
+    fontSize: 12,
     color: colors.textMuted,
+    flex: 1,
   },
   nextUpCountdown: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '900',
     color: colors.primary,
     letterSpacing: -0.5,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   nextUpTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
     color: colors.text,
-    marginBottom: 12,
+    marginBottom: 10,
   },
   nextUpDetails: {
-    gap: 6,
-    marginBottom: 12,
+    gap: 5,
+    marginBottom: 10,
   },
   nextUpDetailRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   nextUpDetailText: {
-    fontSize: 14,
+    fontSize: 13,
     color: colors.textMuted,
   },
-  directionsBtn: {
+  nextUpTapHint: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 16,
+    justifyContent: 'flex-end',
+    gap: 2,
+    borderTopWidth: 1,
+    borderTopColor: colors.glassBorder,
+    paddingTop: 10,
+    marginTop: 2,
   },
-  directionsBtnText: {
-    fontSize: 13,
-    fontWeight: '600',
+  nextUpTapHintText: {
+    fontSize: 12,
     color: colors.primary,
+    fontWeight: '600',
+  },
+  nextUpDots: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 12,
+  },
+  nextUpDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.textMuted + '40',
+  },
+  nextUpDotActive: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primary,
   },
   emptyNextUp: {
     padding: 24,
@@ -1877,60 +2033,6 @@ const createStyles = (colors: any) => StyleSheet.create({
     color: colors.textMuted,
     marginTop: 4,
     textAlign: 'center' as const,
-  },
-
-  // RSVP
-  rsvpSection: {
-    borderTopWidth: 1,
-    borderTopColor: colors.glassBorder,
-    paddingTop: 14,
-    marginTop: 4,
-  },
-  rsvpLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.textMuted,
-    textTransform: 'uppercase' as const,
-    letterSpacing: 1,
-    marginBottom: 10,
-  },
-  rsvpHelpText: {
-    fontSize: 13,
-    color: colors.textMuted,
-    fontStyle: 'italic',
-  },
-  rsvpRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  rsvpBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
-    backgroundColor: colors.glassCard,
-    alignItems: 'center',
-  },
-  rsvpBtnText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.textMuted,
-  },
-  rsvpBtnActiveYes: {
-    backgroundColor: colors.success + '20',
-    borderColor: colors.success,
-  },
-  rsvpBtnActiveNo: {
-    backgroundColor: colors.danger + '20',
-    borderColor: colors.danger,
-  },
-  rsvpBtnActiveMaybe: {
-    backgroundColor: colors.warning + '20',
-    borderColor: colors.warning,
-  },
-  rsvpBtnTextActive: {
-    color: colors.text,
   },
 
   // ========== QUICK PULSE ==========
@@ -1972,21 +2074,6 @@ const createStyles = (colors: any) => StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
-  },
-  teamChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.card,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 8,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  teamChipText: {
-    fontSize: 13,
-    color: colors.textMuted,
   },
   statCard: {
     width: '48%' as any,
@@ -2074,6 +2161,62 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontSize: 14,
     color: colors.primary,
     fontWeight: '600',
+  },
+
+  // ========== TEAM WALL PREVIEW ==========
+  teamWallPreviewCard: {
+    backgroundColor: colors.glassCard,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    borderRadius: 20,
+    padding: 16,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
+      android: { elevation: 6 },
+    }),
+  },
+  teamWallPreviewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 10,
+  },
+  teamWallPreviewIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.primary + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  teamWallPreviewAuthor: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  teamWallPreviewTime: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 1,
+  },
+  teamWallPreviewContent: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    lineHeight: 20,
+    marginBottom: 10,
+  },
+  teamWallPreviewFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderTopWidth: 1,
+    borderTopColor: colors.glassBorder,
+    paddingTop: 10,
+  },
+  teamWallPreviewCta: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary,
   },
 
   // ========== PAYMENT CARD ==========

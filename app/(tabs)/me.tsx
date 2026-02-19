@@ -168,9 +168,10 @@ export default function MeScreen() {
       ];
     }
     if (isParent) {
-      // Parent: My Children, Payments, Schedule, Volunteer History
+      // Parent: My Children, Registration, Payments, Schedule, Waivers
       return [
         { icon: 'people', label: 'My Children', route: '/my-kids', iconColor: colors.primary, iconBg: colors.primary + '15' },
+        { icon: 'clipboard', label: 'Registration Hub', route: '/parent-registration-hub', iconColor: '#AF52DE', iconBg: '#AF52DE15' },
         { icon: 'wallet', label: 'Payments', route: '/family-payments', iconColor: colors.warning, iconBg: colors.warning + '15' },
         { icon: 'calendar', label: 'Schedule', route: '/(tabs)/gameday', iconColor: colors.info, iconBg: colors.info + '15' },
         { icon: 'document-text', label: 'Waivers', route: '/my-waivers', iconColor: colors.success, iconBg: colors.success + '15' },

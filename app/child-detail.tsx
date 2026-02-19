@@ -1,23 +1,27 @@
+import { getSportDisplay, getPositionInfo } from '@/constants/sport-display';
 import { useAuth } from '@/lib/auth';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  Animated,
   Dimensions,
   Image,
   Platform,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // =============================================================================
 // TYPES
@@ -30,7 +34,6 @@ type PlayerData = {
   jersey_number: string | null;
   position: string | null;
   photo_url: string | null;
-  avatar_url: string | null;
   sport_id: string | null;
   season_id: string;
 };
@@ -41,15 +44,7 @@ type TeamData = {
   color: string | null;
 };
 
-type SeasonStats = {
-  games_played: number;
-  total_kills: number;
-  total_aces: number;
-  total_digs: number;
-  total_blocks: number;
-  total_assists: number;
-  total_points: number;
-};
+type SeasonStats = Record<string, number>;
 
 type Achievement = {
   id: string;
@@ -81,6 +76,9 @@ type TeamStandings = {
 type TabKey = 'overview' | 'stats' | 'schedule' | 'achievements';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+const PANEL_COLLAPSED_TOP = SCREEN_HEIGHT * 0.62;
+const SCROLL_THRESHOLD = PANEL_COLLAPSED_TOP - SCREEN_HEIGHT * 0.30;
 
 // =============================================================================
 // COMPONENT
@@ -109,8 +107,14 @@ export default function ChildDetailScreen() {
   const [standings, setStandings] = useState<TeamStandings | null>(null);
   const [sportName, setSportName] = useState<string | null>(null);
   const [registrationStatus, setRegistrationStatus] = useState<string>('new');
+  const [photoUploading, setPhotoUploading] = useState(false);
+
+  const insets = useSafeAreaInsets();
+  const scrollY = useRef(new Animated.Value(0)).current;
 
   const s = createStyles(colors);
+  const sportDisplay = useMemo(() => getSportDisplay(sportName), [sportName]);
+  const posInfo = useMemo(() => getPositionInfo(player?.position, sportName), [player?.position, sportName]);
 
   // ---------------------------------------------------------------------------
   // Data Loading
@@ -124,11 +128,12 @@ export default function ChildDetailScreen() {
       // 1. Fetch player
       const { data: playerData, error: playerErr } = await supabase
         .from('players')
-        .select('id, first_name, last_name, jersey_number, position, photo_url, avatar_url, sport_id, season_id')
+        .select('id, first_name, last_name, jersey_number, position, photo_url, sport_id, season_id')
         .eq('id', playerId)
         .single();
 
       if (playerErr || !playerData) {
+        if (__DEV__) console.error('[ChildDetail] Player query failed:', playerErr?.message, 'playerId:', playerId);
         setError('Could not load player data.');
         return;
       }
@@ -165,25 +170,22 @@ export default function ChildDetailScreen() {
       setTeam(teamInfo || null);
       const teamId = teamInfo?.id || null;
 
-      // 3. Fetch season stats
+      // 3. Fetch season stats (select all columns to support any sport)
       const seasonId = workingSeason?.id || playerData.season_id;
       const { data: statsData } = await supabase
         .from('player_season_stats')
-        .select('games_played, total_kills, total_aces, total_digs, total_blocks, total_assists, total_points')
+        .select('*')
         .eq('player_id', playerId)
         .eq('season_id', seasonId)
         .maybeSingle();
 
       if (statsData) {
-        setStats({
-          games_played: statsData.games_played || 0,
-          total_kills: statsData.total_kills || 0,
-          total_aces: statsData.total_aces || 0,
-          total_digs: statsData.total_digs || 0,
-          total_blocks: statsData.total_blocks || 0,
-          total_assists: statsData.total_assists || 0,
-          total_points: statsData.total_points || 0,
-        });
+        // Normalize: ensure numeric values default to 0
+        const normalized: Record<string, number> = {};
+        for (const [key, val] of Object.entries(statsData)) {
+          if (typeof val === 'number') normalized[key] = val;
+        }
+        setStats(normalized);
       } else {
         setStats(null);
       }
@@ -252,7 +254,7 @@ export default function ChildDetailScreen() {
         setStandings(null);
       }
     } catch (err) {
-      console.error('Error loading child detail:', err);
+      if (__DEV__) console.error('Error loading child detail:', err);
       setError('Something went wrong. Please try again.');
     } finally {
       setLoading(false);
@@ -268,6 +270,55 @@ export default function ChildDetailScreen() {
     await fetchAllData();
     setRefreshing(false);
   }, [fetchAllData]);
+
+  // ---------------------------------------------------------------------------
+  // Photo Upload
+  // ---------------------------------------------------------------------------
+
+  const pickAndUploadPhoto = async () => {
+    if (!player) return;
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [3, 4],
+      quality: 0.8,
+    });
+
+    if (result.canceled || !result.assets[0]) return;
+
+    setPhotoUploading(true);
+    try {
+      const uri = result.assets[0].uri;
+      const ext = uri.split('.').pop() || 'jpg';
+      const fileName = `player_${player.id}_${Date.now()}.${ext}`;
+
+      const response = await fetch(uri);
+      const blob = await response.blob();
+
+      const { error: uploadError } = await supabase.storage
+        .from('player-photos')
+        .upload(fileName, blob);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('player-photos')
+        .getPublicUrl(fileName);
+
+      await supabase
+        .from('players')
+        .update({ photo_url: publicUrl })
+        .eq('id', player.id);
+
+      // Refresh player data to show new photo
+      await fetchAllData();
+    } catch (err: any) {
+      Alert.alert('Upload Error', err.message || 'Failed to upload photo.');
+    } finally {
+      setPhotoUploading(false);
+    }
+  };
 
   // ---------------------------------------------------------------------------
   // Helpers
@@ -453,9 +504,15 @@ export default function ChildDetailScreen() {
           <Text style={[s.sectionLabel, { color: colors.textMuted }]}>QUICK STATS</Text>
           <View style={s.quickStatsGrid}>
             {renderQuickStatCard('trophy-outline', 'Games', stats?.games_played ?? 0, colors.primary)}
-            {renderQuickStatCard('flash-outline', 'Kills', stats?.total_kills ?? 0, '#FF3B3B')}
-            {renderQuickStatCard('star-outline', 'Aces', stats?.total_aces ?? 0, '#A855F7')}
-            {renderQuickStatCard('ribbon-outline', 'Points', stats?.total_points ?? 0, colors.success)}
+            {sportDisplay.primaryStats.slice(0, 3).map((st) =>
+              renderQuickStatCard(
+                (st.ionicon + '-outline') as string,
+                st.label,
+                stats?.[`total_${st.key}`] ?? stats?.[st.key] ?? 0,
+                st.color,
+                st.key,
+              )
+            )}
           </View>
         </View>
 
@@ -473,8 +530,8 @@ export default function ChildDetailScreen() {
     );
   };
 
-  const renderQuickStatCard = (icon: string, label: string, value: number, color: string) => (
-    <View style={[s.quickStatCard, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}>
+  const renderQuickStatCard = (icon: string, label: string, value: number, color: string, key?: string) => (
+    <View key={key || label} style={[s.quickStatCard, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}>
       <Ionicons name={icon as any} size={18} color={color} />
       <Text style={[s.quickStatValue, { color: colors.text }]}>{value}</Text>
       <Text style={[s.quickStatLabel, { color: colors.textMuted }]}>{label}</Text>
@@ -488,8 +545,13 @@ export default function ChildDetailScreen() {
         return { icon: 'trophy', text: `${player!.first_name}'s team won their last game! Great job!` };
       }
     }
-    if (stats && stats.total_kills > 0) {
-      return { icon: 'flash', text: `${player!.first_name} has racked up ${stats.total_kills} kills this season!` };
+    // Use the sport's primary stat for the pride moment
+    if (stats) {
+      const primaryStat = sportDisplay.primaryStats[0];
+      const statValue = stats[`total_${primaryStat.key}`] ?? stats[primaryStat.key] ?? 0;
+      if (statValue > 0) {
+        return { icon: primaryStat.ionicon, text: `${player!.first_name} has racked up ${statValue} ${primaryStat.label.toLowerCase()} this season!` };
+      }
     }
     if (stats && stats.games_played > 0) {
       return { icon: 'star', text: `${player!.first_name} has played ${stats.games_played} games this season!` };
@@ -501,13 +563,12 @@ export default function ChildDetailScreen() {
   };
 
   const renderStatsTab = () => {
-    const statRows: { label: string; value: number; color: string; icon: string }[] = [
-      { label: 'Kills', value: stats?.total_kills ?? 0, color: '#FF3B3B', icon: 'flash' },
-      { label: 'Aces', value: stats?.total_aces ?? 0, color: '#A855F7', icon: 'star' },
-      { label: 'Digs', value: stats?.total_digs ?? 0, color: '#3B82F6', icon: 'shield' },
-      { label: 'Blocks', value: stats?.total_blocks ?? 0, color: '#F59E0B', icon: 'stop' },
-      { label: 'Assists', value: stats?.total_assists ?? 0, color: '#10B981', icon: 'people' },
-    ];
+    const statRows = sportDisplay.primaryStats.map((st) => ({
+      label: st.label,
+      value: stats?.[`total_${st.key}`] ?? stats?.[st.key] ?? 0,
+      color: st.color,
+      icon: st.ionicon,
+    }));
 
     // Calculate max value for progress bar scaling
     const maxVal = Math.max(...statRows.map(r => r.value), 1);
@@ -734,116 +795,172 @@ export default function ChildDetailScreen() {
   // Render
   // ---------------------------------------------------------------------------
 
-  const heroImageUrl = player.photo_url || player.avatar_url;
+  const heroImageUrl = player.photo_url;
+
+  // Animated interpolations for hero overlay info
+  const overlayOpacity = scrollY.interpolate({
+    inputRange: [0, SCROLL_THRESHOLD - 60],
+    outputRange: [1, 0],
+    extrapolate: 'clamp',
+  });
+  const overlayTranslateY = scrollY.interpolate({
+    inputRange: [0, SCROLL_THRESHOLD],
+    outputRange: [0, -30],
+    extrapolate: 'clamp',
+  });
 
   return (
-    <SafeAreaView style={[s.safeArea, { backgroundColor: colors.background }]} edges={['top']}>
-      <ScrollView
-        style={s.scrollView}
-        contentContainerStyle={s.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
-        }
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      {/* ================================================================ */}
+      {/* STATIC BACKGROUND PHOTO — absolute, full screen                  */}
+      {/* ================================================================ */}
+      {heroImageUrl ? (
+        <Image source={{ uri: heroImageUrl }} style={s.fullScreenPhoto} resizeMode="cover" />
+      ) : (
+        <LinearGradient
+          colors={[teamColor + '60', teamColor + '20', colors.background]}
+          style={s.fullScreenPhoto}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+        >
+          <View style={s.fallbackInitialsContainer}>
+            <Text style={s.fallbackInitialsText}>{getInitials()}</Text>
+          </View>
+        </LinearGradient>
+      )}
+
+      {/* Bottom gradient for text readability over photo */}
+      <LinearGradient
+        colors={['transparent', 'rgba(0,0,0,0.55)']}
+        style={[s.photoBottomGradient, { bottom: SCREEN_HEIGHT - PANEL_COLLAPSED_TOP }]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+      />
+
+      {/* Camera icon — photo upload */}
+      <TouchableOpacity
+        style={s.cameraBtn}
+        onPress={pickAndUploadPhoto}
+        activeOpacity={0.7}
+        disabled={photoUploading}
       >
-        {/* ================================================================ */}
-        {/* HERO SECTION                                                     */}
-        {/* ================================================================ */}
-        <View style={s.heroSection}>
-          {heroImageUrl ? (
-            <Image source={{ uri: heroImageUrl }} style={s.heroImage} resizeMode="cover" />
-          ) : (
-            <View style={[s.heroGradient, { backgroundColor: teamColor + '30' }]}>
-              <Text style={[s.heroInitials, { color: teamColor }]}>{getInitials()}</Text>
+        {photoUploading ? (
+          <ActivityIndicator size="small" color="#FFFFFF" />
+        ) : (
+          <Ionicons name="camera" size={20} color="#FFFFFF" />
+        )}
+      </TouchableOpacity>
+
+      {/* Player info overlaid on photo — fades out on scroll */}
+      <Animated.View style={[
+        s.photoOverlayInfo,
+        { bottom: SCREEN_HEIGHT - PANEL_COLLAPSED_TOP + 20 },
+        { opacity: overlayOpacity, transform: [{ translateY: overlayTranslateY }] },
+      ]}>
+        <Text style={s.overlayPlayerName}>
+          {player.first_name} {player.last_name}
+        </Text>
+        {team && (
+          <Text style={s.overlayTeamName}>{team.name}</Text>
+        )}
+        <View style={s.overlayPillsRow}>
+          {player.jersey_number && (
+            <View style={s.overlayPill}>
+              <Text style={s.overlayPillText}>#{player.jersey_number}</Text>
             </View>
           )}
-
-          {/* Gradient Overlay */}
-          <View style={[s.heroOverlay, { backgroundColor: colors.background }]} />
-
-          {/* Back Button */}
-          <TouchableOpacity style={[s.heroBackBtn, { backgroundColor: colors.glassCard }]} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={22} color={colors.text} />
-          </TouchableOpacity>
-
-          {/* Player Info */}
-          <View style={s.heroInfo}>
-            <Text style={[s.heroPlayerName, { color: colors.text }]}>
-              {player.first_name} {player.last_name}
-            </Text>
-            {team && (
-              <Text style={[s.heroTeamName, { color: teamColor }]}>{team.name}</Text>
-            )}
-
-            {/* Badges Row */}
-            <View style={s.heroBadgesRow}>
-              {player.jersey_number && (
-                <View style={[s.heroPill, { backgroundColor: colors.primary + '20' }]}>
-                  <Text style={[s.heroPillText, { color: colors.primary }]}>#{player.jersey_number}</Text>
-                </View>
-              )}
-              {player.position && (
-                <View style={[s.heroPill, { backgroundColor: colors.info + '20' }]}>
-                  <Text style={[s.heroPillText, { color: colors.info }]}>{player.position}</Text>
-                </View>
-              )}
-              {sportName && (
-                <View style={[s.heroPill, { backgroundColor: teamColor + '20' }]}>
-                  <Text style={[s.heroPillText, { color: teamColor }]}>{sportName}</Text>
-                </View>
-              )}
-              <View style={[s.heroPill, { backgroundColor: (isActive ? colors.success : colors.warning) + '20' }]}>
-                <View style={[s.statusDot, { backgroundColor: isActive ? colors.success : colors.warning }]} />
-                <Text style={[s.heroPillText, { color: isActive ? colors.success : colors.warning }]}>
-                  {isActive ? 'Active' : 'Pending'}
-                </Text>
-              </View>
+          {player.position && (
+            <View style={s.overlayPill}>
+              <Text style={s.overlayPillText}>{posInfo?.full || player.position}</Text>
             </View>
+          )}
+          {sportName && (
+            <View style={s.overlayPill}>
+              <Text style={s.overlayPillText}>{sportName}</Text>
+            </View>
+          )}
+          <View style={[s.overlayPill, { backgroundColor: isActive ? 'rgba(34,197,94,0.3)' : 'rgba(234,179,8,0.3)' }]}>
+            <View style={[s.statusDot, { backgroundColor: isActive ? '#22C55E' : '#EAB308' }]} />
+            <Text style={s.overlayPillText}>{isActive ? 'Active' : 'Pending'}</Text>
           </View>
         </View>
+      </Animated.View>
 
-        {/* ================================================================ */}
-        {/* TAB NAVIGATION                                                   */}
-        {/* ================================================================ */}
-        <View style={[s.tabBar, { borderBottomColor: colors.glassBorder }]}>
-          {tabs.map((tab) => {
-            const isTabActive = activeTab === tab.key;
-            return (
-              <TouchableOpacity
-                key={tab.key}
-                style={[s.tabItem, isTabActive && { borderBottomColor: colors.primary }]}
-                onPress={() => setActiveTab(tab.key)}
-                activeOpacity={0.7}
-              >
-                <Ionicons
-                  name={tab.icon as any}
-                  size={18}
-                  color={isTabActive ? colors.primary : colors.textMuted}
-                />
-                <Text style={[
-                  s.tabLabel,
-                  { color: isTabActive ? colors.primary : colors.textMuted },
-                  isTabActive && s.tabLabelActive,
-                ]}>
-                  {tab.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
+      {/* ================================================================ */}
+      {/* SCROLLABLE FOREGROUND                                             */}
+      {/* ================================================================ */}
+      <Animated.ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 40 }}
+        showsVerticalScrollIndicator={false}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false }
+        )}
+        scrollEventThrottle={16}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FFFFFF" />
+        }
+      >
+        {/* Transparent spacer — lets photo show through */}
+        <View style={{ height: PANEL_COLLAPSED_TOP }} />
+
+        {/* Content panel with rounded top */}
+        <View style={[s.contentPanel, { backgroundColor: colors.background }]}>
+          {/* Drag handle indicator */}
+          <View style={s.dragHandle}>
+            <View style={[s.dragHandleBar, { backgroundColor: colors.textMuted }]} />
+          </View>
+
+          {/* Tab navigation */}
+          <View style={[s.tabBar, { borderBottomColor: colors.glassBorder }]}>
+            {tabs.map((tab) => {
+              const isTabActive = activeTab === tab.key;
+              return (
+                <TouchableOpacity
+                  key={tab.key}
+                  style={[s.tabItem, isTabActive && { borderBottomColor: colors.primary }]}
+                  onPress={() => setActiveTab(tab.key)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={tab.icon as any}
+                    size={18}
+                    color={isTabActive ? colors.primary : colors.textMuted}
+                  />
+                  <Text style={[
+                    s.tabLabel,
+                    { color: isTabActive ? colors.primary : colors.textMuted },
+                    isTabActive && s.tabLabelActive,
+                  ]}>
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* Tab content */}
+          {activeTab === 'overview' && renderOverviewTab()}
+          {activeTab === 'stats' && renderStatsTab()}
+          {activeTab === 'schedule' && renderScheduleTab()}
+          {activeTab === 'achievements' && renderAchievementsTab()}
         </View>
+      </Animated.ScrollView>
 
-        {/* ================================================================ */}
-        {/* TAB CONTENT                                                      */}
-        {/* ================================================================ */}
-        {activeTab === 'overview' && renderOverviewTab()}
-        {activeTab === 'stats' && renderStatsTab()}
-        {activeTab === 'schedule' && renderScheduleTab()}
-        {activeTab === 'achievements' && renderAchievementsTab()}
-
-        {/* Bottom padding */}
-        <View style={{ height: 40 }} />
-      </ScrollView>
-    </SafeAreaView>
+      {/* ================================================================ */}
+      {/* FLOATING BACK BUTTON                                              */}
+      {/* ================================================================ */}
+      <View style={[s.floatingBackBtn, { top: insets.top + 8 }]}>
+        <TouchableOpacity
+          style={s.backBtnCircle}
+          onPress={() => router.back()}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 }
 
@@ -855,12 +972,6 @@ const createStyles = (colors: any) =>
   StyleSheet.create({
     safeArea: {
       flex: 1,
-    },
-    scrollView: {
-      flex: 1,
-    },
-    scrollContent: {
-      paddingBottom: 40,
     },
     centerContainer: {
       flex: 1,
@@ -905,85 +1016,133 @@ const createStyles = (colors: any) =>
       alignItems: 'center',
     },
 
-    // ========== HERO SECTION ==========
-    heroSection: {
-      height: 280,
-      position: 'relative',
-      justifyContent: 'flex-end',
+    // ========== IMMERSIVE HERO ==========
+    fullScreenPhoto: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      width: SCREEN_WIDTH,
+      height: SCREEN_HEIGHT,
     },
-    heroImage: {
-      ...StyleSheet.absoluteFillObject,
-      width: '100%',
-      height: '100%',
-    },
-    heroGradient: {
-      ...StyleSheet.absoluteFillObject,
+    fallbackInitialsContainer: {
+      flex: 1,
       justifyContent: 'center',
       alignItems: 'center',
     },
-    heroInitials: {
-      fontSize: 72,
+    fallbackInitialsText: {
+      fontSize: 80,
       fontWeight: '900',
-      opacity: 0.5,
+      color: 'rgba(255,255,255,0.25)',
+      letterSpacing: 4,
     },
-    heroOverlay: {
-      ...StyleSheet.absoluteFillObject,
-      opacity: 0.6,
-    },
-    heroBackBtn: {
-      position: 'absolute',
-      top: 8,
-      left: 16,
+    cameraBtn: {
+      position: 'absolute' as const,
+      top: 60,
+      right: 16,
       width: 40,
       height: 40,
       borderRadius: 20,
-      justifyContent: 'center',
-      alignItems: 'center',
-      ...Platform.select({
-        ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4 },
-        android: { elevation: 4 },
-      }),
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      justifyContent: 'center' as const,
+      alignItems: 'center' as const,
+      zIndex: 20,
     },
-    heroInfo: {
+    photoBottomGradient: {
       position: 'absolute',
-      bottom: 0,
       left: 0,
       right: 0,
-      paddingHorizontal: 20,
-      paddingBottom: 16,
+      height: 200,
     },
-    heroPlayerName: {
-      fontSize: 32,
+    photoOverlayInfo: {
+      position: 'absolute',
+      left: 20,
+      right: 20,
+      zIndex: 10,
+    },
+    overlayPlayerName: {
+      fontSize: 36,
       fontWeight: '900',
+      color: '#FFFFFF',
       letterSpacing: -0.5,
+      textShadowColor: 'rgba(0,0,0,0.6)',
+      textShadowOffset: { width: 0, height: 2 },
+      textShadowRadius: 8,
     },
-    heroTeamName: {
-      fontSize: 16,
-      fontWeight: '600',
-      marginTop: 2,
+    overlayTeamName: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: '#FFFFFF',
+      marginTop: 4,
+      textShadowColor: 'rgba(0,0,0,0.5)',
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 4,
     },
-    heroBadgesRow: {
+    overlayPillsRow: {
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 6,
       marginTop: 10,
     },
-    heroPill: {
+    overlayPill: {
       flexDirection: 'row',
       alignItems: 'center',
       paddingHorizontal: 10,
       paddingVertical: 5,
       borderRadius: 10,
+      backgroundColor: 'rgba(255,255,255,0.2)',
       gap: 4,
     },
-    heroPillText: {
+    overlayPillText: {
       fontSize: 12,
       fontWeight: '700',
+      color: '#FFFFFF',
+      textShadowColor: 'rgba(0,0,0,0.3)',
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 2,
     },
     statusDot: {
       width: 6,
       height: 6,
       borderRadius: 3,
+    },
+    contentPanel: {
+      minHeight: SCREEN_HEIGHT,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      paddingTop: 4,
+      ...Platform.select({
+        ios: { shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.15, shadowRadius: 12 },
+        android: { elevation: 8 },
+      }),
+    },
+    dragHandle: {
+      alignItems: 'center',
+      paddingVertical: 8,
+    },
+    dragHandleBar: {
+      width: 40,
+      height: 4,
+      borderRadius: 2,
+      opacity: 0.4,
+    },
+    floatingBackBtn: {
+      position: 'absolute',
+      left: 16,
+      zIndex: 100,
+    },
+    backBtnCircle: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: 'rgba(0,0,0,0.4)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      ...Platform.select({
+        ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4 },
+        android: { elevation: 4 },
+      }),
     },
 
     // ========== TAB BAR ==========

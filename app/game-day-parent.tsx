@@ -34,7 +34,7 @@ type GameEvent = {
   game_status: string | null;
   game_result: string | null;
   our_score: number | null;
-  their_score: number | null;
+  opponent_score: number | null;
   set_scores: any;
   teams: {
     name: string;
@@ -89,7 +89,7 @@ export default function GameDayParentScreen() {
         .single();
 
       if (gameError) {
-        console.error('Error fetching game:', gameError);
+        if (__DEV__) console.error('Error fetching game:', gameError);
         setLoading(false);
         return;
       }
@@ -142,7 +142,7 @@ export default function GameDayParentScreen() {
         setRsvpStatuses(rsvps || []);
       }
     } catch (err) {
-      console.error('Error fetching game day data:', err);
+      if (__DEV__) console.error('Error fetching game day data:', err);
     } finally {
       setLoading(false);
     }
@@ -229,7 +229,7 @@ export default function GameDayParentScreen() {
     }
   };
 
-  const hasLiveScore = game && (game.our_score !== null || game.their_score !== null);
+  const hasLiveScore = game && (game.our_score !== null || game.opponent_score !== null);
 
   // -----------------------------------------------
   // Render
@@ -395,7 +395,7 @@ export default function GameDayParentScreen() {
                 <Text style={s.liveTeamName}>{game.teams?.name || 'Us'}</Text>
                 <Text style={s.liveScore}>{game.our_score ?? 0}</Text>
                 <Text style={s.liveScoreSep}>-</Text>
-                <Text style={s.liveScore}>{game.their_score ?? 0}</Text>
+                <Text style={s.liveScore}>{game.opponent_score ?? 0}</Text>
                 <Text style={s.liveTeamName}>{game.opponent_name || 'Them'}</Text>
               </View>
             </View>

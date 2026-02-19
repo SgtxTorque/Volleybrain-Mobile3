@@ -103,7 +103,7 @@ export default function NotificationPreferencesScreen() {
         setPrefs({ ...DEFAULT_PREFS, ...parsed });
       }
     } catch (error) {
-      console.error('Error loading notification preferences:', error);
+      if (__DEV__) console.error('Error loading notification preferences:', error);
     } finally {
       setLoading(false);
     }
@@ -117,7 +117,7 @@ export default function NotificationPreferencesScreen() {
     try {
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     } catch (error) {
-      console.error('Error saving notification preferences to storage:', error);
+      if (__DEV__) console.error('Error saving notification preferences to storage:', error);
     }
 
     // Also save to Supabase profiles
@@ -128,7 +128,7 @@ export default function NotificationPreferencesScreen() {
           .update({ notification_preferences: updated })
           .eq('id', profile.id);
       } catch (error) {
-        console.error('Error saving notification preferences to server:', error);
+        if (__DEV__) console.error('Error saving notification preferences to server:', error);
       }
     }
   };

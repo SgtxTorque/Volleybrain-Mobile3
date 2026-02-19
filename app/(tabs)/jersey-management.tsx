@@ -96,7 +96,7 @@ export default function JerseyManagementScreen() {
         setSelectedTeam(data[0]);
       }
     } catch (err) {
-      console.error('Error fetching teams:', err);
+      if (__DEV__) console.error('Error fetching teams:', err);
     } finally {
       setLoading(false);
     }
@@ -116,7 +116,7 @@ export default function JerseyManagementScreen() {
       if (error) throw error;
       setAssignments(data || []);
     } catch (err) {
-      console.error('Error fetching assignments:', err);
+      if (__DEV__) console.error('Error fetching assignments:', err);
     }
   };
 
@@ -132,7 +132,7 @@ export default function JerseyManagementScreen() {
       if (error) throw error;
       setAlerts(data || []);
     } catch (err) {
-      console.error('Error fetching alerts:', err);
+      if (__DEV__) console.error('Error fetching alerts:', err);
     }
   };
 
@@ -180,7 +180,7 @@ export default function JerseyManagementScreen() {
       setNewNumber('');
       onRefresh();
     } catch (err: any) {
-      console.error('Error changing number:', err);
+      if (__DEV__) console.error('Error changing number:', err);
       Alert.alert('Error', err.message || 'Failed to change jersey number');
     } finally {
       setSaving(false);
@@ -200,7 +200,7 @@ export default function JerseyManagementScreen() {
       if (error) throw error;
       onRefresh();
     } catch (err) {
-      console.error('Error marking ordered:', err);
+      if (__DEV__) console.error('Error marking ordered:', err);
     }
   };
 

@@ -109,56 +109,59 @@ export default function StandingsScreen() {
         return;
       }
 
-      // Fetch game results for each team
-      const standingsData: TeamStanding[] = await Promise.all(
-        teams.map(async (team) => {
-          const { data: games } = await supabase
+      // Batch: fetch all completed game results for all teams at once
+      const teamIds = teams.map(t => t.id);
+      const { data: allGames } = teamIds.length > 0
+        ? await supabase
             .from('schedule_events')
-            .select('game_result, our_score, opponent_score')
-            .eq('team_id', team.id)
+            .select('team_id, game_result, our_score, opponent_score')
+            .in('team_id', teamIds)
             .eq('event_type', 'game')
-            .eq('game_status', 'completed');
+            .eq('game_status', 'completed')
+        : { data: [] };
 
-          let wins = 0;
-          let losses = 0;
-          let pointsFor = 0;
-          let pointsAgainst = 0;
+      // Group games by team
+      const gamesByTeam = new Map<string, any[]>();
+      for (const game of (allGames || [])) {
+        if (!gamesByTeam.has(game.team_id)) gamesByTeam.set(game.team_id, []);
+        gamesByTeam.get(game.team_id)!.push(game);
+      }
 
-          if (games) {
-            for (const game of games) {
-              const ourScore = game.our_score || 0;
-              const oppScore = game.opponent_score || 0;
-              pointsFor += ourScore;
-              pointsAgainst += oppScore;
+      const standingsData: TeamStanding[] = teams.map((team) => {
+        const games = gamesByTeam.get(team.id) || [];
+        let wins = 0;
+        let losses = 0;
+        let pointsFor = 0;
+        let pointsAgainst = 0;
 
-              if (game.game_result === 'win' || (game.game_result === null && ourScore > oppScore)) {
-                wins++;
-              } else if (game.game_result === 'loss' || (game.game_result === null && oppScore > ourScore)) {
-                losses++;
-              } else if (game.game_result === null && ourScore === oppScore && ourScore > 0) {
-                // Tie counts neither way
-              } else if (game.game_result === 'loss') {
-                losses++;
-              }
-            }
+        for (const game of games) {
+          const ourScore = game.our_score || 0;
+          const oppScore = game.opponent_score || 0;
+          pointsFor += ourScore;
+          pointsAgainst += oppScore;
+
+          if (game.game_result === 'win' || (game.game_result === null && ourScore > oppScore)) {
+            wins++;
+          } else if (game.game_result === 'loss' || (game.game_result === null && oppScore > ourScore)) {
+            losses++;
           }
+        }
 
-          const totalGames = wins + losses;
-          const winPct = totalGames > 0 ? wins / totalGames : 0;
+        const totalGames = wins + losses;
+        const winPct = totalGames > 0 ? wins / totalGames : 0;
 
-          return {
-            id: team.id,
-            name: team.name,
-            color: team.color,
-            wins,
-            losses,
-            winPct,
-            pointsFor,
-            pointsAgainst,
-            pointDiff: pointsFor - pointsAgainst,
-          };
-        })
-      );
+        return {
+          id: team.id,
+          name: team.name,
+          color: team.color,
+          wins,
+          losses,
+          winPct,
+          pointsFor,
+          pointsAgainst,
+          pointDiff: pointsFor - pointsAgainst,
+        };
+      });
 
       // Sort by wins desc, then winPct desc, then point diff desc
       standingsData.sort((a, b) => {
@@ -169,7 +172,7 @@ export default function StandingsScreen() {
 
       setStandings(standingsData);
     } catch (err) {
-      console.error('Error loading standings:', err);
+      if (__DEV__) console.error('Error loading standings:', err);
       setStandings([]);
     } finally {
       setLoading(false);
@@ -272,7 +275,7 @@ export default function StandingsScreen() {
 
       setLeaderboard(entries);
     } catch (err) {
-      console.error('Error loading leaderboard:', err);
+      if (__DEV__) console.error('Error loading leaderboard:', err);
       setLeaderboard([]);
     } finally {
       setLeaderboardLoading(false);

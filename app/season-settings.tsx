@@ -125,15 +125,27 @@ export default function SeasonSettingsScreen() {
       setAgeGroups(ageGroupData || []);
 
       const { data: teamsData } = await supabase.from('teams').select('id, name, age_group_id').eq('season_id', workingSeason.id);
-      const teamsWithCounts = await Promise.all(
-        (teamsData || []).map(async (team) => {
-          const { count } = await supabase.from('team_players').select('*', { count: 'exact', head: true }).eq('team_id', team.id);
-          return { ...team, player_count: count || 0 };
-        })
-      );
+      const teamIds = (teamsData || []).map(t => t.id);
+
+      // Batch player counts for all teams at once
+      let playerCountMap = new Map<string, number>();
+      if (teamIds.length > 0) {
+        const { data: allTeamPlayers } = await supabase
+          .from('team_players')
+          .select('team_id')
+          .in('team_id', teamIds);
+        for (const tp of (allTeamPlayers || [])) {
+          playerCountMap.set(tp.team_id, (playerCountMap.get(tp.team_id) || 0) + 1);
+        }
+      }
+
+      const teamsWithCounts = (teamsData || []).map(team => ({
+        ...team,
+        player_count: playerCountMap.get(team.id) || 0,
+      }));
       setTeams(teamsWithCounts);
     } catch (error) {
-      console.error('Error fetching season data:', error);
+      if (__DEV__) console.error('Error fetching season data:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);

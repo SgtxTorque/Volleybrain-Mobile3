@@ -8,6 +8,7 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -563,11 +564,15 @@ export default function AttendanceScreen() {
                   <View key={player.id} style={s.playerCard}>
                     {/* Player Info */}
                     <View style={s.playerInfo}>
-                      <View style={s.jerseyBadge}>
-                        <Text style={s.jerseyText}>
-                          {player.jersey_number || '--'}
-                        </Text>
-                      </View>
+                      {player.photo_url ? (
+                        <Image source={{ uri: player.photo_url }} style={s.playerPhoto} />
+                      ) : (
+                        <View style={s.jerseyBadge}>
+                          <Text style={s.jerseyText}>
+                            {player.jersey_number || '--'}
+                          </Text>
+                        </View>
+                      )}
                       <View style={{ flex: 1 }}>
                         <Text style={s.playerName}>
                           {player.first_name} {player.last_name}
@@ -895,6 +900,12 @@ const createStyles = (colors: any) =>
       flexDirection: 'row',
       alignItems: 'center',
       marginBottom: 12,
+    },
+    playerPhoto: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      marginRight: 12,
     },
     jerseyBadge: {
       width: 44,

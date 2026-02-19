@@ -58,12 +58,12 @@ export default function PlayersScreen() {
 
   const fetchData = async () => {
     if (!workingSeason) {
-      console.log('No working season');
+      if (__DEV__) console.log('No working season');
       setLoading(false);
       return;
     }
 
-    console.log('Fetching data for season:', workingSeason.id, workingSeason.name);
+    if (__DEV__) console.log('Fetching data for season:', workingSeason.id, workingSeason.name);
 
     try {
       // Fetch teams
@@ -74,7 +74,7 @@ export default function PlayersScreen() {
         .order('name');
 
       if (teamsError) {
-        console.error('Teams fetch error:', teamsError);
+        if (__DEV__) console.error('Teams fetch error:', teamsError);
       }
 
       const formattedTeams: Team[] = (teamsData || []).map(t => ({
@@ -84,7 +84,7 @@ export default function PlayersScreen() {
         age_group_name: null,
       }));
       setTeams(formattedTeams);
-      console.log('Teams loaded:', formattedTeams.length);
+      if (__DEV__) console.log('Teams loaded:', formattedTeams.length);
 
       // Fetch players - simpler query first
       const { data: playersData, error: playersError } = await supabase
@@ -94,12 +94,12 @@ export default function PlayersScreen() {
         .order('last_name');
 
       if (playersError) {
-        console.error('Players fetch error:', playersError);
+        if (__DEV__) console.error('Players fetch error:', playersError);
         setLoading(false);
         return;
       }
 
-      console.log('Players raw data:', playersData?.length);
+      if (__DEV__) console.log('Players raw data:', playersData?.length);
 
       // Fetch team_players separately
       const { data: teamPlayersData } = await supabase
@@ -143,11 +143,11 @@ export default function PlayersScreen() {
         };
       });
       
-      console.log('Formatted players:', formattedPlayers.length);
+      if (__DEV__) console.log('Formatted players:', formattedPlayers.length);
       setPlayers(formattedPlayers);
 
     } catch (error) {
-      console.error('Error fetching players:', error);
+      if (__DEV__) console.error('Error fetching players:', error);
     } finally {
       setLoading(false);
     }

@@ -124,11 +124,12 @@ export const compressImage = async (
 
 export const uploadMedia = async (
   media: MediaResult,
-  channelId: string
+  folderPath: string,
+  bucket: string = 'chat-media'
 ): Promise<string | null> => {
   try {
     const fileExt = media.type === 'image' ? 'jpg' : 'mp4';
-    const filePath = `${channelId}/${Date.now()}.${fileExt}`;
+    const filePath = `${folderPath}/${Date.now()}.${fileExt}`;
 
     // Fetch the file as a blob
     const response = await fetch(media.uri);
@@ -138,21 +139,21 @@ export const uploadMedia = async (
     const arrayBuffer = await new Response(blob).arrayBuffer();
 
     const { error } = await supabase.storage
-      .from('chat-media')
+      .from(bucket)
       .upload(filePath, arrayBuffer, {
         contentType: media.type === 'image' ? 'image/jpeg' : 'video/mp4',
         upsert: false,
       });
 
     if (error) {
-      console.error('Upload error:', error);
+      if (__DEV__) console.error('Upload error:', error);
       return null;
     }
 
-    const { data } = supabase.storage.from('chat-media').getPublicUrl(filePath);
+    const { data } = supabase.storage.from(bucket).getPublicUrl(filePath);
     return data.publicUrl;
   } catch (error) {
-    console.error('Upload error:', error);
+    if (__DEV__) console.error('Upload error:', error);
     return null;
   }
 };

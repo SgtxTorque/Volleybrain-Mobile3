@@ -90,6 +90,7 @@ export default function AppDrawer({ visible, onClose }: AppDrawerProps) {
         title: 'My Family',
         items: [
           { id: 'my-kids', label: 'My Kids', icon: 'people', route: '/my-kids' },
+          { id: 'registration-hub', label: 'Registration Hub', icon: 'clipboard', route: '/parent-registration-hub' },
           { id: 'my-teams', label: 'My Teams', icon: 'shirt', route: '/(tabs)/my-teams' },
           { id: 'parent-schedule', label: 'Schedule', icon: 'calendar', route: '/(tabs)/schedule' },
           { id: 'family-payments', label: 'Payments', icon: 'wallet', route: '/family-payments' },
@@ -115,7 +116,7 @@ export default function AppDrawer({ visible, onClose }: AppDrawerProps) {
     sections.push({
       title: 'League',
       items: [
-        { id: 'team-wall', label: 'Team Wall', icon: 'chatbubbles', route: '/team-wall' },
+        { id: 'team-wall', label: 'Team Wall', icon: 'people', route: '/(tabs)/connect' },
         { id: 'standings', label: 'Standings', icon: 'trophy', route: '/standings' },
         { id: 'achievements', label: 'Achievements', icon: 'ribbon', route: '/achievements' },
       ],

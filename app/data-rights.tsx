@@ -154,12 +154,8 @@ export default function DataRightsScreen() {
 
       setChildren(formattedChildren);
 
-      // Check if consent was already revoked
-      if (profile?.coppa_consent_given === false && profile?.coppa_consent_revoked_at) {
-        setConsentRevoked(true);
-      }
     } catch (error) {
-      console.error('Error fetching children data:', error);
+      if (__DEV__) console.error('Error fetching children data:', error);
     } finally {
       setLoading(false);
     }
@@ -187,7 +183,7 @@ export default function DataRightsScreen() {
         'Your data export request has been submitted. You will be notified when the export is ready.',
       );
     } catch (error: any) {
-      console.error('Error requesting export:', error);
+      if (__DEV__) console.error('Error requesting export:', error);
       Alert.alert('Error', error.message || 'Failed to request data export.');
     } finally {
       setExportingFor(null);
@@ -221,7 +217,7 @@ export default function DataRightsScreen() {
                 `A deletion request has been submitted for ${child.first_name}. An administrator will process this request.`,
               );
             } catch (error: any) {
-              console.error('Error requesting deletion:', error);
+              if (__DEV__) console.error('Error requesting deletion:', error);
               Alert.alert('Error', error.message || 'Failed to request deletion.');
             } finally {
               setDeletingFor(null);
@@ -234,7 +230,7 @@ export default function DataRightsScreen() {
 
   const handleRevokeConsent = () => {
     Alert.alert(
-      'Revoke COPPA Consent',
+      'Revoke Consent',
       'Revoking consent will remove your children from all active rosters and disable their player profiles. You will need to contact your organization to re-enroll.\n\nAre you sure?',
       [
         { text: 'Cancel', style: 'cancel' },
@@ -244,20 +240,20 @@ export default function DataRightsScreen() {
           onPress: async () => {
             setRevokingConsent(true);
             try {
-              const { error } = await supabase
-                .from('profiles')
-                .update({
-                  coppa_consent_given: false,
-                  coppa_consent_revoked_at: new Date().toISOString(),
-                })
-                .eq('id', user!.id);
+              // Mark all children as deletion requested
+              for (const child of children) {
+                await supabase
+                  .from('players')
+                  .update({
+                    deletion_requested: true,
+                    deletion_requested_at: new Date().toISOString(),
+                  })
+                  .eq('id', child.id);
+              }
 
-              if (error) throw error;
-
-              await refreshProfile();
               setConsentRevoked(true);
             } catch (error: any) {
-              console.error('Error revoking consent:', error);
+              if (__DEV__) console.error('Error revoking consent:', error);
               Alert.alert('Error', error.message || 'Failed to revoke consent.');
             } finally {
               setRevokingConsent(false);
@@ -303,7 +299,7 @@ export default function DataRightsScreen() {
         <View style={s.infoCard}>
           <Ionicons name="shield-checkmark" size={28} color={colors.info} />
           <Text style={s.infoText}>
-            Under COPPA, you have the right to review, modify, and request deletion of your child's personal information.
+            You have the right to review, modify, and request deletion of your child's personal information.
           </Text>
         </View>
 

@@ -10,7 +10,7 @@ import * as Notifications from 'expo-notifications';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useRef } from 'react';
-import { useColorScheme, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, useColorScheme, View } from 'react-native';
 
 function RootLayoutNav() {
   const { session, loading, profile, needsOnboarding } = useAuth();
@@ -107,10 +107,15 @@ function RootLayoutNav() {
     <NavThemeProvider value={navTheme}>
       <View style={{ flex: 1 }}>
         <AppBackground />
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }}>
-          <Stack.Screen name="(auth)" />
-          <Stack.Screen name="(tabs)" />
-        </Stack>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }}>
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="(tabs)" />
+          </Stack>
+        </KeyboardAvoidingView>
       </View>
       <StatusBar style="auto" />
     </NavThemeProvider>

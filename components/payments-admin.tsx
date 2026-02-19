@@ -218,7 +218,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
       });
 
     } catch (error) {
-      console.error('Error fetching payments:', error);
+      if (__DEV__) console.error('Error fetching payments:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -361,7 +361,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
       setFamilyGroups(families);
 
     } catch (error) {
-      console.error('Error fetching families:', error);
+      if (__DEV__) console.error('Error fetching families:', error);
       Alert.alert('Error', 'Failed to load families');
     } finally {
       setLoadingFamilies(false);
@@ -469,7 +469,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
       fetchPayments();
 
     } catch (error) {
-      console.error('Error recording payment:', error);
+      if (__DEV__) console.error('Error recording payment:', error);
       Alert.alert('Error', 'Failed to record payment');
     } finally {
       setSubmitting(false);
@@ -580,7 +580,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
               setSelectedIds(new Set());
               fetchPayments();
             } catch (error) {
-              console.error('Error approving payments:', error);
+              if (__DEV__) console.error('Error approving payments:', error);
               Alert.alert('Error', 'Failed to approve payments');
             } finally {
               setSubmitting(false);
@@ -621,7 +621,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
               setSelectedIds(new Set());
               fetchPayments();
             } catch (error) {
-              console.error('Error rejecting payments:', error);
+              if (__DEV__) console.error('Error rejecting payments:', error);
               Alert.alert('Error', 'Failed to reject payments');
             } finally {
               setSubmitting(false);
@@ -655,7 +655,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
               if (error) throw error;
               fetchPayments();
             } catch (error) {
-              console.error('Error:', error);
+              if (__DEV__) console.error('Error:', error);
               Alert.alert('Error', 'Failed to approve payment');
             }
           },
@@ -733,7 +733,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
 
       if (error) {
         // If table doesn't exist, just show a success message anyway
-        console.log('Notification insert note:', error.message);
+        if (__DEV__) console.log('Notification insert note:', error.message);
       }
 
       Alert.alert(
@@ -744,7 +744,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
 
       setShowReminderModal(false);
     } catch (error) {
-      console.error('Error sending reminders:', error);
+      if (__DEV__) console.error('Error sending reminders:', error);
       Alert.alert('Error', 'Failed to send reminders. Please try again.');
     } finally {
       setSendingReminder(false);
@@ -798,7 +798,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
         message: text,
       });
     } catch (error) {
-      console.error('Error sharing summary:', error);
+      if (__DEV__) console.error('Error sharing summary:', error);
     }
   };
 

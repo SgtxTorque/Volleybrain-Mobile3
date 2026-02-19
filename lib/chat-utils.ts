@@ -13,7 +13,6 @@ type AddParentOptions = {
   playerFirstName: string;
   teamChatId: string;
   playerChatId: string;
-  coppaConsent: boolean;
 };
 
 type AddCoachOptions = {
@@ -108,7 +107,7 @@ export const createTeamChats = async (options: CreateChatOptions): Promise<{ tea
 
 // Add parent to team chats
 export const addParentToTeamChats = async (options: AddParentOptions): Promise<boolean> => {
-  const { parentId, parentName, playerFirstName, teamChatId, playerChatId, coppaConsent } = options;
+  const { parentId, parentName, playerFirstName, teamChatId, playerChatId } = options;
 
   const { data: existingMemberships } = await supabase
     .from('channel_members')
@@ -151,23 +150,21 @@ export const addParentToTeamChats = async (options: AddParentOptions): Promise<b
 
   const existingPlayerMember = existingMemberships?.find(m => m.channel_id === playerChatId);
   
-  if (coppaConsent) {
-    if (existingPlayerMember) {
-      await supabase
-        .from('channel_members')
-        .update({ display_name: displayName })
-        .eq('user_id', parentId)
-        .eq('channel_id', playerChatId);
-    } else {
-      await supabase.from('channel_members').insert({
-        channel_id: playerChatId,
-        user_id: parentId,
-        display_name: displayName,
-        member_role: 'parent',
-        can_post: false,
-        can_moderate: false,
-      });
-    }
+  if (existingPlayerMember) {
+    await supabase
+      .from('channel_members')
+      .update({ display_name: displayName })
+      .eq('user_id', parentId)
+      .eq('channel_id', playerChatId);
+  } else {
+    await supabase.from('channel_members').insert({
+      channel_id: playerChatId,
+      user_id: parentId,
+      display_name: displayName,
+      member_role: 'parent',
+      can_post: false,
+      can_moderate: false,
+    });
   }
 
   return true;
@@ -348,7 +345,6 @@ export const syncTeamChats = async (seasonId: string, teamId: string, teamName: 
           playerFirstName: playerName,
           teamChatId: chats.teamChatId,
           playerChatId: chats.playerChatId,
-          coppaConsent: true,
         });
         added.push(`Parent: ${profile.full_name || parentName} (${playerName})`);
       } else {

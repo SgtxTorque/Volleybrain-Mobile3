@@ -3,6 +3,7 @@ import EventDetailModal from '@/components/EventDetailModal';
 import NotificationBell from '@/components/NotificationBell';
 import { useAuth } from '@/lib/auth';
 import { runScheduledChecks } from '@/lib/notifications';
+import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
@@ -121,9 +122,8 @@ export default function ScheduleScreen() {
   const [showGameTimePicker, setShowGameTimePicker] = useState(false);
 
   // Role check
-  const userRole = profile?.role as string | undefined;
-  const isAdmin = userRole === 'admin' || userRole === 'league_admin';
-  const isCoachOrAdmin = isAdmin || userRole === 'coach' || userRole === 'head_coach' || userRole === 'assistant_coach' || userRole === 'parent';
+  const { isAdmin, isCoach, isParent } = usePermissions();
+  const isCoachOrAdmin = isAdmin || isCoach || isParent;
 
   useEffect(() => {
     if (workingSeason?.id) {
@@ -138,10 +138,10 @@ export default function ScheduleScreen() {
       // Run auto-blast and RSVP reminders in background
       runScheduledChecks().then(result => {
         if (result.autoBlasts > 0 || result.rsvpReminders > 0) {
-          console.log(`Auto-notifications sent: ${result.autoBlasts} blasts, ${result.rsvpReminders} reminders`);
+          if (__DEV__) console.log(`Auto-notifications sent: ${result.autoBlasts} blasts, ${result.rsvpReminders} reminders`);
         }
       }).catch(err => {
-        console.log('Scheduled checks skipped:', err.message);
+        if (__DEV__) console.log('Scheduled checks skipped:', err.message);
       });
     }
   }, [user?.id, isCoachOrAdmin]);
@@ -195,77 +195,83 @@ export default function ScheduleScreen() {
           return aTime - bTime;
         });
 
-      console.log('[ScheduleScreen] EVENTS_SORT_SAMPLE', sortedEventsData.slice(0, 3).map((e: any) => ({
-        id: e.id,
-        title: e.title,
-        event_date: e.event_date,
-        event_time: e.event_time,
-        effectiveStart: e.effectiveStart?.toISOString(),
-      })));
       let eventsWithExtras: ScheduleEvent[] = [];
-      
+
       try {
-        eventsWithExtras = await Promise.all(
-          sortedEventsData.map(async (event: any) => {
-            // Fetch RSVPs
-            const { data: rsvps } = await supabase
-              .from('event_rsvps')
-              .select('status')
-              .eq('event_id', event.id);
+        const eventIds = sortedEventsData.map((e: any) => e.id);
+        const eventTeamIds = [...new Set(sortedEventsData.map((e: any) => e.team_id).filter(Boolean))];
+        const gameEventIds = sortedEventsData.filter((e: any) => e.event_type === 'game').map((e: any) => e.id);
 
-            const { data: teamPlayers } = await supabase
-              .from('team_players')
-              .select('id')
-              .eq('team_id', event.team_id);
+        // Batch: fetch all RSVPs for all events at once
+        const { data: allRsvps } = eventIds.length > 0
+          ? await supabase.from('event_rsvps').select('event_id, status').in('event_id', eventIds)
+          : { data: [] };
 
-            const yesCount = rsvps?.filter((r: any) => r.status === 'yes').length || 0;
-            const noCount = rsvps?.filter((r: any) => r.status === 'no').length || 0;
-            const maybeCount = rsvps?.filter((r: any) => r.status === 'maybe').length || 0;
-            const totalPlayers = teamPlayers?.length || 0;
-            const pendingCount = Math.max(0, totalPlayers - yesCount - noCount - maybeCount);
+        // Batch: fetch all team player counts at once
+        const { data: allTeamPlayers } = eventTeamIds.length > 0
+          ? await supabase.from('team_players').select('team_id').in('team_id', eventTeamIds)
+          : { data: [] };
 
-            // Fetch primary volunteers for games
-            let volunteers = undefined;
-            if (event.event_type === 'game') {
-              const { data: volunteerData } = await supabase
-                .from('event_volunteers')
-                .select(`
-                  role,
-                  position,
-                  profile:profiles(first_name, last_name)
-                `)
-                .eq('event_id', event.id)
-                .eq('position', 'primary');
-              
-              if (volunteerData && volunteerData.length > 0) {
-                const lineJudge = volunteerData.find((v: any) => v.role === 'line_judge');
-                const scorekeeper = volunteerData.find((v: any) => v.role === 'scorekeeper');
-                
-                volunteers = {
-                  line_judge: lineJudge?.profile 
-                    ? `${(lineJudge.profile as any).first_name} ${(lineJudge.profile as any).last_name?.charAt(0)}.`
-                    : null,
-                  scorekeeper: scorekeeper?.profile 
-                    ? `${(scorekeeper.profile as any).first_name} ${(scorekeeper.profile as any).last_name?.charAt(0)}.`
-                    : null,
-                };
-              }
+        // Batch: fetch all volunteers for game events at once
+        const { data: allVolunteers } = gameEventIds.length > 0
+          ? await supabase.from('event_volunteers').select('event_id, role, position, profile:profiles(first_name, last_name)').in('event_id', gameEventIds).eq('position', 'primary')
+          : { data: [] };
+
+        // Build lookup maps
+        const rsvpMap = new Map<string, any[]>();
+        for (const r of (allRsvps || [])) {
+          if (!rsvpMap.has(r.event_id)) rsvpMap.set(r.event_id, []);
+          rsvpMap.get(r.event_id)!.push(r);
+        }
+
+        const teamPlayerCountMap = new Map<string, number>();
+        for (const tp of (allTeamPlayers || [])) {
+          teamPlayerCountMap.set(tp.team_id, (teamPlayerCountMap.get(tp.team_id) || 0) + 1);
+        }
+
+        const volunteerMap = new Map<string, any[]>();
+        for (const v of (allVolunteers || [])) {
+          if (!volunteerMap.has(v.event_id)) volunteerMap.set(v.event_id, []);
+          volunteerMap.get(v.event_id)!.push(v);
+        }
+
+        eventsWithExtras = sortedEventsData.map((event: any) => {
+          const rsvps = rsvpMap.get(event.id) || [];
+          const yesCount = rsvps.filter((r: any) => r.status === 'yes').length;
+          const noCount = rsvps.filter((r: any) => r.status === 'no').length;
+          const maybeCount = rsvps.filter((r: any) => r.status === 'maybe').length;
+          const totalPlayers = teamPlayerCountMap.get(event.team_id) || 0;
+          const pendingCount = Math.max(0, totalPlayers - yesCount - noCount - maybeCount);
+
+          let volunteers = undefined;
+          if (event.event_type === 'game') {
+            const volunteerData = volunteerMap.get(event.id) || [];
+            if (volunteerData.length > 0) {
+              const lineJudge = volunteerData.find((v: any) => v.role === 'line_judge');
+              const scorekeeper = volunteerData.find((v: any) => v.role === 'scorekeeper');
+              volunteers = {
+                line_judge: lineJudge?.profile
+                  ? `${(lineJudge.profile as any).first_name} ${(lineJudge.profile as any).last_name?.charAt(0)}.`
+                  : null,
+                scorekeeper: scorekeeper?.profile
+                  ? `${(scorekeeper.profile as any).first_name} ${(scorekeeper.profile as any).last_name?.charAt(0)}.`
+                  : null,
+              };
             }
+          }
 
-            const team = teamsData?.find((t: Team) => t.id === event.team_id);
+          const team = teamsData?.find((t: Team) => t.id === event.team_id);
 
-            // Map database columns to component expected format
-            return {
-              ...event,
-              start_time: event.event_time, // Map event_time to start_time for EventCard
-              duration_minutes: (event.duration_hours || 1.5) * 60,
-              team_name: team?.name,
-              team_color: team?.color,
-              rsvp_count: { yes: yesCount, no: noCount, maybe: maybeCount, pending: pendingCount },
-              volunteers,
-            } as ScheduleEvent;
-          })
-        );
+          return {
+            ...event,
+            start_time: event.event_time,
+            duration_minutes: (event.duration_hours || 1.5) * 60,
+            team_name: team?.name,
+            team_color: team?.color,
+            rsvp_count: { yes: yesCount, no: noCount, maybe: maybeCount, pending: pendingCount },
+            volunteers,
+          } as ScheduleEvent;
+        });
       } catch (rsvpError) {
         eventsWithExtras = sortedEventsData.map((event: any) => {
           const team = teamsData?.find((t: Team) => t.id === event.team_id);
@@ -281,7 +287,7 @@ export default function ScheduleScreen() {
 
       setEvents(eventsWithExtras);
     } catch (error) {
-      console.error('Error fetching events:', error);
+      if (__DEV__) console.error('Error fetching events:', error);
       Alert.alert('Error', 'Failed to load schedule');
     }
     
@@ -402,7 +408,7 @@ export default function ScheduleScreen() {
       resetForm();
       fetchData();
     } catch (error) {
-      console.error('Error adding event:', error);
+      if (__DEV__) console.error('Error adding event:', error);
       Alert.alert('Error', 'Failed to add event');
     }
     setCreating(false);
@@ -456,13 +462,13 @@ export default function ScheduleScreen() {
         { text: 'Cancel', style: 'cancel', onPress: () => setCreating(false) },
         { text: 'Create All', onPress: async () => {
           const { error } = await supabase.from('schedule_events').insert(eventsToCreate);
-          if (error) { console.error('Bulk create error:', error); Alert.alert('Error', 'Failed to create events'); }
+          if (error) { if (__DEV__) console.error('Bulk create error:', error); Alert.alert('Error', 'Failed to create events'); }
           else { Alert.alert('Success', `Created ${eventsToCreate.length} events!`); setShowBulkModal(false); resetBulkForm(); fetchData(); }
           setCreating(false);
         }}
       ]);
     } catch (error) {
-      console.error('Bulk create error:', error);
+      if (__DEV__) console.error('Bulk create error:', error);
       Alert.alert('Error', 'Failed to create events');
       setCreating(false);
     }
@@ -487,7 +493,7 @@ export default function ScheduleScreen() {
   };
 
   const handleEventPress = (event: ScheduleEvent) => { setSelectedEvent(event); setShowEventModal(true); };
-  const handleGamePrep = (event: ScheduleEvent) => { setShowEventModal(false); Alert.alert('Coming Soon', 'Game Prep & Lineup Builder will be available in the next update!'); };
+  const handleGamePrep = (event: ScheduleEvent) => { setShowEventModal(false); router.push('/game-prep'); };
   const deleteEvent = (event: ScheduleEvent) => {
     Alert.alert('Delete Event', `Delete "${event.title}"?`, [
       { text: 'Cancel', style: 'cancel' },

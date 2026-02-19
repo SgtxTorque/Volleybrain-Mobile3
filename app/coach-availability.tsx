@@ -89,7 +89,7 @@ export default function CoachAvailabilityScreen() {
 
       setRecords((data || []) as AvailabilityRecord[]);
     } catch (error) {
-      console.error('Fetch availability error:', error);
+      if (__DEV__) console.error('Fetch availability error:', error);
     } finally {
       setLoading(false);
     }
@@ -165,7 +165,7 @@ export default function CoachAvailabilityScreen() {
       await supabase.from('coach_availability').delete().eq('id', id);
       setRecords(prev => prev.filter(r => r.id !== id));
     } catch (error) {
-      console.error('Remove error:', error);
+      if (__DEV__) console.error('Remove error:', error);
     }
   };
 

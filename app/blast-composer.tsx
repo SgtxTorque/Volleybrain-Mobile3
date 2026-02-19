@@ -226,7 +226,8 @@ export default function BlastComposerScreen() {
         const recipients = players.map((p: any) => ({
           message_id: messageId,
           recipient_type: 'parent',
-          recipient_id: p.parent_account_id || p.id,
+          player_id: p.id,
+          profile_id: p.parent_account_id || null,
           recipient_name: p.parent_name,
           recipient_email: p.parent_email,
         }));

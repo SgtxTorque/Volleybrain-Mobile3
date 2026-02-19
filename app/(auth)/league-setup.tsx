@@ -128,7 +128,7 @@ export default function LeagueSetupScreen() {
 
       setStep(2);
     } catch (error: any) {
-      console.error('Step 1 error:', error);
+      if (__DEV__) console.error('Step 1 error:', error);
       Alert.alert('Error', error.message || 'Failed to create account.');
     } finally {
       setLoading(false);
@@ -168,7 +168,7 @@ export default function LeagueSetupScreen() {
 
       setStep(3);
     } catch (error: any) {
-      console.error('Step 2 error:', error);
+      if (__DEV__) console.error('Step 2 error:', error);
       Alert.alert('Error', error.message || 'Failed to create organization.');
     } finally {
       setLoading(false);
@@ -208,7 +208,7 @@ export default function LeagueSetupScreen() {
       setSeasonSport(selectedSports[0]);
       setStep(4);
     } catch (error: any) {
-      console.error('Step 3 error:', error);
+      if (__DEV__) console.error('Step 3 error:', error);
       Alert.alert('Error', error.message || 'Failed to add sports.');
     } finally {
       setLoading(false);
@@ -250,7 +250,7 @@ export default function LeagueSetupScreen() {
         ]
       );
     } catch (error: any) {
-      console.error('Step 4 error:', error);
+      if (__DEV__) console.error('Step 4 error:', error);
       Alert.alert('Error', error.message || 'Failed to create season.');
     } finally {
       setLoading(false);

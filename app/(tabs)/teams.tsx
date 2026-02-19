@@ -197,7 +197,6 @@ const assignPlayer = async (player: Player) => {
             playerFirstName: player.first_name,
             teamChatId: chats.teamChatId,
             playerChatId: chats.playerChatId,
-            coppaConsent: true,
           });
         }
       }

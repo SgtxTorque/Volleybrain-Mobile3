@@ -249,7 +249,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
       setStats({ totalUnpaid, totalPending, totalPaid, pendingCount });
 
     } catch (error) {
-      console.error('Error fetching payments:', error);
+      if (__DEV__) console.error('Error fetching payments:', error);
       Alert.alert('Error', 'Failed to load payments');
     } finally {
       setLoading(false);
@@ -428,7 +428,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
               setSelectedFees(new Set());
               fetchPayments();
             } catch (error) {
-              console.error('Error verifying:', error);
+              if (__DEV__) console.error('Error verifying:', error);
               Alert.alert('Error', 'Failed to verify payments');
             } finally {
               setSubmitting(false);
@@ -474,7 +474,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
               setSelectedFees(new Set());
               fetchPayments();
             } catch (error) {
-              console.error('Error rejecting:', error);
+              if (__DEV__) console.error('Error rejecting:', error);
               Alert.alert('Error', 'Failed to reject payments');
             } finally {
               setSubmitting(false);
@@ -542,7 +542,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
       fetchPayments();
 
     } catch (error) {
-      console.error('Error recording:', error);
+      if (__DEV__) console.error('Error recording:', error);
       Alert.alert('Error', 'Failed to record payment');
     } finally {
       setSubmitting(false);
@@ -572,7 +572,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
               if (error) throw error;
               fetchPayments();
             } catch (error) {
-              console.error('Error:', error);
+              if (__DEV__) console.error('Error:', error);
               Alert.alert('Error', 'Failed to verify');
             }
           },

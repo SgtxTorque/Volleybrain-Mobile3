@@ -223,7 +223,7 @@ export default function MyWaiversScreen() {
 
       setChildWaivers(allChildWaivers);
     } catch (err) {
-      console.error('Error fetching waivers:', err);
+      if (__DEV__) console.error('Error fetching waivers:', err);
     } finally {
       setLoading(false);
     }

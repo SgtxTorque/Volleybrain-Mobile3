@@ -43,7 +43,7 @@ export default function WelcomeScreen() {
 
       if (error) throw error;
     } catch (error: any) {
-      console.error('Sign in error:', error);
+      if (__DEV__) console.error('Sign in error:', error);
       Alert.alert(
         'Sign In Failed',
         error.message || 'Please check your credentials and try again.'
@@ -59,7 +59,7 @@ export default function WelcomeScreen() {
       const { error } = await signInWithGoogle();
       if (error) throw error;
     } catch (error: any) {
-      console.error('Google sign in error:', error);
+      if (__DEV__) console.error('Google sign in error:', error);
       Alert.alert('Sign In Failed', error.message || 'Google sign-in failed. Please try again.');
     } finally {
       setOauthLoading(null);
@@ -72,7 +72,7 @@ export default function WelcomeScreen() {
       const { error } = await signInWithApple();
       if (error) throw error;
     } catch (error: any) {
-      console.error('Apple sign in error:', error);
+      if (__DEV__) console.error('Apple sign in error:', error);
       Alert.alert('Sign In Failed', error.message || 'Apple sign-in failed. Please try again.');
     } finally {
       setOauthLoading(null);

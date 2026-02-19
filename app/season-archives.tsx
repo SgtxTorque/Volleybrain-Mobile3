@@ -80,7 +80,7 @@ export default function SeasonArchivesScreen() {
 
       setSeasons(enriched);
     } catch (error) {
-      console.error('Error fetching archived seasons:', error);
+      if (__DEV__) console.error('Error fetching archived seasons:', error);
     } finally {
       setLoading(false);
     }
@@ -129,7 +129,7 @@ export default function SeasonArchivesScreen() {
         },
       }));
     } catch (error) {
-      console.error('Error fetching season details:', error);
+      if (__DEV__) console.error('Error fetching season details:', error);
     } finally {
       setLoadingDetail(null);
     }

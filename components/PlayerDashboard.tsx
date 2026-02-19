@@ -375,7 +375,7 @@ export default function PlayerDashboard() {
 
       await Promise.all(promises);
     } catch (err: any) {
-      console.error('PlayerDashboard loadPlayerData error:', err);
+      if (__DEV__) console.error('PlayerDashboard loadPlayerData error:', err);
       setError(err.message || 'Failed to load player data');
     }
   }, [user?.id, workingSeason?.id]);
@@ -871,7 +871,7 @@ export default function PlayerDashboard() {
         <View style={s.quickActionsGrid}>
           <TouchableOpacity
             style={s.quickActionCard}
-            onPress={() => router.push('/team-wall' as any)}
+            onPress={() => router.push('/(tabs)/connect' as any)}
             activeOpacity={0.7}
           >
             <Ionicons name="people" size={26} color={DARK.neonBlue} />

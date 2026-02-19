@@ -372,7 +372,7 @@ export default function RegistrationHubScreen() {
 
       setTeams(teamsWithCounts);
     } catch (error) {
-      console.error('Error fetching registration data:', error);
+      if (__DEV__) console.error('Error fetching registration data:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -449,7 +449,7 @@ export default function RegistrationHubScreen() {
       setDetailModalVisible(false);
       Alert.alert('Success', `Registration ${newStatus}`);
     } catch (error) {
-      console.error('Error updating registration:', error);
+      if (__DEV__) console.error('Error updating registration:', error);
       Alert.alert('Error', 'Failed to update registration');
     } finally {
       setActionLoading(false);
@@ -526,7 +526,7 @@ export default function RegistrationHubScreen() {
       setDetailModalVisible(false);
       Alert.alert('Success', 'Player assigned to team!');
     } catch (error) {
-      console.error('Error assigning to team:', error);
+      if (__DEV__) console.error('Error assigning to team:', error);
       Alert.alert('Error', 'Failed to assign player to team');
     } finally {
       setActionLoading(false);
