@@ -1,5 +1,7 @@
 import { getSportDisplay, getPositionInfo } from '@/constants/sport-display';
 import { useAuth } from '@/lib/auth';
+import { getTrackedProgress, getUnseenAchievements, markAchievementsSeen } from '@/lib/achievement-engine';
+import type { AchievementProgress, UnseenAchievement } from '@/lib/achievement-types';
 import { pickImage, takePhoto, uploadMedia } from '@/lib/media-utils';
 import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
@@ -25,7 +27,10 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AchievementCelebrationModal from './AchievementCelebrationModal';
+import RarityGlow from './RarityGlow';
 import RoleSelector from './RoleSelector';
+import SquadComms from './SquadComms';
 
 // ============================================
 // FORCED DARK PALETTE
@@ -279,6 +284,11 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
   const [newNotePrivate, setNewNotePrivate] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
+  // Achievement celebration + tracking
+  const [unseenAchievements, setUnseenAchievements] = useState<UnseenAchievement[]>([]);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [trackedProgress, setTrackedProgress] = useState<AchievementProgress[]>([]);
+
   const P = THEME_VARIANTS[themeVariant];
 
   // Load preferences from AsyncStorage on mount
@@ -518,6 +528,16 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
         );
       }
 
+      // Unseen achievements for celebration modal
+      promises.push(
+        getUnseenAchievements(playerId).then((unseen) => {
+          if (unseen.length > 0) {
+            setUnseenAchievements(unseen);
+            setShowCelebration(true);
+          }
+        })
+      );
+
       await Promise.all(promises);
     } catch (err: any) {
       if (__DEV__) console.error('PlayerDashboard loadPlayerData error:', err);
@@ -541,6 +561,13 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
     await loadPlayerData();
     setRefreshing(false);
   }, [loadPlayerData]);
+
+  // Load tracked progress after stats are available
+  useEffect(() => {
+    if (player?.id && stats) {
+      getTrackedProgress(player.id, stats as Record<string, number>).then(setTrackedProgress);
+    }
+  }, [player?.id, stats]);
 
   // -----------------------------------------------
   // COMPUTED
@@ -771,28 +798,20 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
           >
             {achievements.map((a) => {
               const badgeColor = a.achievement?.color_primary || P.gold;
+              const rarity = a.achievement?.rarity || 'common';
               const earnedDate = a.earned_at ? formatShortDate(a.earned_at.split('T')[0]) : '';
               return (
                 <View key={a.id} style={s.trophyItem}>
-                  <View
-                    style={[
-                      s.trophyCircle,
-                      {
-                        backgroundColor: badgeColor + '25',
-                        ...Platform.select({
-                          ios: {
-                            shadowColor: badgeColor,
-                            shadowOffset: { width: 0, height: 0 },
-                            shadowOpacity: 0.5,
-                            shadowRadius: 10,
-                          },
-                          android: { elevation: 6 },
-                        }),
-                      },
-                    ]}
-                  >
-                    <Text style={s.trophyEmoji}>{a.achievement?.icon || '?'}</Text>
-                  </View>
+                  <RarityGlow rarity={rarity} size={70} earned>
+                    <View
+                      style={[
+                        s.trophyCircle,
+                        { backgroundColor: badgeColor + '25' },
+                      ]}
+                    >
+                      <Text style={s.trophyEmoji}>{a.achievement?.icon || '?'}</Text>
+                    </View>
+                  </RarityGlow>
                   <Text style={[s.trophyName, { color: P.textSecondary }]} numberOfLines={2}>
                     {a.achievement?.name || 'Badge'}
                   </Text>
@@ -954,16 +973,68 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
     </View>
   );
 
+  // "Almost There" nudges for tracked achievements near completion
+  const renderTrackedNudges = () => {
+    const nearComplete = trackedProgress.filter((t) => t.pct >= 75 && t.pct < 100);
+    if (nearComplete.length === 0) return null;
+
+    return (
+      <View style={s.section}>
+        <View style={s.sectionHeaderRow}>
+          <Text style={[s.sectionHeader, { color: P.gold }]}>ALMOST THERE</Text>
+          <Ionicons name="flame" size={14} color={P.gold} />
+        </View>
+        {nearComplete.map((t) => {
+          const remaining = t.target_value - t.current_value;
+          const statLabel = t.achievement.stat_key
+            ? t.achievement.stat_key.replace('total_', '').replace(/_/g, ' ')
+            : '';
+          return (
+            <TouchableOpacity
+              key={t.achievement_id}
+              style={[s.battleCard, { backgroundColor: P.card, borderColor: P.border }]}
+              onPress={() => router.push('/achievements' as any)}
+              activeOpacity={0.7}
+            >
+              <View style={[s.battleAccent, { backgroundColor: P.gold }]} />
+              <View style={s.battleContent}>
+                <Text style={{ color: P.text, fontSize: 14, fontWeight: '700' }}>
+                  {t.achievement.icon || '\uD83C\uDFC6'} {t.achievement.name}
+                </Text>
+                <View style={[s.statBarTrack, { backgroundColor: P.cardAlt, marginTop: 6 }]}>
+                  <View
+                    style={[
+                      s.statBarFill,
+                      { width: `${Math.min(t.pct, 100)}%` as any, backgroundColor: P.gold },
+                    ]}
+                  />
+                </View>
+                <Text style={{ color: P.gold, fontSize: 11, marginTop: 4, fontWeight: '600' }}>
+                  {remaining > 0
+                    ? `${remaining} more ${statLabel} to unlock!`
+                    : 'Almost there!'}{' '}
+                  ({Math.round(t.pct)}%)
+                </Text>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    );
+  };
+
   // Section ordering
   const SECTION_ORDER: Record<LayoutPreference, string[]> = {
-    default: ['stats', 'trophies', 'battle', 'upcoming'],
-    stats_first: ['stats', 'battle', 'trophies', 'upcoming'],
-    games_first: ['battle', 'stats', 'trophies', 'upcoming'],
+    default: ['stats', 'trophies', 'tracked', 'squadcomms', 'battle', 'upcoming'],
+    stats_first: ['stats', 'battle', 'trophies', 'tracked', 'squadcomms', 'upcoming'],
+    games_first: ['battle', 'stats', 'trophies', 'tracked', 'squadcomms', 'upcoming'],
   };
 
   const sectionMap: Record<string, () => React.ReactNode> = {
     stats: renderStatHud,
     trophies: renderTrophyCase,
+    tracked: renderTrackedNudges,
+    squadcomms: () => <SquadComms teamId={team?.id} playerId={player?.id} themeColors={P} />,
     battle: renderBattleLog,
     upcoming: renderUpcomingBattles,
   };
@@ -974,6 +1045,7 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
   // RENDER
   // -----------------------------------------------
   return (
+    <>
     <ScrollView
       style={[s.container, { backgroundColor: P.bg }]}
       contentContainerStyle={s.contentContainer}
@@ -1311,6 +1383,24 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
       {/* Bottom spacing for tab bar */}
       <View style={{ height: 100, backgroundColor: P.bg }} />
     </ScrollView>
+
+    {/* Achievement Celebration Modal */}
+    {showCelebration && unseenAchievements.length > 0 && (
+      <AchievementCelebrationModal
+        unseen={unseenAchievements}
+        onDismiss={() => {
+          setShowCelebration(false);
+          if (player?.id) markAchievementsSeen(player.id);
+        }}
+        onViewAllTrophies={() => {
+          setShowCelebration(false);
+          if (player?.id) markAchievementsSeen(player.id);
+          router.push('/achievements' as any);
+        }}
+        themeColors={P}
+      />
+    )}
+    </>
   );
 }
 

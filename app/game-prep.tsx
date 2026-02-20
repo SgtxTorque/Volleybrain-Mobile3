@@ -1,6 +1,7 @@
 import EmergencyContactModal from '@/components/EmergencyContactModal';
 import GameCompletionWizard, { type GameCompletionResult } from '@/components/GameCompletionWizard';
 import VolleyballCourt, { type CourtSlot } from '@/components/VolleyballCourt';
+import { checkAndUnlockAchievements } from '@/lib/achievement-engine';
 import { useAuth } from '@/lib/auth';
 import { useSeason } from '@/lib/season';
 import { useSport } from '@/lib/sport';
@@ -659,6 +660,17 @@ export default function GamePrepScreen() {
         if (statsError) {
           if (__DEV__) console.error('Failed to save live stats:', statsError);
         }
+
+        // Fire-and-forget achievement check for participating players
+        const participatingPlayerIds = statRecords.map((r) => r.player_id);
+        if (participatingPlayerIds.length > 0 && workingSeason?.id) {
+          checkAndUnlockAchievements({
+            playerIds: participatingPlayerIds,
+            teamId: activeGame.team_id,
+            gameId: activeGame.id,
+            seasonId: workingSeason.id,
+          }).catch((err) => { if (__DEV__) console.error('Achievement check:', err); });
+        }
       }
 
       setShowWizard(false);
@@ -808,6 +820,17 @@ export default function GamePrepScreen() {
         stats_entered_at: new Date().toISOString(),
         stats_entered_by: user.id,
       }).eq('id', activeGame.id);
+
+      // Fire-and-forget achievement check for players with detailed stats
+      const detailedPlayerIds = statsArray.map((r) => r.player_id);
+      if (detailedPlayerIds.length > 0) {
+        checkAndUnlockAchievements({
+          playerIds: detailedPlayerIds,
+          teamId: activeGame.team_id,
+          gameId: activeGame.id,
+          seasonId: workingSeason!.id,
+        }).catch((err) => { if (__DEV__) console.error('Achievement check:', err); });
+      }
 
       Alert.alert('Stats Saved!', `Saved stats for ${statsArray.length} players.`, [
         { text: 'OK', onPress: () => { setMode('list'); loadGames(); } },

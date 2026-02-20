@@ -1,3 +1,6 @@
+import RarityGlow from '@/components/RarityGlow';
+import type { AchievementFull } from '@/lib/achievement-types';
+import { RARITY_CONFIG } from '@/lib/achievement-types';
 import { useAuth } from '@/lib/auth';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
@@ -39,20 +42,7 @@ const DARK = {
 // TYPES
 // =============================================================================
 
-type Achievement = {
-  id: string;
-  name: string;
-  description: string | null;
-  category: string;
-  type: string | null;
-  rarity: string;
-  icon: string | null;
-  stat_key: string | null;
-  threshold: number | null;
-  display_order: number | null;
-  is_active: boolean;
-  requires_verification?: boolean;
-};
+type Achievement = AchievementFull;
 
 type PlayerAchievement = {
   id: string;
@@ -278,22 +268,42 @@ export default function AchievementsScreen() {
     }
   };
 
-  // Auto-unlock achievements when season stats meet thresholds
+  // Auto-unlock achievements when season stats meet thresholds + update progress
   const unlockNewAchievements = async () => {
     if (!playerId || !workingSeason?.id || allAchievements.length === 0 || Object.keys(seasonStats).length === 0) return;
 
     const toUnlock: { achievement_id: string; stat_value_at_unlock: number }[] = [];
+    const progressRows: { player_id: string; achievement_id: string; current_value: number; target_value: number; last_updated_at: string }[] = [];
+    const now = new Date().toISOString();
 
     for (const ach of allAchievements) {
-      // Skip if already earned, no stat_key/threshold, or requires verification
-      if (earnedMap[ach.id]) continue;
       if (!ach.stat_key || ach.threshold == null) continue;
       if (ach.requires_verification) continue;
 
-      const currentVal = seasonStats[ach.stat_key];
-      if (currentVal != null && currentVal >= ach.threshold) {
+      const currentVal = seasonStats[ach.stat_key] ?? 0;
+
+      // Always update progress for stat-based achievements
+      progressRows.push({
+        player_id: playerId,
+        achievement_id: ach.id,
+        current_value: currentVal,
+        target_value: ach.threshold,
+        last_updated_at: now,
+      });
+
+      // Check for new unlock
+      if (earnedMap[ach.id]) continue;
+      if (currentVal >= ach.threshold) {
         toUnlock.push({ achievement_id: ach.id, stat_value_at_unlock: currentVal });
       }
+    }
+
+    // Batch upsert progress
+    if (progressRows.length > 0) {
+      await supabase
+        .from('player_achievement_progress')
+        .upsert(progressRows, { onConflict: 'player_id,achievement_id' })
+        .then(({ error }) => { if (__DEV__ && error) console.error('Progress upsert:', error); });
     }
 
     if (toUnlock.length === 0) return;
@@ -301,7 +311,7 @@ export default function AchievementsScreen() {
     const rows = toUnlock.map((u) => ({
       player_id: playerId,
       achievement_id: u.achievement_id,
-      earned_at: new Date().toISOString(),
+      earned_at: now,
       season_id: workingSeason.id,
       stat_value_at_unlock: u.stat_value_at_unlock,
     }));
@@ -463,7 +473,8 @@ export default function AchievementsScreen() {
       icon: 'star' as keyof typeof Ionicons.glyphMap,
     };
     const rarityConfig = RARITY_COLORS[item.rarity] || RARITY_COLORS.common;
-    const isLegendary = item.rarity === 'legendary';
+    const prog = getProgressForAchievement(item, earnedMap[item.id], seasonStats);
+    const isInProgress = !isEarned && prog.pct > 0;
 
     return (
       <TouchableOpacity
@@ -472,45 +483,35 @@ export default function AchievementsScreen() {
           isEarned
             ? { backgroundColor: catConfig.color + '33' }
             : { backgroundColor: DARK.cardAlt },
-          isLegendary &&
-            isEarned && {
-              ...Platform.select({
-                ios: {
-                  shadowColor: DARK.gold,
-                  shadowOffset: { width: 0, height: 0 },
-                  shadowOpacity: 0.6,
-                  shadowRadius: 12,
-                },
-                android: { elevation: 8 },
-              }),
-            },
         ]}
         activeOpacity={0.7}
         onPress={() => handleBadgePress(item)}
       >
-        {/* Icon container */}
-        <View
-          style={[
-            s.badgeIconWrap,
-            isEarned
-              ? { backgroundColor: catConfig.color + '40' }
-              : { backgroundColor: 'rgba(255,255,255,0.05)' },
-          ]}
-        >
-          <Text style={[s.badgeEmoji, !isEarned && { opacity: 0.3 }]}>
-            {item.icon || '\uD83C\uDFC6'}
-          </Text>
-          {/* Overlay: checkmark or lock */}
-          {isEarned ? (
-            <View style={s.badgeCheckOverlay}>
-              <Ionicons name="checkmark-circle" size={14} color="#10B981" />
-            </View>
-          ) : (
-            <View style={s.badgeLockOverlay}>
-              <Ionicons name="lock-closed" size={10} color={DARK.textMuted} />
-            </View>
-          )}
-        </View>
+        {/* Icon container with rarity glow */}
+        <RarityGlow rarity={item.rarity} size={52} earned={isEarned}>
+          <View
+            style={[
+              s.badgeIconWrap,
+              isEarned
+                ? { backgroundColor: catConfig.color + '40' }
+                : { backgroundColor: 'rgba(255,255,255,0.05)' },
+            ]}
+          >
+            <Text style={[s.badgeEmoji, !isEarned && { opacity: isInProgress ? 0.5 : 0.2 }]}>
+              {item.icon || '\uD83C\uDFC6'}
+            </Text>
+            {/* Overlay: checkmark or lock */}
+            {isEarned ? (
+              <View style={s.badgeCheckOverlay}>
+                <Ionicons name="checkmark-circle" size={14} color="#10B981" />
+              </View>
+            ) : (
+              <View style={s.badgeLockOverlay}>
+                <Ionicons name="lock-closed" size={10} color={DARK.textMuted} />
+              </View>
+            )}
+          </View>
+        </RarityGlow>
 
         {/* Badge name */}
         <Text
@@ -520,8 +521,14 @@ export default function AchievementsScreen() {
           {item.name}
         </Text>
 
-        {/* Rarity dot */}
-        <View style={[s.rarityDot, { backgroundColor: rarityConfig.text }]} />
+        {/* Progress bar for in-progress (not earned, some progress) */}
+        {isInProgress ? (
+          <View style={s.miniProgressBg}>
+            <View style={[s.miniProgressFill, { width: `${prog.pct}%` as any, backgroundColor: rarityConfig.text }]} />
+          </View>
+        ) : (
+          <View style={[s.rarityDot, { backgroundColor: rarityConfig.text }]} />
+        )}
 
         {/* Tracking indicator */}
         {trackedIds.has(item.id) && !isEarned && (
@@ -705,35 +712,26 @@ export default function AchievementsScreen() {
             contentContainerStyle={s.modalScrollContent}
             showsVerticalScrollIndicator={false}
           >
-            {/* Large badge icon */}
-            <View
-              style={[
-                s.modalBadgeCircle,
-                {
-                  backgroundColor: isEarned ? catConfig.color + '30' : DARK.cardAlt,
-                },
-                isEarned && {
-                  ...Platform.select({
-                    ios: {
-                      shadowColor: catConfig.color,
-                      shadowOffset: { width: 0, height: 0 },
-                      shadowOpacity: 0.6,
-                      shadowRadius: 20,
-                    },
-                    android: { elevation: 12 },
-                  }),
-                },
-              ]}
-            >
-              <Text style={[s.modalBadgeEmoji, !isEarned && { opacity: 0.35 }]}>
-                {ach.icon || '\uD83C\uDFC6'}
-              </Text>
-              {!isEarned && (
-                <View style={s.modalLockOverlay}>
-                  <Ionicons name="lock-closed" size={24} color={DARK.textMuted} />
-                </View>
-              )}
-            </View>
+            {/* Large badge icon with rarity glow */}
+            <RarityGlow rarity={ach.rarity} size={100} earned={isEarned} style={{ marginTop: 20 }}>
+              <View
+                style={[
+                  s.modalBadgeCircle,
+                  {
+                    backgroundColor: isEarned ? catConfig.color + '30' : DARK.cardAlt,
+                  },
+                ]}
+              >
+                <Text style={[s.modalBadgeEmoji, !isEarned && { opacity: 0.35 }]}>
+                  {ach.icon || '\uD83C\uDFC6'}
+                </Text>
+                {!isEarned && (
+                  <View style={s.modalLockOverlay}>
+                    <Ionicons name="lock-closed" size={24} color={DARK.textMuted} />
+                  </View>
+                )}
+              </View>
+            </RarityGlow>
 
             {/* Badge name */}
             <Text style={s.modalBadgeName}>{ach.name}</Text>
@@ -775,7 +773,7 @@ export default function AchievementsScreen() {
                   />
                 </View>
                 <Text style={s.modalHowToEarnText}>
-                  {ach.description || 'Complete the required objective'}
+                  {ach.how_to_earn || ach.description || 'Complete the required objective'}
                 </Text>
               </View>
 
@@ -1190,6 +1188,18 @@ const createStyles = () =>
       borderRadius: 3,
       marginTop: 4,
     },
+    miniProgressBg: {
+      width: '100%',
+      height: 3,
+      borderRadius: 1.5,
+      backgroundColor: 'rgba(255,255,255,0.08)',
+      marginTop: 4,
+      overflow: 'hidden',
+    },
+    miniProgressFill: {
+      height: '100%',
+      borderRadius: 1.5,
+    },
 
     // Empty states
     emptyBox: {
@@ -1250,7 +1260,6 @@ const createStyles = () =>
       borderRadius: 50,
       justifyContent: 'center',
       alignItems: 'center',
-      marginTop: 20,
       borderWidth: 2,
       borderColor: DARK.border,
       position: 'relative',
