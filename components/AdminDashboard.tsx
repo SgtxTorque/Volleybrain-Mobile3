@@ -121,6 +121,10 @@ export default function AdminDashboard() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
   const [teamCodeDescription, setTeamCodeDescription] = useState('');
+  const [teamRevenueBreakdown, setTeamRevenueBreakdown] = useState<{
+    teamId: string; teamName: string; collected: number; expected: number;
+  }[]>([]);
+  const [showTeamBreakdown, setShowTeamBreakdown] = useState(false);
 
   // ============================================
   // DATA FETCHING
@@ -403,6 +407,68 @@ export default function AdminDashboard() {
     setTeams(data || []);
   };
 
+  const fetchTeamRevenueBreakdown = async () => {
+    if (!workingSeason) return;
+    try {
+      // 1. Get teams
+      const { data: seasonTeams } = await supabase
+        .from('teams')
+        .select('id, name')
+        .eq('season_id', workingSeason.id)
+        .order('name');
+      if (!seasonTeams || seasonTeams.length === 0) { setTeamRevenueBreakdown([]); return; }
+
+      // 2. Get team_players
+      const teamIds = seasonTeams.map(t => t.id);
+      const { data: teamPlayers } = await supabase
+        .from('team_players')
+        .select('team_id, player_id')
+        .in('team_id', teamIds);
+
+      // Build team->player map
+      const teamPlayerMap = new Map<string, string[]>();
+      (teamPlayers || []).forEach(tp => {
+        const pids = teamPlayerMap.get(tp.team_id) || [];
+        pids.push(tp.player_id);
+        teamPlayerMap.set(tp.team_id, pids);
+      });
+
+      // 3. Get season fees for expected calc
+      const { data: seasonFees } = await supabase
+        .from('season_fees')
+        .select('amount')
+        .eq('season_id', workingSeason.id);
+      const feePerPlayer = (seasonFees || []).reduce((sum, f) => sum + (f.amount || 0), 0) || (workingSeason.fee_registration || 335);
+
+      // 4. Get payments (already have them from fetchStats, but fetch again for clarity)
+      const allPlayerIds = [...new Set((teamPlayers || []).map(tp => tp.player_id))];
+      let paymentsMap = new Map<string, number>();
+      if (allPlayerIds.length > 0) {
+        const { data: payments } = await supabase
+          .from('payments')
+          .select('player_id, amount, paid')
+          .in('player_id', allPlayerIds)
+          .eq('season_id', workingSeason.id)
+          .eq('paid', true);
+        (payments || []).forEach(p => {
+          paymentsMap.set(p.player_id, (paymentsMap.get(p.player_id) || 0) + (p.amount || 0));
+        });
+      }
+
+      // 5. Build breakdown
+      const breakdown = seasonTeams.map(team => {
+        const playerIds = teamPlayerMap.get(team.id) || [];
+        const expected = playerIds.length * feePerPlayer;
+        const collected = playerIds.reduce((sum, pid) => sum + (paymentsMap.get(pid) || 0), 0);
+        return { teamId: team.id, teamName: team.name, collected, expected };
+      });
+
+      setTeamRevenueBreakdown(breakdown);
+    } catch (err) {
+      if (__DEV__) console.error('Team revenue breakdown error:', err);
+    }
+  };
+
   const fetchTodaysGames = async () => {
     if (!workingSeason) { setTodaysGames([]); setTomorrowGames([]); return; }
     const now = new Date();
@@ -471,6 +537,7 @@ export default function AdminDashboard() {
       fetchStats();
       fetchTeams();
       fetchTodaysGames();
+      fetchTeamRevenueBreakdown();
     }
     fetchPendingInvites();
   }, [workingSeason]);
@@ -918,6 +985,72 @@ export default function AdminDashboard() {
           </View>
         </View>
       </TouchableOpacity>
+
+      {/* Team Revenue Breakdown */}
+      {teamRevenueBreakdown.length > 0 && (
+        <TouchableOpacity
+          onPress={() => setShowTeamBreakdown(!showTeamBreakdown)}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingVertical: 8,
+            gap: 6,
+          }}
+        >
+          <Text style={{ fontSize: 12, fontWeight: '600', color: colors.textMuted }}>
+            {showTeamBreakdown ? 'Hide' : 'Show'} Team Breakdown
+          </Text>
+          <Ionicons name={showTeamBreakdown ? 'chevron-up' : 'chevron-down'} size={14} color={colors.textMuted} />
+        </TouchableOpacity>
+      )}
+
+      {showTeamBreakdown && teamRevenueBreakdown.length > 0 && (
+        <View style={{
+          backgroundColor: colors.glassCard,
+          borderRadius: 16,
+          borderWidth: 1,
+          borderColor: colors.glassBorder,
+          overflow: 'hidden',
+          marginHorizontal: 16,
+          marginBottom: 8,
+        }}>
+          {teamRevenueBreakdown.map((team, idx) => {
+            const pct = team.expected > 0 ? Math.round((team.collected / team.expected) * 100) : 0;
+            const barColor = pct >= 80 ? colors.success : pct >= 50 ? colors.warning : colors.danger;
+            return (
+              <View key={team.teamId} style={{
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                borderBottomWidth: idx < teamRevenueBreakdown.length - 1 ? 1 : 0,
+                borderBottomColor: colors.border,
+              }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Text style={{ fontSize: 14, fontWeight: '500', color: colors.text, flex: 1 }}>{team.teamName}</Text>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: barColor }}>{pct}%</Text>
+                </View>
+                <View style={{
+                  height: 4,
+                  backgroundColor: colors.border,
+                  borderRadius: 2,
+                  marginTop: 6,
+                  overflow: 'hidden',
+                }}>
+                  <View style={{
+                    height: '100%',
+                    width: `${Math.min(pct, 100)}%`,
+                    backgroundColor: barColor,
+                    borderRadius: 2,
+                  }} />
+                </View>
+                <Text style={{ fontSize: 11, color: colors.textMuted, marginTop: 4 }}>
+                  ${team.collected.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} of ${team.expected.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+      )}
 
       {/* TODAY'S GAMES */}
       {todaysGames.length > 0 && (

@@ -27,6 +27,7 @@ type UserWithRole = {
   phone: string | null;
   avatar_url: string | null;
   pending_approval: boolean;
+  is_suspended: boolean;
   created_at: string;
   roles: {
     id: string;
@@ -69,6 +70,7 @@ export default function UsersScreen() {
           phone,
           avatar_url,
           pending_approval,
+          is_suspended,
           created_at
         `)
         .order('created_at', { ascending: false });
@@ -268,6 +270,67 @@ export default function UsersScreen() {
         },
       },
     ]);
+  };
+
+  const handleSuspendUser = (user: UserWithRole) => {
+    const isSuspended = user.is_suspended;
+    Alert.alert(
+      isSuspended ? 'Reactivate Account' : 'Suspend Account',
+      isSuspended
+        ? `Reactivate ${user.full_name}? They will regain access to the app.`
+        : `Suspend ${user.full_name}? They will lose access to the app until reactivated.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: isSuspended ? 'Reactivate' : 'Suspend',
+          style: isSuspended ? 'default' : 'destructive',
+          onPress: async () => {
+            try {
+              // Update profile
+              await supabase
+                .from('profiles')
+                .update({ is_suspended: !isSuspended })
+                .eq('id', user.id);
+
+              // Toggle role active status
+              const orgId = profile?.current_organization_id;
+              if (orgId) {
+                if (isSuspended) {
+                  // Reactivate: set roles active
+                  await supabase
+                    .from('user_roles')
+                    .update({ is_active: true, revoked_at: null, revoked_by: null })
+                    .eq('user_id', user.id)
+                    .eq('organization_id', orgId);
+                } else {
+                  // Suspend: deactivate roles
+                  await supabase
+                    .from('user_roles')
+                    .update({
+                      is_active: false,
+                      revoked_at: new Date().toISOString(),
+                      revoked_by: profile?.id,
+                    })
+                    .eq('user_id', user.id)
+                    .eq('organization_id', orgId);
+                }
+              }
+
+              Alert.alert(
+                isSuspended ? 'Reactivated' : 'Suspended',
+                `${user.full_name} has been ${isSuspended ? 'reactivated' : 'suspended'}.`
+              );
+              fetchUsers();
+              setShowUserModal(false);
+              setSelectedUser(null);
+            } catch (error) {
+              if (__DEV__) console.error('Suspend error:', error);
+              Alert.alert('Error', 'Failed to update account status');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const getRoleIcon = (role: UserRole): string => {
@@ -508,6 +571,17 @@ export default function UsersScreen() {
                       <Ionicons name={getRoleIcon(primaryRole) as any} size={14} color={getRoleColor(primaryRole)} />
                     </View>
                   )}
+                  {user.is_suspended && (
+                    <View style={{
+                      backgroundColor: '#FF3B3020',
+                      paddingHorizontal: 8,
+                      paddingVertical: 3,
+                      borderRadius: 8,
+                      marginRight: 8,
+                    }}>
+                      <Text style={{ fontSize: 10, fontWeight: '700', color: '#FF3B30' }}>SUSPENDED</Text>
+                    </View>
+                  )}
                   <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
                 </TouchableOpacity>
               );
@@ -596,6 +670,54 @@ export default function UsersScreen() {
                       })}
                     </View>
                   </>
+                )}
+
+                {/* Account Status */}
+                {selectedUser.id !== profile?.id && (
+                  <View style={{ marginTop: 16 }}>
+                    <Text style={s.modalSectionTitle}>Account Status</Text>
+                    {selectedUser.is_suspended && (
+                      <View style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        backgroundColor: '#FF3B3015',
+                        padding: 12,
+                        borderRadius: 12,
+                        gap: 8,
+                        marginBottom: 12,
+                      }}>
+                        <Ionicons name="warning" size={20} color="#FF3B30" />
+                        <Text style={{ flex: 1, fontSize: 14, color: '#FF3B30', fontWeight: '500' }}>
+                          This account is currently suspended
+                        </Text>
+                      </View>
+                    )}
+                    <TouchableOpacity
+                      onPress={() => handleSuspendUser(selectedUser)}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 8,
+                        paddingVertical: 14,
+                        borderRadius: 12,
+                        backgroundColor: selectedUser.is_suspended ? colors.success + '20' : '#FF3B3020',
+                      }}
+                    >
+                      <Ionicons
+                        name={selectedUser.is_suspended ? 'checkmark-circle' : 'ban'}
+                        size={20}
+                        color={selectedUser.is_suspended ? colors.success : '#FF3B30'}
+                      />
+                      <Text style={{
+                        fontSize: 15,
+                        fontWeight: '600',
+                        color: selectedUser.is_suspended ? colors.success : '#FF3B30',
+                      }}>
+                        {selectedUser.is_suspended ? 'Reactivate Account' : 'Suspend Account'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 )}
 
                 {/* Metadata */}

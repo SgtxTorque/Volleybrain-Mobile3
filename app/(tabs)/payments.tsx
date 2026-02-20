@@ -3,6 +3,7 @@ import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -40,6 +41,7 @@ type PaymentItem = {
 type PlayerGroup = {
   player_id: string;
   player_name: string;
+  family_id: string | null;
   season_id: string;
   season_name: string;
   sport_name: string;
@@ -52,6 +54,17 @@ type PlayerGroup = {
   unpaidCount: number;
   paidCount: number;
 };
+
+type FamilyGroup = {
+  family_id: string | null;
+  family_name: string;
+  players: PlayerGroup[];
+  totalDue: number;
+  totalPaid: number;
+  outstanding: number;
+  collectionRate: number;
+};
+type ViewMode = 'player' | 'family';
 
 type Tab = 'verification' | 'all';
 type RecordMethod = 'cash' | 'check' | 'venmo' | 'zelle' | 'cashapp' | 'other';
@@ -68,6 +81,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
   const { colors } = useTheme();
   const { user } = useAuth();
   const { workingSeason } = useSeason();
+  const router = useRouter();
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -77,6 +91,10 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
   const [expandedPlayers, setExpandedPlayers] = useState<Set<string>>(new Set());
   const [selectedFees, setSelectedFees] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('player');
+  const [familyGroups, setFamilyGroups] = useState<FamilyGroup[]>([]);
+  const [showOutstandingOnly, setShowOutstandingOnly] = useState(false);
+  const [generatingFees, setGeneratingFees] = useState(false);
 
   // Record Payment Modal
   const [showRecordModal, setShowRecordModal] = useState(false);
@@ -107,6 +125,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
           first_name,
           last_name,
           parent_email,
+          family_id,
           season_id,
           seasons (
             id,
@@ -124,6 +143,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
 
       if (!players || players.length === 0) {
         setPlayerGroups([]);
+        setFamilyGroups([]);
         setStats({ totalUnpaid: 0, totalPending: 0, totalPaid: 0, pendingCount: 0 });
         setLoading(false);
         return;
@@ -223,6 +243,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
           groups.push({
             player_id: player.id,
             player_name: `${player.first_name} ${player.last_name}`,
+            family_id: (player as any).family_id || null,
             season_id: player.season_id,
             season_name: season.name,
             sport_name: sport?.name || '',
@@ -247,6 +268,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
 
       setPlayerGroups(groups);
       setStats({ totalUnpaid, totalPending, totalPaid, pendingCount });
+      buildFamilyGroups(groups);
 
     } catch (error) {
       if (__DEV__) console.error('Error fetching payments:', error);
@@ -256,6 +278,183 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
       setRefreshing(false);
     }
   }, [workingSeason?.id]);
+
+  const buildFamilyGroups = async (groups: PlayerGroup[]) => {
+    try {
+      // Group players by family_id
+      const familyMap = new Map<string, PlayerGroup[]>();
+      const soloPlayers: PlayerGroup[] = [];
+
+      groups.forEach(group => {
+        if (group.family_id) {
+          const existing = familyMap.get(group.family_id) || [];
+          existing.push(group);
+          familyMap.set(group.family_id, existing);
+        } else {
+          soloPlayers.push(group);
+        }
+      });
+
+      // Batch query families table for names
+      const familyIds = [...familyMap.keys()];
+      let familyNamesMap = new Map<string, string>();
+      if (familyIds.length > 0) {
+        const { data: families } = await supabase
+          .from('families')
+          .select('id, name')
+          .in('id', familyIds);
+        (families || []).forEach(f => {
+          familyNamesMap.set(f.id, f.name);
+        });
+      }
+
+      const result: FamilyGroup[] = [];
+
+      // Build family groups from grouped players
+      familyMap.forEach((players, familyId) => {
+        let totalPaid = 0;
+        let outstanding = 0;
+
+        players.forEach(player => {
+          player.payments.forEach(payment => {
+            if (payment.status === 'verified') {
+              totalPaid += payment.amount;
+            } else {
+              outstanding += payment.amount;
+            }
+          });
+        });
+
+        const collectionRate = (totalPaid + outstanding) > 0
+          ? (totalPaid / (totalPaid + outstanding)) * 100
+          : 0;
+
+        result.push({
+          family_id: familyId,
+          family_name: familyNamesMap.get(familyId) || 'Unknown Family',
+          players,
+          totalDue: outstanding,
+          totalPaid,
+          outstanding,
+          collectionRate,
+        });
+      });
+
+      // Add solo players as individual family entries
+      soloPlayers.forEach(player => {
+        let totalPaid = 0;
+        let outstanding = 0;
+
+        player.payments.forEach(payment => {
+          if (payment.status === 'verified') {
+            totalPaid += payment.amount;
+          } else {
+            outstanding += payment.amount;
+          }
+        });
+
+        const collectionRate = (totalPaid + outstanding) > 0
+          ? (totalPaid / (totalPaid + outstanding)) * 100
+          : 0;
+
+        result.push({
+          family_id: null,
+          family_name: player.player_name,
+          players: [player],
+          totalDue: outstanding,
+          totalPaid,
+          outstanding,
+          collectionRate,
+        });
+      });
+
+      // Sort by outstanding desc
+      result.sort((a, b) => b.outstanding - a.outstanding);
+
+      setFamilyGroups(result);
+    } catch (error) {
+      if (__DEV__) console.error('Error building family groups:', error);
+    }
+  };
+
+  const handleGenerateMissingFees = async () => {
+    if (!workingSeason?.id) return;
+    setGeneratingFees(true);
+    try {
+      // 1. Get all players for season
+      const { data: allPlayers } = await supabase
+        .from('players')
+        .select('id')
+        .eq('season_id', workingSeason.id);
+      if (!allPlayers || allPlayers.length === 0) {
+        Alert.alert('No Players', 'No players found for this season.');
+        setGeneratingFees(false);
+        return;
+      }
+      // 2. Get existing payment player_ids
+      const { data: existingPayments } = await supabase
+        .from('payments')
+        .select('player_id')
+        .eq('season_id', workingSeason.id);
+      const paidPlayerIds = new Set((existingPayments || []).map(p => p.player_id));
+      // 3. Find missing
+      const missingPlayers = allPlayers.filter(p => !paidPlayerIds.has(p.id));
+      if (missingPlayers.length === 0) {
+        Alert.alert('All Good', 'All players already have fee records.');
+        setGeneratingFees(false);
+        return;
+      }
+      // 4. Get fee templates
+      const { data: feeTemplates } = await supabase
+        .from('season_fees')
+        .select('fee_type, fee_name, amount, due_date')
+        .eq('season_id', workingSeason.id);
+      if (!feeTemplates || feeTemplates.length === 0) {
+        Alert.alert('No Fee Templates', 'Set up season fees in Season Settings first.');
+        setGeneratingFees(false);
+        return;
+      }
+      // 5. Confirm
+      Alert.alert(
+        'Generate Missing Fees',
+        `${missingPlayers.length} player${missingPlayers.length !== 1 ? 's' : ''} missing fee records. Generate ${missingPlayers.length * feeTemplates.length} payment records?`,
+        [
+          { text: 'Cancel', style: 'cancel', onPress: () => setGeneratingFees(false) },
+          {
+            text: 'Generate',
+            onPress: async () => {
+              try {
+                const records = missingPlayers.flatMap(player =>
+                  feeTemplates.map(fee => ({
+                    season_id: workingSeason.id,
+                    player_id: player.id,
+                    fee_type: fee.fee_type,
+                    fee_name: fee.fee_name,
+                    amount: fee.amount,
+                    paid: false,
+                    due_date: fee.due_date || null,
+                    auto_generated: true,
+                    status: 'unpaid',
+                  }))
+                );
+                const { error } = await supabase.from('payments').insert(records);
+                if (error) throw error;
+                Alert.alert('Done', `${records.length} fee records created for ${missingPlayers.length} players.`);
+                fetchPayments();
+              } catch (err: any) {
+                Alert.alert('Error', err.message || 'Failed to generate fees');
+              } finally {
+                setGeneratingFees(false);
+              }
+            },
+          },
+        ]
+      );
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to check missing fees');
+      setGeneratingFees(false);
+    }
+  };
 
   useEffect(() => {
     fetchPayments();
@@ -350,7 +549,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
     const relevantPayments = activeTab === 'verification'
       ? group.payments.filter(p => p.status === 'pending')
       : group.payments.filter(p => p.status !== 'verified');
-    
+
     if (relevantPayments.length === 0) return false;
     return relevantPayments.every(p => selectedFees.has(p.id));
   };
@@ -359,7 +558,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
     const relevantPayments = activeTab === 'verification'
       ? group.payments.filter(p => p.status === 'pending')
       : group.payments.filter(p => p.status !== 'verified');
-    
+
     const selectedCount = relevantPayments.filter(p => selectedFees.has(p.id)).length;
     return selectedCount > 0 && selectedCount < relevantPayments.length;
   };
@@ -410,7 +609,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
             try {
               for (const { payment } of selected) {
                 if (payment.id.startsWith('new-')) continue; // Skip unpaid fees
-                
+
                 const { error } = await supabase
                   .from('payments')
                   .update({
@@ -641,6 +840,97 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
   const selectedTotal = getSelectedTotal();
   const selectedPendingCount = getSelectedPayments().filter(s => s.payment.status === 'pending').length;
 
+  const renderFamilyCard = (family: FamilyGroup) => {
+    const rateColor = family.collectionRate >= 80 ? '#34C759' : family.collectionRate >= 50 ? '#FF9500' : '#FF3B30';
+    return (
+      <View
+        key={family.family_id || family.family_name}
+        style={{
+          backgroundColor: colors.glassCard,
+          borderRadius: 16,
+          marginBottom: 12,
+          overflow: 'hidden',
+          borderWidth: 1,
+          borderColor: family.outstanding > 0 ? '#FF3B3040' : colors.glassBorder,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.15,
+          shadowRadius: 12,
+          elevation: 6,
+        }}
+      >
+        <View style={{ padding: 14 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>
+                {family.family_name}
+              </Text>
+              <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>
+                {family.players.length} player{family.players.length !== 1 ? 's' : ''}
+              </Text>
+            </View>
+            <View style={{ alignItems: 'flex-end' }}>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: rateColor }}>
+                {Math.round(family.collectionRate)}%
+              </Text>
+              <Text style={{ fontSize: 11, color: colors.textSecondary }}>collected</Text>
+            </View>
+          </View>
+
+          {/* Mini progress bar */}
+          <View style={{
+            height: 6,
+            backgroundColor: colors.border,
+            borderRadius: 3,
+            marginTop: 10,
+            overflow: 'hidden',
+          }}>
+            <View style={{
+              height: '100%',
+              width: `${Math.min(family.collectionRate, 100)}%`,
+              backgroundColor: rateColor,
+              borderRadius: 3,
+            }} />
+          </View>
+
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 }}>
+            <Text style={{ fontSize: 12, color: colors.textSecondary }}>
+              Paid: ${family.totalPaid}
+            </Text>
+            {family.outstanding > 0 && (
+              <Text style={{ fontSize: 12, color: '#FF3B30', fontWeight: '600' }}>
+                Outstanding: ${family.outstanding}
+              </Text>
+            )}
+          </View>
+
+          {/* Per-player breakdown */}
+          {family.players.map(player => (
+            <View key={player.player_id} style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              marginTop: 8,
+              paddingTop: 8,
+              borderTopWidth: 1,
+              borderTopColor: colors.border,
+            }}>
+              <Text style={{ fontSize: 16, marginRight: 6 }}>{player.sport_icon}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 14, color: colors.text, fontWeight: '500' }}>{player.player_name}</Text>
+                <Text style={{ fontSize: 11, color: colors.textSecondary }}>
+                  {player.paidCount} paid · {player.unpaidCount + player.pendingCount} outstanding
+                </Text>
+              </View>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: player.totalDue > 0 ? '#FF3B30' : '#34C759' }}>
+                ${player.totalDue > 0 ? player.totalDue : 'Paid'}
+              </Text>
+            </View>
+          ))}
+        </View>
+      </View>
+    );
+  };
+
   return (
     <Wrapper style={{ flex: 1, backgroundColor: 'transparent' }} {...wrapperProps}>
       {/* Header */}
@@ -649,15 +939,40 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
           padding: 16,
           borderBottomWidth: 1,
           borderBottomColor: colors.border,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
         }}>
-          <Text style={{ fontSize: 28, fontWeight: '800', color: colors.text }}>
-            Payments
-          </Text>
-          {workingSeason && (
-            <Text style={{ fontSize: 14, color: colors.textSecondary, marginTop: 2 }}>
-              {workingSeason.name}
+          <View>
+            <Text style={{ fontSize: 28, fontWeight: '800', color: colors.text }}>
+              Payments
             </Text>
-          )}
+            {workingSeason && (
+              <Text style={{ fontSize: 14, color: colors.textSecondary, marginTop: 2 }}>
+                {workingSeason.name}
+              </Text>
+            )}
+          </View>
+          <TouchableOpacity
+            onPress={handleGenerateMissingFees}
+            disabled={generatingFees}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: colors.primary + '15',
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              borderRadius: 8,
+              gap: 4,
+            }}
+          >
+            {generatingFees ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Ionicons name="add-circle-outline" size={16} color={colors.primary} />
+            )}
+            <Text style={{ fontSize: 12, fontWeight: '600', color: colors.primary }}>Generate Fees</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -779,6 +1094,60 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
         </TouchableOpacity>
       </View>
 
+      {/* View Mode & Filters */}
+      <View style={{
+        flexDirection: 'row',
+        paddingHorizontal: 16,
+        marginBottom: 8,
+        gap: 8,
+      }}>
+        <TouchableOpacity
+          onPress={() => setViewMode('player')}
+          style={{
+            paddingHorizontal: 14,
+            paddingVertical: 8,
+            borderRadius: 20,
+            backgroundColor: viewMode === 'player' ? colors.primary + '20' : colors.card,
+            borderWidth: 1,
+            borderColor: viewMode === 'player' ? colors.primary : colors.border,
+          }}
+        >
+          <Text style={{ fontSize: 13, fontWeight: '600', color: viewMode === 'player' ? colors.primary : colors.textSecondary }}>
+            By Player
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => setViewMode('family')}
+          style={{
+            paddingHorizontal: 14,
+            paddingVertical: 8,
+            borderRadius: 20,
+            backgroundColor: viewMode === 'family' ? colors.primary + '20' : colors.card,
+            borderWidth: 1,
+            borderColor: viewMode === 'family' ? colors.primary : colors.border,
+          }}
+        >
+          <Text style={{ fontSize: 13, fontWeight: '600', color: viewMode === 'family' ? colors.primary : colors.textSecondary }}>
+            By Family
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => setShowOutstandingOnly(!showOutstandingOnly)}
+          style={{
+            paddingHorizontal: 14,
+            paddingVertical: 8,
+            borderRadius: 20,
+            backgroundColor: showOutstandingOnly ? '#FF3B3020' : colors.card,
+            borderWidth: 1,
+            borderColor: showOutstandingOnly ? '#FF3B30' : colors.border,
+          }}
+        >
+          <Text style={{ fontSize: 13, fontWeight: '600', color: showOutstandingOnly ? '#FF3B30' : colors.textSecondary }}>
+            Outstanding
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Search */}
       <View style={{ paddingHorizontal: 16, marginBottom: 12 }}>
         <View style={{
@@ -815,290 +1184,318 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
         contentContainerStyle={{ padding: 16, paddingTop: 0, paddingBottom: 100 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        {filteredGroups.length === 0 ? (
-          <View style={{
-            backgroundColor: colors.glassCard,
-            borderRadius: 16,
-            padding: 32,
-            alignItems: 'center',
-            borderWidth: 1,
-            borderColor: colors.glassBorder,
-          }}>
-            <Ionicons
-              name={activeTab === 'verification' ? 'checkmark-circle' : 'receipt-outline'}
-              size={48}
-              color={activeTab === 'verification' ? '#34C759' : colors.textSecondary}
-            />
-            <Text style={{ color: colors.text, marginTop: 12, fontSize: 16, fontWeight: '600' }}>
-              {activeTab === 'verification' ? 'All Caught Up!' : 'No Payments Found'}
-            </Text>
-            <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 13, textAlign: 'center' }}>
-              {activeTab === 'verification'
-                ? 'No payments pending verification.'
-                : searchQuery
-                  ? 'Try a different search term.'
-                  : 'No payment records yet.'}
-            </Text>
-          </View>
-        ) : (
-          filteredGroups.map(group => {
-            const isExpanded = expandedPlayers.has(group.player_id);
-            const isFullySelected = isPlayerFullySelected(group);
-            const isPartiallySelected = isPlayerPartiallySelected(group);
-            
-            const relevantPayments = activeTab === 'verification'
-              ? group.payments.filter(p => p.status === 'pending')
-              : group.payments;
+        {viewMode === 'player' ? (
+          // Player view
+          filteredGroups.filter(g => !showOutstandingOnly || g.totalDue > 0).length === 0 ? (
+            <View style={{
+              backgroundColor: colors.glassCard,
+              borderRadius: 16,
+              padding: 32,
+              alignItems: 'center',
+              borderWidth: 1,
+              borderColor: colors.glassBorder,
+            }}>
+              <Ionicons
+                name={activeTab === 'verification' ? 'checkmark-circle' : 'receipt-outline'}
+                size={48}
+                color={activeTab === 'verification' ? '#34C759' : colors.textSecondary}
+              />
+              <Text style={{ color: colors.text, marginTop: 12, fontSize: 16, fontWeight: '600' }}>
+                {activeTab === 'verification' ? 'All Caught Up!' : 'No Payments Found'}
+              </Text>
+              <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 13, textAlign: 'center' }}>
+                {activeTab === 'verification'
+                  ? 'No payments pending verification.'
+                  : showOutstandingOnly
+                    ? 'No players with outstanding payments.'
+                    : searchQuery
+                      ? 'Try a different search term.'
+                      : 'No payment records yet.'}
+              </Text>
+            </View>
+          ) : (
+            filteredGroups.filter(g => !showOutstandingOnly || g.totalDue > 0).map(group => {
+              const isExpanded = expandedPlayers.has(group.player_id);
+              const isFullySelected = isPlayerFullySelected(group);
+              const isPartiallySelected = isPlayerPartiallySelected(group);
 
-            const summaryText = activeTab === 'verification'
-              ? `${group.pendingCount} pending • $${relevantPayments.reduce((s, p) => s + p.amount, 0)}`
-              : `${group.unpaidCount > 0 ? `${group.unpaidCount} due` : ''}${group.unpaidCount > 0 && group.pendingCount > 0 ? ' • ' : ''}${group.pendingCount > 0 ? `${group.pendingCount} pending` : ''}${group.paidCount > 0 ? ` • ${group.paidCount} paid` : ''}`;
+              const relevantPayments = activeTab === 'verification'
+                ? group.payments.filter(p => p.status === 'pending')
+                : group.payments;
 
-            return (
-              <View
-                key={group.player_id}
-                style={{
-                  backgroundColor: colors.glassCard,
-                  borderRadius: 16,
-                  marginBottom: 12,
-                  overflow: 'hidden',
-                  borderWidth: isFullySelected || isPartiallySelected ? 2 : 1,
-                  borderColor: isFullySelected || isPartiallySelected ? colors.primary : colors.glassBorder,
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.15,
-                  shadowRadius: 12,
-                  elevation: 6,
-                }}
-              >
-                {/* Player Header */}
-                <TouchableOpacity
-                  onPress={() => toggleExpand(group.player_id)}
+              const summaryText = activeTab === 'verification'
+                ? `${group.pendingCount} pending • $${relevantPayments.reduce((s, p) => s + p.amount, 0)}`
+                : `${group.unpaidCount > 0 ? `${group.unpaidCount} due` : ''}${group.unpaidCount > 0 && group.pendingCount > 0 ? ' • ' : ''}${group.pendingCount > 0 ? `${group.pendingCount} pending` : ''}${group.paidCount > 0 ? ` • ${group.paidCount} paid` : ''}`;
+
+              return (
+                <View
+                  key={group.player_id}
                   style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    padding: 14,
+                    backgroundColor: colors.glassCard,
+                    borderRadius: 16,
+                    marginBottom: 12,
+                    overflow: 'hidden',
+                    borderWidth: isFullySelected || isPartiallySelected ? 2 : 1,
+                    borderColor: isFullySelected || isPartiallySelected ? colors.primary : colors.glassBorder,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.15,
+                    shadowRadius: 12,
+                    elevation: 6,
                   }}
                 >
-                  {/* Checkbox */}
+                  {/* Player Header */}
                   <TouchableOpacity
-                    onPress={() => togglePlayerSelection(group)}
+                    onPress={() => toggleExpand(group.player_id)}
                     style={{
-                      width: 24,
-                      height: 24,
-                      borderRadius: 6,
-                      borderWidth: 2,
-                      borderColor: isFullySelected ? colors.primary : colors.border,
-                      backgroundColor: isFullySelected ? colors.primary : 'transparent',
-                      justifyContent: 'center',
+                      flexDirection: 'row',
                       alignItems: 'center',
-                      marginRight: 12,
+                      padding: 14,
                     }}
                   >
-                    {isFullySelected && (
-                      <Ionicons name="checkmark" size={16} color="#fff" />
-                    )}
-                    {isPartiallySelected && !isFullySelected && (
-                      <View style={{
-                        width: 10,
-                        height: 10,
-                        borderRadius: 2,
-                        backgroundColor: colors.primary,
-                      }} />
-                    )}
-                  </TouchableOpacity>
+                    {/* Checkbox */}
+                    <TouchableOpacity
+                      onPress={() => togglePlayerSelection(group)}
+                      style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: 6,
+                        borderWidth: 2,
+                        borderColor: isFullySelected ? colors.primary : colors.border,
+                        backgroundColor: isFullySelected ? colors.primary : 'transparent',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        marginRight: 12,
+                      }}
+                    >
+                      {isFullySelected && (
+                        <Ionicons name="checkmark" size={16} color="#fff" />
+                      )}
+                      {isPartiallySelected && !isFullySelected && (
+                        <View style={{
+                          width: 10,
+                          height: 10,
+                          borderRadius: 2,
+                          backgroundColor: colors.primary,
+                        }} />
+                      )}
+                    </TouchableOpacity>
 
-                  {/* Player Info */}
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>
-                      {group.player_name}
-                    </Text>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
-                      <Text style={{ fontSize: 16, marginRight: 4 }}>{group.sport_icon}</Text>
-                      <Text style={{ fontSize: 13, color: group.sport_color }}>
-                        {group.sport_name} • {group.season_name}
+                    {/* Player Info */}
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>
+                        {group.player_name}
+                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                        <Text style={{ fontSize: 16, marginRight: 4 }}>{group.sport_icon}</Text>
+                        <Text style={{ fontSize: 13, color: group.sport_color }}>
+                          {group.sport_name} • {group.season_name}
+                        </Text>
+                      </View>
+                      <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>
+                        {summaryText}
                       </Text>
                     </View>
-                    <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>
-                      {summaryText}
-                    </Text>
-                  </View>
 
-                  {/* Expand Arrow */}
-                  <Ionicons
-                    name={isExpanded ? 'chevron-up' : 'chevron-down'}
-                    size={20}
-                    color={colors.textSecondary}
-                  />
-                </TouchableOpacity>
+                    {/* Expand Arrow */}
+                    <Ionicons
+                      name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                      size={20}
+                      color={colors.textSecondary}
+                    />
+                  </TouchableOpacity>
 
-                {/* Expanded Payment Items */}
-                {isExpanded && (
-                  <View style={{
-                    borderTopWidth: 1,
-                    borderTopColor: colors.border,
-                  }}>
-                    {relevantPayments.map((payment, idx) => {
-                      const status = getStatusInfo(payment.status);
-                      const isSelected = selectedFees.has(payment.id);
-                      const showCheckbox = payment.status !== 'verified';
+                  {/* Expanded Payment Items */}
+                  {isExpanded && (
+                    <View style={{
+                      borderTopWidth: 1,
+                      borderTopColor: colors.border,
+                    }}>
+                      {relevantPayments.map((payment, idx) => {
+                        const status = getStatusInfo(payment.status);
+                        const isSelected = selectedFees.has(payment.id);
+                        const showCheckbox = payment.status !== 'verified';
 
-                      return (
-                        <View
-                          key={payment.id}
-                          style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            padding: 14,
-                            paddingLeft: 20,
-                            backgroundColor: isSelected ? colors.primary + '10' : 'transparent',
-                            borderBottomWidth: idx < relevantPayments.length - 1 ? 1 : 0,
-                            borderBottomColor: colors.border,
-                          }}
-                        >
-                          {/* Checkbox */}
-                          {showCheckbox ? (
-                            <TouchableOpacity
-                              onPress={() => toggleFeeSelection(payment.id)}
-                              style={{
+                        return (
+                          <View
+                            key={payment.id}
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              padding: 14,
+                              paddingLeft: 20,
+                              backgroundColor: isSelected ? colors.primary + '10' : 'transparent',
+                              borderBottomWidth: idx < relevantPayments.length - 1 ? 1 : 0,
+                              borderBottomColor: colors.border,
+                            }}
+                          >
+                            {/* Checkbox */}
+                            {showCheckbox ? (
+                              <TouchableOpacity
+                                onPress={() => toggleFeeSelection(payment.id)}
+                                style={{
+                                  width: 22,
+                                  height: 22,
+                                  borderRadius: 4,
+                                  borderWidth: 2,
+                                  borderColor: isSelected ? colors.primary : colors.border,
+                                  backgroundColor: isSelected ? colors.primary : 'transparent',
+                                  justifyContent: 'center',
+                                  alignItems: 'center',
+                                  marginRight: 12,
+                                }}
+                              >
+                                {isSelected && (
+                                  <Ionicons name="checkmark" size={14} color="#fff" />
+                                )}
+                              </TouchableOpacity>
+                            ) : (
+                              <View style={{
                                 width: 22,
                                 height: 22,
                                 borderRadius: 4,
-                                borderWidth: 2,
-                                borderColor: isSelected ? colors.primary : colors.border,
-                                backgroundColor: isSelected ? colors.primary : 'transparent',
+                                backgroundColor: '#34C75920',
                                 justifyContent: 'center',
                                 alignItems: 'center',
                                 marginRight: 12,
-                              }}
-                            >
-                              {isSelected && (
-                                <Ionicons name="checkmark" size={14} color="#fff" />
-                              )}
-                            </TouchableOpacity>
-                          ) : (
-                            <View style={{
-                              width: 22,
-                              height: 22,
-                              borderRadius: 4,
-                              backgroundColor: '#34C75920',
-                              justifyContent: 'center',
-                              alignItems: 'center',
-                              marginRight: 12,
-                            }}>
-                              <Ionicons name="checkmark" size={14} color="#34C759" />
-                            </View>
-                          )}
-
-                          {/* Fee Info */}
-                          <View style={{ flex: 1 }}>
-                            <Text style={{ fontSize: 15, fontWeight: '500', color: colors.text }}>
-                              {payment.fee_name}
-                            </Text>
-                            
-                            {/* Payment Method Badge (for pending) */}
-                            {payment.status === 'pending' && payment.payment_method && (
-                              <View style={{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                marginTop: 4,
                               }}>
-                                <View style={{
-                                  backgroundColor: getMethodColor(payment.payment_method) + '20',
-                                  paddingHorizontal: 8,
-                                  paddingVertical: 3,
-                                  borderRadius: 4,
-                                  flexDirection: 'row',
-                                  alignItems: 'center',
-                                }}>
-                                  <View style={{
-                                    width: 14,
-                                    height: 14,
-                                    borderRadius: 3,
-                                    backgroundColor: getMethodColor(payment.payment_method),
-                                    justifyContent: 'center',
-                                    alignItems: 'center',
-                                    marginRight: 4,
-                                  }}>
-                                    <Text style={{ fontSize: 8, fontWeight: '700', color: '#fff' }}>
-                                      {payment.payment_method === 'venmo' ? 'V' : payment.payment_method === 'cashapp' ? '$' : 'Z'}
-                                    </Text>
-                                  </View>
-                                  <Text style={{ fontSize: 11, fontWeight: '600', color: getMethodColor(payment.payment_method) }}>
-                                    {payment.payer_name || getMethodLabel(payment.payment_method)}
-                                  </Text>
-                                </View>
-                                <Text style={{ fontSize: 11, color: colors.textSecondary, marginLeft: 8 }}>
-                                  {formatTime(payment.reported_at)}
-                                </Text>
+                                <Ionicons name="checkmark" size={14} color="#34C759" />
                               </View>
                             )}
 
-                            {/* Verified info */}
-                            {payment.status === 'verified' && (
-                              <Text style={{ fontSize: 11, color: colors.textSecondary, marginTop: 2 }}>
-                                {payment.payment_method ? getMethodLabel(payment.payment_method) : 'Paid'} • {formatTime(payment.verified_at)}
+                            {/* Fee Info */}
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ fontSize: 15, fontWeight: '500', color: colors.text }}>
+                                {payment.fee_name}
                               </Text>
+
+                              {/* Payment Method Badge (for pending) */}
+                              {payment.status === 'pending' && payment.payment_method && (
+                                <View style={{
+                                  flexDirection: 'row',
+                                  alignItems: 'center',
+                                  marginTop: 4,
+                                }}>
+                                  <View style={{
+                                    backgroundColor: getMethodColor(payment.payment_method) + '20',
+                                    paddingHorizontal: 8,
+                                    paddingVertical: 3,
+                                    borderRadius: 4,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                  }}>
+                                    <View style={{
+                                      width: 14,
+                                      height: 14,
+                                      borderRadius: 3,
+                                      backgroundColor: getMethodColor(payment.payment_method),
+                                      justifyContent: 'center',
+                                      alignItems: 'center',
+                                      marginRight: 4,
+                                    }}>
+                                      <Text style={{ fontSize: 8, fontWeight: '700', color: '#fff' }}>
+                                        {payment.payment_method === 'venmo' ? 'V' : payment.payment_method === 'cashapp' ? '$' : 'Z'}
+                                      </Text>
+                                    </View>
+                                    <Text style={{ fontSize: 11, fontWeight: '600', color: getMethodColor(payment.payment_method) }}>
+                                      {payment.payer_name || getMethodLabel(payment.payment_method)}
+                                    </Text>
+                                  </View>
+                                  <Text style={{ fontSize: 11, color: colors.textSecondary, marginLeft: 8 }}>
+                                    {formatTime(payment.reported_at)}
+                                  </Text>
+                                </View>
+                              )}
+
+                              {/* Verified info */}
+                              {payment.status === 'verified' && (
+                                <Text style={{ fontSize: 11, color: colors.textSecondary, marginTop: 2 }}>
+                                  {payment.payment_method ? getMethodLabel(payment.payment_method) : 'Paid'} • {formatTime(payment.verified_at)}
+                                </Text>
+                              )}
+                            </View>
+
+                            {/* Amount & Status */}
+                            <View style={{ alignItems: 'flex-end' }}>
+                              <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>
+                                ${payment.amount}
+                              </Text>
+                              <View style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                backgroundColor: status.color + '20',
+                                paddingHorizontal: 6,
+                                paddingVertical: 2,
+                                borderRadius: 4,
+                                marginTop: 4,
+                              }}>
+                                <Ionicons name={status.icon as any} size={10} color={status.color} />
+                                <Text style={{ fontSize: 10, fontWeight: '600', color: status.color, marginLeft: 3 }}>
+                                  {status.label}
+                                </Text>
+                              </View>
+                            </View>
+
+                            {/* Quick Actions */}
+                            {payment.status === 'pending' && (
+                              <TouchableOpacity
+                                onPress={() => handleVerifySingle(payment)}
+                                style={{
+                                  marginLeft: 10,
+                                  padding: 6,
+                                  backgroundColor: '#34C75920',
+                                  borderRadius: 6,
+                                }}
+                              >
+                                <Ionicons name="checkmark" size={18} color="#34C759" />
+                              </TouchableOpacity>
+                            )}
+
+                            {payment.status === 'unpaid' && activeTab === 'all' && (
+                              <TouchableOpacity
+                                onPress={() => openRecordModal(payment, group)}
+                                style={{
+                                  marginLeft: 10,
+                                  padding: 6,
+                                  backgroundColor: colors.primary + '20',
+                                  borderRadius: 6,
+                                }}
+                              >
+                                <Ionicons name="add" size={18} color={colors.primary} />
+                              </TouchableOpacity>
                             )}
                           </View>
-
-                          {/* Amount & Status */}
-                          <View style={{ alignItems: 'flex-end' }}>
-                            <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>
-                              ${payment.amount}
-                            </Text>
-                            <View style={{
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                              backgroundColor: status.color + '20',
-                              paddingHorizontal: 6,
-                              paddingVertical: 2,
-                              borderRadius: 4,
-                              marginTop: 4,
-                            }}>
-                              <Ionicons name={status.icon as any} size={10} color={status.color} />
-                              <Text style={{ fontSize: 10, fontWeight: '600', color: status.color, marginLeft: 3 }}>
-                                {status.label}
-                              </Text>
-                            </View>
-                          </View>
-
-                          {/* Quick Actions */}
-                          {payment.status === 'pending' && (
-                            <TouchableOpacity
-                              onPress={() => handleVerifySingle(payment)}
-                              style={{
-                                marginLeft: 10,
-                                padding: 6,
-                                backgroundColor: '#34C75920',
-                                borderRadius: 6,
-                              }}
-                            >
-                              <Ionicons name="checkmark" size={18} color="#34C759" />
-                            </TouchableOpacity>
-                          )}
-                          
-                          {payment.status === 'unpaid' && activeTab === 'all' && (
-                            <TouchableOpacity
-                              onPress={() => openRecordModal(payment, group)}
-                              style={{
-                                marginLeft: 10,
-                                padding: 6,
-                                backgroundColor: colors.primary + '20',
-                                borderRadius: 6,
-                              }}
-                            >
-                              <Ionicons name="add" size={18} color={colors.primary} />
-                            </TouchableOpacity>
-                          )}
-                        </View>
-                      );
-                    })}
-                  </View>
-                )}
+                        );
+                      })}
+                    </View>
+                  )}
+                </View>
+              );
+            })
+          )
+        ) : (
+          // Family view
+          (() => {
+            const filtered = familyGroups
+              .filter(f => !showOutstandingOnly || f.outstanding > 0)
+              .filter(f => !searchQuery.trim() || f.family_name.toLowerCase().includes(searchQuery.toLowerCase()) || f.players.some(p => p.player_name.toLowerCase().includes(searchQuery.toLowerCase())));
+            return filtered.length === 0 ? (
+              <View style={{
+                backgroundColor: colors.glassCard,
+                borderRadius: 16,
+                padding: 32,
+                alignItems: 'center',
+                borderWidth: 1,
+                borderColor: colors.glassBorder,
+              }}>
+                <Ionicons name="people-outline" size={48} color={colors.textSecondary} />
+                <Text style={{ color: colors.text, marginTop: 12, fontSize: 16, fontWeight: '600' }}>No Families Found</Text>
+                <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 13, textAlign: 'center' }}>
+                  {showOutstandingOnly ? 'No families with outstanding payments.' : 'No family payment data.'}
+                </Text>
               </View>
-            );
-          })
+            ) : filtered.map(renderFamilyCard);
+          })()
         )}
       </ScrollView>
 

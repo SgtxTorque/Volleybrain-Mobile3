@@ -243,7 +243,10 @@ export default function BlastComposerScreen() {
       Alert.alert(
         'Announcement Sent!',
         `"${title.trim()}" was sent to ${players?.length || 0} recipient${(players?.length || 0) !== 1 ? 's' : ''}.`,
-        [{ text: 'OK', onPress: () => router.back() }]
+        [
+          { text: 'View Sent', onPress: () => router.push('/blast-history' as any) },
+          { text: 'Done', onPress: () => router.back() },
+        ]
       );
     } catch (error: any) {
       Alert.alert('Send Failed', error.message || 'Something went wrong. Please try again.');

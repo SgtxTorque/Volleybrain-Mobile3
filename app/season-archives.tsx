@@ -23,6 +23,8 @@ type ArchivedSeason = {
   organization_id: string | null;
   team_count: number;
   player_count: number;
+  revenue_collected: number;
+  revenue_total: number;
 };
 
 type SeasonDetail = {
@@ -53,30 +55,56 @@ export default function SeasonArchivesScreen() {
         .order('end_date', { ascending: false });
 
       if (error) throw error;
+      if (!data || data.length === 0) { setSeasons([]); setLoading(false); return; }
 
-      const enriched: ArchivedSeason[] = [];
-      for (const season of data || []) {
-        const { data: teamIds } = await supabase
-          .from('teams')
-          .select('id')
-          .eq('season_id', season.id);
+      const seasonIds = data.map(s => s.id);
 
-        const ids = teamIds?.map((t: any) => t.id) || [];
-        let playerCount = 0;
-        if (ids.length > 0) {
-          const { count } = await supabase
-            .from('team_players')
-            .select('id', { count: 'exact', head: true })
-            .in('team_id', ids);
-          playerCount = count || 0;
-        }
+      // Batch: get all teams for these seasons
+      const { data: allTeams } = await supabase
+        .from('teams')
+        .select('id, season_id')
+        .in('season_id', seasonIds);
 
-        enriched.push({
-          ...season,
-          team_count: ids.length,
-          player_count: playerCount,
+      const teamsBySeasonMap = new Map<string, string[]>();
+      (allTeams || []).forEach(t => {
+        const ids = teamsBySeasonMap.get(t.season_id) || [];
+        ids.push(t.id);
+        teamsBySeasonMap.set(t.season_id, ids);
+      });
+
+      // Batch: get all team_players counts
+      const allTeamIds = (allTeams || []).map(t => t.id);
+      let playerCountByTeam = new Map<string, number>();
+      if (allTeamIds.length > 0) {
+        const { data: teamPlayers } = await supabase
+          .from('team_players')
+          .select('team_id')
+          .in('team_id', allTeamIds);
+        (teamPlayers || []).forEach(tp => {
+          playerCountByTeam.set(tp.team_id, (playerCountByTeam.get(tp.team_id) || 0) + 1);
         });
       }
+
+      // Batch: revenue data
+      const { data: allPayments } = await supabase
+        .from('payments')
+        .select('season_id, amount, paid')
+        .in('season_id', seasonIds);
+
+      const enriched: ArchivedSeason[] = data.map(season => {
+        const teamIds = teamsBySeasonMap.get(season.id) || [];
+        const playerCount = teamIds.reduce((sum, tid) => sum + (playerCountByTeam.get(tid) || 0), 0);
+        const seasonPayments = (allPayments || []).filter(p => p.season_id === season.id);
+        const collected = seasonPayments.filter(p => p.paid).reduce((sum, p) => sum + (p.amount || 0), 0);
+        const total = seasonPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+        return {
+          ...season,
+          team_count: teamIds.length,
+          player_count: playerCount,
+          revenue_collected: collected,
+          revenue_total: total,
+        };
+      });
 
       setSeasons(enriched);
     } catch (error) {
@@ -87,13 +115,8 @@ export default function SeasonArchivesScreen() {
   };
 
   const toggleExpand = async (seasonId: string) => {
-    if (expandedId === seasonId) {
-      setExpandedId(null);
-      return;
-    }
-
+    if (expandedId === seasonId) { setExpandedId(null); return; }
     setExpandedId(seasonId);
-
     if (details[seasonId]) return;
 
     setLoadingDetail(seasonId);
@@ -104,14 +127,23 @@ export default function SeasonArchivesScreen() {
         .eq('season_id', seasonId)
         .order('name');
 
-      const teamsWithCounts: { id: string; name: string; player_count: number }[] = [];
-      for (const team of teams || []) {
-        const { count } = await supabase
+      // Batch: team player counts
+      const teamIds = (teams || []).map(t => t.id);
+      let playerCountMap = new Map<string, number>();
+      if (teamIds.length > 0) {
+        const { data: teamPlayers } = await supabase
           .from('team_players')
-          .select('id', { count: 'exact', head: true })
-          .eq('team_id', team.id);
-        teamsWithCounts.push({ ...team, player_count: count || 0 });
+          .select('team_id')
+          .in('team_id', teamIds);
+        (teamPlayers || []).forEach(tp => {
+          playerCountMap.set(tp.team_id, (playerCountMap.get(tp.team_id) || 0) + 1);
+        });
       }
+
+      const teamsWithCounts = (teams || []).map(team => ({
+        ...team,
+        player_count: playerCountMap.get(team.id) || 0,
+      }));
 
       const { data: games } = await supabase
         .from('schedule_events')
@@ -123,10 +155,7 @@ export default function SeasonArchivesScreen() {
 
       setDetails(prev => ({
         ...prev,
-        [seasonId]: {
-          teams: teamsWithCounts,
-          games: games || [],
-        },
+        [seasonId]: { teams: teamsWithCounts, games: games || [] },
       }));
     } catch (error) {
       if (__DEV__) console.error('Error fetching season details:', error);
@@ -216,6 +245,11 @@ export default function SeasonArchivesScreen() {
                       <Text style={s.statLabel}>{season.sport}</Text>
                     </View>
                   )}
+                  <View style={s.statItem}>
+                    <Ionicons name="wallet-outline" size={16} color={colors.primary} />
+                    <Text style={s.statValue}>${season.revenue_collected}</Text>
+                    <Text style={s.statLabel}>of ${season.revenue_total}</Text>
+                  </View>
                 </View>
 
                 <Ionicons

@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
+  Platform,
   RefreshControl,
   ScrollView,
   Text,
@@ -108,6 +109,7 @@ type Registration = {
   }[];
   sport?: Sport;
   season?: Season;
+  custom_answers?: Record<string, any>;
 };
 
 type RegistrationStats = {
@@ -169,6 +171,13 @@ export default function RegistrationHubScreen() {
   const [actionLoading, setActionLoading] = useState(false);
   const [requiredWaiverIds, setRequiredWaiverIds] = useState<string[]>([]);
   const [waiverSignatureMap, setWaiverSignatureMap] = useState<Map<string, Set<string>>>(new Map());
+
+  // Bulk selection state
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkSubmitting, setBulkSubmitting] = useState(false);
+  const [showDenyModal, setShowDenyModal] = useState(false);
+  const [denyReason, setDenyReason] = useState('');
 
   // =====================================================
   // DATA FETCHING - Now queries ALL open seasons
@@ -501,15 +510,35 @@ export default function RegistrationHubScreen() {
 
     if (existing && existing.length > 0) return;
 
-    const payments = [
-      { season_id: seasonId, player_id: playerId, fee_type: 'registration', amount: 150, paid: false, due_now: true },
-      { season_id: seasonId, player_id: playerId, fee_type: 'uniform', amount: 35, paid: false, due_now: true },
-      { season_id: seasonId, player_id: playerId, fee_type: 'monthly_1', amount: 50, paid: false, due_now: false },
-      { season_id: seasonId, player_id: playerId, fee_type: 'monthly_2', amount: 50, paid: false, due_now: false },
-      { season_id: seasonId, player_id: playerId, fee_type: 'monthly_3', amount: 50, paid: false, due_now: false },
-    ];
+    // Try season_fees templates first
+    const { data: feeTemplates } = await supabase
+      .from('season_fees')
+      .select('fee_type, fee_name, amount, due_date')
+      .eq('season_id', seasonId);
 
-    await supabase.from('payments').insert(payments);
+    if (feeTemplates && feeTemplates.length > 0) {
+      const records = feeTemplates.map(fee => ({
+        season_id: seasonId,
+        player_id: playerId,
+        fee_type: fee.fee_type,
+        fee_name: fee.fee_name,
+        amount: fee.amount,
+        paid: false,
+        due_date: fee.due_date || null,
+        auto_generated: true,
+      }));
+      await supabase.from('payments').insert(records);
+    } else {
+      // Fallback: hardcoded amounts
+      const payments = [
+        { season_id: seasonId, player_id: playerId, fee_type: 'registration', fee_name: 'Registration Fee', amount: 150, paid: false, auto_generated: true },
+        { season_id: seasonId, player_id: playerId, fee_type: 'uniform', fee_name: 'Uniform Fee', amount: 35, paid: false, auto_generated: true },
+        { season_id: seasonId, player_id: playerId, fee_type: 'monthly_1', fee_name: 'Monthly Fee 1', amount: 50, paid: false, auto_generated: true },
+        { season_id: seasonId, player_id: playerId, fee_type: 'monthly_2', fee_name: 'Monthly Fee 2', amount: 50, paid: false, auto_generated: true },
+        { season_id: seasonId, player_id: playerId, fee_type: 'monthly_3', fee_name: 'Monthly Fee 3', amount: 50, paid: false, auto_generated: true },
+      ];
+      await supabase.from('payments').insert(payments);
+    }
   };
 
   const assignToTeam = async (registrationId: string, playerId: string, teamId: string) => {
@@ -617,6 +646,116 @@ export default function RegistrationHubScreen() {
   };
 
   // =====================================================
+  // BULK ACTIONS
+  // =====================================================
+  const toggleSelectionMode = () => {
+    if (selectionMode) {
+      setSelectedIds(new Set());
+    }
+    setSelectionMode(!selectionMode);
+  };
+
+  const toggleSelectId = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAllVisible = () => {
+    const ids = filteredRegistrations.map(r => r.id);
+    setSelectedIds(new Set(ids));
+  };
+
+  const deselectAll = () => setSelectedIds(new Set());
+
+  const handleBulkApprove = async () => {
+    const count = selectedIds.size;
+    Alert.alert('Bulk Approve', `Approve ${count} registration${count > 1 ? 's' : ''}?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Approve All',
+        onPress: async () => {
+          setBulkSubmitting(true);
+          let success = 0;
+          for (const id of selectedIds) {
+            try {
+              const reg = registrations.find(r => r.id === id);
+              if (!reg) continue;
+              await updateRegistrationStatus(id, 'approved');
+              success++;
+            } catch { /* continue */ }
+          }
+          await fetchData();
+          setSelectionMode(false);
+          setSelectedIds(new Set());
+          setBulkSubmitting(false);
+          Alert.alert('Done', `${success} registration${success > 1 ? 's' : ''} approved.`);
+        },
+      },
+    ]);
+  };
+
+  const executeBulkDeny = async (reason: string) => {
+    setBulkSubmitting(true);
+    let success = 0;
+    for (const id of selectedIds) {
+      try {
+        await updateRegistrationStatus(id, 'denied', { denial_reason: reason });
+        success++;
+      } catch { /* continue */ }
+    }
+    await fetchData();
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+    setBulkSubmitting(false);
+    setShowDenyModal(false);
+    setDenyReason('');
+    Alert.alert('Done', `${success} registration${success > 1 ? 's' : ''} denied.`);
+  };
+
+  const handleBulkDeny = () => {
+    const count = selectedIds.size;
+    if (Platform.OS === 'ios') {
+      Alert.prompt('Deny Reason', `Deny ${count} registration${count > 1 ? 's' : ''}. Provide a reason:`, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Deny All', style: 'destructive', onPress: (reason: string | undefined) => executeBulkDeny(reason || '') },
+      ], 'plain-text');
+    } else {
+      setShowDenyModal(true);
+    }
+  };
+
+  const handleBulkWaitlist = async () => {
+    const count = selectedIds.size;
+    Alert.alert('Bulk Waitlist', `Waitlist ${count} registration${count > 1 ? 's' : ''}?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Waitlist All',
+        onPress: async () => {
+          setBulkSubmitting(true);
+          const maxPos = Math.max(0, ...registrations.filter(r => r.status === 'waitlisted').map(r => r.waitlist_position || 0));
+          let success = 0;
+          let idx = 0;
+          for (const id of selectedIds) {
+            try {
+              await updateRegistrationStatus(id, 'waitlisted', { waitlist_position: maxPos + idx + 1 });
+              success++;
+              idx++;
+            } catch { /* continue */ }
+          }
+          await fetchData();
+          setSelectionMode(false);
+          setSelectedIds(new Set());
+          setBulkSubmitting(false);
+          Alert.alert('Done', `${success} registration${success > 1 ? 's' : ''} waitlisted.`);
+        },
+      },
+    ]);
+  };
+
+  // =====================================================
   // FILTERING
   // =====================================================
   const filteredRegistrations = registrations.filter(reg => {
@@ -715,6 +854,8 @@ export default function RegistrationHubScreen() {
       : 0;
     const hasMedical = hasMedicalInfo(player);
 
+    const isSelected = selectedIds.has(registration.id);
+
     return (
       <TouchableOpacity
         key={registration.id}
@@ -725,19 +866,31 @@ export default function RegistrationHubScreen() {
           marginBottom: 12,
           borderLeftWidth: 4,
           borderLeftColor: config.color,
-          borderWidth: 1,
-          borderColor: colors.glassBorder,
+          borderWidth: isSelected ? 2 : 1,
+          borderColor: isSelected ? colors.primary : colors.glassBorder,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 4 },
           shadowOpacity: 0.15,
           shadowRadius: 12,
           elevation: 6,
+          flexDirection: selectionMode ? 'row' : 'column',
+          alignItems: selectionMode ? 'flex-start' : 'stretch',
         }}
         onPress={() => {
-          setSelectedRegistration(registration);
-          setDetailModalVisible(true);
+          if (selectionMode) {
+            toggleSelectId(registration.id);
+          } else {
+            setSelectedRegistration(registration);
+            setDetailModalVisible(true);
+          }
         }}
       >
+        {selectionMode && (
+          <View style={{ marginRight: 12, marginTop: 4 }}>
+            <Ionicons name={isSelected ? 'checkbox' : 'square-outline'} size={24} color={isSelected ? colors.primary : colors.textMuted} />
+          </View>
+        )}
+        <View style={{ flex: 1 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <View style={{ flex: 1 }}>
             {/* Sport Icon + Player Name */}
@@ -860,6 +1013,7 @@ export default function RegistrationHubScreen() {
               </View>
             );
           })()}
+        </View>
         </View>
       </TouchableOpacity>
     );
@@ -1066,6 +1220,22 @@ export default function RegistrationHubScreen() {
               </View>
             )}
 
+            {/* Custom Registration Answers */}
+            {selectedRegistration?.custom_answers && Object.keys(selectedRegistration.custom_answers).length > 0 && (
+              <View style={{ backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.glassBorder }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                  <Ionicons name="document-text" size={18} color={colors.primary} />
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: colors.primary, marginLeft: 8 }}>REGISTRATION ANSWERS</Text>
+                </View>
+                {Object.entries(selectedRegistration.custom_answers).map(([question, answer]) => (
+                  <View key={question} style={{ marginBottom: 10 }}>
+                    <Text style={{ fontSize: 12, color: colors.textSecondary, marginBottom: 2 }}>{question}</Text>
+                    <Text style={{ fontSize: 14, color: colors.text }}>{String(answer || '—')}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
             {/* Team Assignment */}
             {team && (
               <View style={{ backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.glassBorder }}>
@@ -1159,8 +1329,10 @@ export default function RegistrationHubScreen() {
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text }}>Registration Hub</Text>
-        <TouchableOpacity onPress={() => router.push('/season-settings' as any)}>
-          <Ionicons name="settings-outline" size={24} color={colors.primary} />
+        <TouchableOpacity onPress={toggleSelectionMode}>
+          <Text style={{ fontSize: 15, fontWeight: '600', color: colors.primary }}>
+            {selectionMode ? 'Done' : 'Select'}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -1240,6 +1412,23 @@ export default function RegistrationHubScreen() {
           </>
         )}
 
+        {/* Selection mode controls */}
+        {selectionMode && (
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, paddingHorizontal: 4 }}>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>
+              {selectedIds.size} selected
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <TouchableOpacity onPress={selectAllVisible}>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: colors.primary }}>Select All</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={deselectAll}>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textSecondary }}>Deselect All</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
         {/* Search */}
         <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, borderRadius: 12, paddingHorizontal: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.border }}>
           <Ionicons name="search" size={20} color={colors.textSecondary} />
@@ -1285,6 +1474,69 @@ export default function RegistrationHubScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* Bulk Action Bar */}
+      {selectionMode && selectedIds.size > 0 && (
+        <View style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0,
+          backgroundColor: colors.glassCard, borderTopWidth: 1, borderTopColor: colors.glassBorder,
+          padding: 16, paddingBottom: 32,
+          shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 10,
+        }}>
+          {bulkSubmitting ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TouchableOpacity
+                style={{ flex: 1, backgroundColor: '#34C759', borderRadius: 12, paddingVertical: 14, alignItems: 'center' }}
+                onPress={handleBulkApprove}
+              >
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Approve ({selectedIds.size})</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{ flex: 1, backgroundColor: '#FF9500', borderRadius: 12, paddingVertical: 14, alignItems: 'center' }}
+                onPress={handleBulkWaitlist}
+              >
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Waitlist ({selectedIds.size})</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{ flex: 1, backgroundColor: '#FF3B30', borderRadius: 12, paddingVertical: 14, alignItems: 'center' }}
+                onPress={handleBulkDeny}
+              >
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Deny ({selectedIds.size})</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      )}
+
+      {/* Android Deny Reason Modal */}
+      <Modal visible={showDenyModal} transparent animationType="fade" onRequestClose={() => setShowDenyModal(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 32 }}>
+          <View style={{ backgroundColor: colors.card, borderRadius: 16, padding: 24 }}>
+            <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text, marginBottom: 8 }}>Deny Reason</Text>
+            <Text style={{ fontSize: 14, color: colors.textSecondary, marginBottom: 16 }}>
+              Deny {selectedIds.size} registration{selectedIds.size > 1 ? 's' : ''}. Provide a reason:
+            </Text>
+            <TextInput
+              style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 12, color: colors.text, fontSize: 15, minHeight: 80, textAlignVertical: 'top' }}
+              placeholder="Reason for denial..."
+              placeholderTextColor={colors.textMuted}
+              value={denyReason}
+              onChangeText={setDenyReason}
+              multiline
+            />
+            <View style={{ flexDirection: 'row', gap: 12, marginTop: 16 }}>
+              <TouchableOpacity style={{ flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 10, backgroundColor: colors.background }} onPress={() => { setShowDenyModal(false); setDenyReason(''); }}>
+                <Text style={{ fontWeight: '600', color: colors.text }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={{ flex: 1, paddingVertical: 12, alignItems: 'center', borderRadius: 10, backgroundColor: '#FF3B30' }} onPress={() => executeBulkDeny(denyReason)}>
+                <Text style={{ fontWeight: '600', color: '#fff' }}>Deny All</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Detail Modal */}
       {renderDetailModal()}

@@ -31,6 +31,7 @@ type MenuItem = {
   iconColor?: string;
   iconBg?: string;
   badge?: number;
+  params?: Record<string, string>;
 };
 
 // =============================================================================
@@ -171,6 +172,7 @@ export default function ManageScreen() {
     { icon: 'calendar-outline', label: 'Coach Availability', route: '/coach-availability', iconColor: colors.primary, iconBg: colors.primary + '15' },
     { icon: 'person-circle', label: 'Coach Profile', route: '/coach-profile', iconColor: colors.textSecondary, iconBg: colors.textMuted + '15' },
     { icon: 'analytics', label: 'Game Prep', route: '/game-prep', iconColor: '#FF6B6B', iconBg: '#FF6B6B15' },
+    { icon: 'time', label: 'Blast History', route: '/blast-history', iconColor: '#5AC8FA', iconBg: '#5AC8FA15' },
   ];
 
   // =========================================================================
@@ -185,17 +187,26 @@ export default function ManageScreen() {
     { icon: 'calendar', label: 'Season Management', route: '/season-settings', iconColor: colors.success, iconBg: colors.success + '15' },
     { icon: 'bar-chart', label: 'Reports', route: '/(tabs)/reports-tab', iconColor: '#AF52DE', iconBg: '#AF52DE15' },
     { icon: 'business', label: 'Org Directory', route: '/org-directory', iconColor: colors.textSecondary, iconBg: colors.textMuted + '15' },
+    { icon: 'archive', label: 'Season Archives', route: '/season-archives', iconColor: '#6B7280', iconBg: '#6B728015' },
+    { icon: 'settings', label: 'Org Settings', route: '/web-features', iconColor: colors.textSecondary, iconBg: colors.textMuted + '15', params: { featureName: 'Organization Settings', description: 'Configure organization name, logo, and details on the web portal.' } },
+    { icon: 'document-text', label: 'Form Builder', route: '/web-features', iconColor: '#5AC8FA', iconBg: '#5AC8FA15', params: { featureName: 'Registration Form Builder', description: 'Build custom registration forms with questions — works best on a larger screen.' } },
+    { icon: 'shield-checkmark', label: 'Waiver Editor', route: '/web-features', iconColor: '#34C759', iconBg: '#34C75915', params: { featureName: 'Waiver Template Editor', description: 'Create and manage digital waivers for your organization.' } },
+    { icon: 'card', label: 'Payment Gateway', route: '/web-features', iconColor: '#635BFF', iconBg: '#635BFF15', params: { featureName: 'Payment Gateway Setup', description: 'Connect your Stripe account to accept online payments.' } },
   ];
 
-  const handleNavigate = (route: string) => {
-    router.push(route as any);
+  const handleNavigate = (item: MenuItem) => {
+    if (item.params) {
+      router.push({ pathname: item.route, params: item.params } as any);
+    } else {
+      router.push(item.route as any);
+    }
   };
 
   const renderMenuItem = (item: MenuItem, index: number) => (
     <TouchableOpacity
       key={`${item.route}-${item.label}-${index}`}
       style={s.menuItem}
-      onPress={() => handleNavigate(item.route)}
+      onPress={() => handleNavigate(item)}
       activeOpacity={0.7}
     >
       <View style={[s.menuItemIcon, { backgroundColor: item.iconBg || colors.glassCard }]}>

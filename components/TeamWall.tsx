@@ -320,6 +320,9 @@ export default function TeamWall({ teamId: propTeamId, embedded = false }: TeamW
   // Fullscreen image viewer
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
 
+  // Post actions menu (admin/coach moderation)
+  const [showPostActions, setShowPostActions] = useState<string | null>(null);
+
   // New posts pill
   const [newPostsCount, setNewPostsCount] = useState(0);
   const feedListRef = useRef<FlatList>(null);
@@ -714,6 +717,53 @@ export default function TeamWall({ teamId: propTeamId, embedded = false }: TeamW
   };
 
   // =============================================================================
+  // POST MODERATION (Admin/Coach)
+  // =============================================================================
+
+  const handleDeletePost = (postId: string) => {
+    Alert.alert(
+      'Delete Post',
+      'Are you sure you want to delete this post? This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { error } = await supabase
+                .from('team_posts')
+                .delete()
+                .eq('id', postId);
+              if (error) throw error;
+              // Optimistic remove
+              setPosts(prev => prev.filter(p => p.id !== postId));
+              setShowPostActions(null);
+            } catch (err: any) {
+              Alert.alert('Error', err.message || 'Failed to delete post');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleTogglePin = async (post: any) => {
+    try {
+      const { error } = await supabase
+        .from('team_posts')
+        .update({ is_pinned: !post.is_pinned })
+        .eq('id', post.id);
+      if (error) throw error;
+      // Optimistic update
+      setPosts(prev => prev.map(p => p.id === post.id ? { ...p, is_pinned: !p.is_pinned } : p));
+      setShowPostActions(null);
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to update pin status');
+    }
+  };
+
+  // =============================================================================
   // ROSTER TAB
   // =============================================================================
 
@@ -913,7 +963,61 @@ export default function TeamWall({ teamId: propTeamId, embedded = false }: TeamW
               {typeConfig.label}
             </Text>
           </View>
+          {isCoachOrAdmin && (
+            <TouchableOpacity
+              onPress={() => setShowPostActions(showPostActions === post.id ? null : post.id)}
+              style={{ padding: 6, marginLeft: 4 }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="ellipsis-horizontal" size={20} color={colors.textMuted} />
+            </TouchableOpacity>
+          )}
         </View>
+
+        {/* Post actions dropdown (admin/coach moderation) */}
+        {isCoachOrAdmin && showPostActions === post.id && (
+          <View style={{
+            flexDirection: 'row',
+            gap: 8,
+            paddingHorizontal: 16,
+            paddingVertical: 8,
+            borderTopWidth: 1,
+            borderTopColor: colors.border,
+          }}>
+            <TouchableOpacity
+              onPress={() => handleTogglePin(post)}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+                backgroundColor: colors.primary + '15',
+                paddingHorizontal: 12,
+                paddingVertical: 8,
+                borderRadius: 8,
+              }}
+            >
+              <Ionicons name={post.is_pinned ? 'pin-outline' : 'pin'} size={16} color={colors.primary} />
+              <Text style={{ fontSize: 13, fontWeight: '600', color: colors.primary }}>
+                {post.is_pinned ? 'Unpin' : 'Pin'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => handleDeletePost(post.id)}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+                backgroundColor: '#FF3B3015',
+                paddingHorizontal: 12,
+                paddingVertical: 8,
+                borderRadius: 8,
+              }}
+            >
+              <Ionicons name="trash-outline" size={16} color="#FF3B30" />
+              <Text style={{ fontSize: 13, fontWeight: '600', color: '#FF3B30' }}>Delete</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Post content */}
         {post.title && <Text style={s.postTitle}>{post.title}</Text>}
