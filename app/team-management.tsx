@@ -1,3 +1,4 @@
+import AdminContextBar from '@/components/AdminContextBar';
 import { useAuth } from '@/lib/auth';
 import { addAdminToTeamChats, addParentToTeamChats, createTeamChats, getProfileByEmail, syncTeamChats } from '@/lib/chat-utils';
 import { useSeason } from '@/lib/season';
@@ -476,6 +477,8 @@ export default function TeamManagementScreen() {
           </TouchableOpacity>
         </View>
 
+        <AdminContextBar />
+
         {/* Stats Row */}
         <View style={s.statsRow}>
           <View style={s.statBox}>
@@ -666,10 +669,16 @@ export default function TeamManagementScreen() {
                 </View>
 
                 <ScrollView style={s.detailScroll}>
-                  <TouchableOpacity style={s.syncBtn} onPress={() => syncChats(selectedTeam)} disabled={syncing}>
-                    <Ionicons name="chatbubbles" size={18} color={colors.info} />
-                    <Text style={s.syncBtnTxt}>{syncing ? 'Syncing...' : 'Sync Team Chats'}</Text>
-                  </TouchableOpacity>
+                  <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+                    <TouchableOpacity style={[s.syncBtn, { flex: 1, marginBottom: 0 }]} onPress={() => syncChats(selectedTeam)} disabled={syncing}>
+                      <Ionicons name="chatbubbles" size={18} color={colors.info} />
+                      <Text style={s.syncBtnTxt}>{syncing ? 'Syncing...' : 'Sync Chats'}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[s.syncBtn, { flex: 1, marginBottom: 0 }]} onPress={() => { setShowDetailModal(false); router.push('/(tabs)/jersey-management' as any); }}>
+                      <Ionicons name="shirt-outline" size={18} color={colors.info} />
+                      <Text style={s.syncBtnTxt}>Manage Jerseys</Text>
+                    </TouchableOpacity>
+                  </View>
 
                   {/* Coaches Section */}
                   <View style={s.section}>

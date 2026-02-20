@@ -1,3 +1,4 @@
+import AdminContextBar from '@/components/AdminContextBar';
 import SeasonFeesManager from '@/components/SeasonFeesManager';
 import { useAuth } from '@/lib/auth';
 import { useSeason } from '@/lib/season';
@@ -397,6 +398,8 @@ export default function SeasonSettingsScreen() {
         <Text style={s.headerTitle}>Season Settings</Text>
         <View style={{ width: 24 }} />
       </View>
+
+      <AdminContextBar />
 
       <ScrollView style={s.scroll} contentContainerStyle={s.scrollContent} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData(); }} />}>
         {/* Season Header */}

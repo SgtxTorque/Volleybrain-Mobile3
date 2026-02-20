@@ -43,11 +43,13 @@ function CollapsibleSection({
   children,
   defaultOpen = true,
   colors,
+  itemCount,
 }: {
   title: string;
   children: React.ReactNode;
   defaultOpen?: boolean;
   colors: any;
+  itemCount?: number;
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const rotateAnim = useRef(new Animated.Value(defaultOpen ? 1 : 0)).current;
@@ -90,7 +92,7 @@ function CollapsibleSection({
             letterSpacing: 1,
           }}
         >
-          {title}
+          {title}{!isOpen && itemCount ? ` (${itemCount})` : ''}
         </Text>
         <Animated.View style={{ transform: [{ rotate: rotation }] }}>
           <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
@@ -107,7 +109,7 @@ function CollapsibleSection({
 
 export default function ManageScreen() {
   const { colors } = useTheme();
-  const { isAdmin, isCoach, isParent } = usePermissions();
+  const { isAdmin, isCoach, isParent, viewAs, primaryRole } = usePermissions();
   const { profile } = useAuth();
   const router = useRouter();
 
@@ -183,6 +185,7 @@ export default function ManageScreen() {
     { icon: 'people-circle', label: 'User Management', route: '/users', iconColor: colors.warning, iconBg: colors.warning + '15', badge: badgeCounts.pendingApprovals },
     { icon: 'card', label: 'Payment Admin', route: '/(tabs)/payments', iconColor: colors.danger, iconBg: colors.danger + '15', badge: badgeCounts.pendingPay },
     { icon: 'shirt', label: 'Team Management', route: '/team-management', iconColor: '#FF6B6B', iconBg: '#FF6B6B15', badge: badgeCounts.unrostered },
+    { icon: 'shirt-outline', label: 'Jersey Management', route: '/(tabs)/jersey-management', iconColor: '#FF6B6B', iconBg: '#FF6B6B15' },
     { icon: 'clipboard', label: 'Coach Directory', route: '/coach-directory', iconColor: colors.info, iconBg: colors.info + '15' },
     { icon: 'calendar', label: 'Season Management', route: '/season-settings', iconColor: colors.success, iconBg: colors.success + '15' },
     { icon: 'bar-chart', label: 'Reports', route: '/(tabs)/reports-tab', iconColor: '#AF52DE', iconBg: '#AF52DE15' },
@@ -225,6 +228,22 @@ export default function ManageScreen() {
   const showParent = isParent || isAdmin;
   const showCoach = isCoach || isAdmin;
 
+  // Determine active role for section ordering
+  const activeRole: 'admin' | 'coach' | 'parent' = (() => {
+    if (viewAs === 'league_admin') return 'admin';
+    if (viewAs === 'head_coach' || viewAs === 'assistant_coach') return 'coach';
+    if (viewAs === 'parent') return 'parent';
+    if (primaryRole === 'league_admin') return 'admin';
+    if (primaryRole === 'head_coach' || primaryRole === 'assistant_coach') return 'coach';
+    return 'parent';
+  })();
+
+  const sections = [
+    { key: 'parent' as const, title: 'Parent', items: parentItems, show: showParent },
+    { key: 'coach' as const, title: 'Coach', items: coachItems, show: showCoach },
+    { key: 'admin' as const, title: 'Admin Tools', items: adminItems, show: isAdmin },
+  ].sort((a, b) => (a.key === activeRole ? -1 : b.key === activeRole ? 1 : 0));
+
   return (
     <SafeAreaView style={s.container}>
       <ScrollView
@@ -238,32 +257,19 @@ export default function ManageScreen() {
           <Text style={s.title}>Manage</Text>
         </View>
 
-        {/* Parent Section */}
-        {showParent && (
-          <CollapsibleSection title="Parent" defaultOpen={true} colors={colors}>
+        {sections.filter(sec => sec.show).map(sec => (
+          <CollapsibleSection
+            key={sec.key}
+            title={sec.title}
+            defaultOpen={sec.key === activeRole}
+            colors={colors}
+            itemCount={sec.items.length}
+          >
             <View style={s.menuCard}>
-              {parentItems.map((item, i) => renderMenuItem(item, i))}
+              {sec.items.map((item, i) => renderMenuItem(item, i))}
             </View>
           </CollapsibleSection>
-        )}
-
-        {/* Coach Section */}
-        {showCoach && (
-          <CollapsibleSection title="Coach" defaultOpen={true} colors={colors}>
-            <View style={s.menuCard}>
-              {coachItems.map((item, i) => renderMenuItem(item, i))}
-            </View>
-          </CollapsibleSection>
-        )}
-
-        {/* Admin Section */}
-        {isAdmin && (
-          <CollapsibleSection title="Admin Tools" defaultOpen={false} colors={colors}>
-            <View style={s.menuCard}>
-              {adminItems.map((item, i) => renderMenuItem(item, i))}
-            </View>
-          </CollapsibleSection>
-        )}
+        ))}
 
         <View style={{ height: 120 }} />
       </ScrollView>

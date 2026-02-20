@@ -1,3 +1,4 @@
+import AdminContextBar from '@/components/AdminContextBar';
 import { useAuth } from '@/lib/auth';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
@@ -975,6 +976,8 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
           </TouchableOpacity>
         </View>
       )}
+
+      {!hideHeader && <AdminContextBar />}
 
       {/* Compact header when hideHeader */}
       {hideHeader && (

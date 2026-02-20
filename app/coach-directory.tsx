@@ -1,3 +1,4 @@
+import AdminContextBar from '@/components/AdminContextBar';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
@@ -196,6 +197,8 @@ export default function CoachDirectoryScreen() {
             {workingSeason && <Text style={s.subtitle}>{workingSeason.name}</Text>}
           </View>
         </View>
+
+        <AdminContextBar />
 
         {/* Stats Row */}
         <View style={s.statsRow}>

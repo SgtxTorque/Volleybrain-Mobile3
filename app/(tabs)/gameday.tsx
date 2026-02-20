@@ -1,3 +1,4 @@
+import AdminGameDay from '@/components/AdminGameDay';
 import EventDetailModal from '@/components/EventDetailModal';
 import { ScheduleEvent } from '@/components/EventCard';
 import { useAuth } from '@/lib/auth';
@@ -110,6 +111,11 @@ export default function GameDayScreen() {
   const router = useRouter();
 
   const isCoachOrAdmin = isAdmin || isCoach;
+
+  // Admin-only game day view (tournament director mode)
+  if (isAdmin && !isCoach) {
+    return <AdminGameDay />;
+  }
 
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
@@ -224,7 +230,8 @@ export default function GameDayScreen() {
   }, [fetchData]);
 
   // ─── Derived Data ──────────────────────────────────────
-  const todayStr = new Date().toISOString().split('T')[0];
+  const _now = new Date();
+  const todayStr = `${_now.getFullYear()}-${String(_now.getMonth() + 1).padStart(2, '0')}-${String(_now.getDate()).padStart(2, '0')}`;
 
   const upcomingEvents = useMemo(
     () => events.filter((e) => e.event_date >= todayStr),
@@ -237,7 +244,7 @@ export default function GameDayScreen() {
   const thisWeekEvents = useMemo(() => {
     const weekEnd = new Date();
     weekEnd.setDate(weekEnd.getDate() + 7);
-    const weekEndStr = weekEnd.toISOString().split('T')[0];
+    const weekEndStr = `${weekEnd.getFullYear()}-${String(weekEnd.getMonth() + 1).padStart(2, '0')}-${String(weekEnd.getDate()).padStart(2, '0')}`;
     // Skip the first event (hero card) for thisWeek section
     return upcomingEvents.filter(
       (e) => e.event_date >= todayStr && e.event_date <= weekEndStr && e.id !== nextEvent?.id
@@ -248,7 +255,7 @@ export default function GameDayScreen() {
   const allUpcomingEvents = useMemo(() => {
     const thirtyDaysOut = new Date();
     thirtyDaysOut.setDate(thirtyDaysOut.getDate() + 30);
-    const endStr = thirtyDaysOut.toISOString().split('T')[0];
+    const endStr = `${thirtyDaysOut.getFullYear()}-${String(thirtyDaysOut.getMonth() + 1).padStart(2, '0')}-${String(thirtyDaysOut.getDate()).padStart(2, '0')}`;
     const thisWeekIds = new Set(thisWeekEvents.map(e => e.id));
     return upcomingEvents.filter((e) => e.event_date <= endStr && e.id !== nextEvent?.id && !thisWeekIds.has(e.id));
   }, [upcomingEvents, nextEvent, thisWeekEvents]);

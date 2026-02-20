@@ -1,3 +1,4 @@
+import AdminContextBar from '@/components/AdminContextBar';
 import { REPORTS, REPORT_CATEGORIES, ReportCategory, ReportDefinition, getReportsByCategory } from '@/lib/reports';
 import { useSeason } from '@/lib/season';
 import { useTheme } from '@/lib/theme';
@@ -63,6 +64,8 @@ export default function ReportsScreen() {
           {workingSeason?.name || 'All Seasons'}
         </Text>
       </View>
+
+      <AdminContextBar />
 
       <ScrollView style={s.content} showsVerticalScrollIndicator={false}>
         {/* Category Grid */}

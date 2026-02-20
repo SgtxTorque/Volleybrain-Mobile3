@@ -4,7 +4,8 @@ import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import AdminContextBar from '@/components/AdminContextBar';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -171,6 +172,9 @@ export default function RegistrationHubScreen() {
   const [actionLoading, setActionLoading] = useState(false);
   const [requiredWaiverIds, setRequiredWaiverIds] = useState<string[]>([]);
   const [waiverSignatureMap, setWaiverSignatureMap] = useState<Map<string, Set<string>>>(new Map());
+
+  const [showApproveTeamPicker, setShowApproveTeamPicker] = useState(false);
+  const [sortMode, setSortMode] = useState<'recent' | 'alpha' | 'status'>('recent');
 
   // Bulk selection state
   const [selectionMode, setSelectionMode] = useState(false);
@@ -772,12 +776,40 @@ export default function RegistrationHubScreen() {
     return true;
   });
 
+  const statusCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: registrations.length };
+    for (const r of registrations) counts[r.status] = (counts[r.status] || 0) + 1;
+    return counts;
+  }, [registrations]);
+
+  const sortedRegistrations = useMemo(() => {
+    const sorted = [...filteredRegistrations];
+    switch (sortMode) {
+      case 'alpha':
+        sorted.sort((a, b) => {
+          const nameA = `${a.player?.last_name || ''} ${a.player?.first_name || ''}`.toLowerCase();
+          const nameB = `${b.player?.last_name || ''} ${b.player?.first_name || ''}`.toLowerCase();
+          return nameA.localeCompare(nameB);
+        });
+        break;
+      case 'status': {
+        const order: Record<string, number> = { new: 0, approved: 1, active: 2, waitlisted: 3, rostered: 4, denied: 5, withdrawn: 6 };
+        sorted.sort((a, b) => (order[a.status] ?? 99) - (order[b.status] ?? 99));
+        break;
+      }
+      default: // 'recent'
+        sorted.sort((a, b) => new Date(b.submitted_at || (b as any).created_at || 0).getTime() - new Date(a.submitted_at || (a as any).created_at || 0).getTime());
+        break;
+    }
+    return sorted;
+  }, [filteredRegistrations, sortMode]);
+
   const groupedRegistrations = {
-    new: filteredRegistrations.filter(r => r.status === 'new'),
-    approved: filteredRegistrations.filter(r => r.status === 'approved'),
-    active: filteredRegistrations.filter(r => r.status === 'active'),
-    rostered: filteredRegistrations.filter(r => r.status === 'rostered'),
-    waitlisted: filteredRegistrations.filter(r => r.status === 'waitlisted'),
+    new: sortedRegistrations.filter(r => r.status === 'new'),
+    approved: sortedRegistrations.filter(r => r.status === 'approved'),
+    active: sortedRegistrations.filter(r => r.status === 'active'),
+    rostered: sortedRegistrations.filter(r => r.status === 'rostered'),
+    waitlisted: sortedRegistrations.filter(r => r.status === 'waitlisted'),
   };
 
   // =====================================================
@@ -1053,11 +1085,11 @@ export default function RegistrationHubScreen() {
         visible={detailModalVisible}
         animationType="slide"
         presentationStyle="pageSheet"
-        onRequestClose={() => setDetailModalVisible(false)}
+        onRequestClose={() => { setDetailModalVisible(false); setShowApproveTeamPicker(false); }}
       >
         <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-            <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
+            <TouchableOpacity onPress={() => { setDetailModalVisible(false); setShowApproveTeamPicker(false); }}>
               <Ionicons name="close" size={24} color={colors.text} />
             </TouchableOpacity>
             <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text }}>Registration Details</Text>
@@ -1256,9 +1288,88 @@ export default function RegistrationHubScreen() {
               <>
                 {selectedRegistration.status === 'new' && (
                   <View style={{ gap: 12 }}>
-                    <TouchableOpacity style={{ backgroundColor: '#34C759', paddingVertical: 14, borderRadius: 12, alignItems: 'center' }} onPress={() => updateRegistrationStatus(selectedRegistration.id, 'approved')}>
-                      <Text style={{ color: '#fff', fontWeight: '600', fontSize: 16 }}>Approve Registration</Text>
-                    </TouchableOpacity>
+                    {/* Enhanced Approve with Team Picker */}
+                    {!showApproveTeamPicker ? (
+                      <>
+                        <TouchableOpacity
+                          style={{ backgroundColor: '#34C759', paddingVertical: 14, borderRadius: 12, alignItems: 'center', marginBottom: 8 }}
+                          onPress={() => setShowApproveTeamPicker(true)}
+                          disabled={actionLoading}
+                        >
+                          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>Approve & Assign Team</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={{ backgroundColor: colors.card, paddingVertical: 14, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.border, marginBottom: 8 }}
+                          onPress={() => updateRegistrationStatus(selectedRegistration.id, 'approved')}
+                          disabled={actionLoading}
+                        >
+                          <Text style={{ color: colors.text, fontWeight: '500' }}>Approve Without Team</Text>
+                        </TouchableOpacity>
+                      </>
+                    ) : (
+                      <View style={{ gap: 8, marginBottom: 8 }}>
+                        <Text style={{ color: colors.textSecondary, textAlign: 'center', fontWeight: '600', marginBottom: 4 }}>
+                          Select Team
+                        </Text>
+                        {seasonTeams.map(t => (
+                          <TouchableOpacity
+                            key={t.id}
+                            disabled={actionLoading}
+                            style={{
+                              backgroundColor: colors.card, paddingVertical: 14, paddingHorizontal: 16,
+                              borderRadius: 12, flexDirection: 'row', justifyContent: 'space-between',
+                              alignItems: 'center', borderWidth: 1, borderColor: colors.border,
+                            }}
+                            onPress={async () => {
+                              setActionLoading(true);
+                              try {
+                                // 1. Approve registration
+                                await updateRegistrationStatus(selectedRegistration.id, 'approved');
+                                // 2. Assign to team (this also creates RSVPs)
+                                await assignToTeam(selectedRegistration.id, selectedRegistration.player_id, t.id);
+
+                                // Get fee total
+                                const { data: fees } = await supabase
+                                  .from('payments')
+                                  .select('amount')
+                                  .eq('player_id', selectedRegistration.player_id)
+                                  .eq('season_id', selectedRegistration.season_id);
+                                const totalFees = (fees || []).reduce((sum: number, f: any) => sum + (f.amount || 0), 0);
+
+                                // Count future events for RSVP summary
+                                const now = new Date();
+                                const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                                const { count: rsvpCount } = await supabase
+                                  .from('schedule_events')
+                                  .select('*', { count: 'exact', head: true })
+                                  .eq('team_id', t.id)
+                                  .gte('event_date', todayStr);
+
+                                setShowApproveTeamPicker(false);
+                                Alert.alert(
+                                  'Registration Approved!',
+                                  `Added to ${t.name}, fees generated ($${totalFees.toFixed(2)}), RSVPs created for ${rsvpCount || 0} upcoming events.`
+                                );
+                              } catch (error) {
+                                if (__DEV__) console.log('Approval chain error:', error);
+                                Alert.alert('Error', 'Some steps of the approval may have failed. Check the registration status.');
+                              } finally {
+                                setActionLoading(false);
+                              }
+                            }}
+                          >
+                            <Text style={{ color: colors.text, fontWeight: '600' }}>{t.name}</Text>
+                            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                          </TouchableOpacity>
+                        ))}
+                        <TouchableOpacity
+                          style={{ paddingVertical: 10, alignItems: 'center' }}
+                          onPress={() => setShowApproveTeamPicker(false)}
+                        >
+                          <Text style={{ color: colors.textMuted }}>Cancel</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
                     <View style={{ flexDirection: 'row', gap: 12 }}>
                       <TouchableOpacity style={{ flex: 1, backgroundColor: colors.card, paddingVertical: 14, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.border }} onPress={() => handleWaitlist(selectedRegistration)}>
                         <Text style={{ color: colors.text, fontWeight: '600' }}>Waitlist</Text>
@@ -1335,6 +1446,8 @@ export default function RegistrationHubScreen() {
           </Text>
         </TouchableOpacity>
       </View>
+
+      <AdminContextBar />
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
         {/* All Open Seasons Badge */}
@@ -1436,15 +1549,37 @@ export default function RegistrationHubScreen() {
           {searchQuery ? <TouchableOpacity onPress={() => setSearchQuery('')}><Ionicons name="close-circle" size={20} color={colors.textSecondary} /></TouchableOpacity> : null}
         </View>
 
+        {/* Sort Toggle */}
+        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 8, gap: 4, paddingHorizontal: 16 }}>
+          <Text style={{ color: colors.textMuted, fontSize: 12, alignSelf: 'center', marginRight: 4 }}>Sort:</Text>
+          {(['recent', 'alpha', 'status'] as const).map(mode => (
+            <TouchableOpacity
+              key={mode}
+              onPress={() => setSortMode(mode)}
+              style={{
+                paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12,
+                backgroundColor: sortMode === mode ? colors.primary + '20' : 'transparent',
+              }}
+            >
+              <Text style={{
+                fontSize: 12, fontWeight: sortMode === mode ? '700' : '500',
+                color: sortMode === mode ? colors.primary : colors.textMuted,
+              }}>
+                {mode === 'recent' ? 'Recent' : mode === 'alpha' ? 'A-Z' : 'Status'}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
         {/* Status Filter Pills */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <TouchableOpacity style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: activeFilter === 'all' ? colors.primary : colors.card }} onPress={() => setActiveFilter('all')}>
-              <Text style={{ color: activeFilter === 'all' ? colors.background : colors.text }}>All</Text>
+              <Text style={{ color: activeFilter === 'all' ? colors.background : colors.text }}>All ({statusCounts.all})</Text>
             </TouchableOpacity>
             {Object.entries(statusConfig).map(([key, config]) => (
               <TouchableOpacity key={key} style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: activeFilter === key ? config.color : colors.card }} onPress={() => setActiveFilter(key as RegistrationStatus)}>
-                <Text style={{ color: activeFilter === key ? '#fff' : colors.text }}>{config.label}</Text>
+                <Text style={{ color: activeFilter === key ? '#fff' : colors.text }}>{config.label} ({statusCounts[key] || 0})</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -1460,7 +1595,7 @@ export default function RegistrationHubScreen() {
             {renderSection('Waitlisted', groupedRegistrations.waitlisted, 'waitlisted')}
           </>
         ) : (
-          filteredRegistrations.map(renderRegistrationCard)
+          sortedRegistrations.map(renderRegistrationCard)
         )}
 
         {/* Empty State */}

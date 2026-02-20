@@ -24,7 +24,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import ReenrollmentBanner from './ReenrollmentBanner';
 import RoleSelector from './RoleSelector';
 import SportSelector from './ui/SportSelector';
 
@@ -472,10 +471,10 @@ export default function AdminDashboard() {
   const fetchTodaysGames = async () => {
     if (!workingSeason) { setTodaysGames([]); setTomorrowGames([]); return; }
     const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     const tomorrow = new Date(now);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+    const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
 
     const { data: todayData } = await supabase
       .from('schedule_events')
@@ -810,7 +809,7 @@ export default function AdminDashboard() {
     setRefreshing(false);
   };
 
-  const openSeasonsCount = allSeasons.filter(s => s.registration_open).length;
+  // Season switcher already in hero section — no need for separate banner
   const revenuePercent = totalExpected > 0 ? Math.round((totalCollected / totalExpected) * 100) : 0;
 
   const s = createStyles(colors, sportColors);
@@ -889,15 +888,6 @@ export default function AdminDashboard() {
           </View>
         </View>
       </View>
-
-      {openSeasonsCount > 0 && (
-        <View style={s.regAlert}>
-          <Ionicons name="information-circle" size={18} color={colors.info} />
-          <Text style={s.regAlertText}>{openSeasonsCount} season{openSeasonsCount > 1 ? 's' : ''} accepting registration</Text>
-        </View>
-      )}
-
-      <ReenrollmentBanner />
 
       {/* NEEDS ATTENTION */}
       {alerts.length > 0 && alerts[0].type !== 'success' && (

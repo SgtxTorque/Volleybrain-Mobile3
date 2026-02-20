@@ -1,3 +1,4 @@
+import AdminContextBar from '@/components/AdminContextBar';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
@@ -435,6 +436,8 @@ export default function UsersScreen() {
         <Text style={s.headerTitle}>User Management</Text>
         <View style={s.backBtn} />
       </View>
+
+      <AdminContextBar />
 
       <ScrollView
         style={s.scroll}
