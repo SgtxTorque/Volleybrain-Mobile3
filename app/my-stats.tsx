@@ -473,9 +473,9 @@ export default function MyStatsScreen() {
         {!seasonSummary ? (
           <View style={s.emptyState}>
             <Ionicons name="stats-chart-outline" size={48} color={colors.textMuted} />
-            <Text style={s.emptyTitle}>No Stats Yet</Text>
+            <Text style={s.emptyTitle}>Your Stats Journey Begins Here</Text>
             <Text style={s.emptySubtitle}>
-              Your stats journey starts with your first game!
+              Once you hit the court, your stats start tracking automatically.
             </Text>
           </View>
         ) : (
@@ -552,8 +552,8 @@ export default function MyStatsScreen() {
       {gameHistory.length === 0 ? (
         <View style={s.emptyState}>
           <Ionicons name="game-controller-outline" size={48} color={colors.textMuted} />
-          <Text style={s.emptyTitle}>No Games Recorded</Text>
-          <Text style={s.emptySubtitle}>Your game history will appear here once your team plays.</Text>
+          <Text style={s.emptyTitle}>Game Log Loading...</Text>
+          <Text style={s.emptySubtitle}>After your first match, you'll see a full breakdown of every game here.</Text>
         </View>
       ) : (
         gameHistory.map((game) => {

@@ -402,7 +402,7 @@ export default function GameResultsScreen() {
           <View style={s.noStats}>
             <Ionicons name="stats-chart-outline" size={36} color={colors.textMuted} />
             <Text style={s.noStatsText}>
-              No individual stats recorded for this game
+              Stats weren't tracked for this game. Ask your coach to record stats!
             </Text>
           </View>
         )}

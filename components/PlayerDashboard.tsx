@@ -11,11 +11,14 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import { LinearGradient } from 'expo-linear-gradient';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   Dimensions,
+  Easing,
   Image,
   Platform,
   RefreshControl,
@@ -29,6 +32,11 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AchievementCelebrationModal from './AchievementCelebrationModal';
+import AnimatedNumber from './AnimatedNumber';
+import AnimatedStatBar from './AnimatedStatBar';
+import CircularProgress from './CircularProgress';
+import HexBadge from './HexBadge';
+import PressableCard from './PressableCard';
 import RarityGlow from './RarityGlow';
 import RoleSelector from './RoleSelector';
 import SquadComms from './SquadComms';
@@ -291,6 +299,14 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
   const [showCelebration, setShowCelebration] = useState(false);
   const [trackedProgress, setTrackedProgress] = useState<AchievementProgress[]>([]);
   const [lineupPositions, setLineupPositions] = useState<Record<string, { position: string | null; is_starter: boolean }>>({});
+
+  // Animation refs
+  const battleSlideAnims = useRef<Animated.Value[]>([]).current;
+  const battleOpacityAnims = useRef<Animated.Value[]>([]).current;
+  const hasAnimatedBattleLog = useRef(false);
+  const trophyScrollX = useRef(new Animated.Value(0)).current;
+  const xpBarAnim = useRef(new Animated.Value(0)).current;
+  const xpShimmerAnim = useRef(new Animated.Value(-30)).current;
 
   const P = THEME_VARIANTS[themeVariant];
 
@@ -626,6 +642,36 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
   const heroImage = playerSelfie || player?.photo_url || null;
   const isOwnProfile = player?.parent_account_id === user?.id;
   const activeCard = CALLING_CARDS.find(c => c.id === equippedCard) || CALLING_CARDS[0];
+  const isFirstTimePlayer = !stats && recentGames.length === 0 && achievements.length === 0 && !!player;
+
+  // Battle log slide-in animation
+  useEffect(() => {
+    if (recentGames.length === 0 || hasAnimatedBattleLog.current) return;
+    hasAnimatedBattleLog.current = true;
+    // Ensure we have enough anim values
+    while (battleSlideAnims.length < recentGames.length) {
+      battleSlideAnims.push(new Animated.Value(50));
+      battleOpacityAnims.push(new Animated.Value(0));
+    }
+    recentGames.forEach((_, i) => {
+      Animated.parallel([
+        Animated.timing(battleSlideAnims[i], { toValue: 0, duration: 400, delay: i * 80, useNativeDriver: true }),
+        Animated.timing(battleOpacityAnims[i], { toValue: 1, duration: 400, delay: i * 80, useNativeDriver: true }),
+      ]).start();
+    });
+  }, [recentGames.length]);
+
+  // XP bar fill + shimmer
+  useEffect(() => {
+    const pct = xp.xpForNext > 0 ? Math.min((xp.currentXP / xp.xpForNext) * 100, 100) : 0;
+    Animated.timing(xpBarAnim, { toValue: pct, duration: 1000, delay: 300, easing: Easing.out(Easing.cubic), useNativeDriver: false }).start();
+    // Shimmer loop
+    const shimmerLoop = Animated.loop(
+      Animated.timing(xpShimmerAnim, { toValue: 200, duration: 1500, easing: Easing.linear, useNativeDriver: true })
+    );
+    shimmerLoop.start();
+    return () => shimmerLoop.stop();
+  }, [xp.currentXP, xp.xpForNext]);
 
   const s = createStyles(colors);
 
@@ -745,7 +791,7 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
       </View>
 
       <View style={[s.statHudCard, { backgroundColor: P.card, borderColor: P.border }]}>
-        {statDefs.map((def) => {
+        {statDefs.map((def, index) => {
           const value = stats ? stats[def.key] || 0 : 0;
           const avg = perGame(value);
           const pct = Math.min((value / def.max) * 100, 100);
@@ -768,11 +814,14 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
                   <Text style={[s.statName, { color: P.text }]}>{def.label}</Text>
                   <Text style={[s.statAvg, { color: P.textMuted }]}>{avg}/g</Text>
                 </View>
-                <View style={[s.statBarTrack, { backgroundColor: P.cardAlt }]}>
-                  <View style={[s.statBarFill, { width: `${pct}%`, backgroundColor: def.color }]} />
-                </View>
+                <AnimatedStatBar
+                  percentage={pct}
+                  color={def.color}
+                  delay={index * 100}
+                  trackColor={P.cardAlt}
+                />
               </View>
-              <Text style={[s.statValue, { color: def.color }]}>{value}</Text>
+              <AnimatedNumber value={value} delay={index * 100} style={[s.statValue, { color: def.color }]} />
               {leagueRanks[def.sportKey] && (
                 <View style={{ backgroundColor: def.color + '20', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8, marginLeft: 4 }}>
                   <Text style={{ fontSize: 10, fontWeight: '700', color: def.color }}>
@@ -785,27 +834,35 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
         })}
       </View>
 
-      {/* Bottom percentage cards */}
+      {/* Bottom percentage rings */}
       <View style={s.pctCardsRow}>
         {isVolleyball ? (
           <>
             <View style={[s.pctCard, { backgroundColor: P.card, borderColor: P.border }]}>
-              <Text style={[s.pctValue, { color: P.text }]}>{hitPct}%</Text>
+              <CircularProgress percentage={hitPct} size={52} strokeWidth={4} color={P.neonGreen} trackColor={P.cardAlt} delay={statDefs.length * 100}>
+                <Text style={[s.pctValue, { color: P.text, fontSize: 14 }]}>{hitPct}%</Text>
+              </CircularProgress>
               <Text style={[s.pctLabel, { color: P.textMuted }]}>Hit %</Text>
             </View>
             <View style={[s.pctCard, { backgroundColor: P.card, borderColor: P.border }]}>
-              <Text style={[s.pctValue, { color: P.text }]}>{servePct}%</Text>
+              <CircularProgress percentage={servePct} size={52} strokeWidth={4} color={P.neonBlue} trackColor={P.cardAlt} delay={statDefs.length * 100 + 100}>
+                <Text style={[s.pctValue, { color: P.text, fontSize: 14 }]}>{servePct}%</Text>
+              </CircularProgress>
               <Text style={[s.pctLabel, { color: P.textMuted }]}>Serve %</Text>
             </View>
           </>
         ) : (
           <View style={[s.pctCard, { backgroundColor: P.card, borderColor: P.border }]}>
-            <Text style={[s.pctValue, { color: P.text }]}>{ovr}</Text>
+            <CircularProgress percentage={Math.min(ovr, 100)} size={52} strokeWidth={4} color={playerAccent} trackColor={P.cardAlt} delay={statDefs.length * 100}>
+              <Text style={[s.pctValue, { color: P.text, fontSize: 14 }]}>{ovr}</Text>
+            </CircularProgress>
             <Text style={[s.pctLabel, { color: P.textMuted }]}>OVR</Text>
           </View>
         )}
         <View style={[s.pctCard, { backgroundColor: P.card, borderColor: P.border }]}>
-          <Text style={[s.pctValue, { color: P.text }]}>{stats?.games_played || 0}</Text>
+          <CircularProgress percentage={Math.min(((stats?.games_played || 0) / 30) * 100, 100)} size={52} strokeWidth={4} color={P.neonPurple} trackColor={P.cardAlt} delay={statDefs.length * 100 + 200}>
+            <Text style={[s.pctValue, { color: P.text, fontSize: 14 }]}>{stats?.games_played || 0}</Text>
+          </CircularProgress>
           <Text style={[s.pctLabel, { color: P.textMuted }]}>Games</Text>
         </View>
       </View>
@@ -833,17 +890,29 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
 
       {achievements.length > 0 ? (
         <>
-          <ScrollView
+          <Animated.ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={s.trophyScroll}
+            snapToInterval={92}
+            decelerationRate="fast"
+            onScroll={Animated.event(
+              [{ nativeEvent: { contentOffset: { x: trophyScrollX } } }],
+              { useNativeDriver: true }
+            )}
+            scrollEventThrottle={16}
           >
-            {achievements.map((a) => {
+            {achievements.map((a, i) => {
               const badgeColor = a.achievement?.color_primary || P.gold;
               const rarity = a.achievement?.rarity || 'common';
               const earnedDate = a.earned_at ? formatShortDate(a.earned_at.split('T')[0]) : '';
+              const trophyScale = trophyScrollX.interpolate({
+                inputRange: [(i - 1) * 92, i * 92, (i + 1) * 92],
+                outputRange: [0.9, 1.1, 0.9],
+                extrapolate: 'clamp',
+              });
               return (
-                <View key={a.id} style={s.trophyItem}>
+                <Animated.View key={a.id} style={[s.trophyItem, { transform: [{ scale: trophyScale }] }]}>
                   <RarityGlow rarity={rarity} size={70} earned>
                     <View
                       style={[
@@ -858,10 +927,10 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
                     {a.achievement?.name || 'Badge'}
                   </Text>
                   {earnedDate ? <Text style={[s.trophyDate, { color: P.textMuted }]}>{earnedDate}</Text> : null}
-                </View>
+                </Animated.View>
               );
             })}
-          </ScrollView>
+          </Animated.ScrollView>
           <TouchableOpacity
             style={s.viewAllButton}
             onPress={() => router.push('/achievements' as any)}
@@ -874,9 +943,9 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
       ) : (
         <View style={[s.trophyEmptyCard, { backgroundColor: P.card, borderColor: P.border }]}>
           <Ionicons name="trophy-outline" size={48} color={P.gold} />
-          <Text style={[s.trophyEmptyTitle, { color: P.textSecondary }]}>START EARNING TROPHIES</Text>
+          <Text style={[s.trophyEmptyTitle, { color: P.textSecondary }]}>YOUR TROPHY CASE AWAITS</Text>
           <Text style={[s.trophyEmptySubtext, { color: P.textMuted }]}>
-            Play games and hit milestones to unlock achievements
+            Every game is a chance to unlock achievements. Get out there and start collecting!
           </Text>
           <TouchableOpacity
             style={s.viewAllButton}
@@ -899,7 +968,7 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
 
       {recentGames.length > 0 ? (
         <>
-          {recentGames.map((game) => {
+          {recentGames.map((game, gameIndex) => {
             const isWin = game.game_result === 'win';
             const isLoss = game.game_result === 'loss';
             const accentColor = isWin ? P.neonGreen : isLoss ? P.neonRed : P.textMuted;
@@ -910,10 +979,15 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
                 : '';
 
             return (
-              <TouchableOpacity
+              <Animated.View
                 key={game.id}
+                style={{
+                  transform: [{ translateX: battleSlideAnims[gameIndex] || new Animated.Value(0) }],
+                  opacity: battleOpacityAnims[gameIndex] || new Animated.Value(1),
+                }}
+              >
+              <PressableCard
                 style={[s.battleCard, { backgroundColor: P.card, borderColor: P.border }]}
-                activeOpacity={0.7}
                 onPress={() => router.push(`/game-results?eventId=${game.id}` as any)}
               >
                 <View style={[s.battleAccent, { backgroundColor: accentColor }]} />
@@ -945,7 +1019,8 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
                   </View>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={P.textMuted} />
-              </TouchableOpacity>
+              </PressableCard>
+              </Animated.View>
             );
           })}
           <TouchableOpacity
@@ -960,9 +1035,9 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
       ) : (
         <View style={[s.trophyEmptyCard, { backgroundColor: P.card, borderColor: P.border }]}>
           <Ionicons name="game-controller-outline" size={44} color={P.textMuted} />
-          <Text style={[s.trophyEmptyTitle, { color: P.textSecondary }]}>NO BATTLES YET</Text>
+          <Text style={[s.trophyEmptyTitle, { color: P.textSecondary }]}>FIRST BATTLE INCOMING</Text>
           <Text style={[s.trophyEmptySubtext, { color: P.textMuted }]}>
-            Your battle log will fill up once you start competing
+            Your game results and stats will stack up here. Time to make your mark!
           </Text>
         </View>
       )}
@@ -1044,9 +1119,9 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
       ) : (
         <View style={[s.trophyEmptyCard, { backgroundColor: P.card, borderColor: P.border }]}>
           <Ionicons name="telescope-outline" size={44} color={P.textMuted} />
-          <Text style={[s.trophyEmptyTitle, { color: P.textSecondary }]}>NO UPCOMING BATTLES</Text>
+          <Text style={[s.trophyEmptyTitle, { color: P.textSecondary }]}>ALL CLEAR FOR NOW</Text>
           <Text style={[s.trophyEmptySubtext, { color: P.textMuted }]}>
-            Check back later for new missions and matches
+            No games or events on the radar. Enjoy the downtime, champ.
           </Text>
         </View>
       )}
@@ -1176,12 +1251,16 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
             <View style={[s.heroOverlayBottom, { backgroundColor: P.bg }]} />
           </View>
         ) : (
-          <View style={[s.heroGradientBg, { backgroundColor: activeCard.gradient[0] }]}>
-            <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: activeCard.gradient[1], opacity: 0.4 }} />
+          <LinearGradient
+            colors={[activeCard.gradient[0], activeCard.gradient[1]]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={s.heroGradientBg}
+          >
             <View style={[s.heroInitialsCircle, { backgroundColor: teamColor }]}>
               <Text style={[s.heroInitialsText, { color: P.text }]}>{initials}</Text>
             </View>
-          </View>
+          </LinearGradient>
         )}
 
         {/* Role selector top-right */}
@@ -1272,15 +1351,28 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
           </View>
           <View style={s.xpBarWrap}>
             <View style={[s.xpBarTrack, { backgroundColor: P.cardAlt }]}>
-              <View
+              <Animated.View
                 style={[
                   s.xpBarFill,
                   {
-                    width: `${Math.min((xp.currentXP / xp.xpForNext) * 100, 100)}%`,
+                    width: xpBarAnim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }),
                     backgroundColor: playerAccent,
+                    overflow: 'hidden',
                   },
                 ]}
-              />
+              >
+                <Animated.View
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    bottom: 0,
+                    width: 30,
+                    backgroundColor: 'rgba(255,255,255,0.2)',
+                    borderRadius: 4,
+                    transform: [{ translateX: xpShimmerAnim }],
+                  }}
+                />
+              </Animated.View>
             </View>
             <Text style={[s.xpText, { color: P.textMuted }]}>
               {xp.currentXP} / {xp.xpForNext} XP to Level {xp.level + 1}
@@ -1288,24 +1380,44 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
           </View>
         </View>
 
-        {/* Mini stat counters */}
-        <View style={s.miniCountersRow}>
-          <View style={[s.miniCounter, { backgroundColor: P.neonBlue + '20' }]}>
-            <Text style={[s.miniCounterNumber, { color: P.neonBlue }]}>{stats?.games_played || 0}</Text>
-            <Text style={[s.miniCounterLabel, { color: P.textMuted }]}>Games</Text>
-          </View>
-          <View style={[s.miniCounter, { backgroundColor: P.gold + '20' }]}>
-            <Text style={[s.miniCounterNumber, { color: P.gold }]}>{achievements.length}</Text>
-            <Text style={[s.miniCounterLabel, { color: P.textMuted }]}>Trophies</Text>
-          </View>
-          <View style={[s.miniCounter, { backgroundColor: playerAccent + '20' }]}>
-            <Text style={[s.miniCounterNumber, { color: playerAccent }]}>
-              {statKeys.reduce((sum, k) => sum + (stats?.[k] || 0), 0)}
-            </Text>
-            <Text style={[s.miniCounterLabel, { color: P.textMuted }]}>Stat Pts</Text>
-          </View>
+        {/* Hex badge counters */}
+        <View style={[s.miniCountersRow, { justifyContent: 'space-around' }]}>
+          <HexBadge size="large" borderColor={P.neonBlue} value={stats?.games_played || 0} label="Games" valueColor={P.neonBlue} labelColor={P.textMuted} bgColor={P.neonBlue + '15'} />
+          <HexBadge size="large" borderColor={P.gold} value={achievements.length} label="Trophies" valueColor={P.gold} labelColor={P.textMuted} bgColor={P.gold + '15'} />
+          <HexBadge size="large" borderColor={playerAccent} value={statKeys.reduce((sum, k) => sum + (stats?.[k] || 0), 0)} label="Stat Pts" valueColor={playerAccent} labelColor={P.textMuted} bgColor={playerAccent + '15'} />
         </View>
       </View>
+
+      {/* ============================================ */}
+      {/* WELCOME STATE (first-time player)            */}
+      {/* ============================================ */}
+      {isFirstTimePlayer && (
+        <View style={s.section}>
+          <View style={[s.welcomeCard, { backgroundColor: P.card, borderColor: playerAccent + '40' }]}>
+            <Text style={{ fontSize: 32, textAlign: 'center' }}>{sportDisplay.icon}</Text>
+            <Text style={[s.welcomeTitle, { color: P.text }]}>Welcome to VolleyBrain!</Text>
+            <Text style={[s.welcomeSubtext, { color: P.textMuted }]}>
+              This is your player dashboard. As you play games and earn stats, this space will fill up with your achievements, rankings, and highlights. Let's go!
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 12, marginTop: 16 }}>
+              <PressableCard
+                style={[s.welcomeBtn, { backgroundColor: playerAccent }]}
+                onPress={() => router.push('/achievements' as any)}
+              >
+                <Ionicons name="trophy" size={16} color="#fff" />
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Browse Trophies</Text>
+              </PressableCard>
+              <PressableCard
+                style={[s.welcomeBtn, { backgroundColor: P.cardAlt }]}
+                onPress={() => router.push('/(tabs)/schedule' as any)}
+              >
+                <Ionicons name="calendar" size={16} color={P.text} />
+                <Text style={{ color: P.text, fontWeight: '700', fontSize: 13 }}>See Schedule</Text>
+              </PressableCard>
+            </View>
+          </View>
+        </View>
+      )}
 
       {/* ============================================ */}
       {/* ORDERED SECTIONS                             */}
@@ -1319,38 +1431,22 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
       {/* ============================================ */}
       <View style={s.section}>
         <View style={s.quickActionsGrid}>
-          <TouchableOpacity
-            style={[s.quickActionCard, { backgroundColor: P.card, borderColor: P.border }]}
-            onPress={() => router.push('/(tabs)/connect' as any)}
-            activeOpacity={0.7}
-          >
+          <PressableCard style={[s.quickActionCard, { backgroundColor: P.card, borderColor: P.border }]} onPress={() => router.push('/(tabs)/connect' as any)}>
             <Ionicons name="people" size={26} color={P.neonBlue} />
             <Text style={[s.quickActionLabel, { color: P.text }]}>Team Hub</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[s.quickActionCard, { backgroundColor: P.card, borderColor: P.border }]}
-            onPress={() => router.push('/standings' as any)}
-            activeOpacity={0.7}
-          >
+          </PressableCard>
+          <PressableCard style={[s.quickActionCard, { backgroundColor: P.card, borderColor: P.border }]} onPress={() => router.push('/standings' as any)}>
             <Ionicons name="podium" size={26} color={P.neonGreen} />
             <Text style={[s.quickActionLabel, { color: P.text }]}>Leaderboards</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[s.quickActionCard, { backgroundColor: P.card, borderColor: P.border }]}
-            onPress={() => router.push('/achievements' as any)}
-            activeOpacity={0.7}
-          >
+          </PressableCard>
+          <PressableCard style={[s.quickActionCard, { backgroundColor: P.card, borderColor: P.border }]} onPress={() => router.push('/achievements' as any)}>
             <Ionicons name="trophy" size={26} color={P.gold} />
             <Text style={[s.quickActionLabel, { color: P.text }]}>Trophies</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[s.quickActionCard, { backgroundColor: P.card, borderColor: P.border }]}
-            onPress={() => router.push('/(tabs)/schedule' as any)}
-            activeOpacity={0.7}
-          >
+          </PressableCard>
+          <PressableCard style={[s.quickActionCard, { backgroundColor: P.card, borderColor: P.border }]} onPress={() => router.push('/(tabs)/schedule' as any)}>
             <Ionicons name="calendar" size={26} color={P.neonPurple} />
             <Text style={[s.quickActionLabel, { color: P.text }]}>Schedule</Text>
-          </TouchableOpacity>
+          </PressableCard>
         </View>
       </View>
 
@@ -2101,5 +2197,33 @@ const createStyles = (colors: any) =>
       fontSize: 13,
       fontWeight: '700',
       color: DARK.text,
+    },
+
+    // Welcome card (first-time player)
+    welcomeCard: {
+      borderRadius: 16,
+      borderWidth: 1,
+      padding: 24,
+      alignItems: 'center' as const,
+    },
+    welcomeTitle: {
+      fontSize: 20,
+      fontWeight: '800' as const,
+      marginTop: 12,
+      textAlign: 'center' as const,
+    },
+    welcomeSubtext: {
+      fontSize: 14,
+      textAlign: 'center' as const,
+      lineHeight: 20,
+      marginTop: 8,
+    },
+    welcomeBtn: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: 6,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 12,
     },
   });

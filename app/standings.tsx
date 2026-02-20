@@ -477,8 +477,8 @@ export default function StandingsScreen() {
       return (
         <View style={s.emptyState}>
           <Ionicons name="podium-outline" size={48} color={colors.textMuted} />
-          <Text style={s.emptyTitle}>No Teams Yet</Text>
-          <Text style={s.emptySubtitle}>Teams will appear here once they are added to the season.</Text>
+          <Text style={s.emptyTitle}>Leaderboards Coming Soon</Text>
+          <Text style={s.emptySubtitle}>Once teams are added, rankings and stats light up here.</Text>
         </View>
       );
     }
@@ -780,9 +780,9 @@ export default function StandingsScreen() {
         ) : displayLeaderboard.length === 0 ? (
           <View style={s.emptyState}>
             <Ionicons name="stats-chart-outline" size={48} color={colors.textMuted} />
-            <Text style={s.emptyTitle}>No Stats Recorded</Text>
+            <Text style={s.emptyTitle}>Stats Are on the Way</Text>
             <Text style={s.emptySubtitle}>
-              Player stats for {currentStatCategory.label.toLowerCase()} will appear here once games are recorded.
+              Once games are played, the leaderboard will come alive.
             </Text>
           </View>
         ) : (

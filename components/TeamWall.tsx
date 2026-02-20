@@ -1221,13 +1221,13 @@ export default function TeamWall({ teamId: propTeamId, embedded = false }: TeamW
                 <Ionicons name="megaphone-outline" size={56} color={teamColor + '50'} />
                 <Text style={s.emptyTitle}>
                   {isCoachOrAdmin
-                    ? `Be the first to post for ${team?.name || 'your team'}!`
-                    : `Check back for ${team?.name || 'team'} updates`}
+                    ? 'Your Team Wall Is Ready!'
+                    : 'Stay Tuned!'}
                 </Text>
                 <Text style={s.emptySubtitle}>
                   {isCoachOrAdmin
-                    ? 'Share updates, shoutouts, and game recaps with your team.'
-                    : 'Your coaches will post updates, schedules, and highlights here.'}
+                    ? 'Share updates, shoutouts, and game recaps to fire up your squad.'
+                    : 'Coaches will post highlights, updates, and news here.'}
                 </Text>
                 {isCoachOrAdmin && (
                   <TouchableOpacity
@@ -1288,8 +1288,8 @@ export default function TeamWall({ teamId: propTeamId, embedded = false }: TeamW
           ) : roster.length === 0 ? (
             <View style={s.centered}>
               <Ionicons name="people-outline" size={56} color={teamColor + '50'} />
-              <Text style={s.emptyTitle}>No Players</Text>
-              <Text style={s.emptySubtitle}>No players have been added to this team yet.</Text>
+              <Text style={s.emptyTitle}>Roster Loading</Text>
+              <Text style={s.emptySubtitle}>Players will show up once the coach builds the roster.</Text>
             </View>
           ) : (
             <FlatList
@@ -1312,8 +1312,8 @@ export default function TeamWall({ teamId: propTeamId, embedded = false }: TeamW
           ) : events.length === 0 ? (
             <View style={s.centered}>
               <Ionicons name="calendar-outline" size={56} color={teamColor + '50'} />
-              <Text style={s.emptyTitle}>No Upcoming Events</Text>
-              <Text style={s.emptySubtitle}>No scheduled events found for this team.</Text>
+              <Text style={s.emptyTitle}>Schedule TBD</Text>
+              <Text style={s.emptySubtitle}>Events will appear here once they're on the calendar.</Text>
             </View>
           ) : (
             <FlatList

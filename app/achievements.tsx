@@ -450,8 +450,8 @@ export default function AchievementsScreen() {
         </View>
         <View style={s.centered}>
           <Ionicons name="trophy-outline" size={64} color={DARK.textMuted} />
-          <Text style={s.emptyTitle}>Achievements are being prepared</Text>
-          <Text style={s.emptySubtitle}>for your league!</Text>
+          <Text style={s.emptyTitle}>Achievements Unlocking Soon</Text>
+          <Text style={s.emptySubtitle}>Your league is setting up trophies. Check back — your first badge is within reach!</Text>
         </View>
       </SafeAreaView>
     );
@@ -665,7 +665,7 @@ export default function AchievementsScreen() {
         {filteredAchievements.length === 0 && (
           <View style={s.emptyBox}>
             <Ionicons name="trophy-outline" size={48} color={DARK.textMuted} />
-            <Text style={s.emptyFilterText}>No achievements in this category</Text>
+            <Text style={s.emptyFilterText}>None unlocked yet in this category. Keep grinding!</Text>
           </View>
         )}
       </View>

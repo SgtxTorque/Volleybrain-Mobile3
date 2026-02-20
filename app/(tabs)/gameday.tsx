@@ -309,9 +309,9 @@ export default function GameDayScreen() {
       <SafeAreaView style={s.container}>
         <View style={s.emptyCenter}>
           <Ionicons name="flash-outline" size={64} color={colors.textMuted} />
-          <Text style={[s.emptyTitle, { color: colors.textMuted }]}>No season selected</Text>
+          <Text style={[s.emptyTitle, { color: colors.textMuted }]}>Pick Your Season</Text>
           <Text style={[s.emptySubtitle, { color: colors.textMuted }]}>
-            Select a season to see your Game Day dashboard
+            Select a season to see your Game Day dashboard.
           </Text>
         </View>
       </SafeAreaView>
@@ -578,9 +578,9 @@ export default function GameDayScreen() {
           <View style={s.section}>
             <View style={[glassCard, s.emptyHero]}>
               <Ionicons name="sunny-outline" size={48} color={colors.textMuted} />
-              <Text style={[s.emptyHeroTitle, { color: colors.text }]}>No upcoming events</Text>
+              <Text style={[s.emptyHeroTitle, { color: colors.text }]}>No events on deck</Text>
               <Text style={[s.emptyHeroSubtitle, { color: colors.textMuted }]}>
-                Enjoy the break! Check back when new events are scheduled.
+                Rest up — when game day hits, this is your command center.
               </Text>
             </View>
           </View>
