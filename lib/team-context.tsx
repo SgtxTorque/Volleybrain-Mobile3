@@ -17,7 +17,7 @@ export const useTeamContext = () => {
       .then(id => {
         if (id) {
           setSelectedTeamIdState(id);
-          console.log('[TeamContext] Restored selected team:', id);
+          if (__DEV__) console.log('[TeamContext] Restored selected team:', id);
         }
         setLoaded(true);
       })
@@ -32,10 +32,10 @@ export const useTeamContext = () => {
     try {
       if (id) {
         await AsyncStorage.setItem(TEAM_CONTEXT_KEY, id);
-        console.log('[TeamContext] Selected team:', id);
+        if (__DEV__) console.log('[TeamContext] Selected team:', id);
       } else {
         await AsyncStorage.removeItem(TEAM_CONTEXT_KEY);
-        console.log('[TeamContext] Cleared team selection');
+        if (__DEV__) console.log('[TeamContext] Cleared team selection');
       }
     } catch (err) {
       console.error('[TeamContext] Error saving team selection:', err);

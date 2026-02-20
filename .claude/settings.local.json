@@ -6,7 +6,26 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(tee:*)",
-      "Bash(git status:*)"
+      "Bash(git status:*)",
+      "Bash(findstr:*)",
+      "Bash(node -e:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(dir:*)",
+      "Bash(where:*)",
+      "Bash(/c/Program\\\\ Files/Git/usr/bin/ls.exe:*)",
+      "Bash(\"C:/Program Files/Git/usr/bin/bash.exe\" -c \"cd ''C:/Users/fuent/Desktop/Volleybrain-Mobile3'' && grep -rn ''console\\\\.log'' --include=''*.tsx'' --include=''*.ts'' app/ components/ lib/ constants/ | grep -v node_modules | grep -v reference/ | grep -v __DEV__\")",
+      "Bash(\"C:\\\\Program Files\\\\Git\\\\bin\\\\bash.exe\" -c \"echo hello\")",
+      "Bash(git -C \"C:/Users/fuent/Desktop/Volleybrain-Mobile3\" status)",
+      "Bash(git -C \"C:/Users/fuent/Desktop/Volleybrain-Mobile3\" grep -n \"console\\\\.log\" -- \"app/**/*.tsx\" \"app/**/*.ts\" \"components/**/*.tsx\" \"components/**/*.ts\" \"lib/**/*.tsx\" \"lib/**/*.ts\" \"constants/**/*.tsx\" \"constants/**/*.ts\")",
+      "Bash(git -C \"C:/Users/fuent/Desktop/Volleybrain-Mobile3\" grep -rn \"console\\\\.log\" -- \"*.tsx\" \"*.ts\")",
+      "Bash(git -C \"C:/Users/fuent/Desktop/Volleybrain-Mobile3\" grep -rn \"console\\\\.log\" -- \":\\(glob\\)app/*.ts\" \":\\(glob\\)app/*.tsx\" \":\\(glob\\)app/**/*.ts\" \":\\(glob\\)app/**/*.tsx\")",
+      "Bash(git -C \"C:/Users/fuent/Desktop/Volleybrain-Mobile3\" grep -rn \"console\\\\.log\" -- \":\\(glob\\)components/*.ts\" \":\\(glob\\)components/*.tsx\" \":\\(glob\\)components/**/*.ts\" \":\\(glob\\)components/**/*.tsx\")",
+      "Bash(git -C \"C:/Users/fuent/Desktop/Volleybrain-Mobile3\" grep -rn \"console\\\\.log\" -- \":\\(glob\\)lib/*.ts\" \":\\(glob\\)lib/*.tsx\" \":\\(glob\\)lib/**/*.ts\" \":\\(glob\\)lib/**/*.tsx\")",
+      "Bash(git -C \"C:/Users/fuent/Desktop/Volleybrain-Mobile3\" grep -rn \"console\\\\.log\" -- \":\\(glob\\)lib/**/*.ts\" \":\\(glob\\)lib/**/*.tsx\")",
+      "Bash(git -C \"C:/Users/fuent/Desktop/Volleybrain-Mobile3\" grep -rn \"console\\\\.log\" -- \":\\(glob\\)constants/*.ts\" \":\\(glob\\)constants/*.tsx\" \":\\(glob\\)constants/**/*.ts\" \":\\(glob\\)constants/**/*.tsx\")",
+      "Bash(git -C \"C:/Users/fuent/Desktop/Volleybrain-Mobile3\" grep -rn \"console\\\\.log\" -- \":\\(glob\\)components/**/*.ts\" \":\\(glob\\)components/**/*.tsx\")",
+      "Bash(git -C \"C:/Users/fuent/Desktop/Volleybrain-Mobile3\" grep -rn --invert-grep -e \"__DEV__\" \"console\\\\.log\" -- \":\\(glob\\)lib/**/*.ts\" \":\\(glob\\)lib/**/*.tsx\")"
     ]
   }
 }

@@ -199,7 +199,7 @@ export default function GameResultsScreen() {
       if (typeof item === 'number') return String(item);
       if (typeof item === 'object' && item !== null) {
         const us = item.our_score ?? item.us ?? item.home ?? null;
-        const them = item.their_score ?? item.opponent_score ?? item.them ?? item.away ?? null;
+        const them = item.opponent_score ?? item.their_score ?? item.them ?? item.away ?? null;
         if (us != null && them != null) return `${us}-${them}`;
         // Try first two numeric values
         const vals = Object.values(item).filter(v => typeof v === 'number');

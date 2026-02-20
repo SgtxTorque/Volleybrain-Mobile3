@@ -131,7 +131,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         setAccentColor(savedAccent as AccentColor);
       }
     } catch (e) {
-      console.log('Error loading theme prefs:', e);
+      if (__DEV__) console.log('Error loading theme prefs:', e);
     }
   };
 

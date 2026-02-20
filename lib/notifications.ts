@@ -20,7 +20,7 @@ try {
     });
   }
 } catch (e) {
-  console.log('Notifications not available:', e);
+  if (__DEV__) console.log('Notifications not available:', e);
 }
 
 export type NotificationType =
@@ -50,12 +50,12 @@ export interface AppNotification {
 export async function registerForPushNotificationsAsync(): Promise<string | null> {
   try {
     if (isExpoGo) {
-      console.log('Push notifications are not available in Expo Go');
+      if (__DEV__) console.log('Push notifications are not available in Expo Go');
       return null;
     }
 
     if (!Device.isDevice) {
-      console.log('Push notifications require a physical device');
+      if (__DEV__) console.log('Push notifications require a physical device');
       return null;
     }
 
@@ -68,7 +68,7 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     }
 
     if (finalStatus !== 'granted') {
-      console.log('Push notification permission denied');
+      if (__DEV__) console.log('Push notification permission denied');
       return null;
     }
 
@@ -609,14 +609,14 @@ export async function runScheduledChecks(): Promise<{
   autoBlasts: number;
   rsvpReminders: number;
 }> {
-  console.log('Running scheduled notification checks...');
+  if (__DEV__) console.log('Running scheduled notification checks...');
   
   const [autoBlasts, rsvpReminders] = await Promise.all([
     runAutoBlastCheck(2),      // Check games in next 2 days
     sendRSVPReminders(3),      // Remind for events in next 3 days
   ]);
   
-  console.log(`Scheduled checks complete: ${autoBlasts} blasts, ${rsvpReminders} reminders`);
+  if (__DEV__) console.log(`Scheduled checks complete: ${autoBlasts} blasts, ${rsvpReminders} reminders`);
   
   return { autoBlasts, rsvpReminders };
 }
