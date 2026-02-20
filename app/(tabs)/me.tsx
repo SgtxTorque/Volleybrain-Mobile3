@@ -2,8 +2,9 @@ import { useAuth } from '@/lib/auth';
 import { usePermissions } from '@/lib/permissions-context';
 import { AccentColor, accentColors, useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
@@ -231,6 +232,49 @@ export default function MeScreen() {
 
   const accentColorKeys: AccentColor[] = ['orange', 'blue', 'purple', 'green', 'rose', 'slate'];
 
+  // =========================================================================
+  // PLAYER CUSTOMIZATION STATE (only for players)
+  // =========================================================================
+  const PLAYER_ACCENT_COLORS = ['#F97316', '#3B82F6', '#A855F7', '#10B981', '#F43F5E', '#64748B'];
+  const THEME_VARIANT_OPTIONS = [
+    { key: 'midnight', label: 'Midnight', desc: 'Dark with glow', colors: ['#0A0F1A', '#111827', '#F97316'] },
+    { key: 'clean', label: 'Clean', desc: 'Light & minimal', colors: ['#F8FAFC', '#FFFFFF', '#F97316'] },
+    { key: 'fire', label: 'Fire', desc: 'Warm embers', colors: ['#1A0A0A', '#2D1111', '#FF6B35'] },
+  ];
+  const LAYOUT_OPTIONS = [
+    { key: 'default', label: 'Default', desc: 'Stats → Achievements → Games' },
+    { key: 'stats_first', label: 'Stats First', desc: 'Stats → Games → Achievements' },
+    { key: 'games_first', label: 'Games First', desc: 'Games → Stats → Achievements' },
+  ];
+  const CALLING_CARDS = [
+    { id: 0, name: 'Default', gradient: ['#1A2235', '#0A0F1A'] },
+    { id: 1, name: 'Gold Rush', gradient: ['#F59E0B', '#D97706'] },
+    { id: 2, name: 'Ocean', gradient: ['#06B6D4', '#0284C7'] },
+    { id: 3, name: 'Ember', gradient: ['#EF4444', '#B91C1C'] },
+    { id: 4, name: 'Neon', gradient: ['#A855F7', '#7C3AED'] },
+    { id: 5, name: 'Forest', gradient: ['#10B981', '#059669'] },
+    { id: 6, name: 'Sunset', gradient: ['#F97316', '#EA580C'] },
+    { id: 7, name: 'Ice', gradient: ['#38BDF8', '#0EA5E9'] },
+  ];
+
+  const [playerTheme, setPlayerTheme] = useState('midnight');
+  const [playerAccent, setPlayerAccent] = useState('#F97316');
+  const [playerLayout, setPlayerLayout] = useState('default');
+  const [playerCard, setPlayerCard] = useState(0);
+
+  useEffect(() => {
+    if (isPlayer) {
+      AsyncStorage.getItem('vb_player_theme_variant').then(v => { if (v) setPlayerTheme(v); });
+      AsyncStorage.getItem('vb_player_accent').then(v => { if (v) setPlayerAccent(v); });
+      AsyncStorage.getItem('vb_player_layout').then(v => { if (v) setPlayerLayout(v); });
+      AsyncStorage.getItem('vb_player_calling_card').then(v => { if (v) setPlayerCard(Number(v)); });
+    }
+  }, [isPlayer]);
+
+  const savePlayerPref = (key: string, value: string) => {
+    AsyncStorage.setItem(key, value);
+  };
+
   return (
     <SafeAreaView style={s.container}>
       <ScrollView
@@ -275,6 +319,15 @@ export default function MeScreen() {
             <Text style={s.heroOrg}>{organization.name}</Text>
           )}
         </View>
+
+        {/* ===== MY STUFF SECTION (role-specific shortcuts) ===== */}
+        {myStuffItems.length > 0 && (
+          <CollapsibleSection title="My Stuff" defaultOpen={true} colors={colors}>
+            <View style={s.menuCard}>
+              {myStuffItems.map((item, i) => renderMenuItem(item, i))}
+            </View>
+          </CollapsibleSection>
+        )}
 
         {/* ===== PERSONAL SECTION (always visible) ===== */}
         <CollapsibleSection title="Personal" defaultOpen={true} colors={colors}>
@@ -328,6 +381,127 @@ export default function MeScreen() {
             {personalItems.map((item, i) => renderMenuItem(item, i))}
           </View>
         </CollapsibleSection>
+
+        {/* ===== PLAYER CUSTOMIZATION (only for players) ===== */}
+        {isPlayer && (
+          <CollapsibleSection title="Player Dashboard Customization" defaultOpen={false} colors={colors}>
+            <View style={s.menuCard}>
+              {/* Theme Variant */}
+              <View style={s.customSection}>
+                <Text style={[s.customLabel, { color: colors.text }]}>Theme Variant</Text>
+                <View style={s.customRow}>
+                  {THEME_VARIANT_OPTIONS.map(opt => (
+                    <TouchableOpacity
+                      key={opt.key}
+                      style={[
+                        s.themeCard,
+                        { backgroundColor: opt.colors[0], borderColor: playerTheme === opt.key ? opt.colors[2] : colors.border },
+                      ]}
+                      onPress={() => { setPlayerTheme(opt.key); savePlayerPref('vb_player_theme_variant', opt.key); }}
+                      activeOpacity={0.7}
+                    >
+                      <View style={{ flexDirection: 'row', gap: 4, marginBottom: 6 }}>
+                        {opt.colors.map((c, i) => (
+                          <View key={i} style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: c }} />
+                        ))}
+                      </View>
+                      <Text style={[s.themeCardLabel, { color: opt.key === 'clean' ? '#1E293B' : '#FFF' }]}>
+                        {opt.label}
+                      </Text>
+                      <Text style={{ fontSize: 10, color: opt.key === 'clean' ? '#64748B' : '#94A3B8' }}>
+                        {opt.desc}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Player Accent Color */}
+              <View style={s.customSection}>
+                <Text style={[s.customLabel, { color: colors.text }]}>Player Accent</Text>
+                <View style={s.accentCircles}>
+                  {PLAYER_ACCENT_COLORS.map(c => (
+                    <TouchableOpacity
+                      key={c}
+                      style={[
+                        s.accentCircle,
+                        { backgroundColor: c },
+                        playerAccent === c && s.accentCircleSelected,
+                      ]}
+                      onPress={() => { setPlayerAccent(c); savePlayerPref('vb_player_accent', c); }}
+                      activeOpacity={0.7}
+                    >
+                      {playerAccent === c && <Ionicons name="checkmark" size={14} color="#fff" />}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Layout Preference */}
+              <View style={s.customSection}>
+                <Text style={[s.customLabel, { color: colors.text }]}>Layout</Text>
+                {LAYOUT_OPTIONS.map(opt => (
+                  <TouchableOpacity
+                    key={opt.key}
+                    style={[
+                      s.layoutOption,
+                      { borderColor: playerLayout === opt.key ? colors.primary : colors.border },
+                      playerLayout === opt.key && { backgroundColor: colors.primary + '10' },
+                    ]}
+                    onPress={() => { setPlayerLayout(opt.key); savePlayerPref('vb_player_layout', opt.key); }}
+                    activeOpacity={0.7}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <View style={[s.radioOuter, { borderColor: playerLayout === opt.key ? colors.primary : colors.textMuted }]}>
+                        {playerLayout === opt.key && <View style={[s.radioInner, { backgroundColor: colors.primary }]} />}
+                      </View>
+                      <View>
+                        <Text style={[s.layoutLabel, { color: colors.text }]}>{opt.label}</Text>
+                        <Text style={{ fontSize: 11, color: colors.textMuted }}>{opt.desc}</Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Calling Card */}
+              <View style={s.customSection}>
+                <Text style={[s.customLabel, { color: colors.text }]}>Calling Card</Text>
+                <View style={s.cardGrid}>
+                  {CALLING_CARDS.map(card => (
+                    <TouchableOpacity
+                      key={card.id}
+                      style={[
+                        s.callingCard,
+                        { backgroundColor: card.gradient[0] },
+                        playerCard === card.id && { borderColor: '#FFD700', borderWidth: 2 },
+                      ]}
+                      onPress={() => { setPlayerCard(card.id); savePlayerPref('vb_player_calling_card', String(card.id)); }}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[s.callingCardInner, { backgroundColor: card.gradient[1], opacity: 0.4 }]} />
+                      <Text style={s.callingCardName}>{card.name}</Text>
+                      {playerCard === card.id && (
+                        <View style={s.callingCardCheck}>
+                          <Ionicons name="checkmark-circle" size={16} color="#FFD700" />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </View>
+          </CollapsibleSection>
+        )}
+
+        {/* ===== ADMIN TOOLS (only for admins) ===== */}
+        {isAdmin && (
+          <CollapsibleSection title="Admin Tools" defaultOpen={false} colors={colors}>
+            <View style={s.menuCard}>
+              {adminToolsItems.map((item, i) => renderMenuItem(item, i))}
+            </View>
+          </CollapsibleSection>
+        )}
 
         {/* ===== SIGN OUT ===== */}
         <TouchableOpacity
@@ -530,6 +704,92 @@ const createStyles = (colors: any, isDark: boolean) =>
           elevation: 4,
         },
       }),
+    },
+
+    // ===== PLAYER CUSTOMIZATION =====
+    customSection: {
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    customLabel: {
+      fontSize: 13,
+      fontWeight: '700',
+      marginBottom: 10,
+    },
+    customRow: {
+      flexDirection: 'row',
+      gap: 8,
+    },
+    themeCard: {
+      flex: 1,
+      borderRadius: 12,
+      padding: 10,
+      borderWidth: 1.5,
+      alignItems: 'center',
+    },
+    themeCardLabel: {
+      fontSize: 12,
+      fontWeight: '700',
+    },
+    layoutOption: {
+      borderRadius: 10,
+      padding: 10,
+      borderWidth: 1,
+      marginBottom: 6,
+    },
+    layoutLabel: {
+      fontSize: 13,
+      fontWeight: '600',
+    },
+    radioOuter: {
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+      borderWidth: 2,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    radioInner: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+    },
+    cardGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    callingCard: {
+      width: '23%' as any,
+      aspectRatio: 1.4,
+      borderRadius: 10,
+      justifyContent: 'flex-end',
+      alignItems: 'center',
+      padding: 6,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.1)',
+      overflow: 'hidden',
+      position: 'relative',
+    },
+    callingCardInner: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+    },
+    callingCardName: {
+      fontSize: 9,
+      fontWeight: '700',
+      color: '#FFF',
+      textAlign: 'center',
+    },
+    callingCardCheck: {
+      position: 'absolute',
+      top: 2,
+      right: 2,
     },
 
     // ===== SIGN OUT =====

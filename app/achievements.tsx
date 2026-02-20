@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Dimensions,
   FlatList,
   Modal,
@@ -148,6 +149,7 @@ export default function AchievementsScreen() {
   const [seasonStats, setSeasonStats] = useState<PlayerSeasonStats>({});
   const [earnedCounts, setEarnedCounts] = useState<Record<string, number>>({});
   const [selectedAchievement, setSelectedAchievement] = useState<Achievement | null>(null);
+  const [trackedIds, setTrackedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (user?.id && workingSeason?.id) {
@@ -166,16 +168,7 @@ export default function AchievementsScreen() {
   const resolvePlayerId = async (): Promise<string | null> => {
     if (!user?.id || !workingSeason?.id) return null;
 
-    // 1. Check user_account_id
-    const { data: selfPlayers } = await supabase
-      .from('players')
-      .select('id')
-      .eq('user_account_id', user.id)
-      .eq('season_id', workingSeason.id)
-      .limit(1);
-    if (selfPlayers && selfPlayers.length > 0) return selfPlayers[0].id;
-
-    // 2. Check parent_account_id
+    // 1. Check parent_account_id
     const { data: directPlayers } = await supabase
       .from('players')
       .select('id')
@@ -184,7 +177,7 @@ export default function AchievementsScreen() {
       .limit(1);
     if (directPlayers && directPlayers.length > 0) return directPlayers[0].id;
 
-    // 3. Check player_guardians
+    // 2. Check player_guardians
     const { data: guardianLinks } = await supabase
       .from('player_guardians')
       .select('player_id')
@@ -233,6 +226,15 @@ export default function AchievementsScreen() {
             map[pa.achievement_id] = pa as PlayerAchievement;
           }
           setEarnedMap(map);
+        }
+
+        // Fetch tracked achievements
+        const { data: tracked } = await supabase
+          .from('player_tracked_achievements')
+          .select('achievement_id')
+          .eq('player_id', resolvedPlayerId);
+        if (tracked) {
+          setTrackedIds(new Set(tracked.map(t => t.achievement_id)));
         }
 
         // Fetch player_season_stats for progress calculation
@@ -311,6 +313,34 @@ export default function AchievementsScreen() {
     if (!error && rows.length > 0) {
       // Refresh to show newly unlocked
       await loadData();
+    }
+  };
+
+  const toggleTrack = async (achievementId: string) => {
+    if (!playerId) return;
+    const isTracked = trackedIds.has(achievementId);
+    if (isTracked) {
+      // Untrack
+      await supabase
+        .from('player_tracked_achievements')
+        .delete()
+        .eq('player_id', playerId)
+        .eq('achievement_id', achievementId);
+      setTrackedIds(prev => {
+        const next = new Set(prev);
+        next.delete(achievementId);
+        return next;
+      });
+    } else {
+      // Track — max 3
+      if (trackedIds.size >= 3) {
+        Alert.alert('Limit Reached', 'You can track up to 3 achievements at a time. Untrack one first.');
+        return;
+      }
+      await supabase
+        .from('player_tracked_achievements')
+        .insert({ player_id: playerId, achievement_id: achievementId, display_order: trackedIds.size });
+      setTrackedIds(prev => new Set(prev).add(achievementId));
     }
   };
 
@@ -492,6 +522,13 @@ export default function AchievementsScreen() {
 
         {/* Rarity dot */}
         <View style={[s.rarityDot, { backgroundColor: rarityConfig.text }]} />
+
+        {/* Tracking indicator */}
+        {trackedIds.has(item.id) && !isEarned && (
+          <View style={s.trackingIndicator}>
+            <Ionicons name="eye" size={8} color={DARK.gold} />
+          </View>
+        )}
       </TouchableOpacity>
     );
   };
@@ -831,6 +868,32 @@ export default function AchievementsScreen() {
                 </View>
               )}
             </View>
+
+            {/* Track / Untrack button */}
+            {playerId && !isEarned && (
+              <TouchableOpacity
+                style={[
+                  s.modalTrackBtn,
+                  trackedIds.has(ach.id) && { backgroundColor: DARK.gold + '25', borderColor: DARK.gold },
+                ]}
+                onPress={() => toggleTrack(ach.id)}
+              >
+                <Ionicons
+                  name={trackedIds.has(ach.id) ? 'eye' : 'eye-outline'}
+                  size={18}
+                  color={trackedIds.has(ach.id) ? DARK.gold : DARK.textSecondary}
+                />
+                <Text style={[
+                  s.modalTrackBtnText,
+                  trackedIds.has(ach.id) && { color: DARK.gold },
+                ]}>
+                  {trackedIds.has(ach.id) ? 'Tracking' : 'Track This'}
+                </Text>
+                {!trackedIds.has(ach.id) && (
+                  <Text style={s.modalTrackHint}>({trackedIds.size}/3)</Text>
+                )}
+              </TouchableOpacity>
+            )}
 
             {/* Close button at bottom */}
             <TouchableOpacity
@@ -1350,6 +1413,41 @@ const createStyles = () =>
       fontSize: 14,
       color: DARK.textSecondary,
       flex: 1,
+    },
+
+    // Track button
+    modalTrackBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      marginTop: 20,
+      backgroundColor: DARK.cardAlt,
+      borderRadius: 14,
+      paddingVertical: 14,
+      paddingHorizontal: 32,
+      borderWidth: 1,
+      borderColor: DARK.border,
+      width: '100%',
+    },
+    modalTrackBtnText: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: DARK.textSecondary,
+    },
+    modalTrackHint: {
+      fontSize: 12,
+      color: DARK.textMuted,
+    },
+
+    // Tracking indicator on badge cell
+    trackingIndicator: {
+      position: 'absolute',
+      top: 4,
+      right: 4,
+      backgroundColor: DARK.gold + '30',
+      borderRadius: 8,
+      padding: 3,
     },
 
     // Bottom close

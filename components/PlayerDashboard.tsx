@@ -25,7 +25,6 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import ReenrollmentBanner from './ReenrollmentBanner';
 import RoleSelector from './RoleSelector';
 
 // ============================================
@@ -566,7 +565,16 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
   const statKeys = sportDisplay.primaryStats.map(s => s.seasonColumn);
   const ovr = calculateOVR(stats, statKeys);
   const ovrTier = getOVRTier(ovr);
-  const heroImage = player?.photo_url || null;
+  const [playerSelfie, setPlayerSelfie] = useState<string | null>(null);
+  // Load player selfie from AsyncStorage (doesn't overwrite admin/coach photo)
+  useEffect(() => {
+    if (player?.id) {
+      AsyncStorage.getItem(`vb_player_selfie_${player.id}`).then(url => {
+        if (url) setPlayerSelfie(url);
+      });
+    }
+  }, [player?.id]);
+  const heroImage = playerSelfie || player?.photo_url || null;
   const isOwnProfile = player?.parent_account_id === user?.id;
   const activeCard = CALLING_CARDS.find(c => c.id === equippedCard) || CALLING_CARDS[0];
 
@@ -578,42 +586,25 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
   const handlePhotoUpload = async () => {
     if (uploadingPhoto) return;
 
-    Alert.alert('Update Photo', 'Choose an option', [
-      {
-        text: 'Take Photo',
-        onPress: async () => {
-          setUploadingPhoto(true);
-          try {
-            const media = await takePhoto();
-            if (media) {
-              const url = await uploadMedia(media, `player-photos/${player!.id}`, 'player-photos');
-              if (url) {
-                await supabase.from('players').update({ photo_url: url }).eq('id', player!.id);
-                setPlayer(prev => prev ? { ...prev, photo_url: url } : prev);
-              }
-            }
-          } catch (e) { if (__DEV__) console.error('Photo upload error:', e); }
-          setUploadingPhoto(false);
+    const doUpload = async (media: any) => {
+      if (!media || !player) return;
+      setUploadingPhoto(true);
+      try {
+        // Upload to chat-media bucket (has open RLS) under player-selfies path
+        const url = await uploadMedia(media, `player-selfies/${player.id}`, 'chat-media');
+        if (url) {
+          // Store selfie URL locally — does NOT overwrite coach/admin photo
+          await AsyncStorage.setItem(`vb_player_selfie_${player.id}`, url);
+          setPlayerSelfie(url);
         }
-      },
-      {
-        text: 'Choose from Library',
-        onPress: async () => {
-          setUploadingPhoto(true);
-          try {
-            const media = await pickImage();
-            if (media) {
-              const url = await uploadMedia(media, `player-photos/${player!.id}`, 'player-photos');
-              if (url) {
-                await supabase.from('players').update({ photo_url: url }).eq('id', player!.id);
-                setPlayer(prev => prev ? { ...prev, photo_url: url } : prev);
-              }
-            }
-          } catch (e) { if (__DEV__) console.error('Photo upload error:', e); }
-          setUploadingPhoto(false);
-        }
-      },
-      { text: 'Cancel', style: 'cancel' }
+      } catch (e) { if (__DEV__) console.error('Photo upload error:', e); }
+      setUploadingPhoto(false);
+    };
+
+    Alert.alert('Update Photo', 'This photo is for your player dashboard only.', [
+      { text: 'Take Photo', onPress: async () => { const m = await takePhoto(); doUpload(m); } },
+      { text: 'Choose from Library', onPress: async () => { const m = await pickImage(); doUpload(m); } },
+      { text: 'Cancel', style: 'cancel' },
     ]);
   };
 
@@ -700,7 +691,7 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
   const renderStatHud = () => (
     <View style={s.section}>
       <View style={s.sectionHeaderRow}>
-        <Text style={[s.sectionHeader, { color: P.gold }]}>STAT HUD</Text>
+        <Text style={[s.sectionHeader, { color: playerAccent }]}>STAT HUD</Text>
         <Text style={[s.sectionHeaderRight, { color: P.textMuted }]}>{workingSeason?.name || ''}</Text>
       </View>
 
@@ -767,7 +758,7 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
   const renderTrophyCase = () => (
     <View style={s.section}>
       <View style={s.sectionHeaderRow}>
-        <Text style={[s.sectionHeader, { color: P.gold }]}>TROPHY CASE</Text>
+        <Text style={[s.sectionHeader, { color: playerAccent }]}>TROPHY CASE</Text>
         <Text style={[s.sectionHeaderRight, { color: P.textMuted }]}>{achievements.length} earned</Text>
       </View>
 
@@ -842,7 +833,7 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
   const renderBattleLog = () => (
     <View style={s.section}>
       <View style={s.sectionHeaderRow}>
-        <Text style={[s.sectionHeader, { color: P.gold }]}>BATTLE LOG</Text>
+        <Text style={[s.sectionHeader, { color: playerAccent }]}>BATTLE LOG</Text>
       </View>
 
       {recentGames.length > 0 ? (
@@ -905,7 +896,7 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
   const renderUpcomingBattles = () => (
     <View style={s.section}>
       <View style={s.sectionHeaderRow}>
-        <Text style={[s.sectionHeader, { color: P.gold }]}>UPCOMING BATTLES</Text>
+        <Text style={[s.sectionHeader, { color: playerAccent }]}>UPCOMING BATTLES</Text>
       </View>
 
       {upcomingEvents.length > 0 ? (
@@ -1033,7 +1024,8 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
             <View style={[s.heroOverlayBottom, { backgroundColor: P.bg }]} />
           </View>
         ) : (
-          <View style={[s.heroGradientBg, { backgroundColor: activeCard.gradient[0] + '30' }]}>
+          <View style={[s.heroGradientBg, { backgroundColor: activeCard.gradient[0] }]}>
+            <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: activeCard.gradient[1], opacity: 0.4 }} />
             <View style={[s.heroInitialsCircle, { backgroundColor: teamColor }]}>
               <Text style={[s.heroInitialsText, { color: P.text }]}>{initials}</Text>
             </View>
@@ -1068,24 +1060,11 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
           </TouchableOpacity>
         )}
 
-        {/* Hero content overlay */}
+        {/* Hero content overlay — name + badges at bottom of photo */}
         <View style={s.heroContent}>
-          {/* OVR Diamond */}
-          <View style={s.ovrWrap}>
-            <View style={[s.ovrDiamond, { borderColor: ovrTier.borderColor, backgroundColor: P.card }]}>
-              <View style={s.ovrInner}>
-                <Text style={[s.ovrNumber, { color: P.text }]}>{ovr}</Text>
-              </View>
-            </View>
-            <Text style={[s.ovrLabel, { color: ovrTier.borderColor }]}>{ovrTier.label}</Text>
-          </View>
-
-          {/* Player name */}
           <Text style={[s.heroName, { color: P.text }]} numberOfLines={1} adjustsFontSizeToFit>
             {playerName}
           </Text>
-
-          {/* Badges row */}
           <View style={s.heroBadgesRow}>
             {team && (
               <View style={[s.heroBadge, { backgroundColor: teamColor + '30' }]}>
@@ -1103,49 +1082,78 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
               </View>
             )}
           </View>
-
-          {/* Level + XP bar */}
-          <View style={s.levelRow}>
-            <View style={[s.levelCircle, { borderColor: P.gold, backgroundColor: P.card }]}>
-              <Text style={[s.levelNumber, { color: P.gold }]}>{xp.level}</Text>
-            </View>
-            <View style={s.xpBarWrap}>
-              <View style={[s.xpBarTrack, { backgroundColor: P.cardAlt }]}>
-                <View
-                  style={[
-                    s.xpBarFill,
-                    {
-                      width: `${Math.min((xp.currentXP / xp.xpForNext) * 100, 100)}%`,
-                      backgroundColor: teamColor,
-                    },
-                  ]}
-                />
-              </View>
-              <Text style={[s.xpText, { color: P.textMuted }]}>
-                {xp.currentXP} / {xp.xpForNext} XP to Level {xp.level + 1}
-              </Text>
-            </View>
-          </View>
-
-          {/* Mini stat counters */}
-          <View style={s.miniCountersRow}>
-            <View style={[s.miniCounter, { backgroundColor: P.neonBlue + '20' }]}>
-              <Text style={[s.miniCounterNumber, { color: P.neonBlue }]}>{stats?.games_played || 0}</Text>
-              <Text style={[s.miniCounterLabel, { color: P.textMuted }]}>Games</Text>
-            </View>
-            <View style={[s.miniCounter, { backgroundColor: P.gold + '20' }]}>
-              <Text style={[s.miniCounterNumber, { color: P.gold }]}>{achievements.length}</Text>
-              <Text style={[s.miniCounterLabel, { color: P.textMuted }]}>Trophies</Text>
-            </View>
-            <View style={[s.miniCounter, { backgroundColor: P.neonPink + '20' }]}>
-              <Text style={[s.miniCounterNumber, { color: P.neonPink }]}>{stats?.total_points || 0}</Text>
-              <Text style={[s.miniCounterLabel, { color: P.textMuted }]}>Points</Text>
-            </View>
-          </View>
         </View>
       </View>
 
-      <ReenrollmentBanner />
+      {/* ============================================ */}
+      {/* POWER STRIP — OVR, XP, counters              */}
+      {/* ============================================ */}
+      <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8, backgroundColor: P.bg }}>
+        {/* OVR + Tier row */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 14, marginBottom: 16 }}>
+          <TouchableOpacity
+            onPress={() => Alert.alert('Overall Rating', 'Your OVR is calculated from your season stats across all games. Keep playing and improving to raise it!')}
+            activeOpacity={0.7}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}
+          >
+            <View style={[s.ovrDiamond, { borderColor: ovrTier.borderColor, backgroundColor: P.card }]}>
+              <View style={s.ovrInner}>
+                <Text style={{ fontSize: 9, fontWeight: '700', color: P.textMuted, letterSpacing: 1 }}>OVR</Text>
+                <Text style={[s.ovrNumber, { color: P.text }]}>{ovr}</Text>
+              </View>
+            </View>
+            <View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <View style={{ backgroundColor: ovrTier.borderColor + '25', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 8 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: ovrTier.borderColor, letterSpacing: 1.5 }}>{ovrTier.label}</Text>
+                </View>
+                <Ionicons name="information-circle-outline" size={16} color={P.textMuted} />
+              </View>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        {/* Level + XP bar */}
+        <View style={s.levelRow}>
+          <View style={[s.levelCircle, { borderColor: playerAccent, backgroundColor: P.card }]}>
+            <Text style={[s.levelNumber, { color: playerAccent }]}>{xp.level}</Text>
+          </View>
+          <View style={s.xpBarWrap}>
+            <View style={[s.xpBarTrack, { backgroundColor: P.cardAlt }]}>
+              <View
+                style={[
+                  s.xpBarFill,
+                  {
+                    width: `${Math.min((xp.currentXP / xp.xpForNext) * 100, 100)}%`,
+                    backgroundColor: playerAccent,
+                  },
+                ]}
+              />
+            </View>
+            <Text style={[s.xpText, { color: P.textMuted }]}>
+              {xp.currentXP} / {xp.xpForNext} XP to Level {xp.level + 1}
+            </Text>
+          </View>
+        </View>
+
+        {/* Mini stat counters */}
+        <View style={s.miniCountersRow}>
+          <View style={[s.miniCounter, { backgroundColor: P.neonBlue + '20' }]}>
+            <Text style={[s.miniCounterNumber, { color: P.neonBlue }]}>{stats?.games_played || 0}</Text>
+            <Text style={[s.miniCounterLabel, { color: P.textMuted }]}>Games</Text>
+          </View>
+          <View style={[s.miniCounter, { backgroundColor: P.gold + '20' }]}>
+            <Text style={[s.miniCounterNumber, { color: P.gold }]}>{achievements.length}</Text>
+            <Text style={[s.miniCounterLabel, { color: P.textMuted }]}>Trophies</Text>
+          </View>
+          <View style={[s.miniCounter, { backgroundColor: playerAccent + '20' }]}>
+            <Text style={[s.miniCounterNumber, { color: playerAccent }]}>
+              {statKeys.reduce((sum, k) => sum + (stats?.[k] || 0), 0)}
+            </Text>
+            <Text style={[s.miniCounterLabel, { color: P.textMuted }]}>Stat Pts</Text>
+          </View>
+        </View>
+      </View>
 
       {/* ============================================ */}
       {/* ORDERED SECTIONS                             */}
@@ -1193,160 +1201,6 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
           </TouchableOpacity>
         </View>
       </View>
-
-      {/* ============================================ */}
-      {/* SETTINGS                                    */}
-      {/* ============================================ */}
-      {isOwnProfile && (
-        <View style={s.section}>
-          <TouchableOpacity
-            style={s.sectionHeaderRow}
-            onPress={() => setShowSettings(!showSettings)}
-          >
-            <Text style={[s.sectionHeader, { color: P.gold }]}>SETTINGS</Text>
-            <Ionicons name={showSettings ? 'chevron-up' : 'chevron-down'} size={18} color={P.textMuted} />
-          </TouchableOpacity>
-
-          {showSettings && (
-            <View style={[s.statHudCard, { backgroundColor: P.card, borderColor: P.border }]}>
-              {/* Achievements Publicity Toggle */}
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8 }}>
-                <Text style={{ color: P.text, fontSize: 14, fontWeight: '600' }}>Show Achievements Publicly</Text>
-                <Switch
-                  value={player?.show_achievements_publicly !== false}
-                  onValueChange={async (val) => {
-                    await supabase.from('players').update({ show_achievements_publicly: val }).eq('id', player!.id);
-                    setPlayer(prev => prev ? { ...prev, show_achievements_publicly: val } : prev);
-                  }}
-                  trackColor={{ false: P.cardAlt, true: P.accent + '60' }}
-                  thumbColor={player?.show_achievements_publicly !== false ? P.accent : P.textMuted}
-                />
-              </View>
-
-              {/* Theme Variant Selector */}
-              <View style={{ marginTop: 16 }}>
-                <Text style={{ color: P.textMuted, fontSize: 12, fontWeight: '700', letterSpacing: 1, marginBottom: 10 }}>THEME</Text>
-                <View style={{ flexDirection: 'row', gap: 10 }}>
-                  {([
-                    { key: 'midnight' as ThemeVariant, label: 'Midnight', colors: ['#0A0F1A', '#111827'] },
-                    { key: 'clean' as ThemeVariant, label: 'Clean', colors: ['#F8FAFC', '#FFFFFF'] },
-                    { key: 'fire' as ThemeVariant, label: 'Fire', colors: ['#1A0A0A', '#2D1111'] },
-                  ]).map(v => (
-                    <TouchableOpacity
-                      key={v.key}
-                      style={{
-                        flex: 1,
-                        padding: 12,
-                        borderRadius: 12,
-                        borderWidth: 2,
-                        borderColor: themeVariant === v.key ? P.accent : P.border,
-                        alignItems: 'center',
-                        backgroundColor: v.colors[0],
-                      }}
-                      onPress={async () => {
-                        setThemeVariant(v.key);
-                        await AsyncStorage.setItem('vb_player_theme_variant', v.key);
-                      }}
-                    >
-                      <View style={{ flexDirection: 'row', gap: 4, marginBottom: 6 }}>
-                        <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: v.colors[0] }} />
-                        <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: v.colors[1] }} />
-                      </View>
-                      <Text style={{ color: themeVariant === v.key ? (v.key === 'clean' ? '#1E293B' : '#fff') : (v.key === 'clean' ? '#64748B' : '#888'), fontSize: 11, fontWeight: '700' }}>{v.label}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-
-              {/* Accent Color Picker */}
-              <View style={{ marginTop: 16 }}>
-                <Text style={{ color: P.textMuted, fontSize: 12, fontWeight: '700', letterSpacing: 1, marginBottom: 10 }}>ACCENT COLOR</Text>
-                <View style={{ flexDirection: 'row', gap: 10 }}>
-                  {ACCENT_COLORS.map(color => (
-                    <TouchableOpacity
-                      key={color}
-                      style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: 18,
-                        backgroundColor: color,
-                        borderWidth: playerAccent === color ? 3 : 0,
-                        borderColor: '#fff',
-                      }}
-                      onPress={async () => {
-                        setPlayerAccent(color);
-                        await AsyncStorage.setItem('vb_player_accent', color);
-                      }}
-                    />
-                  ))}
-                </View>
-              </View>
-
-              {/* Layout Preference */}
-              <View style={{ marginTop: 16 }}>
-                <Text style={{ color: P.textMuted, fontSize: 12, fontWeight: '700', letterSpacing: 1, marginBottom: 10 }}>LAYOUT</Text>
-                {([
-                  { key: 'default' as LayoutPreference, label: 'Default (Stats \u2192 Trophies \u2192 Battle \u2192 Schedule)' },
-                  { key: 'stats_first' as LayoutPreference, label: 'Stats First (Stats \u2192 Battle \u2192 Trophies \u2192 Schedule)' },
-                  { key: 'games_first' as LayoutPreference, label: 'Games First (Battle \u2192 Stats \u2192 Trophies \u2192 Schedule)' },
-                ]).map(opt => (
-                  <TouchableOpacity
-                    key={opt.key}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      paddingVertical: 8,
-                      gap: 10,
-                    }}
-                    onPress={async () => {
-                      setLayoutPref(opt.key);
-                      await AsyncStorage.setItem('vb_player_layout', opt.key);
-                    }}
-                  >
-                    <View style={{
-                      width: 20, height: 20, borderRadius: 10,
-                      borderWidth: 2, borderColor: layoutPref === opt.key ? P.accent : P.textMuted,
-                      backgroundColor: layoutPref === opt.key ? P.accent : 'transparent',
-                    }} />
-                    <Text style={{ color: P.text, fontSize: 13, flex: 1 }}>{opt.label}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              {/* Calling Card */}
-              <View style={{ marginTop: 16 }}>
-                <Text style={{ color: P.textMuted, fontSize: 12, fontWeight: '700', letterSpacing: 1, marginBottom: 10 }}>CALLING CARD</Text>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                  {CALLING_CARDS.map(card => (
-                    <TouchableOpacity
-                      key={card.id}
-                      style={{
-                        width: '23%',
-                        aspectRatio: 1.5,
-                        borderRadius: 10,
-                        backgroundColor: card.gradient[0],
-                        borderWidth: equippedCard === card.id ? 2 : 1,
-                        borderColor: equippedCard === card.id ? P.accent : P.border,
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                      }}
-                      onPress={async () => {
-                        setEquippedCard(card.id);
-                        await AsyncStorage.setItem('vb_player_calling_card', String(card.id));
-                        if (player) {
-                          await supabase.from('players').update({ equipped_calling_card_id: card.id }).eq('id', player.id);
-                        }
-                      }}
-                    >
-                      <Text style={{ color: '#fff', fontSize: 9, fontWeight: '700' }}>{card.name}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-            </View>
-          )}
-        </View>
-      )}
 
       {/* ============================================ */}
       {/* COACH NOTES                                 */}
@@ -1455,7 +1309,7 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
       )}
 
       {/* Bottom spacing for tab bar */}
-      <View style={{ height: 120 }} />
+      <View style={{ height: 100, backgroundColor: P.bg }} />
     </ScrollView>
   );
 }
@@ -1544,7 +1398,7 @@ const createStyles = (colors: any) =>
     // ========================
     heroSection: {
       width: '100%',
-      minHeight: SCREEN_WIDTH * 1.0,
+      minHeight: SCREEN_WIDTH * 1.35,
       position: 'relative',
     },
     heroImageWrap: {
@@ -1559,17 +1413,17 @@ const createStyles = (colors: any) =>
       top: 0,
       left: 0,
       right: 0,
-      height: '40%',
-      backgroundColor: 'rgba(10,15,26,0.6)',
+      height: '25%',
+      backgroundColor: 'rgba(10,15,26,0.35)',
     },
     heroOverlayBottom: {
       position: 'absolute',
       bottom: 0,
       left: 0,
       right: 0,
-      height: '60%',
+      height: '40%',
       backgroundColor: DARK.bg,
-      opacity: 0.95,
+      opacity: 0.85,
     },
     heroGradientBg: {
       ...StyleSheet.absoluteFillObject,

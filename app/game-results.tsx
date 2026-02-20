@@ -193,11 +193,27 @@ export default function GameResultsScreen() {
 
   const parseSetScores = (setScores: any): string[] => {
     if (!setScores) return [];
-    if (Array.isArray(setScores)) return setScores.map(String);
+
+    const formatItem = (item: any): string => {
+      if (typeof item === 'string') return item;
+      if (typeof item === 'number') return String(item);
+      if (typeof item === 'object' && item !== null) {
+        const us = item.our_score ?? item.us ?? item.home ?? null;
+        const them = item.their_score ?? item.opponent_score ?? item.them ?? item.away ?? null;
+        if (us != null && them != null) return `${us}-${them}`;
+        // Try first two numeric values
+        const vals = Object.values(item).filter(v => typeof v === 'number');
+        if (vals.length >= 2) return `${vals[0]}-${vals[1]}`;
+        return JSON.stringify(item);
+      }
+      return String(item);
+    };
+
+    if (Array.isArray(setScores)) return setScores.map(formatItem);
     if (typeof setScores === 'string') {
       try {
         const parsed = JSON.parse(setScores);
-        if (Array.isArray(parsed)) return parsed.map(String);
+        if (Array.isArray(parsed)) return parsed.map(formatItem);
       } catch {}
       return setScores.split(',').map((s: string) => s.trim());
     }
