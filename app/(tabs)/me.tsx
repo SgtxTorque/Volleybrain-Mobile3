@@ -181,7 +181,7 @@ export default function MeScreen() {
     if (isPlayer) {
       // Player: My Stats, My Teams, My Achievements, Schedule
       return [
-        { icon: 'stats-chart', label: 'My Stats', route: '/standings', iconColor: colors.info, iconBg: colors.info + '15' },
+        { icon: 'stats-chart', label: 'My Stats', route: '/my-stats', iconColor: colors.info, iconBg: colors.info + '15' },
         { icon: 'shirt', label: 'My Teams', route: '/(tabs)/my-teams', iconColor: colors.success, iconBg: colors.success + '15' },
         { icon: 'ribbon', label: 'My Achievements', route: '/achievements', iconColor: colors.warning, iconBg: colors.warning + '15' },
         { icon: 'calendar', label: 'Schedule', route: '/(tabs)/gameday', iconColor: colors.primary, iconBg: colors.primary + '15' },

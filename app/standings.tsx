@@ -4,14 +4,18 @@ import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  FlatList,
+  Image,
   Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TouchableOpacity,
   View,
@@ -41,6 +45,9 @@ type PlayerLeaderboardEntry = {
   jerseyNumber: string | null;
   photoUrl: string | null;
   statValue: number;
+  gamesPlayed: number;
+  teamId: string | null;
+  teamName: string | null;
 };
 
 type MainTab = 'standings' | 'leaderboards';
@@ -76,6 +83,13 @@ export default function StandingsScreen() {
   const [standings, setStandings] = useState<TeamStanding[]>([]);
   const [leaderboard, setLeaderboard] = useState<PlayerLeaderboardEntry[]>([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+
+  // Enhancements
+  const [showPerGame, setShowPerGame] = useState(false);
+  const [teams, setTeams] = useState<{ id: string; name: string }[]>([]);
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
+  const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
+  const leaderboardRef = useRef<FlatList<PlayerLeaderboardEntry>>(null);
 
   const s = useMemo(() => createStyles(colors), [colors]);
 
@@ -126,6 +140,9 @@ export default function StandingsScreen() {
         setLoading(false);
         return;
       }
+
+      // Store teams for team filter
+      setTeams(teams.map(t => ({ id: t.id, name: t.name })));
 
       // Batch: fetch all completed game results for all teams at once
       const teamIds = teams.map(t => t.id);
@@ -200,7 +217,7 @@ export default function StandingsScreen() {
   // -----------------------------------------------
   // Load player leaderboard
   // -----------------------------------------------
-  const loadLeaderboard = useCallback(async (stat: string) => {
+  const loadLeaderboard = useCallback(async (stat: string, teamFilter?: string | null) => {
     if (!workingSeason?.id) {
       setLeaderboard([]);
       return;
@@ -210,26 +227,39 @@ export default function StandingsScreen() {
 
     try {
       // Try player_season_stats first
-      const { data: seasonStats, error: seasonError } = await supabase
+      let query = supabase
         .from('player_season_stats')
-        .select('*, players(first_name, last_name, jersey_number, photo_url)')
+        .select('*, players(first_name, last_name, jersey_number, photo_url, team_players(team_id, teams(name)))')
         .eq('season_id', workingSeason.id)
         .order(stat, { ascending: false })
-        .limit(20);
+        .limit(50);
+
+      const { data: seasonStats, error: seasonError } = await query;
 
       if (!seasonError && seasonStats && seasonStats.length > 0) {
-        const entries: PlayerLeaderboardEntry[] = seasonStats
+        let entries: PlayerLeaderboardEntry[] = seasonStats
           .filter((row: any) => row.players && (row[stat] || 0) > 0)
-          .map((row: any) => ({
-            playerId: row.player_id || row.id,
-            firstName: row.players?.first_name || '',
-            lastName: row.players?.last_name || '',
-            jerseyNumber: row.players?.jersey_number?.toString() || null,
-            photoUrl: row.players?.photo_url || null,
-            statValue: row[stat] || 0,
-          }));
+          .map((row: any) => {
+            const tp = (row.players as any)?.team_players?.[0];
+            return {
+              playerId: row.player_id || row.id,
+              firstName: row.players?.first_name || '',
+              lastName: row.players?.last_name || '',
+              jerseyNumber: row.players?.jersey_number?.toString() || null,
+              photoUrl: row.players?.photo_url || null,
+              statValue: row[stat] || 0,
+              gamesPlayed: row.games_played || 0,
+              teamId: tp?.team_id || null,
+              teamName: tp?.teams?.name || null,
+            };
+          });
 
-        setLeaderboard(entries);
+        // Apply team filter
+        if (teamFilter) {
+          entries = entries.filter(e => e.teamId === teamFilter);
+        }
+
+        setLeaderboard(entries.slice(0, 20));
         setLeaderboardLoading(false);
         return;
       }
@@ -260,6 +290,7 @@ export default function StandingsScreen() {
         jerseyNumber: string | null;
         photoUrl: string | null;
         total: number;
+        count: number;
       }>();
 
       for (const row of gameStats as any[]) {
@@ -269,6 +300,7 @@ export default function StandingsScreen() {
         const val = row[dbCol] || 0;
         if (existing) {
           existing.total += val;
+          existing.count += 1;
         } else {
           playerMap.set(pid, {
             firstName: row.players?.first_name || '',
@@ -276,6 +308,7 @@ export default function StandingsScreen() {
             jerseyNumber: row.players?.jersey_number?.toString() || null,
             photoUrl: row.players?.photo_url || null,
             total: val,
+            count: 1,
           });
         }
       }
@@ -288,6 +321,9 @@ export default function StandingsScreen() {
           jerseyNumber: data.jerseyNumber,
           photoUrl: data.photoUrl,
           statValue: data.total,
+          gamesPlayed: data.count,
+          teamId: null,
+          teamName: null,
         }))
         .filter((e) => e.statValue > 0)
         .sort((a, b) => b.statValue - a.statValue)
@@ -318,9 +354,40 @@ export default function StandingsScreen() {
 
   useEffect(() => {
     if (activeTab === 'leaderboards' && activeStat) {
-      loadLeaderboard(activeStat);
+      loadLeaderboard(activeStat, selectedTeamId);
     }
-  }, [activeTab, activeStat, loadLeaderboard]);
+  }, [activeTab, activeStat, selectedTeamId, loadLeaderboard]);
+
+  // Resolve current player ID for "YOU" indicator
+  useEffect(() => {
+    if (!user?.id || !workingSeason?.id) return;
+    (async () => {
+      // Try parent_account_id
+      const { data: directPlayer } = await supabase
+        .from('players')
+        .select('id')
+        .eq('parent_account_id', user.id)
+        .eq('season_id', workingSeason.id)
+        .limit(1)
+        .maybeSingle();
+      if (directPlayer) { setCurrentPlayerId(directPlayer.id); return; }
+      // Fallback: player_guardians
+      const { data: guardianRows } = await supabase
+        .from('player_guardians')
+        .select('player_id')
+        .eq('guardian_id', user.id);
+      if (guardianRows && guardianRows.length > 0) {
+        const pids = guardianRows.map(g => g.player_id);
+        const { data: seasonPlayers } = await supabase
+          .from('players')
+          .select('id')
+          .in('id', pids)
+          .eq('season_id', workingSeason.id)
+          .limit(1);
+        if (seasonPlayers?.[0]) setCurrentPlayerId(seasonPlayers[0].id);
+      }
+    })();
+  }, [user?.id, workingSeason?.id]);
 
   // -----------------------------------------------
   // Refresh
@@ -330,18 +397,40 @@ export default function StandingsScreen() {
     if (activeTab === 'standings') {
       await loadStandings();
     } else if (activeStat) {
-      await loadLeaderboard(activeStat);
+      await loadLeaderboard(activeStat, selectedTeamId);
     }
     setRefreshing(false);
-  }, [activeTab, activeStat, loadStandings, loadLeaderboard]);
+  }, [activeTab, activeStat, selectedTeamId, loadStandings, loadLeaderboard]);
 
   // -----------------------------------------------
   // Helpers
   // -----------------------------------------------
+  const displayLeaderboard = useMemo(() => {
+    if (!showPerGame) return leaderboard;
+    return [...leaderboard]
+      .map(e => ({
+        ...e,
+        statValue: e.gamesPlayed > 0 ? parseFloat((e.statValue / e.gamesPlayed).toFixed(1)) : 0,
+      }))
+      .sort((a, b) => b.statValue - a.statValue);
+  }, [leaderboard, showPerGame]);
+
   const maxStatValue = useMemo(() => {
-    if (leaderboard.length === 0) return 1;
-    return Math.max(...leaderboard.map((e) => e.statValue), 1);
-  }, [leaderboard]);
+    if (displayLeaderboard.length === 0) return 1;
+    return Math.max(...displayLeaderboard.map((e) => e.statValue), 1);
+  }, [displayLeaderboard]);
+
+  // Auto-scroll to current player
+  useEffect(() => {
+    if (!currentPlayerId || displayLeaderboard.length === 0) return;
+    const idx = displayLeaderboard.findIndex(e => e.playerId === currentPlayerId);
+    if (idx > 0) {
+      const timer = setTimeout(() => {
+        leaderboardRef.current?.scrollToIndex({ index: idx, animated: true, viewPosition: 0.5 });
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [displayLeaderboard, currentPlayerId]);
 
   const currentStatCategory = useMemo(
     () => STAT_CATEGORIES.find((c) => c.key === activeStat) || STAT_CATEGORIES[0] || { key: '', label: '', color: '#888' },
@@ -505,6 +594,86 @@ export default function StandingsScreen() {
   // -----------------------------------------------
   // Render: Player Leaderboards
   // -----------------------------------------------
+  const renderLeaderboardRow = ({ item: entry, index }: { item: PlayerLeaderboardEntry; index: number }) => {
+    const rank = index + 1;
+    const medal = getRankDisplay(rank);
+    const barWidth = (entry.statValue / maxStatValue) * 100;
+    const isYou = currentPlayerId && entry.playerId === currentPlayerId;
+    const initials = `${entry.firstName?.[0] || ''}${entry.lastName?.[0] || ''}`;
+
+    return (
+      <View
+        style={[
+          s.leaderboardRow,
+          index % 2 === 0 ? {} : { backgroundColor: colors.glassBorder },
+          isYou && { borderLeftWidth: 3, borderLeftColor: colors.primary },
+        ]}
+      >
+        {/* Stat bar behind the row */}
+        <View
+          style={[
+            s.statBar,
+            {
+              width: `${barWidth}%`,
+              backgroundColor: currentStatCategory.color + '15',
+            },
+          ]}
+        />
+
+        {/* Rank */}
+        <View style={s.leaderRankCol}>
+          {medal ? (
+            <Ionicons name={medal.icon as any} size={20} color={medal.color} />
+          ) : (
+            <Text style={s.leaderRankText}>{rank}</Text>
+          )}
+        </View>
+
+        {/* Player Info */}
+        <View style={s.leaderPlayerCol}>
+          {entry.photoUrl ? (
+            <Image source={{ uri: entry.photoUrl }} style={s.playerAvatar} />
+          ) : (
+            <View style={s.playerAvatarPlaceholder}>
+              <Text style={s.playerAvatarText}>{initials || '?'}</Text>
+            </View>
+          )}
+          <View style={s.playerInfoText}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={s.playerName} numberOfLines={1}>
+                {entry.firstName} {entry.lastName}
+              </Text>
+              {isYou && (
+                <View style={[s.youBadge, { backgroundColor: colors.primary }]}>
+                  <Text style={s.youBadgeText}>YOU</Text>
+                </View>
+              )}
+            </View>
+            {entry.jerseyNumber && (
+              <Text style={s.playerJersey}>#{entry.jerseyNumber}</Text>
+            )}
+          </View>
+        </View>
+
+        {/* Stat Value */}
+        <View style={s.leaderStatCol}>
+          <Text
+            style={[
+              s.leaderStatValue,
+              { color: currentStatCategory.color },
+              rank <= 3 && { fontWeight: '800', fontSize: 20 },
+            ]}
+          >
+            {showPerGame ? entry.statValue.toFixed(1) : entry.statValue}
+          </Text>
+          {showPerGame && (
+            <Text style={{ fontSize: 9, color: colors.textMuted }}>/game</Text>
+          )}
+        </View>
+      </View>
+    );
+  };
+
   const renderLeaderboards = () => {
     return (
       <View style={s.leaderboardContainer}>
@@ -538,6 +707,64 @@ export default function StandingsScreen() {
           })}
         </ScrollView>
 
+        {/* Team Filter */}
+        {teams.length > 1 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={[s.statTabsContainer, { paddingBottom: 8 }]}
+          >
+            <TouchableOpacity
+              style={[
+                s.teamFilterPill,
+                !selectedTeamId && { backgroundColor: colors.primary + '25', borderColor: colors.primary },
+              ]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setSelectedTeamId(null);
+              }}
+            >
+              <Text style={[s.teamFilterText, !selectedTeamId && { color: colors.primary, fontWeight: '700' }]}>
+                All Teams
+              </Text>
+            </TouchableOpacity>
+            {teams.map(t => {
+              const isActive = selectedTeamId === t.id;
+              return (
+                <TouchableOpacity
+                  key={t.id}
+                  style={[
+                    s.teamFilterPill,
+                    isActive && { backgroundColor: colors.primary + '25', borderColor: colors.primary },
+                  ]}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    setSelectedTeamId(t.id);
+                  }}
+                >
+                  <Text style={[s.teamFilterText, isActive && { color: colors.primary, fontWeight: '700' }]}>
+                    {t.name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        )}
+
+        {/* Per-Game Average Toggle */}
+        <View style={s.perGameRow}>
+          <Text style={s.perGameLabel}>Per-Game Average</Text>
+          <Switch
+            value={showPerGame}
+            onValueChange={(val) => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              setShowPerGame(val);
+            }}
+            trackColor={{ false: colors.border, true: colors.primary + '50' }}
+            thumbColor={showPerGame ? colors.primary : colors.textMuted}
+          />
+        </View>
+
         {/* Leaderboard Content */}
         {leaderboardLoading ? (
           <View style={s.centeredLoader}>
@@ -550,7 +777,7 @@ export default function StandingsScreen() {
             <Text style={s.emptyTitle}>No Active Season</Text>
             <Text style={s.emptySubtitle}>Select a season to view leaderboards.</Text>
           </View>
-        ) : leaderboard.length === 0 ? (
+        ) : displayLeaderboard.length === 0 ? (
           <View style={s.emptyState}>
             <Ionicons name="stats-chart-outline" size={48} color={colors.textMuted} />
             <Text style={s.emptyTitle}>No Stats Recorded</Text>
@@ -560,71 +787,14 @@ export default function StandingsScreen() {
           </View>
         ) : (
           <View style={s.leaderboardList}>
-            {leaderboard.map((entry, index) => {
-              const rank = index + 1;
-              const medal = getRankDisplay(rank);
-              const barWidth = (entry.statValue / maxStatValue) * 100;
-
-              return (
-                <View
-                  key={entry.playerId}
-                  style={[
-                    s.leaderboardRow,
-                    index % 2 === 0 ? {} : { backgroundColor: colors.glassBorder },
-                  ]}
-                >
-                  {/* Stat bar behind the row */}
-                  <View
-                    style={[
-                      s.statBar,
-                      {
-                        width: `${barWidth}%`,
-                        backgroundColor: currentStatCategory.color + '15',
-                      },
-                    ]}
-                  />
-
-                  {/* Rank */}
-                  <View style={s.leaderRankCol}>
-                    {medal ? (
-                      <Ionicons name={medal.icon as any} size={20} color={medal.color} />
-                    ) : (
-                      <Text style={s.leaderRankText}>{rank}</Text>
-                    )}
-                  </View>
-
-                  {/* Player Info */}
-                  <View style={s.leaderPlayerCol}>
-                    <View style={s.playerAvatarPlaceholder}>
-                      <Text style={s.playerAvatarText}>
-                        {entry.jerseyNumber || (entry.firstName?.[0] || '?')}
-                      </Text>
-                    </View>
-                    <View style={s.playerInfoText}>
-                      <Text style={s.playerName} numberOfLines={1}>
-                        {entry.firstName} {entry.lastName}
-                      </Text>
-                      {entry.jerseyNumber && (
-                        <Text style={s.playerJersey}>#{entry.jerseyNumber}</Text>
-                      )}
-                    </View>
-                  </View>
-
-                  {/* Stat Value */}
-                  <View style={s.leaderStatCol}>
-                    <Text
-                      style={[
-                        s.leaderStatValue,
-                        { color: currentStatCategory.color },
-                        rank <= 3 && { fontWeight: '800', fontSize: 20 },
-                      ]}
-                    >
-                      {entry.statValue}
-                    </Text>
-                  </View>
-                </View>
-              );
-            })}
+            <FlatList
+              ref={leaderboardRef}
+              data={displayLeaderboard}
+              keyExtractor={(item) => item.playerId}
+              renderItem={renderLeaderboardRow}
+              scrollEnabled={false}
+              onScrollToIndexFailed={() => {}}
+            />
           </View>
         )}
       </View>
@@ -1027,5 +1197,57 @@ const createStyles = (colors: any) =>
     leaderStatValue: {
       fontSize: 18,
       fontWeight: '700',
+    },
+
+    // Player photo avatar
+    playerAvatar: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      marginRight: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+
+    // "YOU" badge
+    youBadge: {
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      borderRadius: 8,
+    },
+    youBadgeText: {
+      fontSize: 10,
+      fontWeight: '800',
+      color: '#FFFFFF',
+      letterSpacing: 1,
+    },
+
+    // Per-game toggle row
+    perGameRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 20,
+      paddingBottom: 12,
+    },
+    perGameLabel: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: colors.textSecondary,
+    },
+
+    // Team filter pills
+    teamFilterPill: {
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.glassCard,
+    },
+    teamFilterText: {
+      fontSize: 13,
+      fontWeight: '500',
+      color: colors.textMuted,
     },
   });

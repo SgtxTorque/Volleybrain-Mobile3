@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
@@ -167,6 +168,7 @@ type RecentGame = {
 
 type PlayerGameStat = {
   id: string;
+  event_id: string;
   created_at: string;
   [key: string]: any;
 };
@@ -288,6 +290,7 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
   const [unseenAchievements, setUnseenAchievements] = useState<UnseenAchievement[]>([]);
   const [showCelebration, setShowCelebration] = useState(false);
   const [trackedProgress, setTrackedProgress] = useState<AchievementProgress[]>([]);
+  const [lineupPositions, setLineupPositions] = useState<Record<string, { position: string | null; is_starter: boolean }>>({});
 
   const P = THEME_VARIANTS[themeVariant];
 
@@ -474,10 +477,29 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
             if (data) setRecentGames(data);
           })()
         );
+
+        // 6b. Lineup positions for upcoming events
+        promises.push(
+          (async () => {
+            const { data } = await supabase
+              .from('game_lineups')
+              .select('event_id, position, is_starter')
+              .eq('player_id', playerId)
+              .eq('team_id', teamId)
+              .eq('is_published', true);
+            if (data) {
+              const map: Record<string, { position: string | null; is_starter: boolean }> = {};
+              for (const row of data) {
+                map[row.event_id] = { position: row.position, is_starter: row.is_starter };
+              }
+              setLineupPositions(map);
+            }
+          })()
+        );
       }
 
       // 7. Player game stats — dynamic columns
-      const gameStatColumns = ['id', 'created_at', ...sportConfig.primaryStats.map(s => s.dbColumn)].join(', ');
+      const gameStatColumns = ['id', 'event_id', 'created_at', ...sportConfig.primaryStats.map(s => s.dbColumn)].join(', ');
       promises.push(
         (async () => {
           const { data } = await supabase
@@ -729,7 +751,15 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
           const pct = Math.min((value / def.max) * 100, 100);
 
           return (
-            <View key={def.key} style={s.statRow}>
+            <TouchableOpacity
+              key={def.key}
+              style={s.statRow}
+              activeOpacity={0.7}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.push(`/my-stats?highlightStat=${def.sportKey}` as any);
+              }}
+            >
               <View style={[s.statIconWrap, { backgroundColor: def.color + '20' }]}>
                 <Ionicons name={def.icon} size={16} color={def.color} />
               </View>
@@ -750,7 +780,7 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
                   </Text>
                 </View>
               )}
-            </View>
+            </TouchableOpacity>
           );
         })}
       </View>
@@ -779,6 +809,18 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
           <Text style={[s.pctLabel, { color: P.textMuted }]}>Games</Text>
         </View>
       </View>
+
+      <TouchableOpacity
+        style={s.viewAllButton}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          router.push('/my-stats' as any);
+        }}
+        activeOpacity={0.7}
+      >
+        <Text style={[s.viewAllText, { color: P.accent }]}>View All Stats</Text>
+        <Ionicons name="chevron-forward" size={16} color={P.accent} />
+      </TouchableOpacity>
     </View>
   );
 
@@ -884,6 +926,21 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
                         vs {game.opponent_name || 'Opponent'}
                       </Text>
                       {scoreText ? <Text style={[s.battleScore, { color: P.textSecondary }]}>{scoreText}</Text> : null}
+                      {(() => {
+                        const gs = playerGameStats.find((s) => s.event_id === game.id);
+                        if (!gs) return null;
+                        const parts = sportDisplay.primaryStats
+                          .map((sc) => {
+                            const v = gs[sc.dbColumn] || 0;
+                            return v > 0 ? `${v}${sc.short}` : null;
+                          })
+                          .filter(Boolean);
+                        return parts.length > 0 ? (
+                          <Text style={{ fontSize: 11, fontWeight: '600', color: P.textMuted, marginTop: 4 }}>
+                            {parts.join(' \u00B7 ')}
+                          </Text>
+                        ) : null;
+                      })()}
                     </View>
                   </View>
                 </View>
@@ -893,7 +950,7 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
           })}
           <TouchableOpacity
             style={s.viewAllButton}
-            onPress={() => router.push('/(tabs)/schedule' as any)}
+            onPress={() => router.push('/my-stats' as any)}
             activeOpacity={0.7}
           >
             <Text style={[s.viewAllText, { color: P.accent }]}>See All Games</Text>
@@ -956,6 +1013,29 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
                       <Text style={[s.missionMetaText, { color: P.textMuted }]}>{team.name}</Text>
                     </View>
                   )}
+                  {(() => {
+                    const lp = lineupPositions[event.id];
+                    if (!lp) return (
+                      <View style={s.missionMeta}>
+                        <Ionicons name="help-circle-outline" size={12} color={P.textMuted} />
+                        <Text style={[s.missionMetaText, { color: P.textMuted }]}>Lineup TBD</Text>
+                      </View>
+                    );
+                    if (!lp.is_starter) return (
+                      <View style={s.missionMeta}>
+                        <Ionicons name="swap-horizontal-outline" size={12} color={P.textMuted} />
+                        <Text style={[s.missionMetaText, { color: P.textMuted }]}>Bench</Text>
+                      </View>
+                    );
+                    return (
+                      <View style={s.missionMeta}>
+                        <Ionicons name="locate-outline" size={12} color={P.accent} />
+                        <Text style={[s.missionMetaText, { color: P.accent, fontWeight: '700' }]}>
+                          Your Position: {lp.position || 'Starter'}
+                        </Text>
+                      </View>
+                    );
+                  })()}
                 </View>
               </TouchableOpacity>
             );
