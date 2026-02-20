@@ -112,13 +112,13 @@ export default function ManageScreen() {
 
   const { workingSeason } = useSeason();
   const [refreshing, setRefreshing] = useState(false);
-  const [badgeCounts, setBadgeCounts] = useState({ pendingRegs: 0, pendingPay: 0, pendingApprovals: 0 });
+  const [badgeCounts, setBadgeCounts] = useState({ pendingRegs: 0, pendingPay: 0, pendingApprovals: 0, unrostered: 0 });
 
   const fetchBadgeCounts = useCallback(async () => {
     if (!isAdmin) return;
     const orgId = profile?.current_organization_id;
     const seasonId = workingSeason?.id;
-    const [regsRes, payRes, appRes] = await Promise.all([
+    const [regsRes, payRes, appRes, unrosteredRes] = await Promise.all([
       seasonId
         ? supabase.from('registrations').select('*', { count: 'exact', head: true }).eq('season_id', seasonId).eq('status', 'new')
         : Promise.resolve({ count: 0 }),
@@ -128,11 +128,15 @@ export default function ManageScreen() {
       orgId
         ? supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('pending_approval', true).eq('current_organization_id', orgId)
         : Promise.resolve({ count: 0 }),
+      seasonId
+        ? supabase.from('registrations').select('*', { count: 'exact', head: true }).eq('season_id', seasonId).eq('status', 'active')
+        : Promise.resolve({ count: 0 }),
     ]);
     setBadgeCounts({
       pendingRegs: (regsRes as any).count || 0,
       pendingPay: (payRes as any).count || 0,
       pendingApprovals: (appRes as any).count || 0,
+      unrostered: (unrosteredRes as any).count || 0,
     });
   }, [isAdmin, workingSeason?.id, profile?.current_organization_id]);
 
@@ -176,8 +180,8 @@ export default function ManageScreen() {
     { icon: 'person-add', label: 'Registration Hub', route: '/registration-hub', iconColor: colors.primary, iconBg: colors.primary + '15', badge: badgeCounts.pendingRegs },
     { icon: 'people-circle', label: 'User Management', route: '/users', iconColor: colors.warning, iconBg: colors.warning + '15', badge: badgeCounts.pendingApprovals },
     { icon: 'card', label: 'Payment Admin', route: '/(tabs)/payments', iconColor: colors.danger, iconBg: colors.danger + '15', badge: badgeCounts.pendingPay },
-    { icon: 'shirt', label: 'Team Management', route: '/(tabs)/teams', iconColor: '#FF6B6B', iconBg: '#FF6B6B15' },
-    { icon: 'clipboard', label: 'Coach Directory', route: '/(tabs)/coaches', iconColor: colors.info, iconBg: colors.info + '15' },
+    { icon: 'shirt', label: 'Team Management', route: '/team-management', iconColor: '#FF6B6B', iconBg: '#FF6B6B15', badge: badgeCounts.unrostered },
+    { icon: 'clipboard', label: 'Coach Directory', route: '/coach-directory', iconColor: colors.info, iconBg: colors.info + '15' },
     { icon: 'calendar', label: 'Season Management', route: '/season-settings', iconColor: colors.success, iconBg: colors.success + '15' },
     { icon: 'bar-chart', label: 'Reports', route: '/(tabs)/reports-tab', iconColor: '#AF52DE', iconBg: '#AF52DE15' },
     { icon: 'business', label: 'Org Directory', route: '/org-directory', iconColor: colors.textSecondary, iconBg: colors.textMuted + '15' },

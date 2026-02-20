@@ -147,7 +147,7 @@ const statusConfig: Record<RegistrationStatus, { label: string; color: string; i
 // =====================================================
 export default function RegistrationHubScreen() {
   const { colors } = useTheme();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { workingSeason } = useSeason();
   const router = useRouter();
 
@@ -167,6 +167,8 @@ export default function RegistrationHubScreen() {
   const [selectedRegistration, setSelectedRegistration] = useState<Registration | null>(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [requiredWaiverIds, setRequiredWaiverIds] = useState<string[]>([]);
+  const [waiverSignatureMap, setWaiverSignatureMap] = useState<Map<string, Set<string>>>(new Map());
 
   // =====================================================
   // DATA FETCHING - Now queries ALL open seasons
@@ -371,6 +373,39 @@ export default function RegistrationHubScreen() {
       );
 
       setTeams(teamsWithCounts);
+
+      // Fetch waiver compliance data
+      const orgId = profile?.current_organization_id;
+      if (orgId) {
+        const { data: requiredWaivers } = await supabase
+          .from('waiver_templates')
+          .select('id')
+          .eq('organization_id', orgId)
+          .eq('is_required', true)
+          .eq('is_active', true);
+
+        const waiverIds = (requiredWaivers || []).map(w => w.id);
+        setRequiredWaiverIds(waiverIds);
+
+        if (waiverIds.length > 0) {
+          const allPlayerIds = registrationsWithPayments.map(r => r.player_id).filter(Boolean);
+          if (allPlayerIds.length > 0) {
+            const { data: signatures } = await supabase
+              .from('waiver_signatures')
+              .select('player_id, waiver_template_id')
+              .in('season_id', seasonIds)
+              .in('player_id', allPlayerIds)
+              .in('waiver_template_id', waiverIds);
+
+            const sigMap = new Map<string, Set<string>>();
+            for (const sig of signatures || []) {
+              if (!sigMap.has(sig.player_id)) sigMap.set(sig.player_id, new Set());
+              sigMap.get(sig.player_id)!.add(sig.waiver_template_id);
+            }
+            setWaiverSignatureMap(sigMap);
+          }
+        }
+      }
     } catch (error) {
       if (__DEV__) console.error('Error fetching registration data:', error);
     } finally {
@@ -609,6 +644,13 @@ export default function RegistrationHubScreen() {
   // =====================================================
   // HELPER FUNCTIONS
   // =====================================================
+  const getWaiverStatus = (playerId: string) => {
+    if (requiredWaiverIds.length === 0) return { complete: true, missing: 0 };
+    const signed = waiverSignatureMap.get(playerId) || new Set();
+    const missing = requiredWaiverIds.filter(wId => !signed.has(wId)).length;
+    return { complete: missing === 0, missing };
+  };
+
   const hasMedicalInfo = (player: Registration['player']) => {
     return !!(player.medical_conditions || player.allergies || player.medications);
   };
@@ -804,6 +846,20 @@ export default function RegistrationHubScreen() {
               <Text style={{ fontSize: 11, color: '#FF3B30', marginLeft: 4 }}>Waiver</Text>
             </View>
           )}
+          {requiredWaiverIds.length > 0 && (() => {
+            const ws = getWaiverStatus(registration.player_id);
+            return ws.complete ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#34C75920', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                <Ionicons name="shield-checkmark" size={12} color="#34C759" />
+                <Text style={{ fontSize: 11, color: '#34C759', marginLeft: 4 }}>Waivers Complete</Text>
+              </View>
+            ) : (
+              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FF950020', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                <Ionicons name="alert-circle" size={12} color="#FF9500" />
+                <Text style={{ fontSize: 11, color: '#FF9500', marginLeft: 4 }}>{ws.missing} missing</Text>
+              </View>
+            );
+          })()}
         </View>
       </TouchableOpacity>
     );

@@ -103,6 +103,7 @@ export default function AdminDashboard() {
   const [todaysGames, setTodaysGames] = useState<TodaysGame[]>([]);
   const [tomorrowGames, setTomorrowGames] = useState<TodaysGame[]>([]);
   const [approvalCount, setApprovalCount] = useState(0);
+  const [unrosteredCount, setUnrosteredCount] = useState(0);
 
   const [showSeasonPicker, setShowSeasonPicker] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -192,10 +193,11 @@ export default function AdminDashboard() {
       .eq('season_id', seasonId)
       .eq('status', 'active');
 
+    setUnrosteredCount(needsTeamCount || 0);
     if (needsTeamCount && needsTeamCount > 0) {
       alertList.push({
         text: needsTeamCount + ' player' + (needsTeamCount > 1 ? 's' : '') + ' ready for team assignment',
-        route: '/registration-hub',
+        route: '/team-management',
         type: 'warning',
         count: needsTeamCount,
         borderColor: colors.danger,
@@ -219,9 +221,9 @@ export default function AdminDashboard() {
       });
     }
 
-    if (teamCount === 0) alertList.push({ text: 'No teams created yet', route: '/(tabs)/teams', type: 'error', borderColor: colors.danger });
+    if (teamCount === 0) alertList.push({ text: 'No teams created yet', route: '/team-management', type: 'error', borderColor: colors.danger });
     if (playerCount === 0 && (!newRegCount || newRegCount === 0)) alertList.push({ text: 'No players registered yet', route: '/(tabs)/players', type: 'error', borderColor: colors.danger });
-    if (coachCount === 0) alertList.push({ text: 'No coaches added yet', route: '/(tabs)/coaches', type: 'error', borderColor: colors.danger });
+    if (coachCount === 0) alertList.push({ text: 'No coaches added yet', route: '/coach-directory', type: 'error', borderColor: colors.danger });
     if (outstanding > 0) alertList.push({ text: '$' + Number(outstanding).toFixed(2) + ' in outstanding payments', route: '/(tabs)/payments', type: 'warning', borderColor: colors.warning });
 
     const orgId = profile?.current_organization_id;
@@ -808,12 +810,12 @@ export default function AdminDashboard() {
               <Text style={s.heroStatLabel}>Players</Text>
             </TouchableOpacity>
             <View style={s.heroStatDivider} />
-            <TouchableOpacity style={s.heroStatItem} onPress={() => router.push('/teams' as any)}>
+            <TouchableOpacity style={s.heroStatItem} onPress={() => router.push('/team-management' as any)}>
               <Text style={s.heroStatNum}>{stats.teams}</Text>
               <Text style={s.heroStatLabel}>Teams</Text>
             </TouchableOpacity>
             <View style={s.heroStatDivider} />
-            <TouchableOpacity style={s.heroStatItem} onPress={() => router.push('/coaches' as any)}>
+            <TouchableOpacity style={s.heroStatItem} onPress={() => router.push('/coach-directory' as any)}>
               <Text style={s.heroStatNum}>{stats.coaches}</Text>
               <Text style={s.heroStatLabel}>Coaches</Text>
             </TouchableOpacity>
@@ -1035,12 +1037,12 @@ export default function AdminDashboard() {
           <Text style={s.actionSubtitle}>{approvalCount > 0 ? approvalCount + ' awaiting approval' : 'All approved'}</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={s.actionCard} onPress={() => router.push('/(tabs)/teams' as any)}>
+        <TouchableOpacity style={s.actionCard} onPress={() => router.push('/team-management' as any)}>
           <View style={[s.actionIconCircle, { backgroundColor: '#FF6B6B26' }]}>
             <Ionicons name="shirt" size={28} color="#FF6B6B" />
           </View>
           <Text style={s.actionLabel}>Teams</Text>
-          <Text style={s.actionSubtitle}>{stats.teams} team{stats.teams !== 1 ? 's' : ''}</Text>
+          <Text style={s.actionSubtitle}>{stats.teams} team{stats.teams !== 1 ? 's' : ''}{unrosteredCount > 0 ? ` · ${unrosteredCount} unrostered` : ''}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={s.actionCard} onPress={() => router.push('/(tabs)/payments' as any)}>
