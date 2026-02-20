@@ -1,13 +1,16 @@
 import { useAuth } from '@/lib/auth';
 import { usePermissions } from '@/lib/permissions-context';
+import { useSeason } from '@/lib/season';
+import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   LayoutAnimation,
   Platform,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -27,6 +30,7 @@ type MenuItem = {
   route: string;
   iconColor?: string;
   iconBg?: string;
+  badge?: number;
 };
 
 // =============================================================================
@@ -106,6 +110,40 @@ export default function ManageScreen() {
   const { profile } = useAuth();
   const router = useRouter();
 
+  const { workingSeason } = useSeason();
+  const [refreshing, setRefreshing] = useState(false);
+  const [badgeCounts, setBadgeCounts] = useState({ pendingRegs: 0, pendingPay: 0, pendingApprovals: 0 });
+
+  const fetchBadgeCounts = useCallback(async () => {
+    if (!isAdmin) return;
+    const orgId = profile?.current_organization_id;
+    const seasonId = workingSeason?.id;
+    const [regsRes, payRes, appRes] = await Promise.all([
+      seasonId
+        ? supabase.from('registrations').select('*', { count: 'exact', head: true }).eq('season_id', seasonId).eq('status', 'new')
+        : Promise.resolve({ count: 0 }),
+      seasonId
+        ? supabase.from('payments').select('*', { count: 'exact', head: true }).eq('season_id', seasonId).eq('status', 'pending')
+        : Promise.resolve({ count: 0 }),
+      orgId
+        ? supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('pending_approval', true).eq('current_organization_id', orgId)
+        : Promise.resolve({ count: 0 }),
+    ]);
+    setBadgeCounts({
+      pendingRegs: (regsRes as any).count || 0,
+      pendingPay: (payRes as any).count || 0,
+      pendingApprovals: (appRes as any).count || 0,
+    });
+  }, [isAdmin, workingSeason?.id, profile?.current_organization_id]);
+
+  useEffect(() => { fetchBadgeCounts(); }, [fetchBadgeCounts]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchBadgeCounts();
+    setRefreshing(false);
+  }, [fetchBadgeCounts]);
+
   const s = createStyles(colors);
 
   // =========================================================================
@@ -135,11 +173,13 @@ export default function ManageScreen() {
   // ADMIN SECTION
   // =========================================================================
   const adminItems: MenuItem[] = [
-    { icon: 'person-add', label: 'Invite Management', route: '/registration-hub', iconColor: colors.primary, iconBg: colors.primary + '15' },
-    { icon: 'calendar', label: 'Season Management', route: '/season-settings', iconColor: colors.info, iconBg: colors.info + '15' },
-    { icon: 'bar-chart', label: 'Reports', route: '/(tabs)/reports-tab', iconColor: colors.success, iconBg: colors.success + '15' },
-    { icon: 'people-circle', label: 'User Management', route: '/users', iconColor: colors.warning, iconBg: colors.warning + '15' },
-    { icon: 'card', label: 'Payment Admin', route: '/(tabs)/payments', iconColor: colors.danger, iconBg: colors.danger + '15' },
+    { icon: 'person-add', label: 'Registration Hub', route: '/registration-hub', iconColor: colors.primary, iconBg: colors.primary + '15', badge: badgeCounts.pendingRegs },
+    { icon: 'people-circle', label: 'User Management', route: '/users', iconColor: colors.warning, iconBg: colors.warning + '15', badge: badgeCounts.pendingApprovals },
+    { icon: 'card', label: 'Payment Admin', route: '/(tabs)/payments', iconColor: colors.danger, iconBg: colors.danger + '15', badge: badgeCounts.pendingPay },
+    { icon: 'shirt', label: 'Team Management', route: '/(tabs)/teams', iconColor: '#FF6B6B', iconBg: '#FF6B6B15' },
+    { icon: 'clipboard', label: 'Coach Directory', route: '/(tabs)/coaches', iconColor: colors.info, iconBg: colors.info + '15' },
+    { icon: 'calendar', label: 'Season Management', route: '/season-settings', iconColor: colors.success, iconBg: colors.success + '15' },
+    { icon: 'bar-chart', label: 'Reports', route: '/(tabs)/reports-tab', iconColor: '#AF52DE', iconBg: '#AF52DE15' },
     { icon: 'business', label: 'Org Directory', route: '/org-directory', iconColor: colors.textSecondary, iconBg: colors.textMuted + '15' },
   ];
 
@@ -158,6 +198,11 @@ export default function ManageScreen() {
         <Ionicons name={item.icon} size={20} color={item.iconColor || colors.text} />
       </View>
       <Text style={s.menuItemLabel}>{item.label}</Text>
+      {item.badge != null && item.badge > 0 && (
+        <View style={s.menuBadge}>
+          <Text style={s.menuBadgeText}>{item.badge > 99 ? '99+' : item.badge}</Text>
+        </View>
+      )}
       <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
     </TouchableOpacity>
   );
@@ -171,6 +216,7 @@ export default function ManageScreen() {
         style={s.scroll}
         contentContainerStyle={s.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
         {/* Header */}
         <View style={s.header}>
@@ -276,5 +322,20 @@ const createStyles = (colors: any) =>
       fontSize: 15,
       fontWeight: '500',
       color: colors.text,
+    },
+    menuBadge: {
+      backgroundColor: '#FF3B30',
+      borderRadius: 10,
+      minWidth: 20,
+      height: 20,
+      justifyContent: 'center' as const,
+      alignItems: 'center' as const,
+      paddingHorizontal: 6,
+      marginRight: 8,
+    },
+    menuBadgeText: {
+      color: '#fff',
+      fontSize: 11,
+      fontWeight: 'bold' as const,
     },
   });

@@ -11,6 +11,7 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Linking,
   Modal,
   Platform,
   RefreshControl,
@@ -61,6 +62,18 @@ type RecentActivity = {
   color: string;
 };
 
+type TodaysGame = {
+  id: string;
+  team_name: string;
+  team_color: string | null;
+  opponent: string | null;
+  event_time: string | null;
+  venue_name: string | null;
+  venue_address: string | null;
+  location: string | null;
+  game_status: string | null;
+};
+
 // ============================================
 // COMPONENT
 // ============================================
@@ -87,6 +100,9 @@ export default function AdminDashboard() {
 
   // Registration stats
   const [newRegistrationCount, setNewRegistrationCount] = useState(0);
+  const [todaysGames, setTodaysGames] = useState<TodaysGame[]>([]);
+  const [tomorrowGames, setTomorrowGames] = useState<TodaysGame[]>([]);
+  const [approvalCount, setApprovalCount] = useState(0);
 
   const [showSeasonPicker, setShowSeasonPicker] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -212,8 +228,70 @@ export default function AdminDashboard() {
     const { count: pendingCount } = await supabase.from('invitations').select('*', { count: 'exact', head: true }).eq('status', 'pending').eq('organization_id', orgId);
     if (pendingCount && pendingCount > 0) alertList.push({ text: pendingCount + ' pending invite' + (pendingCount > 1 ? 's' : '') + ' awaiting response', route: null, type: 'warning', borderColor: colors.info });
 
-    const { count: approvalCount } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('pending_approval', true).eq('current_organization_id', orgId);
-    if (approvalCount && approvalCount > 0) alertList.push({ text: approvalCount + ' account' + (approvalCount > 1 ? 's' : '') + ' awaiting approval', route: '/users', type: 'warning', borderColor: colors.info });
+    const { count: approvalCt } = await supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('pending_approval', true).eq('current_organization_id', orgId);
+    setApprovalCount(approvalCt || 0);
+    if (approvalCt && approvalCt > 0) alertList.push({ text: approvalCt + ' account' + (approvalCt > 1 ? 's' : '') + ' awaiting approval', route: '/users', type: 'warning', borderColor: colors.info });
+
+    // Waiver compliance alert
+    const { data: requiredWaivers } = await supabase
+      .from('waiver_templates')
+      .select('id')
+      .eq('organization_id', orgId)
+      .eq('is_required', true)
+      .eq('is_active', true);
+
+    if (requiredWaivers && requiredWaivers.length > 0 && players && players.length > 0) {
+      const playerIds = players.map(p => p.id);
+      const waiverIds = requiredWaivers.map(w => w.id);
+      const { data: signatures } = await supabase
+        .from('waiver_signatures')
+        .select('player_id, waiver_template_id')
+        .eq('season_id', seasonId)
+        .in('player_id', playerIds)
+        .in('waiver_template_id', waiverIds);
+
+      const signedSet = new Set((signatures || []).map(s => s.player_id + ':' + s.waiver_template_id));
+      let missingCount = 0;
+      for (const pid of playerIds) {
+        for (const wid of waiverIds) {
+          if (!signedSet.has(pid + ':' + wid)) { missingCount++; break; }
+        }
+      }
+      if (missingCount > 0) {
+        alertList.push({
+          text: missingCount + ' player' + (missingCount > 1 ? 's' : '') + ' missing required waivers',
+          route: '/registration-hub',
+          type: 'warning',
+          count: missingCount,
+          borderColor: '#AF52DE',
+        });
+      }
+    }
+
+    // Games needing stats entry alert
+    const { count: needsStatsCount } = await supabase
+      .from('schedule_events')
+      .select('*', { count: 'exact', head: true })
+      .eq('season_id', seasonId)
+      .eq('event_type', 'game')
+      .not('game_result', 'is', null)
+      .or('stats_entered.is.null,stats_entered.eq.false');
+
+    if (needsStatsCount && needsStatsCount > 0) {
+      alertList.push({
+        text: needsStatsCount + ' game' + (needsStatsCount > 1 ? 's' : '') + ' need stats entry',
+        route: '/game-prep',
+        type: 'warning',
+        count: needsStatsCount,
+        borderColor: colors.danger,
+      });
+    }
+
+    // Sort alerts by urgency (errors first, then by count desc)
+    alertList.sort((a, b) => {
+      const pri: Record<string, number> = { error: 0, warning: 1, success: 2 };
+      return (pri[a.type] ?? 1) - (pri[b.type] ?? 1) || ((b.count || 0) - (a.count || 0));
+    });
 
     if (alertList.length === 0) alertList.push({ text: 'All clear! Everything is running smoothly.', route: null, type: 'success' });
     setAlerts(alertList);
@@ -323,10 +401,74 @@ export default function AdminDashboard() {
     setTeams(data || []);
   };
 
+  const fetchTodaysGames = async () => {
+    if (!workingSeason) { setTodaysGames([]); setTomorrowGames([]); return; }
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
+    const { data: todayData } = await supabase
+      .from('schedule_events')
+      .select('id, opponent, opponent_name, event_time, venue_name, venue_address, location, game_status, team_id, teams(name, color)')
+      .eq('season_id', workingSeason.id)
+      .eq('event_type', 'game')
+      .eq('event_date', todayStr)
+      .order('event_time', { ascending: true });
+
+    const mapGame = (g: any): TodaysGame => ({
+      id: g.id,
+      team_name: g.teams?.name || 'Unknown',
+      team_color: g.teams?.color || null,
+      opponent: g.opponent_name || g.opponent || null,
+      event_time: g.event_time,
+      venue_name: g.venue_name,
+      venue_address: g.venue_address,
+      location: g.location,
+      game_status: g.game_status,
+    });
+
+    const todayMapped = (todayData || []).map(mapGame);
+    setTodaysGames(todayMapped);
+
+    if (todayMapped.length === 0) {
+      const { data: tomorrowData } = await supabase
+        .from('schedule_events')
+        .select('id, opponent, opponent_name, event_time, venue_name, venue_address, location, game_status, team_id, teams(name, color)')
+        .eq('season_id', workingSeason.id)
+        .eq('event_type', 'game')
+        .eq('event_date', tomorrowStr)
+        .order('event_time', { ascending: true });
+
+      setTomorrowGames((tomorrowData || []).map(mapGame));
+    } else {
+      setTomorrowGames([]);
+    }
+  };
+
+  const formatGameTime = (time: string | null): string => {
+    if (!time) return 'TBD';
+    const [h, m] = time.split(':').map(Number);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+    return hour12 + ':' + String(m).padStart(2, '0') + ' ' + ampm;
+  };
+
+  const openGameMaps = (address: string) => {
+    const url = Platform.select({
+      ios: 'http://maps.apple.com/?daddr=' + encodeURIComponent(address),
+      android: 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(address),
+      default: 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(address),
+    });
+    if (url) Linking.openURL(url);
+  };
+
   useEffect(() => {
     if (workingSeason) {
       fetchStats();
       fetchTeams();
+      fetchTodaysGames();
     }
     fetchPendingInvites();
   }, [workingSeason]);
@@ -595,8 +737,7 @@ export default function AdminDashboard() {
   const onRefresh = async () => {
     setRefreshing(true);
     await refreshSeasons();
-    await fetchStats();
-    await fetchPendingInvites();
+    await Promise.all([fetchStats(), fetchPendingInvites(), fetchTodaysGames()]);
     setRefreshing(false);
   };
 
@@ -708,6 +849,8 @@ export default function AdminDashboard() {
                 <View style={[s.attentionIconCircle, { backgroundColor: (alert.borderColor || getAlertColor(alert.type)) + '20' }]}>
                   <Ionicons
                     name={
+                      alert.text.includes('waiver') ? 'document-attach' :
+                      alert.text.includes('stats') ? 'stats-chart' :
                       alert.text.includes('registration') ? 'document-text' :
                       alert.text.includes('payment') || alert.text.includes('outstanding') ? 'cash' :
                       alert.text.includes('approval') || alert.text.includes('invite') ? 'person' :
@@ -744,17 +887,23 @@ export default function AdminDashboard() {
 
       {/* REVENUE PULSE */}
       <Text style={s.sectionLabel}>REVENUE PULSE</Text>
-      <View style={s.revenueCard}>
+      <TouchableOpacity style={s.revenueCard} activeOpacity={0.7} onPress={() => router.push('/(tabs)/payments' as any)}>
         <View style={s.revenueHeader}>
-          <Text style={s.revenuePercent}>{revenuePercent}%</Text>
+          <Text style={[s.revenuePercent, revenuePercent >= 100 && { color: colors.success }]}>{revenuePercent}%</Text>
           <Text style={s.revenueLabel}>collected</Text>
+          <View style={{ flex: 1 }} />
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
         </View>
         <View style={s.revenueBarBg}>
-          <View style={[s.revenueBarFill, { width: `${Math.min(revenuePercent, 100)}%` }]} />
+          <View style={[s.revenueBarFill, { width: `${Math.min(revenuePercent, 100)}%` }, revenuePercent >= 100 && { backgroundColor: colors.success }]} />
         </View>
-        <Text style={s.revenueDetail}>
-          ${totalCollected.toFixed(2)} of ${totalExpected.toFixed(2)} collected
-        </Text>
+        {revenuePercent >= 100 ? (
+          <Text style={[s.revenueDetail, { color: colors.success, fontWeight: '600' }]}>All payments collected! Great job!</Text>
+        ) : (
+          <Text style={s.revenueDetail}>
+            ${totalCollected.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} of ${totalExpected.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} collected
+          </Text>
+        )}
         <View style={s.revenueSubStats}>
           <View style={s.revenueSubStat}>
             <Text style={[s.revenueSubNum, { color: colors.success }]}>{familiesPaid}</Text>
@@ -766,16 +915,95 @@ export default function AdminDashboard() {
             <Text style={s.revenueSubLabel}>Families Pending</Text>
           </View>
         </View>
-      </View>
+      </TouchableOpacity>
+
+      {/* TODAY'S GAMES */}
+      {todaysGames.length > 0 && (
+        <>
+          <Text style={s.sectionLabel}>TODAY'S GAMES</Text>
+          <View style={s.todaysGamesContainer}>
+            {todaysGames.map(game => (
+              <View key={game.id} style={s.gameCard}>
+                <View style={[s.gameCardAccent, { backgroundColor: game.team_color || colors.primary }]} />
+                <View style={s.gameCardBody}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Text style={s.gameCardTeam}>{game.team_name}</Text>
+                    <View style={[s.gameStatusPill, {
+                      backgroundColor: game.game_status === 'live' ? colors.danger + '20' :
+                        game.game_status === 'completed' ? colors.success + '20' : colors.info + '20'
+                    }]}>
+                      <Text style={{
+                        fontSize: 10, fontWeight: '700', textTransform: 'uppercase',
+                        color: game.game_status === 'live' ? colors.danger :
+                          game.game_status === 'completed' ? colors.success : colors.info,
+                      }}>
+                        {game.game_status === 'completed' ? 'FINAL' : game.game_status === 'live' ? 'LIVE' : 'SCHEDULED'}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={s.gameCardOpponent}>vs {game.opponent || 'TBD'}</Text>
+                  <View style={s.gameCardDetails}>
+                    <Ionicons name="time-outline" size={14} color={colors.textMuted} />
+                    <Text style={{ fontSize: 13, color: colors.textMuted, marginLeft: 4 }}>{formatGameTime(game.event_time)}</Text>
+                    {(game.venue_name || game.venue_address || game.location) && (
+                      <TouchableOpacity
+                        style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 12 }}
+                        onPress={() => openGameMaps(game.venue_address || game.location || game.venue_name || '')}
+                      >
+                        <Ionicons name="location-outline" size={14} color={colors.info} />
+                        <Text style={{ fontSize: 13, color: colors.info, marginLeft: 4 }} numberOfLines={1}>
+                          {game.venue_name || game.location || 'View Map'}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+              </View>
+            ))}
+          </View>
+        </>
+      )}
+
+      {todaysGames.length === 0 && tomorrowGames.length > 0 && (
+        <>
+          <Text style={s.sectionLabel}>TOMORROW'S GAMES</Text>
+          <View style={s.todaysGamesContainer}>
+            {tomorrowGames.map(game => (
+              <View key={game.id} style={[s.gameCard, { opacity: 0.8 }]}>
+                <View style={[s.gameCardAccent, { backgroundColor: game.team_color || colors.primary }]} />
+                <View style={s.gameCardBody}>
+                  <Text style={s.gameCardTeam}>{game.team_name}</Text>
+                  <Text style={s.gameCardOpponent}>vs {game.opponent || 'TBD'}</Text>
+                  <View style={s.gameCardDetails}>
+                    <Ionicons name="time-outline" size={14} color={colors.textMuted} />
+                    <Text style={{ fontSize: 13, color: colors.textMuted, marginLeft: 4 }}>{formatGameTime(game.event_time)}</Text>
+                  </View>
+                </View>
+              </View>
+            ))}
+          </View>
+        </>
+      )}
+
+      {todaysGames.length === 0 && tomorrowGames.length === 0 && (
+        <>
+          <Text style={s.sectionLabel}>TODAY'S GAMES</Text>
+          <View style={s.noGamesCard}>
+            <Text style={{ fontSize: 32, marginBottom: 8 }}>&#9728;&#65039;</Text>
+            <Text style={{ fontSize: 15, color: colors.textMuted, fontWeight: '500' }}>No games today — enjoy the day off!</Text>
+          </View>
+        </>
+      )}
 
       {/* QUICK ACTIONS */}
       <Text style={s.sectionLabel}>QUICK ACTIONS</Text>
       <View style={s.actionsGrid}>
         <TouchableOpacity style={s.actionCard} onPress={() => router.push('/registration-hub' as any)}>
           <View style={[s.actionIconCircle, { backgroundColor: colors.info + '26' }]}>
-            <Ionicons name="person-add" size={32} color={colors.info} />
+            <Ionicons name="person-add" size={28} color={colors.info} />
           </View>
           <Text style={s.actionLabel}>Registrations</Text>
+          <Text style={s.actionSubtitle}>{newRegistrationCount > 0 ? newRegistrationCount + ' pending' : 'All caught up'}</Text>
           {newRegistrationCount > 0 && (
             <View style={s.actionBadge}>
               <Text style={s.actionBadgeText}>{newRegistrationCount > 99 ? '99+' : newRegistrationCount}</Text>
@@ -785,23 +1013,42 @@ export default function AdminDashboard() {
 
         <TouchableOpacity style={s.actionCard} onPress={() => router.push('/blast-composer' as any)}>
           <View style={[s.actionIconCircle, { backgroundColor: colors.warning + '26' }]}>
-            <Ionicons name="megaphone" size={32} color={colors.warning} />
+            <Ionicons name="megaphone" size={28} color={colors.warning} />
           </View>
           <Text style={s.actionLabel}>Send Blast</Text>
+          <Text style={s.actionSubtitle}>Org-wide announcement</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={s.actionCard} onPress={() => router.push('/(tabs)/reports-tab' as any)}>
           <View style={[s.actionIconCircle, { backgroundColor: colors.success + '26' }]}>
-            <Ionicons name="bar-chart" size={32} color={colors.success} />
+            <Ionicons name="bar-chart" size={28} color={colors.success} />
           </View>
-          <Text style={s.actionLabel}>View Reports</Text>
+          <Text style={s.actionLabel}>Reports</Text>
+          <Text style={s.actionSubtitle}>Analytics & exports</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={s.actionCard} onPress={() => router.push('/users' as any)}>
           <View style={[s.actionIconCircle, { backgroundColor: colors.primary + '26' }]}>
-            <Ionicons name="people-circle" size={32} color={colors.primary} />
+            <Ionicons name="people-circle" size={28} color={colors.primary} />
           </View>
-          <Text style={s.actionLabel}>Manage Users</Text>
+          <Text style={s.actionLabel}>Users</Text>
+          <Text style={s.actionSubtitle}>{approvalCount > 0 ? approvalCount + ' awaiting approval' : 'All approved'}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={s.actionCard} onPress={() => router.push('/(tabs)/teams' as any)}>
+          <View style={[s.actionIconCircle, { backgroundColor: '#FF6B6B26' }]}>
+            <Ionicons name="shirt" size={28} color="#FF6B6B" />
+          </View>
+          <Text style={s.actionLabel}>Teams</Text>
+          <Text style={s.actionSubtitle}>{stats.teams} team{stats.teams !== 1 ? 's' : ''}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={s.actionCard} onPress={() => router.push('/(tabs)/payments' as any)}>
+          <View style={[s.actionIconCircle, { backgroundColor: colors.danger + '26' }]}>
+            <Ionicons name="card" size={28} color={colors.danger} />
+          </View>
+          <Text style={s.actionLabel}>Payments</Text>
+          <Text style={s.actionSubtitle}>{stats.outstanding > 0 ? '$' + stats.outstanding.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' outstanding' : 'Fully collected'}</Text>
         </TouchableOpacity>
       </View>
 
@@ -1604,6 +1851,12 @@ const createStyles = (colors: any, sportColors: any) => StyleSheet.create({
     color: colors.text,
     textAlign: 'center',
   },
+  actionSubtitle: {
+    fontSize: 11,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginTop: 2,
+  },
   actionBadge: {
     position: 'absolute',
     top: 10,
@@ -1620,6 +1873,60 @@ const createStyles = (colors: any, sportColors: any) => StyleSheet.create({
     color: '#fff',
     fontSize: 11,
     fontWeight: 'bold',
+  },
+
+  // Today's Games
+  todaysGamesContainer: {
+    gap: 10,
+    marginBottom: 28,
+  },
+  gameCard: {
+    flexDirection: 'row',
+    backgroundColor: colors.glassCard,
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8 },
+      android: { elevation: 4 },
+    }),
+  },
+  gameCardAccent: {
+    width: 4,
+  },
+  gameCardBody: {
+    flex: 1,
+    padding: 14,
+  },
+  gameCardTeam: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  gameStatusPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  gameCardOpponent: {
+    fontSize: 14,
+    color: colors.textSecondary,
+    marginTop: 2,
+    marginBottom: 8,
+  },
+  gameCardDetails: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  noGamesCard: {
+    backgroundColor: colors.glassCard,
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    marginBottom: 28,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
   },
 
   // Recent Activity
