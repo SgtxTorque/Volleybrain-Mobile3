@@ -1,0 +1,1583 @@
+table_name,column_name,data_type
+account_invites,id,uuid
+account_invites,email,text
+account_invites,phone,text
+account_invites,player_id,uuid
+account_invites,invite_token,text
+account_invites,status,text
+account_invites,sent_at,timestamp with time zone
+account_invites,accepted_at,timestamp with time zone
+account_invites,accepted_by,uuid
+account_invites,expires_at,timestamp with time zone
+account_invites,created_at,timestamp with time zone
+achievements,id,uuid
+achievements,name,text
+achievements,description,text
+achievements,how_to_earn,text
+achievements,category,text
+achievements,type,text
+achievements,rarity,text
+achievements,stat_key,text
+achievements,threshold,integer
+achievements,threshold_type,text
+achievements,requires_verification,boolean
+achievements,icon,text
+achievements,icon_url,text
+achievements,color_primary,text
+achievements,color_secondary,text
+achievements,color_glow,text
+achievements,banner_gradient,text
+achievements,sport,text
+achievements,is_active,boolean
+achievements,display_order,integer
+achievements,created_at,timestamp with time zone
+achievements,frame_url,text
+achievements,glow_url,text
+achievements,unlock_effect_url,text
+admin_notifications,id,uuid
+admin_notifications,organization_id,uuid
+admin_notifications,type,text
+admin_notifications,title,text
+admin_notifications,message,text
+admin_notifications,player_id,uuid
+admin_notifications,team_id,uuid
+admin_notifications,season_id,uuid
+admin_notifications,is_read,boolean
+admin_notifications,read_at,timestamp with time zone
+admin_notifications,read_by,uuid
+admin_notifications,metadata,jsonb
+admin_notifications,created_at,timestamp with time zone
+admin_notifications,updated_at,timestamp with time zone
+age_groups,id,uuid
+age_groups,season_id,uuid
+age_groups,name,text
+age_groups,min_grade,integer
+age_groups,max_grade,integer
+age_groups,display_order,integer
+age_groups,created_at,timestamp with time zone
+announcement_reads,id,uuid
+announcement_reads,announcement_id,uuid
+announcement_reads,user_id,uuid
+announcement_reads,read_at,timestamp with time zone
+announcements,id,uuid
+announcements,organization_id,uuid
+announcements,season_id,uuid
+announcements,title,text
+announcements,body,text
+announcements,announcement_type,text
+announcements,priority,text
+announcements,target_type,text
+announcements,target_team_id,uuid
+announcements,created_by,uuid
+announcements,is_active,boolean
+announcements,is_pinned,boolean
+announcements,total_recipients,integer
+announcements,read_count,integer
+announcements,published_at,timestamp with time zone
+announcements,expires_at,timestamp with time zone
+announcements,created_at,timestamp with time zone
+announcements,updated_at,timestamp with time zone
+channel_members,id,uuid
+channel_members,channel_id,uuid
+channel_members,user_id,uuid
+channel_members,display_name,text
+channel_members,member_role,text
+channel_members,can_post,boolean
+channel_members,can_moderate,boolean
+channel_members,is_muted,boolean
+channel_members,last_read_at,timestamp with time zone
+channel_members,last_read_message_id,uuid
+channel_members,joined_at,timestamp with time zone
+channel_members,left_at,timestamp with time zone
+chat_channels,id,uuid
+chat_channels,season_id,uuid
+chat_channels,team_id,uuid
+chat_channels,name,text
+chat_channels,description,text
+chat_channels,avatar_url,text
+chat_channels,channel_type,text
+chat_channels,created_by,uuid
+chat_channels,is_archived,boolean
+chat_channels,created_at,timestamp with time zone
+chat_channels,updated_at,timestamp with time zone
+chat_messages,id,uuid
+chat_messages,channel_id,uuid
+chat_messages,sender_id,uuid
+chat_messages,message_type,text
+chat_messages,content,text
+chat_messages,reply_to_id,uuid
+chat_messages,is_pinned,boolean
+chat_messages,is_edited,boolean
+chat_messages,is_deleted,boolean
+chat_messages,deleted_by,uuid
+chat_messages,created_at,timestamp with time zone
+chat_messages,edited_at,timestamp with time zone
+chat_messages,deleted_at,timestamp with time zone
+chat_messages,reactions,jsonb
+chat_messages,metadata,jsonb
+coach_sports,id,uuid
+coach_sports,coach_id,uuid
+coach_sports,sport_id,uuid
+coach_sports,is_active,boolean
+coach_sports,created_at,timestamp with time zone
+coaches,id,uuid
+coaches,season_id,uuid
+coaches,first_name,text
+coaches,last_name,text
+coaches,email,text
+coaches,phone,text
+coaches,address,text
+coaches,experience_years,integer
+coaches,experience_details,text
+coaches,specialties,text
+coaches,emergency_contact_name,text
+coaches,emergency_contact_phone,text
+coaches,emergency_contact_relation,text
+coaches,status,text
+coaches,notes,text
+coaches,created_at,timestamp with time zone
+coaches,updated_at,timestamp with time zone
+coaches,profile_id,uuid
+coaches,photo_url,text
+coaches,bio,text
+coaches,date_of_birth,date
+coaches,gender,text
+coaches,shirt_size,text
+coaches,certifications,jsonb
+coaches,background_check_status,text
+coaches,background_check_date,date
+coaches,background_check_expiry,date
+coaches,coaching_license,text
+coaches,coaching_level,text
+coaches,preferred_sports,jsonb
+coaches,preferred_age_groups,jsonb
+coaches,availability,text
+coaches,waiver_signed,boolean
+coaches,waiver_signed_at,timestamp with time zone
+coaches,waiver_signer_name,text
+coaches,code_of_conduct_signed,boolean
+coaches,code_of_conduct_signed_at,timestamp with time zone
+coaches,secondary_phone,text
+coaches,preferred_contact,text
+email_logs,id,uuid
+email_logs,organization_id,uuid
+email_logs,season_id,uuid
+email_logs,player_id,uuid
+email_logs,family_email,text
+email_logs,email_type,text
+email_logs,subject,text
+email_logs,content,text
+email_logs,status,text
+email_logs,sent_at,timestamp with time zone
+email_logs,created_at,timestamp with time zone
+email_notifications,id,uuid
+email_notifications,organization_id,uuid
+email_notifications,recipient_email,text
+email_notifications,recipient_name,text
+email_notifications,type,text
+email_notifications,data,jsonb
+email_notifications,status,text
+email_notifications,created_at,timestamp with time zone
+email_notifications,sent_at,timestamp with time zone
+email_notifications,error_message,text
+email_notifications,external_id,text
+event_attendance,id,uuid
+event_attendance,event_id,uuid
+event_attendance,player_id,uuid
+event_attendance,status,text
+event_attendance,notes,text
+event_attendance,recorded_at,timestamp with time zone
+event_attendance,recorded_by,uuid
+event_rsvps,id,uuid
+event_rsvps,event_id,uuid
+event_rsvps,player_id,uuid
+event_rsvps,responded_by,uuid
+event_rsvps,status,text
+event_rsvps,notes,text
+event_rsvps,responded_at,timestamp with time zone
+event_rsvps,updated_at,timestamp with time zone
+event_volunteers,id,uuid
+event_volunteers,event_id,uuid
+event_volunteers,profile_id,uuid
+event_volunteers,role,text
+event_volunteers,position,text
+event_volunteers,notes,text
+event_volunteers,signed_up_at,timestamp with time zone
+external_league_registrations,id,uuid
+external_league_registrations,external_league_id,uuid
+external_league_registrations,team_id,uuid
+external_league_registrations,status,USER-DEFINED
+external_league_registrations,fee_amount,numeric
+external_league_registrations,amount_paid,numeric
+external_league_registrations,payment_due_date,date
+external_league_registrations,payment_date,date
+external_league_registrations,payment_method,text
+external_league_registrations,payment_reference,text
+external_league_registrations,forms_submitted,boolean
+external_league_registrations,forms_submitted_date,date
+external_league_registrations,required_documents,jsonb
+external_league_registrations,schedule_received,boolean
+external_league_registrations,division,text
+external_league_registrations,notes,text
+external_league_registrations,created_at,timestamp with time zone
+external_league_registrations,updated_at,timestamp with time zone
+external_league_status_view,id,uuid
+external_league_status_view,organization_id,uuid
+external_league_status_view,league_name,text
+external_league_status_view,facility_name,text
+external_league_status_view,registration_deadline,date
+external_league_status_view,forms_due,date
+external_league_status_view,team_registration_fee,numeric
+external_league_status_view,season_start,date
+external_league_status_view,season_end,date
+external_league_status_view,teams_registered,bigint
+external_league_status_view,total_fees,numeric
+external_league_status_view,total_paid,numeric
+external_league_status_view,outstanding,numeric
+external_league_status_view,planned_count,bigint
+external_league_status_view,registered_count,bigint
+external_league_status_view,paid_count,bigint
+external_league_status_view,confirmed_count,bigint
+external_league_status_view,deadline_passed,boolean
+external_league_status_view,forms_overdue,boolean
+external_leagues,id,uuid
+external_leagues,organization_id,uuid
+external_leagues,name,text
+external_leagues,facility_name,text
+external_leagues,website,text
+external_leagues,season_name,text
+external_leagues,sport,text
+external_leagues,season_start,date
+external_leagues,season_end,date
+external_leagues,registration_deadline,date
+external_leagues,early_registration_deadline,date
+external_leagues,coaches_meeting,date
+external_leagues,forms_due,date
+external_leagues,practices_begin,date
+external_leagues,games_begin,date
+external_leagues,team_registration_fee,numeric
+external_leagues,individual_registration_fee,numeric
+external_leagues,late_fee_team,numeric
+external_leagues,late_fee_individual,numeric
+external_leagues,notes,text
+external_leagues,blackout_dates,jsonb
+external_leagues,division_info,jsonb
+external_leagues,settings,jsonb
+external_leagues,created_at,timestamp with time zone
+external_leagues,updated_at,timestamp with time zone
+families,id,uuid
+families,name,text
+families,primary_email,text
+families,primary_phone,text
+families,notes,text
+families,created_at,timestamp with time zone
+families,updated_at,timestamp with time zone
+families,address,text
+families,emergency_contact_name,text
+families,emergency_contact_phone,text
+families,emergency_contact_relation,text
+families,primary_contact_name,text
+families,primary_contact_phone,text
+families,primary_contact_email,text
+families,secondary_contact_name,text
+families,secondary_contact_phone,text
+families,secondary_contact_email,text
+families,account_id,uuid
+game_day_templates,id,uuid
+game_day_templates,organization_id,uuid
+game_day_templates,season_id,uuid
+game_day_templates,name,text
+game_day_templates,subject,text
+game_day_templates,body,text
+game_day_templates,is_default,boolean
+game_day_templates,created_by,uuid
+game_day_templates,created_at,timestamp without time zone
+game_lineups,id,uuid
+game_lineups,event_id,uuid
+game_lineups,player_id,uuid
+game_lineups,rotation_order,integer
+game_lineups,is_starter,boolean
+game_lineups,is_libero,boolean
+game_lineups,position,text
+game_lineups,created_at,timestamp with time zone
+game_lineups,team_id,uuid
+game_lineups,is_published,boolean
+game_lineups,rotation_type,text
+game_player_stats,id,uuid
+game_player_stats,event_id,uuid
+game_player_stats,player_id,uuid
+game_player_stats,team_id,uuid
+game_player_stats,serves,integer
+game_player_stats,aces,integer
+game_player_stats,service_errors,integer
+game_player_stats,attacks,integer
+game_player_stats,kills,integer
+game_player_stats,attack_errors,integer
+game_player_stats,blocks,integer
+game_player_stats,block_assists,integer
+game_player_stats,block_errors,integer
+game_player_stats,digs,integer
+game_player_stats,dig_errors,integer
+game_player_stats,assists,integer
+game_player_stats,set_errors,integer
+game_player_stats,receptions,integer
+game_player_stats,reception_errors,integer
+game_player_stats,points,integer
+game_player_stats,field_goals_made,integer
+game_player_stats,field_goals_attempted,integer
+game_player_stats,three_pointers_made,integer
+game_player_stats,three_pointers_attempted,integer
+game_player_stats,free_throws_made,integer
+game_player_stats,free_throws_attempted,integer
+game_player_stats,rebounds,integer
+game_player_stats,offensive_rebounds,integer
+game_player_stats,defensive_rebounds,integer
+game_player_stats,steals,integer
+game_player_stats,turnovers,integer
+game_player_stats,fouls,integer
+game_player_stats,goals,integer
+game_player_stats,soccer_assists,integer
+game_player_stats,shots,integer
+game_player_stats,shots_on_target,integer
+game_player_stats,saves,integer
+game_player_stats,yellow_cards,integer
+game_player_stats,red_cards,integer
+game_player_stats,minutes_played,integer
+game_player_stats,games_started,boolean
+game_player_stats,created_at,timestamp with time zone
+game_player_stats,updated_at,timestamp with time zone
+game_player_stats,created_by,uuid
+game_player_stats,game_id,uuid
+game_player_stats,season_id,uuid
+game_player_stats,sport,text
+game_player_stats,entered_by,uuid
+game_player_stats,at_bats,integer
+game_player_stats,hits,integer
+game_player_stats,runs,integer
+game_player_stats,rbis,integer
+game_player_stats,strikeouts,integer
+game_player_stats,walks,integer
+game_player_stats,passing_yards,integer
+game_player_stats,rushing_yards,integer
+game_player_stats,touchdowns,integer
+game_player_stats,penalties,integer
+game_player_stats,errors,integer
+game_player_stats,fg_made,integer
+game_player_stats,fg_att,integer
+game_player_stats,three_made,integer
+game_player_stats,three_att,integer
+game_player_stats,ft_made,integer
+game_player_stats,ft_att,integer
+game_player_stats,shots_against,integer
+game_player_stats,doubles,integer
+game_player_stats,triples,integer
+game_player_stats,home_runs,integer
+game_player_stats,stolen_bases,integer
+game_player_stats,pass_att,integer
+game_player_stats,completions,integer
+game_player_stats,passing_tds,integer
+game_player_stats,interceptions,integer
+game_player_stats,rush_att,integer
+game_player_stats,rushing_tds,integer
+game_player_stats,receiving_yards,integer
+game_player_stats,receiving_tds,integer
+game_player_stats,tackles,integer
+game_player_stats,sacks,integer
+game_player_stats,plus_minus,integer
+game_player_stats,power_play_goals,integer
+game_player_stats,short_handed_goals,integer
+game_player_stats,fgm,integer
+game_player_stats,fga,integer
+game_player_stats,three_pm,integer
+game_player_stats,three_pa,integer
+game_player_stats,ftm,integer
+game_player_stats,fta,integer
+game_player_stats,pass_attempts,integer
+game_player_stats,rush_attempts,integer
+game_player_stats,targets,integer
+game_results,id,uuid
+game_results,event_id,uuid
+game_results,team_id,uuid
+game_results,opponent_name,character varying
+game_results,result,character varying
+game_results,sets_won,integer
+game_results,sets_lost,integer
+game_results,set_scores,jsonb
+game_results,total_points_us,integer
+game_results,total_points_them,integer
+game_results,mvp_player_id,uuid
+game_results,notes,text
+game_results,recorded_by,uuid
+game_results,recorded_at,timestamp with time zone
+game_results,created_at,timestamp with time zone
+games_needing_stats,id,uuid
+games_needing_stats,team_id,uuid
+games_needing_stats,season_id,uuid
+games_needing_stats,event_date,date
+games_needing_stats,opponent_name,text
+games_needing_stats,our_score,integer
+games_needing_stats,opponent_score,integer
+games_needing_stats,game_result,text
+games_needing_stats,team_name,text
+games_needing_stats,team_color,text
+games_needing_stats,season_name,text
+invitations,id,uuid
+invitations,organization_id,uuid
+invitations,invite_type,text
+invitations,email,text
+invitations,player_id,uuid
+invitations,team_id,uuid
+invitations,invite_code,text
+invitations,invited_by,uuid
+invitations,invited_at,timestamp with time zone
+invitations,expires_at,timestamp with time zone
+invitations,status,text
+invitations,accepted_at,timestamp with time zone
+invitations,accepted_by,uuid
+jersey_assignment_history,id,uuid
+jersey_assignment_history,jersey_assignment_id,uuid
+jersey_assignment_history,player_id,uuid
+jersey_assignment_history,jersey_number,integer
+jersey_assignment_history,team_id,uuid
+jersey_assignment_history,action,text
+jersey_assignment_history,previous_number,integer
+jersey_assignment_history,season_id,uuid
+jersey_assignment_history,performed_by,uuid
+jersey_assignment_history,performed_at,timestamp with time zone
+jersey_assignment_history,reason,text
+jersey_assignments,id,uuid
+jersey_assignments,organization_id,uuid
+jersey_assignments,sport_id,uuid
+jersey_assignments,team_id,uuid
+jersey_assignments,player_id,uuid
+jersey_assignments,jersey_number,integer
+jersey_assignments,first_assigned_season_id,uuid
+jersey_assignments,last_active_season_id,uuid
+jersey_assignments,assigned_at,timestamp with time zone
+jersey_assignments,status,text
+jersey_assignments,needs_jersey_order,boolean
+jersey_assignments,current_jersey_size,text
+jersey_assignments,jersey_ordered_at,timestamp with time zone
+jersey_assignments,assigned_by,uuid
+jersey_assignments,notes,text
+jersey_assignments,created_at,timestamp with time zone
+jersey_assignments,updated_at,timestamp with time zone
+league_settings,id,uuid
+league_settings,name,text
+league_settings,location,text
+league_settings,logo,text
+league_settings,venmo_handle,text
+league_settings,zelle_handle,text
+league_settings,cashapp_handle,text
+league_settings,created_at,timestamp with time zone
+league_settings,updated_at,timestamp with time zone
+lineup_positions,id,uuid
+lineup_positions,lineup_id,uuid
+lineup_positions,set_number,integer
+lineup_positions,rotation_number,integer
+lineup_positions,court_position,integer
+lineup_positions,player_id,uuid
+lineup_positions,is_serving,boolean
+lineup_positions,is_libero_in,boolean
+lineup_positions,sub_for_player_id,uuid
+lineup_positions,created_at,timestamp with time zone
+lineup_substitutions,id,uuid
+lineup_substitutions,lineup_id,uuid
+lineup_substitutions,set_number,integer
+lineup_substitutions,at_rotation,integer
+lineup_substitutions,player_out_id,uuid
+lineup_substitutions,player_in_id,uuid
+lineup_substitutions,sub_type,character varying
+lineup_substitutions,notes,text
+lineup_substitutions,created_at,timestamp with time zone
+message_attachments,id,uuid
+message_attachments,message_id,uuid
+message_attachments,attachment_type,text
+message_attachments,file_url,text
+message_attachments,file_name,text
+message_attachments,file_size,integer
+message_attachments,mime_type,text
+message_attachments,width,integer
+message_attachments,height,integer
+message_attachments,duration_seconds,integer
+message_attachments,thumbnail_url,text
+message_attachments,created_at,timestamp with time zone
+message_reactions,id,uuid
+message_reactions,message_id,uuid
+message_reactions,user_id,uuid
+message_reactions,reaction_type,text
+message_reactions,created_at,timestamp with time zone
+message_recipients,id,uuid
+message_recipients,message_id,uuid
+message_recipients,player_id,uuid
+message_recipients,recipient_name,text
+message_recipients,recipient_email,text
+message_recipients,recipient_phone,text
+message_recipients,recipient_type,text
+message_recipients,acknowledged,boolean
+message_recipients,acknowledged_at,timestamp with time zone
+message_recipients,delivered,boolean
+message_recipients,delivered_at,timestamp with time zone
+message_recipients,delivery_method,text
+message_recipients,created_at,timestamp with time zone
+message_recipients,profile_id,uuid
+message_reports,id,uuid
+message_reports,message_id,uuid
+message_reports,reported_by,uuid
+message_reports,reason,text
+message_reports,details,text
+message_reports,status,text
+message_reports,reviewed_by,uuid
+message_reports,reviewed_at,timestamp with time zone
+message_reports,resolution_notes,text
+message_reports,created_at,timestamp with time zone
+messages,id,uuid
+messages,season_id,uuid
+messages,sender_id,uuid
+messages,title,text
+messages,body,text
+messages,message_type,text
+messages,priority,text
+messages,target_type,text
+messages,target_team_id,uuid
+messages,requires_acknowledgment,boolean
+messages,total_recipients,integer
+messages,acknowledged_count,integer
+messages,created_at,timestamp with time zone
+notification_preferences,id,uuid
+notification_preferences,user_id,uuid
+notification_preferences,volunteer_requests,boolean
+notification_preferences,rsvp_reminders,boolean
+notification_preferences,event_updates,boolean
+notification_preferences,game_reminders,boolean
+notification_preferences,created_at,timestamp with time zone
+notification_preferences,updated_at,timestamp with time zone
+notification_templates,id,uuid
+notification_templates,organization_id,uuid
+notification_templates,name,text
+notification_templates,type,text
+notification_templates,title_template,text
+notification_templates,body_template,text
+notification_templates,trigger_event,text
+notification_templates,is_active,boolean
+notification_templates,created_at,timestamp with time zone
+notification_templates,updated_at,timestamp with time zone
+notifications,id,uuid
+notifications,user_id,uuid
+notifications,title,text
+notifications,body,text
+notifications,type,text
+notifications,event_id,uuid
+notifications,team_id,uuid
+notifications,read,boolean
+notifications,read_at,timestamp with time zone
+notifications,created_at,timestamp with time zone
+notifications,data,jsonb
+organizations,id,uuid
+organizations,name,text
+organizations,slug,text
+organizations,logo_url,text
+organizations,primary_color,text
+organizations,secondary_color,text
+organizations,contact_email,text
+organizations,contact_phone,text
+organizations,website,text
+organizations,created_at,timestamp with time zone
+organizations,updated_at,timestamp with time zone
+organizations,allow_self_registration,boolean
+organizations,registration_open,boolean
+organizations,settings,jsonb
+organizations,type,USER-DEFINED
+organizations,parent_org_id,uuid
+organizations,description,text
+organizations,address_line1,text
+organizations,address_line2,text
+organizations,city,text
+organizations,state,text
+organizations,zip,text
+organizations,stripe_account_id,text
+organizations,stripe_onboarding_complete,boolean
+organizations,is_active,boolean
+organizations,stripe_enabled,boolean
+organizations,stripe_publishable_key,text
+organizations,stripe_webhook_secret,text
+organizations,stripe_mode,text
+organizations,stripe_webhook_configured,boolean
+organizations,payment_processing_fee_mode,text
+organizations,allow_partial_payments,boolean
+organizations,minimum_payment_amount,integer
+organizations,send_receipt_emails,boolean
+organizations,payment_venmo,text
+organizations,payment_zelle,text
+organizations,payment_cashapp,text
+organizations,payment_instructions,text
+payment_sessions,id,uuid
+payment_sessions,organization_id,uuid
+payment_sessions,user_id,uuid
+payment_sessions,family_email,text
+payment_sessions,payment_ids,ARRAY
+payment_sessions,stripe_session_id,text
+payment_sessions,amount_total,numeric
+payment_sessions,status,text
+payment_sessions,created_at,timestamp with time zone
+payment_sessions,completed_at,timestamp with time zone
+payment_sessions,metadata,jsonb
+payment_settings,id,uuid
+payment_settings,organization_id,uuid
+payment_settings,cashapp_handle,text
+payment_settings,venmo_handle,text
+payment_settings,zelle_email,text
+payment_settings,zelle_phone,text
+payment_settings,square_enabled,boolean
+payment_settings,square_location_id,text
+payment_settings,instructions,text
+payment_settings,created_at,timestamp with time zone
+payment_settings,updated_at,timestamp with time zone
+payments,id,uuid
+payments,player_id,uuid
+payments,season_id,uuid
+payments,fee_type,text
+payments,amount,numeric
+payments,paid,boolean
+payments,paid_date,date
+payments,payment_method,text
+payments,notes,text
+payments,created_at,timestamp with time zone
+payments,updated_at,timestamp with time zone
+payments,fee_name,text
+payments,payer_name,text
+payments,reported_at,timestamp with time zone
+payments,verified_at,timestamp with time zone
+payments,verified_by,uuid
+payments,status,text
+payments,reference_number,text
+payments,family_email,text
+payments,auto_generated,boolean
+payments,fee_category,text
+payments,registration_id,uuid
+payments,description,text
+payments,due_date,date
+payments,stripe_payment_intent_id,text
+payments,stripe_checkout_session_id,text
+payments,receipt_url,text
+payments,paid_at,timestamp with time zone
+payments,early_bird_applied,boolean
+payments,early_bird_amount,numeric
+payments,sibling_discount_applied,boolean
+payments,sibling_discount_amount,numeric
+payments,sibling_index,integer
+platform_admin_actions,id,uuid
+platform_admin_actions,admin_id,uuid
+platform_admin_actions,action_type,text
+platform_admin_actions,target_type,text
+platform_admin_actions,target_id,uuid
+platform_admin_actions,details,jsonb
+platform_admin_actions,created_at,timestamp with time zone
+platform_invoices,id,uuid
+platform_invoices,subscription_id,uuid
+platform_invoices,organization_id,uuid
+platform_invoices,amount_cents,integer
+platform_invoices,status,text
+platform_invoices,invoice_date,date
+platform_invoices,due_date,date
+platform_invoices,paid_at,timestamp with time zone
+platform_invoices,stripe_invoice_id,text
+platform_invoices,created_at,timestamp with time zone
+platform_subscriptions,id,uuid
+platform_subscriptions,organization_id,uuid
+platform_subscriptions,plan_tier,text
+platform_subscriptions,status,text
+platform_subscriptions,billing_cycle,text
+platform_subscriptions,price_cents,integer
+platform_subscriptions,trial_ends_at,timestamp with time zone
+platform_subscriptions,current_period_start,timestamp with time zone
+platform_subscriptions,current_period_end,timestamp with time zone
+platform_subscriptions,stripe_subscription_id,text
+platform_subscriptions,cancelled_at,timestamp with time zone
+platform_subscriptions,created_at,timestamp with time zone
+platform_subscriptions,updated_at,timestamp with time zone
+player_achievement_progress,id,uuid
+player_achievement_progress,player_id,uuid
+player_achievement_progress,achievement_id,uuid
+player_achievement_progress,current_value,integer
+player_achievement_progress,target_value,integer
+player_achievement_progress,last_updated_game_id,uuid
+player_achievement_progress,last_updated_at,timestamp with time zone
+player_achievement_progress,created_at,timestamp with time zone
+player_achievements,id,uuid
+player_achievements,player_id,uuid
+player_achievements,achievement_id,uuid
+player_achievements,earned_at,timestamp with time zone
+player_achievements,game_id,uuid
+player_achievements,team_id,uuid
+player_achievements,season_id,uuid
+player_achievements,stat_value_at_unlock,integer
+player_achievements,verified_by,uuid
+player_achievements,verified_at,timestamp with time zone
+player_badges,id,uuid
+player_badges,player_id,uuid
+player_badges,badge_type,text
+player_badges,badge_name,text
+player_badges,awarded_by,uuid
+player_badges,awarded_at,timestamp without time zone
+player_badges,notes,text
+player_coach_notes,id,uuid
+player_coach_notes,player_id,uuid
+player_coach_notes,coach_id,uuid
+player_coach_notes,season_id,uuid
+player_coach_notes,note_type,text
+player_coach_notes,content,text
+player_coach_notes,is_private,boolean
+player_coach_notes,created_at,timestamp with time zone
+player_coach_notes,updated_at,timestamp with time zone
+player_evaluations,id,uuid
+player_evaluations,player_id,uuid
+player_evaluations,season_id,uuid
+player_evaluations,evaluated_by,uuid
+player_evaluations,evaluation_type,text
+player_evaluations,evaluation_date,date
+player_evaluations,overall_score,integer
+player_evaluations,skills,jsonb
+player_evaluations,notes,text
+player_evaluations,is_initial,boolean
+player_evaluations,created_at,timestamp with time zone
+player_evaluations,updated_at,timestamp with time zone
+player_game_stats,id,uuid
+player_game_stats,game_result_id,uuid
+player_game_stats,player_id,uuid
+player_game_stats,kills,integer
+player_game_stats,kill_errors,integer
+player_game_stats,attack_attempts,integer
+player_game_stats,aces,integer
+player_game_stats,serve_errors,integer
+player_game_stats,serve_attempts,integer
+player_game_stats,digs,integer
+player_game_stats,dig_errors,integer
+player_game_stats,blocks,integer
+player_game_stats,block_errors,integer
+player_game_stats,assists,integer
+player_game_stats,ball_handling_errors,integer
+player_game_stats,hitting_percentage,numeric
+player_game_stats,points_scored,integer
+player_game_stats,created_at,timestamp with time zone
+player_goals,id,uuid
+player_goals,player_id,uuid
+player_goals,season_id,uuid
+player_goals,created_by,uuid
+player_goals,title,text
+player_goals,description,text
+player_goals,category,text
+player_goals,target_value,integer
+player_goals,current_value,integer
+player_goals,target_date,date
+player_goals,status,text
+player_goals,progress_notes,text
+player_goals,completed_at,timestamp with time zone
+player_goals,created_at,timestamp with time zone
+player_goals,updated_at,timestamp with time zone
+player_guardians,id,uuid
+player_guardians,player_id,uuid
+player_guardians,guardian_id,uuid
+player_guardians,relationship,text
+player_guardians,is_primary,boolean
+player_guardians,can_pickup,boolean
+player_guardians,created_at,timestamp with time zone
+player_highlights,id,uuid
+player_highlights,player_id,uuid
+player_highlights,title,text
+player_highlights,video_url,text
+player_highlights,thumbnail_url,text
+player_highlights,description,text
+player_highlights,event_date,date
+player_highlights,created_at,timestamp without time zone
+player_parents,id,uuid
+player_parents,player_id,uuid
+player_parents,parent_id,uuid
+player_parents,relationship,text
+player_parents,is_primary,boolean
+player_parents,can_pickup,boolean
+player_parents,receives_notifications,boolean
+player_parents,created_at,timestamp with time zone
+player_positions,id,uuid
+player_positions,player_id,uuid
+player_positions,sport_id,uuid
+player_positions,primary_position,character varying
+player_positions,secondary_position,character varying
+player_positions,tertiary_position,character varying
+player_positions,is_captain,boolean
+player_positions,is_co_captain,boolean
+player_positions,can_play_libero,boolean
+player_positions,skill_rating,integer
+player_positions,serve_rating,integer
+player_positions,attack_rating,integer
+player_positions,defense_rating,integer
+player_positions,setting_rating,integer
+player_positions,notes,text
+player_positions,created_at,timestamp with time zone
+player_positions,updated_at,timestamp with time zone
+player_season_stats,id,uuid
+player_season_stats,player_id,uuid
+player_season_stats,team_id,uuid
+player_season_stats,season_id,uuid
+player_season_stats,games_played,integer
+player_season_stats,games_started,integer
+player_season_stats,total_serves,integer
+player_season_stats,total_aces,integer
+player_season_stats,total_service_errors,integer
+player_season_stats,total_attacks,integer
+player_season_stats,total_kills,integer
+player_season_stats,total_attack_errors,integer
+player_season_stats,total_blocks,integer
+player_season_stats,total_block_assists,integer
+player_season_stats,total_digs,integer
+player_season_stats,total_assists,integer
+player_season_stats,total_receptions,integer
+player_season_stats,total_reception_errors,integer
+player_season_stats,total_points,integer
+player_season_stats,aces_per_game,numeric
+player_season_stats,kills_per_game,numeric
+player_season_stats,blocks_per_game,numeric
+player_season_stats,digs_per_game,numeric
+player_season_stats,assists_per_game,numeric
+player_season_stats,points_per_game,numeric
+player_season_stats,hitting_percentage,numeric
+player_season_stats,serve_percentage,numeric
+player_season_stats,total_basketball_points,integer
+player_season_stats,total_rebounds,integer
+player_season_stats,total_basketball_assists,integer
+player_season_stats,total_steals,integer
+player_season_stats,total_turnovers,integer
+player_season_stats,total_goals,integer
+player_season_stats,total_soccer_assists,integer
+player_season_stats,total_shots,integer
+player_season_stats,total_saves,integer
+player_season_stats,created_at,timestamp with time zone
+player_season_stats,updated_at,timestamp with time zone
+player_season_stats,total_fg_made,integer
+player_season_stats,total_fg_att,integer
+player_season_stats,total_three_made,integer
+player_season_stats,total_three_att,integer
+player_season_stats,total_ft_made,integer
+player_season_stats,total_ft_att,integer
+player_season_stats,total_fouls,integer
+player_season_stats,total_shots_on_target,integer
+player_season_stats,total_shots_against,integer
+player_season_stats,total_yellow_cards,integer
+player_season_stats,total_red_cards,integer
+player_season_stats,total_doubles,integer
+player_season_stats,total_triples,integer
+player_season_stats,total_home_runs,integer
+player_season_stats,total_stolen_bases,integer
+player_season_stats,total_at_bats,integer
+player_season_stats,total_hits,integer
+player_season_stats,total_runs,integer
+player_season_stats,total_rbis,integer
+player_season_stats,total_walks,integer
+player_season_stats,total_strikeouts,integer
+player_season_stats,total_pass_att,integer
+player_season_stats,total_completions,integer
+player_season_stats,total_passing_yards,integer
+player_season_stats,total_passing_tds,integer
+player_season_stats,total_interceptions,integer
+player_season_stats,total_rush_att,integer
+player_season_stats,total_rushing_yards,integer
+player_season_stats,total_rushing_tds,integer
+player_season_stats,total_receiving_yards,integer
+player_season_stats,total_receiving_tds,integer
+player_season_stats,total_tackles,integer
+player_season_stats,total_sacks,integer
+player_season_stats,total_plus_minus,integer
+player_season_stats,total_penalty_minutes,integer
+player_season_stats,total_power_play_goals,integer
+player_season_stats,total_short_handed_goals,integer
+player_season_stats,fg_percentage,numeric
+player_season_stats,three_percentage,numeric
+player_season_stats,ft_percentage,numeric
+player_season_stats,batting_avg,numeric
+player_season_stats,on_base_pct,numeric
+player_season_stats,completion_pct,numeric
+player_season_stats,shot_pct,numeric
+player_season_stats,save_pct,numeric
+player_season_stats,total_fgm,integer
+player_season_stats,total_fga,integer
+player_season_stats,total_3pm,integer
+player_season_stats,total_3pa,integer
+player_season_stats,total_ftm,integer
+player_season_stats,total_fta,integer
+player_season_stats,shot_accuracy,numeric
+player_season_stats,batting_average,numeric
+player_season_stats,on_base_percentage,numeric
+player_season_stats,slugging_percentage,numeric
+player_season_stats,total_pass_attempts,integer
+player_season_stats,total_rush_attempts,integer
+player_season_stats,total_targets,integer
+player_season_stats,completion_percentage,numeric
+player_season_stats,yards_per_carry,numeric
+player_season_stats,catch_percentage,numeric
+player_season_stats,save_percentage,numeric
+player_skill_ratings,id,uuid
+player_skill_ratings,player_id,uuid
+player_skill_ratings,team_id,uuid
+player_skill_ratings,season_id,uuid
+player_skill_ratings,overall_rating,integer
+player_skill_ratings,serving_rating,integer
+player_skill_ratings,passing_rating,integer
+player_skill_ratings,setting_rating,integer
+player_skill_ratings,attacking_rating,integer
+player_skill_ratings,blocking_rating,integer
+player_skill_ratings,defense_rating,integer
+player_skill_ratings,hustle_rating,integer
+player_skill_ratings,coachability_rating,integer
+player_skill_ratings,teamwork_rating,integer
+player_skill_ratings,coach_notes,text
+player_skill_ratings,rated_by,uuid
+player_skill_ratings,rated_at,timestamp with time zone
+player_skill_ratings,created_at,timestamp with time zone
+player_skill_ratings,updated_at,timestamp with time zone
+player_skills,id,uuid
+player_skills,player_id,uuid
+player_skills,passing,integer
+player_skills,serving,integer
+player_skills,hitting,integer
+player_skills,blocking,integer
+player_skills,setting,integer
+player_skills,defense,integer
+player_skills,created_at,timestamp without time zone
+player_skills,updated_at,timestamp without time zone
+player_skills,sport,text
+player_skills,skills_data,jsonb
+player_skills,season_id,uuid
+player_stats,id,uuid
+player_stats,player_id,uuid
+player_stats,kills,integer
+player_stats,digs,integer
+player_stats,assists,integer
+player_stats,aces,integer
+player_stats,blocks,integer
+player_stats,serve_pct,numeric
+player_stats,attack_pct,numeric
+player_stats,games_played,integer
+player_stats,created_at,timestamp without time zone
+player_stats,updated_at,timestamp without time zone
+player_tracked_achievements,id,uuid
+player_tracked_achievements,player_id,uuid
+player_tracked_achievements,achievement_id,uuid
+player_tracked_achievements,display_order,integer
+player_tracked_achievements,tracked_at,timestamp with time zone
+players,id,uuid
+players,season_id,uuid
+players,first_name,text
+players,last_name,text
+players,birth_date,date
+players,grade,integer
+players,position,text
+players,experience,text
+players,parent_id,uuid
+players,parent_name,text
+players,parent_email,text
+players,parent_phone,text
+players,address,text
+players,emergency_name,text
+players,emergency_phone,text
+players,emergency_relation,text
+players,status,text
+players,eval_score,integer
+players,returning_player,boolean
+players,registration_date,timestamp with time zone
+players,jersey_number,integer
+players,jersey_size,text
+players,medical_notes,text
+players,waiver_signed,boolean
+players,photo_release,boolean
+players,created_at,timestamp with time zone
+players,updated_at,timestamp with time zone
+players,dob,date
+players,school,text
+players,player_type,text
+players,jersey_pref_1,integer
+players,jersey_pref_2,integer
+players,jersey_pref_3,integer
+players,experience_level,text
+players,experience_details,text
+players,goals,text
+players,uniform_size_jersey,text
+players,uniform_size_shorts,text
+players,parent_2_name,text
+players,parent_2_phone,text
+players,parent_2_email,text
+players,emergency_contact_name,text
+players,emergency_contact_phone,text
+players,emergency_contact_relation,text
+players,medical_conditions,text
+players,allergies,text
+players,medications,text
+players,waiver_liability,boolean
+players,waiver_photo,boolean
+players,waiver_conduct,boolean
+players,waiver_signed_by,text
+players,waiver_signed_date,timestamp without time zone
+players,registration_source,text
+players,notes,text
+players,photo_url,text
+players,family_id,uuid
+players,skill_rating,integer
+players,evaluation_notes,text
+players,birth_certificate_url,text
+players,medical_form_url,text
+players,player_pin,text
+players,player_account_enabled,boolean
+players,parent_account_id,uuid
+players,preferred_team_id,uuid
+players,preferred_coach_id,uuid
+players,team_preference_notes,text
+players,sport_id,uuid
+players,placement_preferences,text
+players,gender,text
+players,prefilled_from_player_id,uuid
+players,equipped_calling_card_id,uuid
+players,show_achievements_publicly,boolean
+players,uniform_sizes_extra,jsonb
+players,city,text
+players,state,text
+players,zip,text
+players,parent2_name,text
+players,parent2_email,text
+players,parent2_phone,text
+profiles,id,uuid
+profiles,email,text
+profiles,full_name,text
+profiles,phone,text
+profiles,role,text
+profiles,avatar_url,text
+profiles,created_at,timestamp with time zone
+profiles,updated_at,timestamp with time zone
+profiles,account_type,text
+profiles,parent_profile_id,uuid
+profiles,coppa_consent_given,boolean
+profiles,coppa_consent_date,timestamp with time zone
+profiles,primary_role,text
+profiles,current_organization_id,uuid
+profiles,onboarding_complete,boolean
+profiles,pending_approval,boolean
+profiles,onboarding_completed,boolean
+profiles,onboarding_data,jsonb
+profiles,parent_tutorial_data,jsonb
+profiles,is_platform_admin,boolean
+profiles,is_suspended,boolean
+profiles,deletion_requested,boolean
+push_tokens,id,uuid
+push_tokens,user_id,uuid
+push_tokens,token,text
+push_tokens,device_type,text
+push_tokens,created_at,timestamp with time zone
+push_tokens,updated_at,timestamp with time zone
+registration_templates,id,uuid
+registration_templates,organization_id,uuid
+registration_templates,name,text
+registration_templates,description,text
+registration_templates,sport_id,uuid
+registration_templates,is_default,boolean
+registration_templates,is_active,boolean
+registration_templates,player_fields,jsonb
+registration_templates,parent_fields,jsonb
+registration_templates,emergency_fields,jsonb
+registration_templates,medical_fields,jsonb
+registration_templates,waivers,jsonb
+registration_templates,custom_questions,jsonb
+registration_templates,created_at,timestamp with time zone
+registration_templates,updated_at,timestamp with time zone
+registrations,id,uuid
+registrations,player_id,uuid
+registrations,season_id,uuid
+registrations,family_id,uuid
+registrations,status,text
+registrations,submitted_at,timestamp with time zone
+registrations,reviewed_at,timestamp with time zone
+registrations,reviewed_by,uuid
+registrations,approved_at,timestamp with time zone
+registrations,paid_at,timestamp with time zone
+registrations,rostered_at,timestamp with time zone
+registrations,withdrawn_at,timestamp with time zone
+registrations,needs_evaluation,boolean
+registrations,evaluated_at,timestamp with time zone
+registrations,evaluated_by,uuid
+registrations,evaluation_notes,text
+registrations,waitlist_position,integer
+registrations,waitlist_notes,text
+registrations,denial_reason,text
+registrations,registration_source,text
+registrations,admin_notes,text
+registrations,created_at,timestamp with time zone
+registrations,updated_at,timestamp with time zone
+registrations,custom_answers,jsonb
+registrations,registration_data,jsonb
+registrations,waivers_accepted,jsonb
+registrations,signature_name,text
+registrations,signature_date,timestamp with time zone
+registrations,signature_ip,text
+role_assignments,id,uuid
+role_assignments,user_id,uuid
+role_assignments,role,text
+role_assignments,scope_type,text
+role_assignments,scope_id,uuid
+role_assignments,granted_by,uuid
+role_assignments,granted_at,timestamp with time zone
+role_assignments,expires_at,timestamp with time zone
+role_assignments,is_active,boolean
+schedule_events,id,uuid
+schedule_events,team_id,uuid
+schedule_events,event_type,text
+schedule_events,title,text
+schedule_events,event_date,date
+schedule_events,event_time,time without time zone
+schedule_events,duration_hours,numeric
+schedule_events,location,text
+schedule_events,opponent,text
+schedule_events,notes,text
+schedule_events,is_recurring,boolean
+schedule_events,recurring_day,text
+schedule_events,created_at,timestamp with time zone
+schedule_events,updated_at,timestamp with time zone
+schedule_events,location_type,text
+schedule_events,opponent_name,text
+schedule_events,opponent_team_id,uuid
+schedule_events,our_score,integer
+schedule_events,opponent_score,integer
+schedule_events,arrival_time,timestamp without time zone
+schedule_events,venue_name,text
+schedule_events,venue_address,text
+schedule_events,end_time,time without time zone
+schedule_events,season_id,uuid
+schedule_events,duration_minutes,integer
+schedule_events,start_time,timestamp with time zone
+schedule_events,description,text
+schedule_events,game_status,text
+schedule_events,game_result,text
+schedule_events,completed_at,timestamp with time zone
+schedule_events,completed_by,uuid
+schedule_events,scoring_format,text
+schedule_events,set_scores,jsonb
+schedule_events,period_scores,jsonb
+schedule_events,our_sets_won,integer
+schedule_events,opponent_sets_won,integer
+schedule_events,point_differential,integer
+schedule_events,stats_entered,boolean
+schedule_events,stats_entered_at,timestamp with time zone
+schedule_events,stats_entered_by,uuid
+schedule_events,court_number,text
+season_fees,id,uuid
+season_fees,season_id,uuid
+season_fees,fee_type,text
+season_fees,fee_name,text
+season_fees,amount,numeric
+season_fees,due_date,date
+season_fees,required,boolean
+season_fees,sort_order,integer
+season_fees,created_at,timestamp with time zone
+seasons,id,uuid
+seasons,name,text
+seasons,status,text
+seasons,registration_close,date
+seasons,start_date,date
+seasons,end_date,date
+seasons,fee_registration,numeric
+seasons,fee_uniform,numeric
+seasons,fee_monthly,numeric
+seasons,months_in_season,integer
+seasons,created_at,timestamp with time zone
+seasons,updated_at,timestamp with time zone
+seasons,registration_open,boolean
+seasons,registration_closes_at,date
+seasons,organization_id,uuid
+seasons,sport_id,uuid
+seasons,min_players_per_team,integer
+seasons,max_players_per_team,integer
+seasons,monthly_fee_count,integer
+seasons,registration_opens,date
+seasons,registration_closes,date
+seasons,early_bird_deadline,date
+seasons,early_bird_discount,numeric
+seasons,late_registration_deadline,date
+seasons,late_registration_fee,numeric
+seasons,capacity,integer
+seasons,waitlist_enabled,boolean
+seasons,waitlist_capacity,integer
+seasons,description,text
+seasons,fee_per_family,numeric
+seasons,sibling_discount_type,text
+seasons,sibling_discount_amount,numeric
+seasons,sibling_discount_apply_to,text
+seasons,sport,text
+seasons,registration_config,jsonb
+seasons,registration_template_id,uuid
+sport_positions,id,uuid
+sport_positions,sport_id,uuid
+sport_positions,position_code,character varying
+sport_positions,position_name,character varying
+sport_positions,position_short,character varying
+sport_positions,is_starter_position,boolean
+sport_positions,position_order,integer
+sport_positions,color,character varying
+sport_positions,description,text
+sport_positions,created_at,timestamp with time zone
+sport_skill_templates,id,uuid
+sport_skill_templates,sport_name,text
+sport_skill_templates,skill_key,text
+sport_skill_templates,skill_name,text
+sport_skill_templates,skill_description,text
+sport_skill_templates,display_order,integer
+sport_skill_templates,is_active,boolean
+sport_skill_templates,created_at,timestamp with time zone
+sports,id,uuid
+sports,organization_id,uuid
+sports,name,text
+sports,code,text
+sports,icon,text
+sports,color_primary,text
+sports,color_secondary,text
+sports,color_accent,text
+sports,is_active,boolean
+sports,sort_order,integer
+sports,created_at,timestamp with time zone
+sports,updated_at,timestamp with time zone
+stripe_customers,id,uuid
+stripe_customers,organization_id,uuid
+stripe_customers,email,text
+stripe_customers,stripe_customer_id,text
+stripe_customers,name,text
+stripe_customers,phone,text
+stripe_customers,created_at,timestamp with time zone
+stripe_customers,updated_at,timestamp with time zone
+stripe_payment_intents,id,uuid
+stripe_payment_intents,organization_id,uuid
+stripe_payment_intents,stripe_payment_intent_id,text
+stripe_payment_intents,stripe_customer_id,text
+stripe_payment_intents,amount,numeric
+stripe_payment_intents,currency,text
+stripe_payment_intents,status,text
+stripe_payment_intents,payment_ids,ARRAY
+stripe_payment_intents,parent_email,text
+stripe_payment_intents,client_secret,text
+stripe_payment_intents,error_message,text
+stripe_payment_intents,paid_at,timestamp with time zone
+stripe_payment_intents,refunded_at,timestamp with time zone
+stripe_payment_intents,refund_amount,numeric
+stripe_payment_intents,metadata,jsonb
+stripe_payment_intents,created_at,timestamp with time zone
+stripe_payment_intents,updated_at,timestamp with time zone
+stripe_webhook_logs,id,uuid
+stripe_webhook_logs,organization_id,uuid
+stripe_webhook_logs,event_id,text
+stripe_webhook_logs,event_type,text
+stripe_webhook_logs,payload,jsonb
+stripe_webhook_logs,processed,boolean
+stripe_webhook_logs,error_message,text
+stripe_webhook_logs,created_at,timestamp with time zone
+team_coaches,id,uuid
+team_coaches,team_id,uuid
+team_coaches,coach_id,uuid
+team_coaches,role,text
+team_coaches,created_at,timestamp with time zone
+team_documents,id,uuid
+team_documents,team_id,uuid
+team_documents,uploaded_by,uuid
+team_documents,name,text
+team_documents,description,text
+team_documents,file_url,text
+team_documents,file_type,text
+team_documents,file_size,integer
+team_documents,category,text
+team_documents,is_archived,boolean
+team_documents,created_at,timestamp with time zone
+team_documents,updated_at,timestamp with time zone
+team_invite_codes,id,uuid
+team_invite_codes,team_id,uuid
+team_invite_codes,code,text
+team_invite_codes,max_uses,integer
+team_invite_codes,current_uses,integer
+team_invite_codes,created_by,uuid
+team_invite_codes,created_at,timestamp with time zone
+team_invite_codes,expires_at,timestamp with time zone
+team_invite_codes,is_active,boolean
+team_milestones,id,uuid
+team_milestones,team_id,uuid
+team_milestones,created_by,uuid
+team_milestones,milestone_type,text
+team_milestones,title,text
+team_milestones,description,text
+team_milestones,opponent_name,text
+team_milestones,score_us,integer
+team_milestones,score_them,integer
+team_milestones,player_id,uuid
+team_milestones,icon,text
+team_milestones,highlight_color,text
+team_milestones,milestone_date,date
+team_milestones,created_at,timestamp with time zone
+team_players,id,uuid
+team_players,team_id,uuid
+team_players,player_id,uuid
+team_players,jersey_number,integer
+team_players,is_primary_team,boolean
+team_players,joined_at,timestamp with time zone
+team_players,jersey_assigned_at,timestamp with time zone
+team_players,jersey_needs_order,boolean
+team_players,jersey_ordered_at,timestamp with time zone
+team_players,jersey_preference_result,text
+team_post_comments,id,uuid
+team_post_comments,post_id,uuid
+team_post_comments,author_id,uuid
+team_post_comments,parent_comment_id,uuid
+team_post_comments,content,text
+team_post_comments,is_deleted,boolean
+team_post_comments,deleted_at,timestamp with time zone
+team_post_comments,deleted_by,uuid
+team_post_comments,created_at,timestamp with time zone
+team_post_comments,updated_at,timestamp with time zone
+team_post_reactions,id,uuid
+team_post_reactions,post_id,uuid
+team_post_reactions,user_id,uuid
+team_post_reactions,reaction_type,text
+team_post_reactions,created_at,timestamp with time zone
+team_posts,id,uuid
+team_posts,team_id,uuid
+team_posts,author_id,uuid
+team_posts,post_type,text
+team_posts,title,text
+team_posts,content,text
+team_posts,media_urls,ARRAY
+team_posts,is_pinned,boolean
+team_posts,is_published,boolean
+team_posts,expires_at,timestamp with time zone
+team_posts,reaction_count,integer
+team_posts,comment_count,integer
+team_posts,created_at,timestamp with time zone
+team_posts,updated_at,timestamp with time zone
+team_staff,id,uuid
+team_staff,team_id,uuid
+team_staff,user_id,uuid
+team_staff,staff_role,text
+team_staff,assigned_by,uuid
+team_staff,assigned_at,timestamp with time zone
+team_staff,removed_at,timestamp with time zone
+team_staff,is_active,boolean
+team_standings,id,uuid
+team_standings,team_id,uuid
+team_standings,season_id,uuid
+team_standings,division_id,uuid
+team_standings,wins,integer
+team_standings,losses,integer
+team_standings,ties,integer
+team_standings,games_played,integer
+team_standings,sets_won,integer
+team_standings,sets_lost,integer
+team_standings,points_for,integer
+team_standings,points_against,integer
+team_standings,point_differential,integer
+team_standings,standing_points,integer
+team_standings,win_percentage,numeric
+team_standings,current_streak,text
+team_standings,last_five,text
+team_standings,rank,integer
+team_standings,created_at,timestamp with time zone
+team_standings,updated_at,timestamp with time zone
+teams,id,uuid
+teams,season_id,uuid
+teams,age_group_id,uuid
+teams,name,text
+teams,team_type,text
+teams,color,text
+teams,max_players,integer
+teams,coach_id,uuid
+teams,created_at,timestamp with time zone
+teams,updated_at,timestamp with time zone
+teams,logo_url,text
+teams,motto,text
+teams,banner_url,text
+teams,abbreviation,character varying
+teams,age_group,character varying
+teams,age_group_type,character varying
+teams,skill_level,character varying
+teams,gender,character varying
+teams,max_roster_size,integer
+teams,min_roster_size,integer
+teams,roster_open,boolean
+teams,description,text
+teams,internal_notes,text
+teams,is_independent,boolean
+typing_indicators,channel_id,uuid
+typing_indicators,user_id,uuid
+typing_indicators,started_at,timestamp with time zone
+user_active_contexts,user_id,uuid
+user_active_contexts,active_organization_id,uuid
+user_active_contexts,active_team_id,uuid
+user_active_contexts,active_role,text
+user_active_contexts,recent_contexts,jsonb
+user_active_contexts,updated_at,timestamp with time zone
+user_blocks,id,uuid
+user_blocks,blocker_id,uuid
+user_blocks,blocked_id,uuid
+user_blocks,created_at,timestamp with time zone
+user_roles,id,uuid
+user_roles,organization_id,uuid
+user_roles,user_id,uuid
+user_roles,role,text
+user_roles,granted_by,uuid
+user_roles,granted_at,timestamp with time zone
+user_roles,revoked_at,timestamp with time zone
+user_roles,revoked_by,uuid
+user_roles,is_active,boolean
+v_jersey_alerts,organization_id,uuid
+v_jersey_alerts,team_id,uuid
+v_jersey_alerts,team_name,text
+v_jersey_alerts,player_id,uuid
+v_jersey_alerts,player_name,text
+v_jersey_alerts,jersey_number,integer
+v_jersey_alerts,needs_jersey_order,boolean
+v_jersey_alerts,current_jersey_size,text
+v_jersey_alerts,requested_size,text
+v_jersey_alerts,assignment_reason,text
+v_jersey_alerts,assigned_at,timestamp with time zone
+v_jersey_alerts,alert_type,text
+v_jersey_alerts,alert_message,text
+v_jersey_status,id,uuid
+v_jersey_status,organization_id,uuid
+v_jersey_status,sport_id,uuid
+v_jersey_status,sport_name,text
+v_jersey_status,team_id,uuid
+v_jersey_status,team_name,text
+v_jersey_status,player_id,uuid
+v_jersey_status,first_name,text
+v_jersey_status,last_name,text
+v_jersey_status,player_name,text
+v_jersey_status,jersey_number,integer
+v_jersey_status,status,text
+v_jersey_status,needs_jersey_order,boolean
+v_jersey_status,current_jersey_size,text
+v_jersey_status,first_assigned_season_id,uuid
+v_jersey_status,last_active_season_id,uuid
+v_jersey_status,assigned_at,timestamp with time zone
+v_jersey_status,jersey_pref_1,integer
+v_jersey_status,jersey_pref_2,integer
+v_jersey_status,jersey_pref_3,integer
+v_season_standings,id,uuid
+v_season_standings,team_id,uuid
+v_season_standings,season_id,uuid
+v_season_standings,division_id,uuid
+v_season_standings,wins,integer
+v_season_standings,losses,integer
+v_season_standings,ties,integer
+v_season_standings,games_played,integer
+v_season_standings,sets_won,integer
+v_season_standings,sets_lost,integer
+v_season_standings,points_for,integer
+v_season_standings,points_against,integer
+v_season_standings,point_differential,integer
+v_season_standings,standing_points,integer
+v_season_standings,win_percentage,numeric
+v_season_standings,current_streak,text
+v_season_standings,last_five,text
+v_season_standings,rank,integer
+v_season_standings,created_at,timestamp with time zone
+v_season_standings,updated_at,timestamp with time zone
+v_season_standings,team_name,text
+v_season_standings,season_name,text
+v_season_standings,record,text
+v_season_standings,set_record,text
+v_season_standings,point_diff_formatted,text
+venues,id,uuid
+venues,organization_id,uuid
+venues,name,text
+venues,short_name,text
+venues,address,text
+venues,city,text
+venues,state,text
+venues,zip,text
+venues,google_maps_url,text
+venues,contact_name,text
+venues,contact_phone,text
+venues,contact_email,text
+venues,courts_available,integer
+venues,court_names,ARRAY
+venues,is_home,boolean
+venues,parking_instructions,text
+venues,entrance_instructions,text
+venues,notes,text
+venues,photo_url,text
+venues,rental_cost_per_hour,numeric
+venues,created_at,timestamp with time zone
+venues,updated_at,timestamp with time zone
+volunteer_blasts,id,uuid
+volunteer_blasts,event_id,uuid
+volunteer_blasts,role,text
+volunteer_blasts,sent_by,uuid
+volunteer_blasts,sent_at,timestamp with time zone
+volunteer_blasts,sent_date,date
+volunteer_blasts,recipient_count,integer
+waiver_edit_history,id,uuid
+waiver_edit_history,waiver_template_id,uuid
+waiver_edit_history,edited_by,uuid
+waiver_edit_history,edited_by_name,text
+waiver_edit_history,version,integer
+waiver_edit_history,change_summary,text
+waiver_edit_history,previous_content,text
+waiver_edit_history,created_at,timestamp with time zone
+waiver_sends,id,uuid
+waiver_sends,waiver_template_id,uuid
+waiver_sends,organization_id,uuid
+waiver_sends,player_id,uuid
+waiver_sends,sent_to_email,text
+waiver_sends,sent_to_name,text
+waiver_sends,sent_by,uuid
+waiver_sends,sent_at,timestamp with time zone
+waiver_sends,opened_at,timestamp with time zone
+waiver_sends,signed_at,timestamp with time zone
+waiver_sends,status,text
+waiver_sends,created_at,timestamp with time zone
+waiver_signatures,id,uuid
+waiver_signatures,waiver_template_id,uuid
+waiver_signatures,player_id,uuid
+waiver_signatures,organization_id,uuid
+waiver_signatures,season_id,uuid
+waiver_signatures,signed_by_name,text
+waiver_signatures,signed_by_email,text
+waiver_signatures,signed_by_user_id,uuid
+waiver_signatures,signed_by_relation,text
+waiver_signatures,signature_data,text
+waiver_signatures,ip_address,text
+waiver_signatures,user_agent,text
+waiver_signatures,status,text
+waiver_signatures,waiver_version,integer
+waiver_signatures,signed_at,timestamp with time zone
+waiver_signatures,revoked_at,timestamp with time zone
+waiver_signatures,expires_at,timestamp with time zone
+waiver_signatures,created_at,timestamp with time zone
+waiver_templates,id,uuid
+waiver_templates,organization_id,uuid
+waiver_templates,name,text
+waiver_templates,description,text
+waiver_templates,content,text
+waiver_templates,pdf_url,text
+waiver_templates,type,text
+waiver_templates,sport_id,uuid
+waiver_templates,season_id,uuid
+waiver_templates,is_required,boolean
+waiver_templates,is_active,boolean
+waiver_templates,requires_signature,boolean
+waiver_templates,sort_order,integer
+waiver_templates,org_logo_on_waiver,boolean
+waiver_templates,version,integer
+waiver_templates,last_edited_by,uuid
+waiver_templates,last_edited_at,timestamp with time zone
+waiver_templates,created_at,timestamp with time zone
+waiver_templates,updated_at,timestamp with time zone
+waivers,id,uuid
+waivers,organization_id,uuid
+waivers,name,text
+waivers,description,text
+waivers,content,text
+waivers,waiver_type,text
+waivers,is_required,boolean
+waivers,is_active,boolean
+waivers,sort_order,integer
+waivers,created_at,timestamp with time zone
+waivers,updated_at,timestamp with time zone
