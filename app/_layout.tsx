@@ -1,3 +1,4 @@
+import CoppaConsentModal from '@/components/CoppaConsentModal';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { PermissionsProvider } from '@/lib/permissions-context';
 import { SeasonProvider } from '@/lib/season';
@@ -120,6 +121,7 @@ function RootLayoutNav() {
         </Stack>
       </KeyboardAvoidingView>
       <StatusBar style={isDark ? 'light' : 'dark'} />
+      <CoppaConsentModal />
     </NavThemeProvider>
   );
 }
