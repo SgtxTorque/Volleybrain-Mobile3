@@ -1,10 +1,16 @@
+import AdminContextBar from '@/components/AdminContextBar';
+import AppHeaderBar from '@/components/ui/AppHeaderBar';
+import Badge from '@/components/ui/Badge';
+import Card from '@/components/ui/Card';
+import SectionHeader from '@/components/ui/SectionHeader';
+import StatBox from '@/components/ui/StatBox';
 import { useAuth } from '@/lib/auth';
+import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import AdminContextBar from '@/components/AdminContextBar';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -136,12 +142,12 @@ type Team = {
 // STATUS CONFIG
 // =====================================================
 const statusConfig: Record<RegistrationStatus, { label: string; color: string; icon: string }> = {
-  new: { label: 'New', color: '#FF9500', icon: 'alert-circle' },
-  approved: { label: 'Approved', color: '#5AC8FA', icon: 'checkmark-circle' },
+  new: { label: 'New', color: '#E8913A', icon: 'alert-circle' },
+  approved: { label: 'Approved', color: '#0EA5E9', icon: 'checkmark-circle' },
   waitlisted: { label: 'Waitlisted', color: '#8E8E93', icon: 'time' },
-  denied: { label: 'Denied', color: '#FF3B30', icon: 'close-circle' },
-  active: { label: 'Active', color: '#34C759', icon: 'wallet' },
-  rostered: { label: 'Rostered', color: '#AF52DE', icon: 'people' },
+  denied: { label: 'Denied', color: '#D94F4F', icon: 'close-circle' },
+  active: { label: 'Active', color: '#22C55E', icon: 'wallet' },
+  rostered: { label: 'Rostered', color: '#2C5F7C', icon: 'people' },
   withdrawn: { label: 'Withdrawn', color: '#8E8E93', icon: 'exit' },
 };
 
@@ -855,26 +861,15 @@ export default function RegistrationHubScreen() {
     <TouchableOpacity
       style={{
         flex: 1,
-        backgroundColor: colors.glassCard,
-        borderRadius: 16,
-        padding: 12,
-        alignItems: 'center',
-        borderWidth: activeFilter === filterKey ? 2 : 1,
-        borderColor: activeFilter === filterKey ? color : colors.glassBorder,
         minWidth: 70,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 12,
-        elevation: 6,
+        borderWidth: activeFilter === filterKey ? 2 : 0,
+        borderColor: activeFilter === filterKey ? color : 'transparent',
+        borderRadius: radii.statBox,
       }}
       onPress={onPress}
       disabled={!onPress}
     >
-      <Text style={{ fontSize: 24, fontWeight: 'bold', color }}>{value}</Text>
-      <Text style={{ fontSize: 11, color: colors.textSecondary, marginTop: 2, textAlign: 'center' }} numberOfLines={1}>
-        {label}
-      </Text>
+      <StatBox value={value} label={label} accentColor={color} />
     </TouchableOpacity>
   );
 
@@ -892,19 +887,15 @@ export default function RegistrationHubScreen() {
       <TouchableOpacity
         key={registration.id}
         style={{
-          backgroundColor: colors.glassCard,
-          borderRadius: 16,
+          backgroundColor: '#FFF',
+          borderRadius: radii.card,
           padding: 16,
           marginBottom: 12,
           borderLeftWidth: 4,
           borderLeftColor: config.color,
           borderWidth: isSelected ? 2 : 1,
-          borderColor: isSelected ? colors.primary : colors.glassBorder,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.15,
-          shadowRadius: 12,
-          elevation: 6,
+          borderColor: isSelected ? '#2C5F7C' : 'rgba(0,0,0,0.06)',
+          ...shadows.card,
           flexDirection: selectionMode ? 'row' : 'column',
           alignItems: selectionMode ? 'flex-start' : 'stretch',
         }}
@@ -1087,12 +1078,12 @@ export default function RegistrationHubScreen() {
         presentationStyle="pageSheet"
         onRequestClose={() => { setDetailModalVisible(false); setShowApproveTeamPicker(false); }}
       >
-        <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: 'rgba(0,0,0,0.06)' }}>
             <TouchableOpacity onPress={() => { setDetailModalVisible(false); setShowApproveTeamPicker(false); }}>
               <Ionicons name="close" size={24} color={colors.text} />
             </TouchableOpacity>
-            <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text }}>Registration Details</Text>
+            <Text style={{ ...displayTextStyle, fontSize: 16, color: colors.text }}>REGISTRATION DETAILS</Text>
             <View style={{ width: 24 }} />
           </View>
 
@@ -1155,7 +1146,7 @@ export default function RegistrationHubScreen() {
             )}
 
             {/* Player Info */}
-            <View style={{ backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.glassBorder }}>
+            <View style={{ backgroundColor: '#FFF', borderRadius: radii.card, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', ...shadows.card }}>
               <Text style={{ fontSize: 14, fontWeight: '600', color: colors.primary, marginBottom: 12 }}>PLAYER INFORMATION</Text>
               <View style={{ gap: 8 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Text style={{ color: colors.textSecondary }}>Name</Text><Text style={{ color: colors.text, fontWeight: '500' }}>{player.first_name} {player.last_name}</Text></View>
@@ -1166,7 +1157,7 @@ export default function RegistrationHubScreen() {
             </View>
 
             {/* Parent/Guardian Info */}
-            <View style={{ backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.glassBorder }}>
+            <View style={{ backgroundColor: '#FFF', borderRadius: radii.card, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', ...shadows.card }}>
               <Text style={{ fontSize: 14, fontWeight: '600', color: colors.primary, marginBottom: 12 }}>PARENT/GUARDIAN</Text>
               <View style={{ gap: 8 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Text style={{ color: colors.textSecondary }}>Name</Text><Text style={{ color: colors.text, fontWeight: '500' }}>{player.parent_name}</Text></View>
@@ -1184,7 +1175,7 @@ export default function RegistrationHubScreen() {
             </View>
 
             {/* Uniform & Jersey */}
-            <View style={{ backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.glassBorder }}>
+            <View style={{ backgroundColor: '#FFF', borderRadius: radii.card, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', ...shadows.card }}>
               <Text style={{ fontSize: 14, fontWeight: '600', color: colors.primary, marginBottom: 12 }}>UNIFORM & JERSEY</Text>
               <View style={{ gap: 8 }}>
                 {player.uniform_size_jersey && <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Text style={{ color: colors.textSecondary }}>Jersey Size</Text><Text style={{ color: colors.text, fontWeight: '500' }}>{player.uniform_size_jersey}</Text></View>}
@@ -1205,7 +1196,7 @@ export default function RegistrationHubScreen() {
 
             {/* Siblings */}
             {siblings && siblings.length > 0 && (
-              <View style={{ backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.glassBorder }}>
+              <View style={{ backgroundColor: '#FFF', borderRadius: radii.card, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', ...shadows.card }}>
                 <Text style={{ fontSize: 14, fontWeight: '600', color: colors.primary, marginBottom: 12 }}>SIBLINGS</Text>
                 <View style={{ gap: 8 }}>
                   {siblings.map((sibling) => (
@@ -1222,7 +1213,7 @@ export default function RegistrationHubScreen() {
             )}
 
             {/* Waivers */}
-            <View style={{ backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.glassBorder }}>
+            <View style={{ backgroundColor: '#FFF', borderRadius: radii.card, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', ...shadows.card }}>
               <Text style={{ fontSize: 14, fontWeight: '600', color: colors.primary, marginBottom: 12 }}>WAIVERS</Text>
               <View style={{ gap: 8 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -1242,7 +1233,7 @@ export default function RegistrationHubScreen() {
 
             {/* Payment Info */}
             {payments && payments.total_due > 0 && (
-              <View style={{ backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.glassBorder }}>
+              <View style={{ backgroundColor: '#FFF', borderRadius: radii.card, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', ...shadows.card }}>
                 <Text style={{ fontSize: 14, fontWeight: '600', color: colors.primary, marginBottom: 12 }}>PAYMENT STATUS</Text>
                 <View style={{ gap: 8 }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Text style={{ color: colors.textSecondary }}>Total Due</Text><Text style={{ color: colors.text, fontWeight: '500' }}>{formatCurrency(payments.total_due)}</Text></View>
@@ -1254,7 +1245,7 @@ export default function RegistrationHubScreen() {
 
             {/* Custom Registration Answers */}
             {selectedRegistration?.custom_answers && Object.keys(selectedRegistration.custom_answers).length > 0 && (
-              <View style={{ backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.glassBorder }}>
+              <View style={{ backgroundColor: '#FFF', borderRadius: radii.card, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', ...shadows.card }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
                   <Ionicons name="document-text" size={18} color={colors.primary} />
                   <Text style={{ fontSize: 14, fontWeight: '600', color: colors.primary, marginLeft: 8 }}>REGISTRATION ANSWERS</Text>
@@ -1270,7 +1261,7 @@ export default function RegistrationHubScreen() {
 
             {/* Team Assignment */}
             {team && (
-              <View style={{ backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.glassBorder }}>
+              <View style={{ backgroundColor: '#FFF', borderRadius: radii.card, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', ...shadows.card }}>
                 <Text style={{ fontSize: 14, fontWeight: '600', color: colors.primary, marginBottom: 12 }}>TEAM ASSIGNMENT</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Ionicons name="people" size={20} color="#AF52DE" />
@@ -1433,27 +1424,30 @@ export default function RegistrationHubScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Header */}
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text }}>Registration Hub</Text>
-        <TouchableOpacity onPress={toggleSelectionMode}>
-          <Text style={{ fontSize: 15, fontWeight: '600', color: colors.primary }}>
-            {selectionMode ? 'Done' : 'Select'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
       <AdminContextBar />
+      <AppHeaderBar
+        title="REGISTRATION"
+        showLogo={false}
+        showAvatar={false}
+        showNotificationBell={false}
+        leftIcon={<Ionicons name="arrow-back" size={22} color="#FFF" />}
+        onLeftPress={() => router.back()}
+        rightIcon={
+          <TouchableOpacity onPress={toggleSelectionMode}>
+            <Text style={{ fontSize: 14, fontWeight: '700', color: '#FFF' }}>
+              {selectionMode ? 'DONE' : 'SELECT'}
+            </Text>
+          </TouchableOpacity>
+        }
+      />
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
         {/* All Open Seasons Badge */}
         <View style={{ alignItems: 'center', marginBottom: 16 }}>
-          <View style={{ backgroundColor: colors.primary + '20', paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20 }}>
-            <Text style={{ color: colors.primary, fontWeight: '600' }}>All Open Registrations ({seasons.length} season{seasons.length !== 1 ? 's' : ''})</Text>
+          <View style={{ backgroundColor: '#14B8A620', paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20 }}>
+            <Text style={{ color: '#14B8A6', fontWeight: '700', fontSize: 13 }}>All Open Registrations ({seasons.length} season{seasons.length !== 1 ? 's' : ''})</Text>
           </View>
         </View>
 
@@ -1499,29 +1493,29 @@ export default function RegistrationHubScreen() {
         {stats && (
           <>
             <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
-              {renderStatCard('New', stats.new_count, '#FF9500', 'new', () => setActiveFilter('new'))}
-              {renderStatCard('Paid', stats.approved_count, '#5AC8FA', 'approved', () => setActiveFilter('approved'))}
-              {renderStatCard('Ready', stats.active_count, '#34C759', 'active', () => setActiveFilter('active'))}
-              {renderStatCard('Team', stats.rostered_count, '#AF52DE', 'rostered', () => setActiveFilter('rostered'))}
+              {renderStatCard('New', stats.new_count, '#E8913A', 'new', () => setActiveFilter('new'))}
+              {renderStatCard('Paid', stats.approved_count, '#0EA5E9', 'approved', () => setActiveFilter('approved'))}
+              {renderStatCard('Ready', stats.active_count, '#22C55E', 'active', () => setActiveFilter('active'))}
+              {renderStatCard('Team', stats.rostered_count, '#2C5F7C', 'rostered', () => setActiveFilter('rostered'))}
             </View>
 
             {/* Revenue Overview */}
-            <View style={{ backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 }}>
+            <Card style={{ marginBottom: 16 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                <Ionicons name="wallet" size={18} color={colors.primary} />
-                <Text style={{ color: colors.textSecondary, marginLeft: 8 }}>Payment Overview</Text>
+                <Ionicons name="wallet" size={18} color="#2C5F7C" />
+                <Text style={{ color: colors.textSecondary, marginLeft: 8, fontWeight: '600' }}>Payment Overview</Text>
               </View>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                 <View>
-                  <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#34C759' }}>{formatCurrency(stats.total_collected_revenue)}</Text>
+                  <Text style={{ ...displayTextStyle, fontSize: 24, color: '#22C55E' }}>{formatCurrency(stats.total_collected_revenue)}</Text>
                   <Text style={{ color: colors.textSecondary, fontSize: 12 }}>Collected</Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={{ fontSize: 24, fontWeight: 'bold', color: colors.text }}>{formatCurrency(stats.total_expected_revenue)}</Text>
+                  <Text style={{ ...displayTextStyle, fontSize: 24, color: colors.text }}>{formatCurrency(stats.total_expected_revenue)}</Text>
                   <Text style={{ color: colors.textSecondary, fontSize: 12 }}>Expected</Text>
                 </View>
               </View>
-            </View>
+            </Card>
           </>
         )}
 
@@ -1543,7 +1537,7 @@ export default function RegistrationHubScreen() {
         )}
 
         {/* Search */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, borderRadius: 12, paddingHorizontal: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.border }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', borderRadius: radii.card, paddingHorizontal: 16, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', ...shadows.card }}>
           <Ionicons name="search" size={20} color={colors.textSecondary} />
           <TextInput style={{ flex: 1, paddingVertical: 14, paddingHorizontal: 8, color: colors.text, fontSize: 16 }} placeholder="Search players or parents..." placeholderTextColor={colors.textSecondary} value={searchQuery} onChangeText={setSearchQuery} />
           {searchQuery ? <TouchableOpacity onPress={() => setSearchQuery('')}><Ionicons name="close-circle" size={20} color={colors.textSecondary} /></TouchableOpacity> : null}
@@ -1614,28 +1608,28 @@ export default function RegistrationHubScreen() {
       {selectionMode && selectedIds.size > 0 && (
         <View style={{
           position: 'absolute', bottom: 0, left: 0, right: 0,
-          backgroundColor: colors.glassCard, borderTopWidth: 1, borderTopColor: colors.glassBorder,
+          backgroundColor: '#FFF', borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.06)',
           padding: 16, paddingBottom: 32,
-          shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 10,
+          shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.1, shadowRadius: 12, elevation: 10,
         }}>
           {bulkSubmitting ? (
             <ActivityIndicator size="small" color={colors.primary} />
           ) : (
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <TouchableOpacity
-                style={{ flex: 1, backgroundColor: '#34C759', borderRadius: 12, paddingVertical: 14, alignItems: 'center' }}
+                style={{ flex: 1, backgroundColor: '#22C55E', borderRadius: radii.card, paddingVertical: 14, alignItems: 'center' }}
                 onPress={handleBulkApprove}
               >
                 <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Approve ({selectedIds.size})</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={{ flex: 1, backgroundColor: '#FF9500', borderRadius: 12, paddingVertical: 14, alignItems: 'center' }}
+                style={{ flex: 1, backgroundColor: '#E8913A', borderRadius: radii.card, paddingVertical: 14, alignItems: 'center' }}
                 onPress={handleBulkWaitlist}
               >
                 <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Waitlist ({selectedIds.size})</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={{ flex: 1, backgroundColor: '#FF3B30', borderRadius: 12, paddingVertical: 14, alignItems: 'center' }}
+                style={{ flex: 1, backgroundColor: '#D94F4F', borderRadius: radii.card, paddingVertical: 14, alignItems: 'center' }}
                 onPress={handleBulkDeny}
               >
                 <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Deny ({selectedIds.size})</Text>
