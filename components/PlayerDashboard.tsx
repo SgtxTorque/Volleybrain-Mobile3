@@ -753,11 +753,6 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
         <Text style={[s.noPlayerSubtext, { color: P.textMuted }]}>
           Your account is not linked to a player in this season. Ask your coach or admin to connect your profile.
         </Text>
-        {actualRoles.length > 1 && (
-          <View style={{ marginTop: 20 }}>
-            <RoleSelector />
-          </View>
-        )}
       </View>
     );
   }

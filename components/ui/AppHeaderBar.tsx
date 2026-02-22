@@ -1,3 +1,4 @@
+import RoleSelector from '@/components/RoleSelector';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -70,6 +71,7 @@ export default function AppHeaderBar({
               {hasNotifications && <View style={styles.bellDot} />}
             </TouchableOpacity>
           )}
+          <RoleSelector />
           {showAvatar && (
             <TouchableOpacity style={styles.avatar} onPress={onAvatarPress} activeOpacity={0.7}>
               <Text style={styles.avatarText}>{initials}</Text>
