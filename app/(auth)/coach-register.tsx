@@ -26,14 +26,72 @@ export default function CoachRegisterScreen() {
     email?: string;
     skipApproval?: string;
     isAdmin?: string;
+    organizationId?: string;
   }>();
 
   const [loading, setLoading] = useState(false);
 
   // Invite data
   const hasInvite = !!params.inviteId;
-  const skipApproval = params.skipApproval === 'true';
+  const [skipApproval, setSkipApproval] = useState(params.skipApproval === 'true');
   const isAdminInvite = params.isAdmin === 'true';
+
+  // Inline invite code entry (for coaches who arrive without an invite)
+  const [inviteCode, setInviteCode] = useState('');
+  const [resolvedOrgId, setResolvedOrgId] = useState(params.organizationId || '');
+  const [codeValidating, setCodeValidating] = useState(false);
+  const [codeValidated, setCodeValidated] = useState(!!params.organizationId || hasInvite);
+  const [inlineInviteId, setInlineInviteId] = useState('');
+
+  const redeemInlineCode = async () => {
+    const cleanCode = inviteCode.trim().toUpperCase();
+    if (!cleanCode || cleanCode.length < 6) {
+      Alert.alert('Invalid Code', 'Please enter a valid invite code.');
+      return;
+    }
+
+    setCodeValidating(true);
+    try {
+      const { data: invitation, error } = await supabase
+        .from('invitations')
+        .select('id, organization_id, invite_type, email, status, expires_at')
+        .ilike('invite_code', cleanCode)
+        .single();
+
+      if (error || !invitation) {
+        Alert.alert('Invalid Code', 'This invite code was not found. Please check and try again.');
+        return;
+      }
+
+      if (invitation.status !== 'pending') {
+        Alert.alert('Code Already Used', 'This invite code has already been used or revoked.');
+        return;
+      }
+
+      if (invitation.expires_at && new Date(invitation.expires_at) < new Date()) {
+        Alert.alert('Code Expired', 'This invite code has expired. Please request a new one.');
+        return;
+      }
+
+      if (invitation.invite_type !== 'coach' && invitation.invite_type !== 'admin') {
+        Alert.alert('Wrong Code Type', 'This invite code is for a ' + invitation.invite_type + ' account, not a coach account.');
+        return;
+      }
+
+      setResolvedOrgId(invitation.organization_id);
+      setInlineInviteId(invitation.id);
+      setCodeValidated(true);
+      setSkipApproval(true);
+      if (invitation.email && !email) {
+        setEmail(invitation.email);
+      }
+    } catch (err: any) {
+      if (__DEV__) console.error('Inline code validation error:', err);
+      Alert.alert('Error', 'Failed to validate code. Please try again.');
+    } finally {
+      setCodeValidating(false);
+    }
+  };
 
   // Account Info
   const [email, setEmail] = useState(params.email || '');
@@ -92,14 +150,13 @@ export default function CoachRegisterScreen() {
       if (signUpError) throw signUpError;
       if (!authData.user) throw new Error('Failed to create account');
 
-      // 2. Get org ID
-      const { data: org } = await supabase
-        .from('organizations')
-        .select('id')
-        .eq('slug', 'black-hornets')
-        .single();
-
-      if (!org) throw new Error('Organization not found');
+      // 2. Get org ID from invite/params
+      if (!resolvedOrgId) {
+        Alert.alert('Organization Required', 'Please enter an invite code to identify your organization.');
+        setLoading(false);
+        return;
+      }
+      const orgId = resolvedOrgId;
 
       // 3. Update profile with additional info
       const { error: profileError } = await supabase
@@ -107,7 +164,7 @@ export default function CoachRegisterScreen() {
         .update({
           full_name: fullName.trim(),
           phone: phone.trim() || null,
-          current_organization_id: org.id,
+          current_organization_id: orgId,
           onboarding_completed: true,
           pending_approval: !skipApproval,
           accepted_terms_at: new Date().toISOString(),
@@ -119,7 +176,7 @@ export default function CoachRegisterScreen() {
       // 4. Grant appropriate role
       const roleToGrant = isAdminInvite ? 'league_admin' : 'head_coach';
       await supabase.from('user_roles').insert({
-        organization_id: org.id,
+        organization_id: orgId,
         user_id: authData.user.id,
         role: roleToGrant,
         is_active: skipApproval, // Only active immediately if using invite
@@ -141,15 +198,16 @@ export default function CoachRegisterScreen() {
       }
 
       // 6. Update invitation status if using invite
-      if (params.inviteId) {
+      const activeInviteId = params.inviteId || inlineInviteId;
+      if (activeInviteId) {
         await supabase
           .from('invitations')
-          .update({ 
+          .update({
             status: 'accepted',
             accepted_at: new Date().toISOString(),
             accepted_by: authData.user.id,
           })
-          .eq('id', params.inviteId);
+          .eq('id', activeInviteId);
       }
 
       // Success!
@@ -196,11 +254,11 @@ export default function CoachRegisterScreen() {
         </View>
 
         {/* Invite Banner */}
-        {hasInvite && (
+        {(hasInvite || codeValidated) && (
           <View style={s.inviteBanner}>
             <Ionicons name="checkmark-circle" size={20} color={colors.success} />
             <Text style={s.inviteBannerText}>
-              {isAdminInvite 
+              {isAdminInvite
                 ? 'Admin invite - full access granted immediately!'
                 : 'Using invite code - no approval needed!'
               }
@@ -226,6 +284,40 @@ export default function CoachRegisterScreen() {
               : 'Apply to coach'
             }
           </Text>
+
+          {/* Inline Invite Code Entry */}
+          {!hasInvite && !codeValidated && (
+            <>
+              <Text style={s.sectionTitle}>Invite Code</Text>
+              <Text style={{ fontSize: 14, color: colors.textMuted, marginBottom: 16, lineHeight: 20 }}>
+                Enter the invite code you received from your league admin.
+              </Text>
+              <View style={s.inputGroup}>
+                <TextInput
+                  style={[s.input, { textAlign: 'center', letterSpacing: 3, fontSize: 20, fontWeight: '600' }]}
+                  placeholder="Enter code (e.g. ABC12345)"
+                  placeholderTextColor={colors.textMuted}
+                  value={inviteCode}
+                  onChangeText={(text) => setInviteCode(text.toUpperCase())}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  maxLength={10}
+                />
+              </View>
+              <TouchableOpacity
+                style={[s.submitBtn, (codeValidating || !inviteCode.trim()) && s.submitBtnDisabled]}
+                onPress={redeemInlineCode}
+                disabled={codeValidating || !inviteCode.trim()}
+              >
+                {codeValidating ? (
+                  <ActivityIndicator color="#000" />
+                ) : (
+                  <Text style={s.submitBtnText}>Validate Code</Text>
+                )}
+              </TouchableOpacity>
+              <View style={{ height: 24 }} />
+            </>
+          )}
 
           {/* Account Section */}
           <Text style={s.sectionTitle}>Account Information</Text>

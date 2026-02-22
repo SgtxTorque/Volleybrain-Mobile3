@@ -1,8 +1,8 @@
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -22,10 +22,18 @@ type InviteData = {
 export default function RedeemCodeScreen() {
   const { colors } = useTheme();
   const router = useRouter();
+  const { code: deepLinkCode } = useLocalSearchParams<{ code?: string }>();
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [inviteData, setInviteData] = useState<InviteData | null>(null);
   const [step, setStep] = useState<'enter' | 'confirm'>('enter');
+
+  // Auto-fill from deep link param
+  useEffect(() => {
+    if (deepLinkCode && !code) {
+      setCode(deepLinkCode.toUpperCase());
+    }
+  }, [deepLinkCode]);
 
   const validateCode = async () => {
   const cleanCode = code.trim().toUpperCase();
@@ -188,6 +196,7 @@ export default function RedeemCodeScreen() {
             inviteId: inviteData.invite_id,
             email: inviteData.email || '',
             skipApproval: 'true',
+            organizationId: inviteData.organization_id || '',
           },
         });
       } else if (inviteData.invite_type === 'admin') {
@@ -198,6 +207,7 @@ export default function RedeemCodeScreen() {
             email: inviteData.email || '',
             skipApproval: 'true',
             isAdmin: 'true',
+            organizationId: inviteData.organization_id || '',
           },
         });
       }
