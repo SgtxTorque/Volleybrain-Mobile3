@@ -1,4 +1,5 @@
 import { useAuth } from '@/lib/auth';
+import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
@@ -7,7 +8,6 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -15,7 +15,13 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+// Platform removed — shadows now come from design-tokens
 import RoleSelector from './RoleSelector';
+import Avatar from './ui/Avatar';
+import Badge from './ui/Badge';
+import Card from './ui/Card';
+import PillTabs from './ui/PillTabs';
+import SectionHeader from './ui/SectionHeader';
 
 // ============================================
 // TYPES
@@ -559,35 +565,18 @@ export default function CoachDashboard() {
 
       {/* Team Selector Pills (if multiple teams) */}
       {teams.length > 1 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={s.teamSelectorContainer}
-          contentContainerStyle={s.teamSelectorContent}
-        >
-          {teams.map((team, index) => (
-            <TouchableOpacity
-              key={team.id}
-              style={[
-                s.teamPill,
-                index === activeTeamIndex && s.teamPillActive,
-              ]}
-              onPress={() => setActiveTeamIndex(index)}
-            >
-              <Text style={[
-                s.teamPillText,
-                index === activeTeamIndex && s.teamPillTextActive,
-              ]}>
-                {team.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        <View style={{ marginBottom: 16 }}>
+          <PillTabs
+            tabs={teams.map(t => ({ key: t.id, label: t.name }))}
+            activeKey={activeTeam?.id || teams[0]?.id}
+            onChange={(key) => setActiveTeamIndex(teams.findIndex(t => t.id === key))}
+          />
+        </View>
       )}
 
       {/* HERO SECTION - Team Card */}
       {activeTeam ? (
-        <View style={s.heroCard}>
+        <Card style={{ marginBottom: 28, overflow: 'hidden', paddingHorizontal: 0, paddingVertical: 0 }}>
           <View style={s.heroAccentBar} />
           <View style={s.heroBody}>
             <Text style={s.heroTeamName}>{activeTeam.name}</Text>
@@ -614,36 +603,24 @@ export default function CoachDashboard() {
               {activeTeam.age_group_name ? ` \u00B7 ${activeTeam.age_group_name}` : ''}
             </Text>
           </View>
-        </View>
+        </Card>
       ) : (
-        <View style={s.emptyCard}>
+        <Card style={{ marginBottom: 28, padding: 28, alignItems: 'center' }}>
           <Ionicons name="shirt-outline" size={36} color={colors.textMuted} />
           <Text style={s.emptyTitle}>No Teams Assigned</Text>
           <Text style={s.emptySubtext}>No teams found for this season</Text>
-        </View>
+        </Card>
       )}
 
       {/* MISSION BRIEFING - Next Event */}
-      <Text style={s.sectionLabel}>MISSION BRIEFING</Text>
+      <SectionHeader title="Mission Briefing" />
       {nextEvent ? (
-        <View style={s.missionCard}>
+        <Card style={{ marginBottom: 28 }}>
           <View style={s.missionTop}>
-            <View style={[
-              s.eventTypeBadge,
-              { backgroundColor: nextEvent.type === 'game' ? colors.danger + '20' : colors.info + '20' },
-            ]}>
-              <View style={[
-                s.eventTypeDot,
-                { backgroundColor: nextEvent.type === 'game' ? colors.danger : colors.info },
-              ]} />
-              <Text style={[
-                s.eventTypeBadgeText,
-                { color: nextEvent.type === 'game' ? colors.danger : colors.info },
-              ]}>
-                {nextEvent.type === 'game' ? 'GAME' : 'PRACTICE'}
-              </Text>
-            </View>
-
+            <Badge
+              label={nextEvent.type === 'game' ? 'GAME' : 'PRACTICE'}
+              color={nextEvent.type === 'game' ? colors.danger : colors.info}
+            />
             <Text style={s.countdownText}>{getCountdownText(nextEvent.date)}</Text>
           </View>
 
@@ -690,17 +667,17 @@ export default function CoachDashboard() {
               <Text style={s.missionBtnText}>View Roster</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </Card>
       ) : (
-        <View style={s.emptyCard}>
+        <Card style={{ marginBottom: 28, padding: 28, alignItems: 'center' }}>
           <Ionicons name="calendar-outline" size={32} color={colors.textMuted} />
           <Text style={s.emptyTitle}>All Clear</Text>
           <Text style={s.emptySubtext}>No upcoming events scheduled</Text>
-        </View>
+        </Card>
       )}
 
       {/* TEAM HEALTH - Quick Indicators */}
-      <Text style={s.sectionLabel}>TEAM HEALTH</Text>
+      <SectionHeader title="Team Health" />
       <View style={s.healthRow}>
         <TouchableOpacity style={s.healthCard} activeOpacity={0.7} onPress={() => router.push('/attendance' as any)}>
           <Ionicons
@@ -735,7 +712,7 @@ export default function CoachDashboard() {
       </View>
 
       {/* TOP PERFORMERS */}
-      <Text style={s.sectionLabel}>TOP PERFORMERS</Text>
+      <SectionHeader title="Top Performers" />
       {topPerformers.length > 0 ? (
         <View style={s.performersRow}>
           {topPerformers.map((performer, idx) => {
@@ -743,9 +720,7 @@ export default function CoachDashboard() {
             const accent = accentColors[idx] || colors.textMuted;
             return (
               <View key={performer.player_id} style={s.performerCard}>
-                <View style={[s.performerBadge, { borderColor: accent }]}>
-                  <Text style={s.performerInitials}>{performer.initials}</Text>
-                </View>
+                <Avatar name={performer.player_name} size={44} color={accent} />
                 <Text style={s.performerName} numberOfLines={1}>{performer.player_name}</Text>
                 <Text style={[s.performerStat, { color: accent }]}>
                   {performer.stat_value} {performer.stat_label}
@@ -755,14 +730,14 @@ export default function CoachDashboard() {
           })}
         </View>
       ) : (
-        <View style={s.emptyCard}>
+        <Card style={{ marginBottom: 28, padding: 28, alignItems: 'center' }}>
           <Ionicons name="trophy-outline" size={32} color={colors.textMuted} />
           <Text style={s.emptySubtext}>Play a game to see top performers</Text>
-        </View>
+        </Card>
       )}
 
       {/* QUICK ACTIONS */}
-      <Text style={s.sectionLabel}>QUICK ACTIONS</Text>
+      <SectionHeader title="Quick Actions" />
       <View style={s.actionsGrid}>
         <TouchableOpacity style={s.actionCard} onPress={() => router.push('/attendance' as any)}>
           <View style={[s.actionIconCircle, { backgroundColor: colors.success + '26' }]}>
@@ -806,8 +781,8 @@ export default function CoachDashboard() {
       </View>
 
       {/* SEASON PROGRESS */}
-      <Text style={s.sectionLabel}>SEASON PROGRESS</Text>
-      <View style={s.progressCard}>
+      <SectionHeader title="Season Progress" />
+      <Card style={{ marginBottom: 28 }}>
         <Text style={s.progressTitle}>
           Game {gamesPlayed} of {totalGames} completed
         </Text>
@@ -831,7 +806,7 @@ export default function CoachDashboard() {
             <Text style={s.progressStatLabel}>Remaining</Text>
           </View>
         </View>
-      </View>
+      </Card>
 
       {/* Bottom padding for tab bar */}
       <View style={{ height: 120 }} />
@@ -846,8 +821,7 @@ export default function CoachDashboard() {
 const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
-    paddingHorizontal: 20,
+    paddingHorizontal: spacing.screenPadding,
   },
 
   // Header
@@ -864,55 +838,12 @@ const createStyles = (colors: any) => StyleSheet.create({
     lineHeight: 22,
   },
   heroName: {
+    ...displayTextStyle,
     fontSize: 28,
-    fontWeight: '900',
     color: colors.text,
-    letterSpacing: -0.5,
-  },
-
-  // Team Selector Pills
-  teamSelectorContainer: {
-    marginBottom: 16,
-    flexGrow: 0,
-  },
-  teamSelectorContent: {
-    gap: 8,
-    paddingVertical: 4,
-  },
-  teamPill: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: colors.glassCard,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
-  },
-  teamPillActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  teamPillText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  teamPillTextActive: {
-    color: '#000',
   },
 
   // Hero Card
-  heroCard: {
-    backgroundColor: colors.glassCard,
-    borderRadius: 20,
-    overflow: 'hidden',
-    marginBottom: 28,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 6 },
-    }),
-  },
   heroAccentBar: {
     height: 4,
     backgroundColor: colors.primary,
@@ -921,10 +852,9 @@ const createStyles = (colors: any) => StyleSheet.create({
     padding: 20,
   },
   heroTeamName: {
+    ...displayTextStyle,
     fontSize: 28,
-    fontWeight: '900',
     color: colors.text,
-    letterSpacing: -0.5,
     marginBottom: 12,
   },
   heroStatsRow: {
@@ -942,8 +872,8 @@ const createStyles = (colors: any) => StyleSheet.create({
     marginRight: 4,
   },
   heroRecordNum: {
+    ...displayTextStyle,
     fontSize: 28,
-    fontWeight: '800',
     color: colors.text,
   },
   heroRecordDash: {
@@ -973,56 +903,17 @@ const createStyles = (colors: any) => StyleSheet.create({
     marginTop: 4,
   },
 
-  // Section Label
-  sectionLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.textMuted,
-    letterSpacing: 2,
-    textTransform: 'uppercase' as const,
-    marginBottom: 12,
-  },
-
-  // Mission Briefing Card
-  missionCard: {
-    backgroundColor: colors.glassCard,
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 28,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 6 },
-    }),
-  },
+  // Mission Briefing Card (now uses <Card> wrapper)
   missionTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
   },
-  eventTypeBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-  },
-  eventTypeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  eventTypeBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
+  // Event type badge now uses <Badge> component
   countdownText: {
+    ...displayTextStyle,
     fontSize: 24,
-    fontWeight: '800',
     color: colors.primary,
   },
   missionOpponent: {
@@ -1081,19 +972,16 @@ const createStyles = (colors: any) => StyleSheet.create({
   healthCard: {
     flex: 1,
     backgroundColor: colors.glassCard,
-    borderRadius: 20,
+    borderRadius: radii.card,
     padding: 14,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.glassBorder,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 6 },
-    }),
+    ...shadows.card,
   },
   healthNum: {
+    ...displayTextStyle,
     fontSize: 18,
-    fontWeight: '800',
     color: colors.text,
     marginTop: 6,
     textAlign: 'center',
@@ -1114,31 +1002,14 @@ const createStyles = (colors: any) => StyleSheet.create({
   performerCard: {
     flex: 1,
     backgroundColor: colors.glassCard,
-    borderRadius: 20,
+    borderRadius: radii.card,
     padding: 14,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.glassBorder,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 6 },
-    }),
+    ...shadows.card,
   },
-  performerBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.primary + '15',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    marginBottom: 6,
-  },
-  performerInitials: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.text,
-  },
+  // performerBadge/Initials replaced by <Avatar>
   performerName: {
     fontSize: 12,
     fontWeight: '600',
@@ -1161,15 +1032,12 @@ const createStyles = (colors: any) => StyleSheet.create({
   actionCard: {
     width: '47%',
     backgroundColor: colors.glassCard,
-    borderRadius: 16,
+    borderRadius: radii.card,
     padding: 20,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.glassBorder,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 6 },
-    }),
+    ...shadows.card,
   },
   actionIconCircle: {
     width: 56,
@@ -1203,19 +1071,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     color: '#fff',
   },
 
-  // Season Progress
-  progressCard: {
-    backgroundColor: colors.glassCard,
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 28,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 6 },
-    }),
-  },
+  // Season Progress (now uses <Card> wrapper)
   progressTitle: {
     fontSize: 15,
     fontWeight: '600',
@@ -1243,8 +1099,8 @@ const createStyles = (colors: any) => StyleSheet.create({
     alignItems: 'center',
   },
   progressStatNum: {
+    ...displayTextStyle,
     fontSize: 22,
-    fontWeight: '800',
     color: colors.text,
   },
   progressStatLabel: {
@@ -1253,20 +1109,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     marginTop: 2,
   },
 
-  // Empty / Placeholder Cards
-  emptyCard: {
-    backgroundColor: colors.glassCard,
-    borderRadius: 20,
-    padding: 28,
-    alignItems: 'center',
-    marginBottom: 28,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 6 },
-    }),
-  },
+  // Empty states now use <Card> wrapper
   emptyTitle: {
     fontSize: 16,
     fontWeight: '700',

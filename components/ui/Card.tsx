@@ -3,6 +3,8 @@ import { StyleSheet, TouchableOpacity, View, ViewStyle } from 'react-native';
 import { useTheme } from '@/lib/theme';
 import { radii, shadows, spacing } from '@/lib/design-tokens';
 
+// NOTE: Card has NO built-in margins. Consumers handle their own margins.
+
 type CardProps = {
   children: React.ReactNode;
   accentColor?: string;
@@ -39,8 +41,6 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: radii.card,
     borderWidth: 1,
-    marginHorizontal: spacing.cardMarginH,
-    marginBottom: spacing.cardMarginB,
     paddingHorizontal: spacing.cardPaddingH,
     paddingVertical: spacing.cardPaddingV,
   },

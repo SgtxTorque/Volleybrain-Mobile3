@@ -104,8 +104,6 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: radii.card,
     borderLeftWidth: 4,
-    marginHorizontal: spacing.cardMarginH,
-    marginBottom: spacing.cardMarginB,
     paddingHorizontal: spacing.cardPaddingH,
     paddingVertical: spacing.cardPaddingV,
   },

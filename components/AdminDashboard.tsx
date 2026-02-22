@@ -1,4 +1,5 @@
 import { useAuth } from '@/lib/auth';
+import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { useSport } from '@/lib/sport';
@@ -25,6 +26,9 @@ import {
   View,
 } from 'react-native';
 import RoleSelector from './RoleSelector';
+import Badge from './ui/Badge';
+import Card from './ui/Card';
+import SectionHeader from './ui/SectionHeader';
 import SportSelector from './ui/SportSelector';
 
 // ============================================
@@ -863,9 +867,7 @@ export default function AdminDashboard() {
           <TouchableOpacity style={s.heroSeasonRow} onPress={() => setShowSeasonPicker(true)}>
             <Text style={s.heroSeasonName}>{workingSeason?.name || 'No Season'}</Text>
             {workingSeason && (
-              <View style={[s.heroStatusPill, { backgroundColor: getStatusColor(workingSeason.status) }]}>
-                <Text style={s.heroStatusPillText}>{getStatusLabel(workingSeason.status)}</Text>
-              </View>
+              <Badge label={getStatusLabel(workingSeason.status)} color={getStatusColor(workingSeason.status)} />
             )}
             <Ionicons name="chevron-down" size={16} color={colors.textMuted} style={{ marginLeft: 4 }} />
           </TouchableOpacity>
@@ -892,7 +894,7 @@ export default function AdminDashboard() {
       {/* NEEDS ATTENTION */}
       {alerts.length > 0 && alerts[0].type !== 'success' && (
         <>
-          <Text style={s.sectionLabel}>NEEDS ATTENTION</Text>
+          <SectionHeader title="Needs Attention" />
           <View style={s.attentionContainer}>
             {alerts.map((alert, i) => (
               <TouchableOpacity
@@ -936,16 +938,16 @@ export default function AdminDashboard() {
 
       {alerts.length === 1 && alerts[0].type === 'success' && (
         <>
-          <Text style={s.sectionLabel}>NEEDS ATTENTION</Text>
-          <View style={s.successCard}>
+          <SectionHeader title="Needs Attention" />
+          <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 }}>
             <Ionicons name="checkmark-circle" size={28} color={colors.success} />
             <Text style={s.successText}>All clear! Everything is running smoothly.</Text>
-          </View>
+          </Card>
         </>
       )}
 
       {/* REVENUE PULSE */}
-      <Text style={s.sectionLabel}>REVENUE PULSE</Text>
+      <SectionHeader title="Revenue Pulse" />
       <TouchableOpacity style={s.revenueCard} activeOpacity={0.7} onPress={() => router.push('/(tabs)/payments' as any)}>
         <View style={s.revenueHeader}>
           <Text style={[s.revenuePercent, revenuePercent >= 100 && { color: colors.success }]}>{revenuePercent}%</Text>
@@ -998,11 +1000,10 @@ export default function AdminDashboard() {
       {showTeamBreakdown && teamRevenueBreakdown.length > 0 && (
         <View style={{
           backgroundColor: colors.glassCard,
-          borderRadius: 16,
+          borderRadius: radii.card,
           borderWidth: 1,
           borderColor: colors.glassBorder,
           overflow: 'hidden',
-          marginHorizontal: 16,
           marginBottom: 8,
         }}>
           {teamRevenueBreakdown.map((team, idx) => {
@@ -1045,7 +1046,7 @@ export default function AdminDashboard() {
       {/* TODAY'S GAMES */}
       {todaysGames.length > 0 && (
         <>
-          <Text style={s.sectionLabel}>TODAY'S GAMES</Text>
+          <SectionHeader title="Today's Games" />
           <View style={s.todaysGamesContainer}>
             {todaysGames.map(game => (
               <View key={game.id} style={s.gameCard}>
@@ -1053,18 +1054,10 @@ export default function AdminDashboard() {
                 <View style={s.gameCardBody}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                     <Text style={s.gameCardTeam}>{game.team_name}</Text>
-                    <View style={[s.gameStatusPill, {
-                      backgroundColor: game.game_status === 'live' ? colors.danger + '20' :
-                        game.game_status === 'completed' ? colors.success + '20' : colors.info + '20'
-                    }]}>
-                      <Text style={{
-                        fontSize: 10, fontWeight: '700', textTransform: 'uppercase',
-                        color: game.game_status === 'live' ? colors.danger :
-                          game.game_status === 'completed' ? colors.success : colors.info,
-                      }}>
-                        {game.game_status === 'completed' ? 'FINAL' : game.game_status === 'live' ? 'LIVE' : 'SCHEDULED'}
-                      </Text>
-                    </View>
+                    <Badge
+                      label={game.game_status === 'completed' ? 'FINAL' : game.game_status === 'live' ? 'LIVE' : 'SCHEDULED'}
+                      color={game.game_status === 'live' ? colors.danger : game.game_status === 'completed' ? colors.success : colors.info}
+                    />
                   </View>
                   <Text style={s.gameCardOpponent}>vs {game.opponent || 'TBD'}</Text>
                   <View style={s.gameCardDetails}>
@@ -1091,7 +1084,7 @@ export default function AdminDashboard() {
 
       {todaysGames.length === 0 && tomorrowGames.length > 0 && (
         <>
-          <Text style={s.sectionLabel}>TOMORROW'S GAMES</Text>
+          <SectionHeader title="Tomorrow's Games" />
           <View style={s.todaysGamesContainer}>
             {tomorrowGames.map(game => (
               <View key={game.id} style={[s.gameCard, { opacity: 0.8 }]}>
@@ -1112,7 +1105,7 @@ export default function AdminDashboard() {
 
       {todaysGames.length === 0 && tomorrowGames.length === 0 && (
         <>
-          <Text style={s.sectionLabel}>TODAY'S GAMES</Text>
+          <SectionHeader title="Today's Games" />
           <View style={s.noGamesCard}>
             <Text style={{ fontSize: 32, marginBottom: 8 }}>&#9728;&#65039;</Text>
             <Text style={{ fontSize: 15, color: colors.textMuted, fontWeight: '500' }}>No games today — enjoy the day off!</Text>
@@ -1121,7 +1114,7 @@ export default function AdminDashboard() {
       )}
 
       {/* QUICK ACTIONS */}
-      <Text style={s.sectionLabel}>QUICK ACTIONS</Text>
+      <SectionHeader title="Quick Actions" />
       <View style={s.actionsGrid}>
         <TouchableOpacity style={s.actionCard} onPress={() => router.push('/registration-hub' as any)}>
           <View style={[s.actionIconCircle, { backgroundColor: colors.info + '26' }]}>
@@ -1180,7 +1173,7 @@ export default function AdminDashboard() {
       {/* RECENT ACTIVITY */}
       {recentActivity.length > 0 && (
         <>
-          <Text style={s.sectionLabel}>RECENT ACTIVITY</Text>
+          <SectionHeader title="Recent Activity" />
           <View style={s.activityCard}>
             {recentActivity.map((activity, i) => (
               <View key={activity.id} style={[s.activityRow, i < recentActivity.length - 1 && s.activityRowBorder]}>
@@ -1196,7 +1189,7 @@ export default function AdminDashboard() {
       )}
 
       {/* ORGANIZATION STATS */}
-      <Text style={s.sectionLabel}>ORGANIZATION</Text>
+      <SectionHeader title="Organization" />
       <View style={s.orgStatsGrid}>
         <View style={s.orgStatCard}>
           <Ionicons name="shirt" size={20} color={colors.info} />
@@ -1694,24 +1687,20 @@ const createStyles = (colors: any, sportColors: any) => StyleSheet.create({
     lineHeight: 22,
   },
   userName: {
+    ...displayTextStyle,
     fontSize: 28,
-    fontWeight: '900',
     color: colors.text,
-    letterSpacing: -0.5,
   },
 
   // Hero Card
   heroCard: {
     backgroundColor: colors.glassCard,
-    borderRadius: 20,
+    borderRadius: radii.card,
     overflow: 'hidden',
     marginBottom: 12,
     borderWidth: 1,
     borderColor: colors.glassBorder,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 6 },
-    }),
+    ...shadows.card,
   },
   heroAccentBar: {
     height: 4,
@@ -1727,10 +1716,9 @@ const createStyles = (colors: any, sportColors: any) => StyleSheet.create({
     marginBottom: 8,
   },
   heroOrgName: {
+    ...displayTextStyle,
     fontSize: 28,
-    fontWeight: '900',
     color: colors.text,
-    letterSpacing: -0.5,
     flex: 1,
   },
   heroSportBadge: {
@@ -1781,8 +1769,8 @@ const createStyles = (colors: any, sportColors: any) => StyleSheet.create({
     backgroundColor: colors.glassBorder,
   },
   heroStatNum: {
+    ...displayTextStyle,
     fontSize: 28,
-    fontWeight: '800',
     color: colors.text,
   },
   heroStatLabel: {
@@ -1806,16 +1794,7 @@ const createStyles = (colors: any, sportColors: any) => StyleSheet.create({
     color: colors.info,
   },
 
-  // Section Label
-  sectionLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.textMuted,
-    letterSpacing: 2,
-    textTransform: 'uppercase' as const,
-    marginBottom: 12,
-    marginTop: 8,
-  },
+  // Section labels now use <SectionHeader> component
 
   // Needs Attention
   attentionContainer: {
@@ -1826,15 +1805,12 @@ const createStyles = (colors: any, sportColors: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.glassCard,
-    borderRadius: 16,
+    borderRadius: radii.card,
     padding: 14,
     borderWidth: 1,
     borderColor: colors.glassBorder,
     borderLeftWidth: 4,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8 },
-      android: { elevation: 4 },
-    }),
+    ...shadows.card,
   },
   attentionIconCircle: {
     width: 36,
@@ -1854,17 +1830,7 @@ const createStyles = (colors: any, sportColors: any) => StyleSheet.create({
     lineHeight: 20,
   },
 
-  successCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    backgroundColor: colors.success + '15',
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 28,
-    borderWidth: 1,
-    borderColor: colors.success + '30',
-  },
+  // successCard replaced by <Card> in JSX
   successText: {
     fontSize: 15,
     color: colors.success,
@@ -1875,15 +1841,12 @@ const createStyles = (colors: any, sportColors: any) => StyleSheet.create({
   // Revenue Pulse
   revenueCard: {
     backgroundColor: colors.glassCard,
-    borderRadius: 20,
+    borderRadius: radii.card,
     padding: 20,
     marginBottom: 28,
     borderWidth: 1,
     borderColor: colors.glassBorder,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 6 },
-    }),
+    ...shadows.card,
   },
   revenueHeader: {
     flexDirection: 'row',
@@ -1892,8 +1855,8 @@ const createStyles = (colors: any, sportColors: any) => StyleSheet.create({
     marginBottom: 12,
   },
   revenuePercent: {
+    ...displayTextStyle,
     fontSize: 36,
-    fontWeight: '800',
     color: colors.primary,
   },
   revenueLabel: {
@@ -1932,8 +1895,8 @@ const createStyles = (colors: any, sportColors: any) => StyleSheet.create({
     backgroundColor: colors.glassBorder,
   },
   revenueSubNum: {
+    ...displayTextStyle,
     fontSize: 22,
-    fontWeight: '800',
   },
   revenueSubLabel: {
     fontSize: 11,
@@ -1951,16 +1914,13 @@ const createStyles = (colors: any, sportColors: any) => StyleSheet.create({
   actionCard: {
     width: '47%',
     backgroundColor: colors.glassCard,
-    borderRadius: 16,
+    borderRadius: radii.card,
     padding: 20,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.glassBorder,
     position: 'relative',
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 6 },
-    }),
+    ...shadows.card,
   },
   actionIconCircle: {
     width: 56,
@@ -2008,14 +1968,11 @@ const createStyles = (colors: any, sportColors: any) => StyleSheet.create({
   gameCard: {
     flexDirection: 'row',
     backgroundColor: colors.glassCard,
-    borderRadius: 16,
+    borderRadius: radii.card,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: colors.glassBorder,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8 },
-      android: { elevation: 4 },
-    }),
+    ...shadows.card,
   },
   gameCardAccent: {
     width: 4,
@@ -2046,7 +2003,7 @@ const createStyles = (colors: any, sportColors: any) => StyleSheet.create({
   },
   noGamesCard: {
     backgroundColor: colors.glassCard,
-    borderRadius: 16,
+    borderRadius: radii.card,
     padding: 24,
     alignItems: 'center',
     marginBottom: 28,
@@ -2057,15 +2014,12 @@ const createStyles = (colors: any, sportColors: any) => StyleSheet.create({
   // Recent Activity
   activityCard: {
     backgroundColor: colors.glassCard,
-    borderRadius: 20,
+    borderRadius: radii.card,
     padding: 16,
     marginBottom: 28,
     borderWidth: 1,
     borderColor: colors.glassBorder,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 6 },
-    }),
+    ...shadows.card,
   },
   activityRow: {
     flexDirection: 'row',
@@ -2107,19 +2061,16 @@ const createStyles = (colors: any, sportColors: any) => StyleSheet.create({
   orgStatCard: {
     width: '31%',
     backgroundColor: colors.glassCard,
-    borderRadius: 16,
+    borderRadius: radii.card,
     padding: 14,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.glassBorder,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8 },
-      android: { elevation: 4 },
-    }),
+    ...shadows.card,
   },
   orgStatNum: {
+    ...displayTextStyle,
     fontSize: 20,
-    fontWeight: '800',
     color: colors.text,
     marginTop: 6,
   },

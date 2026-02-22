@@ -1,6 +1,7 @@
 import ParentOnboardingModal from '@/components/ParentOnboardingModal';
 import ShareRegistrationModal from '@/components/ShareRegistrationModal';
 import { useAuth } from '@/lib/auth';
+import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
@@ -31,6 +32,10 @@ import EventDetailModal from './EventDetailModal';
 import RegistrationBanner from './RegistrationBanner';
 import { ScheduleEvent } from './EventCard';
 import ReenrollmentBanner from './ReenrollmentBanner';
+import Badge from './ui/Badge';
+import Card from './ui/Card';
+import SectionHeader from './ui/SectionHeader';
+import StatBox from './ui/StatBox';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const HERO_CARD_WIDTH = SCREEN_WIDTH - 48;
@@ -922,7 +927,7 @@ export default function ParentDashboard() {
         <View style={{ marginHorizontal: 16, marginBottom: 20 }}>
           <View style={{ width: 100, height: 12, borderRadius: 4, backgroundColor: colors.bgSecondary, marginBottom: 12 }} />
           <View style={{
-            height: 180, borderRadius: 20, backgroundColor: colors.glassCard,
+            height: 180, borderRadius: radii.card, backgroundColor: colors.glassCard,
             borderWidth: 1, borderColor: colors.glassBorder, padding: 20,
           }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
@@ -947,7 +952,7 @@ export default function ParentDashboard() {
         <View style={{ marginHorizontal: 16, marginBottom: 20 }}>
           <View style={{ width: 80, height: 12, borderRadius: 4, backgroundColor: colors.bgSecondary, marginBottom: 12 }} />
           <View style={{
-            height: 140, borderRadius: 20, backgroundColor: colors.glassCard,
+            height: 140, borderRadius: radii.card, backgroundColor: colors.glassCard,
             borderWidth: 1, borderColor: colors.glassBorder, padding: 16,
           }}>
             <View style={{ width: '60%', height: 14, borderRadius: 4, backgroundColor: colors.bgSecondary, marginBottom: 10 }} />
@@ -960,7 +965,7 @@ export default function ParentDashboard() {
         <View style={{ marginHorizontal: 16, flexDirection: 'row', gap: 10 }}>
           {[1, 2].map(i => (
             <View key={i} style={{
-              flex: 1, height: 90, borderRadius: 16, backgroundColor: colors.glassCard,
+              flex: 1, height: 90, borderRadius: radii.card, backgroundColor: colors.glassCard,
               borderWidth: 1, borderColor: colors.glassBorder, padding: 14, justifyContent: 'space-between',
             }}>
               <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: colors.bgSecondary }} />
@@ -1172,7 +1177,7 @@ export default function ParentDashboard() {
       {/* ================================================================ */}
       {activeChild && (
         <View style={s.sectionBlock}>
-          <Text style={s.sectionLabel}>LATEST</Text>
+          <SectionHeader title="Latest" />
           <View style={s.prideCard}>
             <View style={s.prideIconWrap}>
               <Ionicons name={prideMoment.icon as any} size={24} color={colors.primary} />
@@ -1214,7 +1219,7 @@ export default function ParentDashboard() {
       {/* NEXT UP -- Horizontal Carousel of Upcoming Events                 */}
       {/* ================================================================ */}
       <View style={s.sectionBlock}>
-        <Text style={s.sectionLabel}>NEXT UP</Text>
+        <SectionHeader title="Next Up" />
         {filteredUpcomingEvents.length === 0 ? (
           <View style={s.glassCard}>
             <View style={s.emptyNextUp}>
@@ -1342,7 +1347,7 @@ export default function ParentDashboard() {
       {/* QUICK PULSE -- 3 Status Cards                                     */}
       {/* ================================================================ */}
       <View style={s.sectionBlock}>
-        <Text style={s.sectionLabel}>AT A GLANCE</Text>
+        <SectionHeader title="At a Glance" />
         <View style={s.pulseRow}>
           {/* Registration */}
           <TouchableOpacity style={s.pulseCard} onPress={() => router.push('/parent-registration-hub' as any)} activeOpacity={0.7}>
@@ -1394,7 +1399,7 @@ export default function ParentDashboard() {
       {/* ================================================================ */}
       {activeChild && (
         <View style={s.sectionBlock}>
-          <Text style={s.sectionLabel}>SEASON STATS</Text>
+          <SectionHeader title="Season Stats" />
           <View style={s.statsGrid}>
             {/* Games Played */}
             <View style={s.statCard}>
@@ -1436,7 +1441,7 @@ export default function ParentDashboard() {
       {/* ================================================================ */}
       {recentGames.length > 0 && (
         <View style={s.sectionBlock}>
-          <Text style={s.sectionLabel}>TEAM FEED</Text>
+          <SectionHeader title="Team Feed" />
           {recentGames.slice(0, 3).map(game => (
             <TouchableOpacity
               key={game.id}
@@ -1481,7 +1486,7 @@ export default function ParentDashboard() {
       {/* ================================================================ */}
       {latestPost && (
         <View style={s.sectionBlock}>
-          <Text style={s.sectionLabel}>TEAM WALL</Text>
+          <SectionHeader title="Team Wall" />
           <TouchableOpacity
             style={s.teamWallPreviewCard}
             onPress={() => router.push('/(tabs)/connect' as any)}
@@ -1656,47 +1661,27 @@ const createStyles = (colors: any) => StyleSheet.create({
   sectionBlock: {
     marginBottom: 28,
   },
-  sectionLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    textTransform: 'uppercase' as const,
-    letterSpacing: 2,
-    color: colors.textMuted,
-    marginBottom: 12,
-  },
+  // sectionLabel replaced by <SectionHeader> component
 
   // Glass Card base
   glassCard: {
     backgroundColor: colors.glassCard,
-    borderRadius: 20,
+    borderRadius: radii.card,
     borderWidth: 1,
     borderColor: colors.glassBorder,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 12,
-      },
-      android: {
-        elevation: 6,
-      },
-    }),
+    ...shadows.card,
   },
 
   // ========== HERO -- Empty ==========
   emptyHeroCard: {
     backgroundColor: colors.glassCard,
-    borderRadius: 20,
+    borderRadius: radii.card,
     borderWidth: 1,
     borderColor: colors.glassBorder,
     padding: 40,
     alignItems: 'center',
     marginBottom: 28,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 6 },
-    }),
+    ...shadows.card,
   },
   emptyHeroIcon: {
     width: 80,
@@ -1738,13 +1723,10 @@ const createStyles = (colors: any) => StyleSheet.create({
   // ========== HERO CARD -- Unified Carousel ==========
   heroCard: {
     height: 240,
-    borderRadius: 20,
+    borderRadius: radii.card,
     overflow: 'hidden' as const,
     position: 'relative' as const,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16 },
-      android: { elevation: 10 },
-    }),
+    ...shadows.cardHover, // heavier shadow for hero trading card
   },
   heroDots: {
     flexDirection: 'row' as const,
@@ -1801,10 +1783,9 @@ const createStyles = (colors: any) => StyleSheet.create({
     paddingHorizontal: 16,
   },
   tradingCardName: {
+    ...displayTextStyle,
     fontSize: 24,
-    fontWeight: '900' as const,
     color: '#FFFFFF',
-    letterSpacing: -0.5,
     textShadowColor: 'rgba(0,0,0,0.5)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
@@ -1830,17 +1811,14 @@ const createStyles = (colors: any) => StyleSheet.create({
   // ========== PRIDE MOMENT ==========
   prideCard: {
     backgroundColor: colors.glassCard,
-    borderRadius: 20,
+    borderRadius: radii.card,
     borderWidth: 1,
     borderColor: colors.glassBorder,
     padding: 20,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 6 },
-    }),
+    ...shadows.card,
   },
   prideIconWrap: {
     width: 44,
@@ -1863,15 +1841,12 @@ const createStyles = (colors: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.danger + '10',
-    borderRadius: 20,
+    borderRadius: radii.card,
     borderWidth: 1,
     borderColor: colors.danger + '30',
     padding: 16,
     marginBottom: 28,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 6 },
-    }),
+    ...shadows.card,
   },
   gameDayLeft: {
     flexDirection: 'row',
@@ -1912,14 +1887,11 @@ const createStyles = (colors: any) => StyleSheet.create({
   // ========== NEXT UP CAROUSEL ==========
   nextUpCard: {
     backgroundColor: colors.glassCard,
-    borderRadius: 20,
+    borderRadius: radii.card,
     borderWidth: 1,
     borderColor: colors.glassBorder,
     padding: 18,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 6 },
-    }),
+    ...shadows.card,
   },
   nextUpTop: {
     flexDirection: 'row',
@@ -1946,10 +1918,9 @@ const createStyles = (colors: any) => StyleSheet.create({
     flex: 1,
   },
   nextUpCountdown: {
+    ...displayTextStyle,
     fontSize: 24,
-    fontWeight: '900',
     color: colors.primary,
-    letterSpacing: -0.5,
     marginBottom: 2,
   },
   nextUpTitle: {
@@ -2029,17 +2000,14 @@ const createStyles = (colors: any) => StyleSheet.create({
   pulseCard: {
     flex: 1,
     backgroundColor: colors.glassCard,
-    borderRadius: 16,
+    borderRadius: radii.card,
     borderWidth: 1,
     borderColor: colors.glassBorder,
     paddingVertical: 16,
     paddingHorizontal: 8,
     alignItems: 'center',
     gap: 6,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 6 },
-    }),
+    ...shadows.card,
   },
   pulseValue: {
     fontSize: 13,
@@ -2064,24 +2032,20 @@ const createStyles = (colors: any) => StyleSheet.create({
   statCard: {
     width: '48%' as any,
     backgroundColor: colors.glassCard,
-    borderRadius: 16,
+    borderRadius: radii.card,
     borderWidth: 1,
     borderColor: colors.glassBorder,
     padding: 18,
     flexGrow: 1,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 6 },
-    }),
+    ...shadows.card,
   },
   statCardIcon: {
     marginBottom: 8,
   },
   statNumber: {
+    ...displayTextStyle,
     fontSize: 28,
-    fontWeight: '800',
     color: colors.text,
-    letterSpacing: -0.5,
   },
   statCardLabel: {
     fontSize: 12,
@@ -2095,15 +2059,12 @@ const createStyles = (colors: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.glassCard,
-    borderRadius: 20,
+    borderRadius: radii.card,
     borderWidth: 1,
     borderColor: colors.glassBorder,
     padding: 14,
     marginBottom: 8,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 6 },
-    }),
+    ...shadows.card,
   },
   feedResultIcon: {
     width: 40,
@@ -2154,12 +2115,9 @@ const createStyles = (colors: any) => StyleSheet.create({
     backgroundColor: colors.glassCard,
     borderWidth: 1,
     borderColor: colors.glassBorder,
-    borderRadius: 20,
+    borderRadius: radii.card,
     padding: 16,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 6 },
-    }),
+    ...shadows.card,
   },
   teamWallPreviewHeader: {
     flexDirection: 'row',
@@ -2211,15 +2169,12 @@ const createStyles = (colors: any) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: colors.glassCard,
-    borderRadius: 20,
+    borderRadius: radii.card,
     borderWidth: 1,
     borderColor: colors.warning + '30',
     padding: 18,
     marginBottom: 28,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 6 },
-    }),
+    ...shadows.card,
   },
   paymentLeft: {
     flexDirection: 'row',
