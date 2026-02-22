@@ -115,7 +115,7 @@ export default function PlayerCard({ player, onPress, size = 'medium', teamLogoU
           </View>
         ) : (
           <View style={s.silhouette}>
-            <Image source={getPlayerPlaceholder()} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
+            <Image source={getPlayerPlaceholder()} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' }} resizeMode="cover" />
             {/* Jersey number badge on silhouette if no position shown */}
             {!player.position && jerseyNumber && (
               <View style={[s.silhouetteNumber, { backgroundColor: colors.primary }]}>
@@ -268,6 +268,7 @@ const createStyles = (colors: any, isDark: boolean, size: 'small' | 'medium' | '
       alignItems: 'center',
       borderWidth: 2,
       borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.2)',
+      overflow: 'hidden' as const,
     },
     silhouetteNumber: {
       position: 'absolute',

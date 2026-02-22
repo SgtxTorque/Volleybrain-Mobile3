@@ -277,7 +277,7 @@ export default function PlayerCardExpanded({ player, visible, onClose, onUpdate 
                   <Image source={{ uri: player.photo_url! }} style={s.photo} />
                 ) : (
                   <View style={s.silhouette}>
-                    <Image source={getPlayerPlaceholder()} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
+                    <Image source={getPlayerPlaceholder()} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' }} resizeMode="cover" />
                   </View>
                 )}
                 {(isAdmin || isCoach) && (
@@ -546,7 +546,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   
   photoWrapper: { position: 'relative' },
   photo: { width: 140, height: 140, borderRadius: 70, borderWidth: 4, borderColor: 'rgba(255,255,255,0.3)' },
-  silhouette: { width: 140, height: 140, borderRadius: 70, backgroundColor: '#2a2a4a', justifyContent: 'center', alignItems: 'center', borderWidth: 4, borderColor: 'rgba(255,255,255,0.1)' },
+  silhouette: { width: 140, height: 140, borderRadius: 70, backgroundColor: '#2a2a4a', justifyContent: 'center', alignItems: 'center', borderWidth: 4, borderColor: 'rgba(255,255,255,0.1)', overflow: 'hidden' as const },
   cameraOverlay: { position: 'absolute', bottom: 0, right: 0, borderRadius: 16, padding: 6 },
   
   jerseyNumber: { fontSize: 20, fontWeight: 'bold', color: '#888', marginTop: 12 },

@@ -610,13 +610,13 @@ export default function CoachDashboard() {
           {/* Background — default sport image */}
           <Image
             source={getDefaultHeroImage(activeSport?.name, nextEvent?.type)}
-            style={StyleSheet.absoluteFillObject}
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' }}
             resizeMode="cover"
           />
           {/* Dark gradient overlay for text readability */}
           <LinearGradient
-            colors={['transparent', 'rgba(27,40,56,0.5)', 'rgba(27,40,56,0.95)']}
-            style={StyleSheet.absoluteFillObject}
+            colors={['transparent', 'rgba(27,40,56,0.6)', 'rgba(27,40,56,0.9)']}
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
             start={{ x: 0, y: 0 }}
             end={{ x: 0, y: 1 }}
           />

@@ -1,7 +1,7 @@
 import ParentOnboardingModal from '@/components/ParentOnboardingModal';
 import ShareRegistrationModal from '@/components/ShareRegistrationModal';
 import { useAuth } from '@/lib/auth';
-import { getDefaultHeroImage } from '@/lib/default-images';
+import { getDefaultHeroImage, getPlayerPlaceholder } from '@/lib/default-images';
 import { displayTextStyle, radii, shadows } from '@/lib/design-tokens';
 import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
@@ -1010,12 +1010,10 @@ export default function ParentDashboard() {
           onPress={() => openEventDetail(nextEvent)}
           activeOpacity={0.9}
         >
-          {/* Background — player photo or default sport image */}
+          {/* Background — sport action image (game/practice) */}
           <Image
-            source={activeChild?.photo_url
-              ? { uri: activeChild.photo_url }
-              : getDefaultHeroImage('volleyball', nextEvent?.type)}
-            style={StyleSheet.absoluteFillObject}
+            source={getDefaultHeroImage('volleyball', nextEvent?.type)}
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' }}
             resizeMode="cover"
           />
           {/* Dark gradient overlay */}
@@ -1076,12 +1074,14 @@ export default function ParentDashboard() {
         <View style={s.heroCardEmpty}>
           <Image
             source={getDefaultHeroImage('volleyball')}
-            style={StyleSheet.absoluteFillObject}
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' }}
             resizeMode="cover"
           />
           <LinearGradient
-            colors={['transparent', 'rgba(27,40,56,0.7)', '#1B2838']}
-            style={StyleSheet.absoluteFillObject}
+            colors={['transparent', 'rgba(27,40,56,0.6)', 'rgba(27,40,56,0.9)']}
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
           />
           <View style={s.heroContent}>
             <Text style={s.heroTitle}>NO UPCOMING EVENTS</Text>
@@ -1138,23 +1138,14 @@ export default function ParentDashboard() {
                 onPress={() => router.push(('/child-detail?playerId=' + child.id) as any)}
                 activeOpacity={0.9}
               >
-                {/* Background */}
-                {child.photo_url ? (
-                  <Image source={{ uri: child.photo_url }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
-                ) : (
-                  <LinearGradient
-                    colors={[child.sport_color || '#2C5F7C', '#14B8A6']}
-                    style={StyleSheet.absoluteFillObject}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                  >
-                    <View style={s.playerMiniInitials}>
-                      <Text style={s.playerMiniInitialsText}>
-                        {child.first_name?.charAt(0)}{child.last_name?.charAt(0)}
-                      </Text>
-                    </View>
-                  </LinearGradient>
-                )}
+                {/* Background — player photo or silhouette placeholder */}
+                <Image
+                  source={child.photo_url
+                    ? { uri: child.photo_url }
+                    : getPlayerPlaceholder()}
+                  style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' }}
+                  resizeMode="cover"
+                />
                 {/* Top-right volleyball icon */}
                 <View style={s.playerMiniBadge}>
                   <Ionicons name="globe-outline" size={12} color={colors.primary} />

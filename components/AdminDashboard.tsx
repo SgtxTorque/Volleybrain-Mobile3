@@ -872,8 +872,17 @@ export default function AdminDashboard() {
 
       {/* HERO — Gradient Club Overview */}
       <View style={s.heroGradient}>
-        <Image source={getDefaultHeroImage(activeSport?.name)} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
-        <LinearGradient colors={['rgba(44,95,124,0.85)', 'rgba(27,40,56,0.9)']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFillObject} />
+        <Image
+          source={getDefaultHeroImage(activeSport?.name)}
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' }}
+          resizeMode="cover"
+        />
+        <LinearGradient
+          colors={['rgba(44,95,124,0.55)', 'rgba(27,40,56,0.7)']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+        />
         <View style={s.heroTopRow}>
           <View style={{ flex: 1 }}>
             <Text style={s.heroOrgName}>{organization?.name || 'Organization'}</Text>
@@ -1630,6 +1639,7 @@ const createStyles = (colors: any, sportColors: any) => StyleSheet.create({
     paddingHorizontal: spacing.screenPadding,
     paddingVertical: 20,
     paddingBottom: 24,
+    overflow: 'hidden' as const,
   },
   heroTopRow: {
     flexDirection: 'row',
