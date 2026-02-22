@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-type Step = 'account' | 'child' | 'waiver' | 'review';
+type Step = 'account' | 'coppa' | 'child' | 'waiver' | 'review';
 
 type AgeGroup = {
   id: string;
@@ -77,6 +77,9 @@ export default function ParentRegisterScreen() {
 
   // Terms acceptance
   const [termsAccepted, setTermsAccepted] = useState(false);
+
+  // COPPA Consent
+  const [coppaConsent, setCoppaConsent] = useState(false);
 
   // Waiver
   const [liabilityWaiver, setLiabilityWaiver] = useState(false);
@@ -167,6 +170,14 @@ export default function ParentRegisterScreen() {
     return true;
   };
 
+  const validateCoppaStep = (): boolean => {
+    if (!coppaConsent) {
+      Alert.alert('Consent Required', 'You must provide parental consent under COPPA to continue.');
+      return false;
+    }
+    return true;
+  };
+
   const validateChildStep = (): boolean => {
     if (!childFirstName.trim() || !childLastName.trim()) {
       Alert.alert('Missing Info', 'Please enter your child\'s name.');
@@ -197,6 +208,8 @@ export default function ParentRegisterScreen() {
 
   const handleNext = () => {
     if (step === 'account' && validateAccountStep()) {
+      setStep('coppa');
+    } else if (step === 'coppa' && validateCoppaStep()) {
       setStep('child');
     } else if (step === 'child' && validateChildStep()) {
       setStep('waiver');
@@ -206,7 +219,8 @@ export default function ParentRegisterScreen() {
   };
 
   const handleBack = () => {
-    if (step === 'child') setStep('account');
+    if (step === 'coppa') setStep('account');
+    else if (step === 'child') setStep('coppa');
     else if (step === 'waiver') setStep('child');
     else if (step === 'review') setStep('waiver');
     else router.back();
@@ -243,6 +257,8 @@ export default function ParentRegisterScreen() {
           onboarding_completed: true,
           pending_approval: !skipApproval, // Skip approval if using invite code
           accepted_terms_at: new Date().toISOString(),
+          coppa_consent_given: true,
+          coppa_consent_date: new Date().toISOString(),
         })
         .eq('id', authData.user.id);
 
@@ -389,11 +405,11 @@ export default function ParentRegisterScreen() {
         {/* Progress */}
         <View style={s.progressContainer}>
           <View style={s.progressBar}>
-            <View style={[s.progressFill, { width: step === 'account' ? '25%' : step === 'child' ? '50%' : step === 'waiver' ? '75%' : '100%' }]} />
+            <View style={[s.progressFill, { width: step === 'account' ? '20%' : step === 'coppa' ? '40%' : step === 'child' ? '60%' : step === 'waiver' ? '80%' : '100%' }]} />
           </View>
           <Text style={s.progressText}>
-            Step {step === 'account' ? '1' : step === 'child' ? '2' : step === 'waiver' ? '3' : '4'} of 4: {' '}
-            {step === 'account' ? 'Your Account' : step === 'child' ? 'Child Info' : step === 'waiver' ? 'Waivers' : 'Review'}
+            Step {step === 'account' ? '1' : step === 'coppa' ? '2' : step === 'child' ? '3' : step === 'waiver' ? '4' : '5'} of 5: {' '}
+            {step === 'account' ? 'Your Account' : step === 'coppa' ? 'Parental Consent' : step === 'child' ? 'Child Info' : step === 'waiver' ? 'Waivers' : 'Review'}
           </Text>
         </View>
 
@@ -471,7 +487,48 @@ export default function ParentRegisterScreen() {
             </View>
           )}
 
-          {/* Step 2: Child Info */}
+          {/* Step 2: COPPA Consent */}
+          {step === 'coppa' && (
+            <View style={s.stepContent}>
+              <Text style={s.stepTitle}>Parental Consent</Text>
+              <Text style={s.stepSubtitle}>
+                Required under the Children's Online Privacy Protection Act (COPPA)
+              </Text>
+
+              <View style={s.consentContainer}>
+                <Switch
+                  value={coppaConsent}
+                  onValueChange={setCoppaConsent}
+                  trackColor={{ false: colors.border, true: colors.primary }}
+                  thumbColor={colors.card}
+                />
+                <Text style={s.consentText}>
+                  As the parent or legal guardian, I consent to the collection and use of my child's
+                  personal information (name, date of birth, and team participation data) by VolleyBrain
+                  for the purpose of league registration and team management. I understand I can request
+                  deletion of this data at any time by contacting support. *
+                </Text>
+              </View>
+
+              <View style={{
+                flexDirection: 'row',
+                alignItems: 'flex-start',
+                gap: 12,
+                backgroundColor: colors.info + '15',
+                padding: 16,
+                borderRadius: 12,
+                marginTop: 16,
+              }}>
+                <Ionicons name="shield-checkmark" size={20} color={colors.info} />
+                <Text style={{ flex: 1, fontSize: 13, color: colors.info, lineHeight: 18 }}>
+                  VolleyBrain complies with COPPA. We never sell children's data and only collect
+                  what's necessary for league operations.
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {/* Step 3: Child Info */}
           {step === 'child' && (
             <View style={s.stepContent}>
               <Text style={s.stepTitle}>Register Your Child</Text>
@@ -624,7 +681,7 @@ export default function ParentRegisterScreen() {
             </View>
           )}
 
-          {/* Step 3: Waivers */}
+          {/* Step 4: Waivers */}
           {step === 'waiver' && (
             <View style={s.stepContent}>
               <Text style={s.stepTitle}>Waivers & Agreements</Text>
@@ -723,7 +780,7 @@ export default function ParentRegisterScreen() {
             </View>
           )}
 
-          {/* Step 4: Review */}
+          {/* Step 5: Review */}
           {step === 'review' && (
             <View style={s.stepContent}>
               <Text style={s.stepTitle}>Review & Submit</Text>

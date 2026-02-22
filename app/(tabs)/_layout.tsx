@@ -1,4 +1,5 @@
 import { useAuth } from '@/lib/auth';
+import { useFirstTimeWelcome } from '@/lib/first-time-welcome';
 import { usePermissions } from '@/lib/permissions-context';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
@@ -11,8 +12,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 export default function TabLayout() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const { loading } = usePermissions();
+  const { loading, isCoach, isParent } = usePermissions();
   const { profile } = useAuth();
+  const primaryRole = isCoach ? 'coach' : isParent ? 'parent' : null;
+  useFirstTimeWelcome(primaryRole);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [unreadAlertCount, setUnreadAlertCount] = useState(0);
 

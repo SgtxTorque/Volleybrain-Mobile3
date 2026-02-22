@@ -369,6 +369,54 @@ export default function WelcomeScreen() {
 
           {/* Get Started Options */}
           <View style={{ gap: 10 }}>
+            {/* I have an invite code */}
+            <TouchableOpacity
+              onPress={() => router.push('/(auth)/redeem-code')}
+              style={{
+                backgroundColor: colors.primary + '10',
+                borderRadius: 16,
+                padding: 14,
+                flexDirection: 'row',
+                alignItems: 'center',
+                borderWidth: 1,
+                borderColor: colors.primary + '40',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.15,
+                shadowRadius: 12,
+                elevation: 6,
+              }}
+            >
+              <View style={{
+                width: 44,
+                height: 44,
+                borderRadius: 12,
+                backgroundColor: colors.primary + '20',
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginRight: 12,
+              }}>
+                <Ionicons name="ticket" size={22} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{
+                  fontSize: 15,
+                  fontWeight: '600',
+                  color: colors.text,
+                }}>
+                  I have an invite code
+                </Text>
+                <Text style={{
+                  fontSize: 12,
+                  color: colors.textSecondary,
+                  marginTop: 1,
+                }}>
+                  Redeem a code from your coach or admin
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.primary} />
+            </TouchableOpacity>
+
             {/* Start a League */}
             <TouchableOpacity
               onPress={() => router.push('/(auth)/league-setup')}
