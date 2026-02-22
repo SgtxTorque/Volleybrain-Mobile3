@@ -1,4 +1,5 @@
 import { useAuth } from '@/lib/auth';
+import { queueBlastEmail } from '@/lib/email-queue';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
@@ -237,6 +238,16 @@ export default function BlastComposerScreen() {
           .insert(recipients);
 
         if (recipientsError) throw recipientsError;
+
+        // Queue blast emails for each recipient
+        try {
+          const orgId = profile?.current_organization_id || '';
+          for (const p of players) {
+            if (p.parent_email) {
+              queueBlastEmail(orgId, p.parent_email, p.parent_name || '', p.parent_account_id || null, title.trim(), body.trim(), '');
+            }
+          }
+        } catch {}
       }
 
       // 4. Success

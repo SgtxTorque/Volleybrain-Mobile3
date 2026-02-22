@@ -1,3 +1,4 @@
+import { queueRegistrationConfirmation, queueWelcomeEmail } from '@/lib/email-queue';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -347,6 +348,13 @@ export default function ParentRegisterScreen() {
       if (params.teamCodeId) {
         await supabase.rpc('increment_team_code_usage', { code_id: params.teamCodeId });
       }
+
+      // Queue confirmation + welcome emails
+      try {
+        const seasonName = season?.name || '';
+        queueRegistrationConfirmation(orgId, email.trim().toLowerCase(), fullName.trim(), childFirstName.trim(), seasonName, '');
+        queueWelcomeEmail(orgId, email.trim().toLowerCase(), fullName.trim(), '', 'parent');
+      } catch {}
 
       // Success!
       if (skipApproval) {

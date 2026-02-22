@@ -1,3 +1,4 @@
+import { queueWelcomeEmail } from '@/lib/email-queue';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -209,6 +210,11 @@ export default function CoachRegisterScreen() {
           })
           .eq('id', activeInviteId);
       }
+
+      // Queue welcome email
+      try {
+        queueWelcomeEmail(orgId, email.trim().toLowerCase(), fullName.trim(), '', isAdminInvite ? 'admin' : 'coach');
+      } catch {}
 
       // Success!
       if (skipApproval) {

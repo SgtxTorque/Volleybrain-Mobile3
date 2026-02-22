@@ -2,6 +2,7 @@ import AdminContextBar from '@/components/AdminContextBar';
 import AppHeaderBar from '@/components/ui/AppHeaderBar';
 import StatBox from '@/components/ui/StatBox';
 import { useAuth } from '@/lib/auth';
+import { queuePaymentConfirmation } from '@/lib/email-queue';
 import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
@@ -83,7 +84,7 @@ type Props = {
 
 export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
   const { colors } = useTheme();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { workingSeason } = useSeason();
   const router = useRouter();
 
@@ -627,6 +628,16 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
                 if (error) throw error;
               }
 
+              // Queue payment confirmation emails
+              try {
+                const orgId = profile?.current_organization_id || '';
+                for (const { payment, group } of selected) {
+                  if (group.parent_email) {
+                    queuePaymentConfirmation(orgId, group.parent_email, '', payment.amount, payment.payment_method || 'manual', group.player_name, '');
+                  }
+                }
+              } catch {}
+
               Alert.alert('Success', `${selected.length} payment${selected.length > 1 ? 's' : ''} verified!`);
               setSelectedFees(new Set());
               fetchPayments();
@@ -738,6 +749,14 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
         if (error) throw error;
       }
 
+      // Queue payment confirmation email
+      try {
+        const orgId = profile?.current_organization_id || '';
+        if (recordingPlayer.parent_email) {
+          queuePaymentConfirmation(orgId, recordingPlayer.parent_email, '', recordingFee.amount, recordMethod, recordingPlayer.player_name, '');
+        }
+      } catch {}
+
       Alert.alert('Recorded', `$${recordingFee.amount} payment recorded for ${recordingPlayer.player_name}.`);
       setShowRecordModal(false);
       setRecordingFee(null);
@@ -773,6 +792,16 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
                 .eq('id', payment.id);
 
               if (error) throw error;
+
+              // Queue payment confirmation email
+              try {
+                const orgId = profile?.current_organization_id || '';
+                const group = playerGroups.find(g => g.player_id === payment.player_id);
+                if (group?.parent_email) {
+                  queuePaymentConfirmation(orgId, group.parent_email, '', payment.amount, payment.payment_method || 'manual', group.player_name, '');
+                }
+              } catch {}
+
               fetchPayments();
             } catch (error) {
               if (__DEV__) console.error('Error:', error);

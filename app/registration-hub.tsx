@@ -6,6 +6,7 @@ import SectionHeader from '@/components/ui/SectionHeader';
 import StatBox from '@/components/ui/StatBox';
 import { useAuth } from '@/lib/auth';
 import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
+import { queueRegistrationApproval, queueTeamAssignment } from '@/lib/email-queue';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
@@ -502,6 +503,16 @@ export default function RegistrationHubScreen() {
         await createPaymentRecords(selectedRegistration.player_id, selectedRegistration.season_id);
       }
 
+      // Queue approval email
+      if (newStatus === 'approved' && selectedRegistration?.player?.parent_email) {
+        try {
+          const p = selectedRegistration.player;
+          const orgId = profile?.current_organization_id || '';
+          const seasonName = seasons.find(s => s.id === selectedRegistration.season_id)?.name || '';
+          queueRegistrationApproval(orgId, p.parent_email, p.parent_name || '', `${p.first_name} ${p.last_name}`, seasonName, '');
+        } catch {}
+      }
+
       await fetchData();
       setDetailModalVisible(false);
       Alert.alert('Success', `Registration ${newStatus}`);
@@ -599,6 +610,18 @@ export default function RegistrationHubScreen() {
       }
 
       await createRSVPsForPlayer(playerId, teamId);
+
+      // Queue team assignment email
+      if (selectedRegistration?.player?.parent_email) {
+        try {
+          const p = selectedRegistration.player;
+          const orgId = profile?.current_organization_id || '';
+          const teamObj = teams.find(t => t.id === teamId);
+          const seasonName = seasons.find(s => s.id === selectedRegistration.season_id)?.name || '';
+          queueTeamAssignment(orgId, p.parent_email, p.parent_name || '', `${p.first_name} ${p.last_name}`, teamObj?.name || '', seasonName, '');
+        } catch {}
+      }
+
       await fetchData();
       setDetailModalVisible(false);
       Alert.alert('Success', 'Player assigned to team!');
@@ -713,6 +736,18 @@ export default function RegistrationHubScreen() {
           setBulkSubmitting(false);
           setBulkProgress(null);
 
+          // Queue approval emails for all approved registrations
+          try {
+            const orgId = profile?.current_organization_id || '';
+            for (const regId of approvedIds) {
+              const reg = registrations.find(r => r.id === regId);
+              if (reg?.player?.parent_email) {
+                const seasonName = seasons.find(s => s.id === reg.season_id)?.name || '';
+                queueRegistrationApproval(orgId, reg.player.parent_email, reg.player.parent_name || '', `${reg.player.first_name} ${reg.player.last_name}`, seasonName, '');
+              }
+            }
+          } catch {}
+
           const failCount = progress.failures.length;
           if (failCount > 0) {
             Alert.alert('Partial Success', `${approvedIds.length} approved, ${failCount} failed:\n${progress.failures.join(', ')}`);
@@ -761,6 +796,20 @@ export default function RegistrationHubScreen() {
     await fetchData();
     setBulkSubmitting(false);
     setBulkProgress(null);
+
+    // Queue team assignment emails
+    try {
+      const orgId = profile?.current_organization_id || '';
+      const teamObj = teams.find(t => t.id === teamId);
+      for (const regId of pendingTeamAssignIds) {
+        const reg = registrations.find(r => r.id === regId);
+        if (reg?.player?.parent_email && teamObj) {
+          const seasonName = seasons.find(s => s.id === reg.season_id)?.name || '';
+          queueTeamAssignment(orgId, reg.player.parent_email, reg.player.parent_name || '', `${reg.player.first_name} ${reg.player.last_name}`, teamObj.name, seasonName, '');
+        }
+      }
+    } catch {}
+
     setPendingTeamAssignIds([]);
 
     const failCount = progress.failures.length;
