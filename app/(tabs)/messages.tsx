@@ -1,4 +1,5 @@
 import { useAuth } from '@/lib/auth';
+import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
@@ -233,19 +234,19 @@ export default function MessagesScreen() {
 }
 
 const createStyles = (colors: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'transparent' },
-  scroll: { flex: 1, padding: 16 },
+  container: { flex: 1, backgroundColor: colors.background },
+  scroll: { flex: 1, padding: spacing.screenPadding },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  title: { fontSize: 28, fontWeight: '800', color: colors.text },
+  title: { ...displayTextStyle, fontSize: 28, color: colors.text },
   subtitle: { fontSize: 14, color: colors.primary, marginTop: 2 },
   addBtn: { backgroundColor: colors.primary, width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
   statsRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  statBox: { flex: 1, backgroundColor: colors.glassCard, borderRadius: 16, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
+  statBox: { flex: 1, backgroundColor: '#FFF', borderRadius: 16, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   statNum: { fontSize: 24, fontWeight: 'bold', color: colors.text },
   statLabel: { fontSize: 11, color: colors.textMuted, marginTop: 4, fontWeight: '700', textTransform: 'uppercase' as const, letterSpacing: 0.5 },
   empty: { alignItems: 'center', padding: 60 },
   emptyText: { color: colors.textMuted, fontSize: 16 },
-  messageCard: { backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, flexDirection: 'row', marginBottom: 12, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
+  messageCard: { backgroundColor: '#FFF', borderRadius: 16, padding: 16, flexDirection: 'row', marginBottom: 12, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   typeIcon: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   messageInfo: { flex: 1 },
   messageHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },

@@ -1,4 +1,5 @@
 import { useAuth } from '@/lib/auth';
+import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
@@ -665,9 +666,9 @@ export default function ChatsScreen() {
 }
 
 const createStyles = (colors: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'transparent' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
-  title: { fontSize: 28, fontWeight: '800', color: colors.text },
+  container: { flex: 1, backgroundColor: colors.background },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: spacing.screenPadding, paddingVertical: 12 },
+  title: { ...displayTextStyle, fontSize: 28, color: colors.text },
   headerActions: { flexDirection: 'row', gap: 12 },
   headerBtn: { padding: 4 },
   searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, marginHorizontal: 16, marginBottom: 12, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, gap: 8 },
@@ -676,7 +677,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   empty: { alignItems: 'center', padding: 60 },
   emptyText: { color: colors.text, fontSize: 18, fontWeight: '600', marginTop: 16 },
   emptySubtext: { color: colors.textMuted, fontSize: 14, marginTop: 4 },
-  channelCard: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, marginHorizontal: 16, marginBottom: 8, backgroundColor: colors.glassCard, borderRadius: 16, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
+  channelCard: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, marginHorizontal: 16, marginBottom: 8, backgroundColor: '#FFF', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   channelAvatar: { width: 52, height: 52, borderRadius: 26, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   avatarImage: { width: 52, height: 52, borderRadius: 26 },
   channelInfo: { flex: 1 },

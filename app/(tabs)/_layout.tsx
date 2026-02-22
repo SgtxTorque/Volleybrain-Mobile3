@@ -111,22 +111,23 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        sceneStyle: { backgroundColor: 'transparent' },
+        sceneStyle: { backgroundColor: colors.background },
         tabBarStyle: {
-          backgroundColor: colors.bgSecondary,
-          borderTopWidth: 0,
+          backgroundColor: colors.card,
+          borderTopWidth: 1,
+          borderTopColor: colors.border,
           height: 56 + insets.bottom,
           paddingBottom: insets.bottom,
           paddingTop: 8,
           ...Platform.select({
             ios: {
               shadowColor: '#000',
-              shadowOffset: { width: 0, height: -4 },
-              shadowOpacity: 0.15,
-              shadowRadius: 12,
+              shadowOffset: { width: 0, height: -1 },
+              shadowOpacity: 0.05,
+              shadowRadius: 4,
             },
             android: {
-              elevation: 12,
+              elevation: 2,
             },
           }),
         },

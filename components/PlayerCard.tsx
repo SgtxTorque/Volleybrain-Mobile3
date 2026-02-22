@@ -1,3 +1,4 @@
+import { getPlayerPlaceholder } from '@/lib/default-images';
 import { usePermissions } from '@/lib/permissions-context';
 import { useTheme } from '@/lib/theme';
 import { getSportDisplay, getPositionInfo } from '@/constants/sport-display';
@@ -114,11 +115,7 @@ export default function PlayerCard({ player, onPress, size = 'medium', teamLogoU
           </View>
         ) : (
           <View style={s.silhouette}>
-            <Ionicons 
-              name="person" 
-              size={size === 'small' ? 32 : size === 'medium' ? 44 : 56} 
-              color={isDark ? '#3a3a5a' : '#5a5a7a'} 
-            />
+            <Image source={getPlayerPlaceholder()} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
             {/* Jersey number badge on silhouette if no position shown */}
             {!player.position && jerseyNumber && (
               <View style={[s.silhouetteNumber, { backgroundColor: colors.primary }]}>

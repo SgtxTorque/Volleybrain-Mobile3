@@ -1,6 +1,8 @@
 import ParentOnboardingModal from '@/components/ParentOnboardingModal';
 import ShareRegistrationModal from '@/components/ShareRegistrationModal';
 import { useAuth } from '@/lib/auth';
+import { getDefaultHeroImage } from '@/lib/default-images';
+import { displayTextStyle, radii, shadows } from '@/lib/design-tokens';
 import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
@@ -11,10 +13,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Animated,
-  Dimensions,
   Image,
   Linking,
   Platform,
@@ -29,16 +29,13 @@ import * as Haptics from 'expo-haptics';
 import AnnouncementBanner from './AnnouncementBanner';
 import EventDetailModal from './EventDetailModal';
 import RegistrationBanner from './RegistrationBanner';
+import AppHeaderBar from './ui/AppHeaderBar';
 import { ScheduleEvent } from './EventCard';
 import ReenrollmentBanner from './ReenrollmentBanner';
+import MatchCard from './ui/MatchCard';
+import SectionHeader from './ui/SectionHeader';
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const HERO_CARD_WIDTH = SCREEN_WIDTH - 48;
-const HERO_CARD_GAP = 12;
-const NEXT_UP_CARD_WIDTH = SCREEN_WIDTH * 0.75;
-const NEXT_UP_CARD_GAP = 12;
 const CHILD_INDEX_KEY = 'vb_parent_active_child_idx';
-import RoleSelector from './RoleSelector';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -212,7 +209,6 @@ export default function ParentDashboard() {
   const [shareVisible, setShareVisible] = useState(false);
   const [showEventDetailModal, setShowEventDetailModal] = useState(false);
   const [selectedModalEvent, setSelectedModalEvent] = useState<ScheduleEvent | null>(null);
-  const [activeNextUpIndex, setActiveNextUpIndex] = useState(0);
   const [openRegistrationCount, setOpenRegistrationCount] = useState(0);
   const [activeAlerts, setActiveAlerts] = useState<{ id: string; title: string; body: string; priority: string }[]>([]);
 
@@ -902,7 +898,13 @@ export default function ParentDashboard() {
   };
 
   const s = createStyles(colors);
-  const firstName = profile?.full_name?.split(' ')[0] || 'Parent';
+  const userInitials = (() => {
+    const name = profile?.full_name || '';
+    const parts = name.split(' ').filter(Boolean);
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    if (parts.length === 1) return parts[0][0].toUpperCase();
+    return '?';
+  })();
 
   // -------------------------------------------------------------------------
   // Loading state
@@ -910,62 +912,27 @@ export default function ParentDashboard() {
 
   if (loading) {
     return (
-      <ScrollView style={s.container} contentContainerStyle={s.contentContainer}>
-        {/* Skeleton header */}
-        <View style={s.header}>
-          <View>
-            <View style={{ width: 100, height: 16, borderRadius: 4, backgroundColor: colors.bgSecondary, marginBottom: 8 }} />
-            <View style={{ width: 160, height: 28, borderRadius: 6, backgroundColor: colors.bgSecondary }} />
+      <ScrollView style={s.container} contentContainerStyle={{ paddingTop: 0 }}>
+        {/* Skeleton header bar */}
+        <View style={[s.headerBar, { justifyContent: 'space-between' }]}>
+          <View style={{ width: 120, height: 14, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.15)' }} />
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: 'rgba(255,255,255,0.15)' }} />
+            <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.15)' }} />
           </View>
         </View>
-        {/* Skeleton trading card */}
-        <View style={{ marginHorizontal: 16, marginBottom: 20 }}>
-          <View style={{ width: 100, height: 12, borderRadius: 4, backgroundColor: colors.bgSecondary, marginBottom: 12 }} />
-          <View style={{
-            height: 180, borderRadius: 20, backgroundColor: colors.glassCard,
-            borderWidth: 1, borderColor: colors.glassBorder, padding: 20,
-          }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-              <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: colors.bgSecondary }} />
-              <View style={{ flex: 1, gap: 8 }}>
-                <View style={{ width: '70%', height: 18, borderRadius: 4, backgroundColor: colors.bgSecondary }} />
-                <View style={{ width: '50%', height: 14, borderRadius: 4, backgroundColor: colors.bgSecondary }} />
-                <View style={{ width: '40%', height: 14, borderRadius: 4, backgroundColor: colors.bgSecondary }} />
-              </View>
-            </View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginTop: 20 }}>
-              {[1, 2, 3, 4].map(i => (
-                <View key={i} style={{ alignItems: 'center', gap: 6 }}>
-                  <View style={{ width: 36, height: 20, borderRadius: 4, backgroundColor: colors.bgSecondary }} />
-                  <View style={{ width: 28, height: 10, borderRadius: 4, backgroundColor: colors.bgSecondary }} />
-                </View>
-              ))}
-            </View>
-          </View>
-        </View>
-        {/* Skeleton Next Up */}
-        <View style={{ marginHorizontal: 16, marginBottom: 20 }}>
-          <View style={{ width: 80, height: 12, borderRadius: 4, backgroundColor: colors.bgSecondary, marginBottom: 12 }} />
-          <View style={{
-            height: 140, borderRadius: 20, backgroundColor: colors.glassCard,
-            borderWidth: 1, borderColor: colors.glassBorder, padding: 16,
-          }}>
-            <View style={{ width: '60%', height: 14, borderRadius: 4, backgroundColor: colors.bgSecondary, marginBottom: 10 }} />
-            <View style={{ width: '80%', height: 14, borderRadius: 4, backgroundColor: colors.bgSecondary, marginBottom: 10 }} />
-            <View style={{ width: '45%', height: 12, borderRadius: 4, backgroundColor: colors.bgSecondary, marginBottom: 10 }} />
-            <View style={{ width: '35%', height: 12, borderRadius: 4, backgroundColor: colors.bgSecondary }} />
-          </View>
-        </View>
-        {/* Skeleton stat cards */}
-        <View style={{ marginHorizontal: 16, flexDirection: 'row', gap: 10 }}>
+        {/* Skeleton hero card */}
+        <View style={{ marginHorizontal: 16, marginTop: 24, height: 220, borderRadius: radii.card, backgroundColor: colors.bgSecondary }} />
+        {/* Skeleton match cards */}
+        <View style={{ marginHorizontal: 16, marginTop: 20, gap: 12 }}>
           {[1, 2].map(i => (
-            <View key={i} style={{
-              flex: 1, height: 90, borderRadius: 16, backgroundColor: colors.glassCard,
-              borderWidth: 1, borderColor: colors.glassBorder, padding: 14, justifyContent: 'space-between',
-            }}>
-              <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: colors.bgSecondary }} />
-              <View style={{ width: '60%', height: 12, borderRadius: 4, backgroundColor: colors.bgSecondary }} />
-            </View>
+            <View key={i} style={{ height: 80, borderRadius: radii.card, backgroundColor: colors.glassCard, borderWidth: 1, borderColor: colors.glassBorder }} />
+          ))}
+        </View>
+        {/* Skeleton player cards row */}
+        <View style={{ flexDirection: 'row', gap: 12, paddingHorizontal: 16, marginTop: 20 }}>
+          {[1, 2, 3].map(i => (
+            <View key={i} style={{ width: 150, height: 210, borderRadius: radii.card, backgroundColor: colors.bgSecondary }} />
           ))}
         </View>
       </ScrollView>
@@ -996,7 +963,7 @@ export default function ParentDashboard() {
             fetchParentData();
           }}
         >
-          <Text style={{ color: '#000', fontWeight: '700', fontSize: 15 }}>Try Again</Text>
+          <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 15 }}>Try Again</Text>
         </TouchableOpacity>
       </View>
     );
@@ -1005,138 +972,215 @@ export default function ParentDashboard() {
   const prideMoment = getPrideMoment();
 
   // -------------------------------------------------------------------------
-  // Render
+  // Render — v0 layout
   // -------------------------------------------------------------------------
 
   return (
     <Animated.View style={{ flex: 1, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
       <ScrollView
         style={s.container}
-        contentContainerStyle={s.contentContainer}
+        contentContainerStyle={{ paddingBottom: 120 }}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FFF" />}
       >
-      {/* Header */}
-      <View style={s.header}>
-        <View>
-          <Text style={s.greeting}>My Family</Text>
-          <Text style={s.heroName}>{firstName}</Text>
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <TouchableOpacity
-            style={s.headerIconBtn}
-            onPress={() => router.push('/invite-friends' as any)}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="share-social-outline" size={20} color={colors.primary} />
-          </TouchableOpacity>
-          <RoleSelector />
+
+      {/* ================================================================ */}
+      {/* 1. HEADER BAR — Steel blue                                        */}
+      {/* ================================================================ */}
+      <AppHeaderBar
+        initials={userInitials}
+        hasNotifications={activeAlerts.length > 0}
+      />
+
+      {/* ================================================================ */}
+      {/* 2. UPCOMING BADGE — Floating teal pill                            */}
+      {/* ================================================================ */}
+      <View style={s.upcomingBadgeWrap}>
+        <View style={s.upcomingBadge}>
+          <Text style={s.upcomingBadgeText}>UPCOMING</Text>
         </View>
       </View>
 
-      {/* Re-enrollment Banner */}
-      <ReenrollmentBanner />
-
-      {/* Announcement Banner */}
-      {user && (
-        <AnnouncementBanner
-          alerts={activeAlerts}
-          userId={user.id}
-          onDismiss={(id) => setActiveAlerts(prev => prev.filter(a => a.id !== id))}
-        />
+      {/* ================================================================ */}
+      {/* 3. GAME DAY HERO CARD                                             */}
+      {/* ================================================================ */}
+      {nextEvent ? (
+        <TouchableOpacity
+          style={s.heroCard}
+          onPress={() => openEventDetail(nextEvent)}
+          activeOpacity={0.9}
+        >
+          {/* Background — player photo or default sport image */}
+          <Image
+            source={activeChild?.photo_url
+              ? { uri: activeChild.photo_url }
+              : getDefaultHeroImage('volleyball', nextEvent?.type)}
+            style={StyleSheet.absoluteFillObject}
+            resizeMode="cover"
+          />
+          {/* Dark gradient overlay */}
+          <LinearGradient
+            colors={['transparent', 'rgba(27,40,56,0.5)', '#1B2838']}
+            style={StyleSheet.absoluteFillObject}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+          />
+          {/* HOME / AWAY badge */}
+          {nextEvent.location_type && (
+            <View style={[
+              s.heroBadge,
+              { backgroundColor: nextEvent.location_type === 'home' ? '#14B8A6' : '#E8913A' },
+            ]}>
+              <Text style={s.heroBadgeText}>
+                {nextEvent.location_type === 'home' ? 'HOME' : 'AWAY'}
+              </Text>
+            </View>
+          )}
+          {/* Bottom content */}
+          <View style={s.heroContent}>
+            <Text style={s.heroCountdown}>{getCountdownText(nextEvent.date)}</Text>
+            <Text style={s.heroTitle}>
+              {nextEvent.type === 'game' ? 'GAME DAY' : 'PRACTICE'}
+            </Text>
+            {nextEvent.opponent && (
+              <Text style={s.heroOpponent}>vs {nextEvent.opponent}</Text>
+            )}
+            <Text style={s.heroDate}>
+              {formatDate(nextEvent.date)}
+              {nextEvent.time ? ` \u2022 ${formatTime(nextEvent.time)}` : ''}
+            </Text>
+            {(nextEvent.venue_name || nextEvent.location) && (
+              <Text style={s.heroVenue}>{nextEvent.venue_name || nextEvent.location}</Text>
+            )}
+            {(nextEvent.venue_address || nextEvent.venue_name || nextEvent.location) && (
+              <TouchableOpacity
+                style={s.heroDirectionsBtn}
+                onPress={() => {
+                  const addr = nextEvent.venue_address || nextEvent.venue_name || nextEvent.location || '';
+                  const url = Platform.select({
+                    ios: `maps:0,0?q=${encodeURIComponent(addr)}`,
+                    android: `geo:0,0?q=${encodeURIComponent(addr)}`,
+                  });
+                  if (url) Linking.openURL(url);
+                }}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="navigate-outline" size={10} color="#FFF" />
+                <Text style={s.heroDirectionsBtnText}>Get Directions</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </TouchableOpacity>
+      ) : (
+        /* Fallback — no upcoming events */
+        <View style={s.heroCardEmpty}>
+          <Image
+            source={getDefaultHeroImage('volleyball')}
+            style={StyleSheet.absoluteFillObject}
+            resizeMode="cover"
+          />
+          <LinearGradient
+            colors={['transparent', 'rgba(27,40,56,0.7)', '#1B2838']}
+            style={StyleSheet.absoluteFillObject}
+          />
+          <View style={s.heroContent}>
+            <Text style={s.heroTitle}>NO UPCOMING EVENTS</Text>
+            <Text style={[s.heroOpponent, { marginTop: 4 }]}>Check back later for your schedule</Text>
+          </View>
+        </View>
       )}
 
-      {/* Registration Banner */}
-      <RegistrationBanner count={openRegistrationCount} />
+      {/* ================================================================ */}
+      {/* 4. UPCOMING MATCHCARDS                                            */}
+      {/* ================================================================ */}
+      {filteredUpcomingEvents.length > 1 && (
+        <View style={s.sectionBlock}>
+          <View style={{ paddingHorizontal: 16 }}>
+            <SectionHeader title="Upcoming" action="See All" onAction={() => router.push('/schedule')} />
+          </View>
+          {filteredUpcomingEvents.slice(1, 4).map(evt => (
+            <MatchCard
+              key={evt.id}
+              homeTeam={activeChild?.team_name || evt.team_name || ''}
+              awayTeam={evt.opponent || evt.title}
+              time={formatTime(evt.time)}
+              date={formatDate(evt.date).toUpperCase()}
+              venue={evt.venue_name || evt.location || ''}
+              accentColor={colors.teal}
+              onPress={() => openEventDetail(evt)}
+              style={{ marginHorizontal: 16, marginBottom: 12 }}
+            />
+          ))}
+        </View>
+      )}
 
       {/* ================================================================ */}
-      {/* HERO SECTION -- Unified Child Carousel                            */}
+      {/* 5. MY PLAYERS — Horizontal Scroll                                 */}
       {/* ================================================================ */}
-      {children.length === 0 ? (
-        <View style={s.emptyHeroCard}>
-          <View style={s.emptyHeroIcon}>
-            <Ionicons name="people-outline" size={40} color={colors.textMuted} />
+      {children.length > 0 && (
+        <View style={s.sectionBlock}>
+          <View style={{ paddingHorizontal: 16 }}>
+            <SectionHeader
+              title="My Players"
+              action={children.length > 1 ? 'See All' : undefined}
+              onAction={children.length > 1 ? () => router.push('/schedule') : undefined}
+            />
           </View>
-          <Text style={s.emptyHeroTitle}>No athletes registered yet</Text>
-          <Text style={s.emptyHeroSub}>Register your child to get started</Text>
-          <TouchableOpacity style={s.emptyHeroBtn} onPress={() => router.push('/(auth)/parent-register')}>
-            <Ionicons name="add-circle" size={20} color="#000" />
-            <Text style={s.emptyHeroBtnText}>Register a Child</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <View style={{ marginBottom: 12 }}>
           <ScrollView
             horizontal
-            pagingEnabled={false}
             showsHorizontalScrollIndicator={false}
-            snapToInterval={HERO_CARD_WIDTH + HERO_CARD_GAP}
-            decelerationRate="fast"
-            contentContainerStyle={{ paddingHorizontal: 0 }}
-            onScroll={(e) => {
-              const x = e.nativeEvent.contentOffset.x;
-              const idx = Math.round(x / (HERO_CARD_WIDTH + HERO_CARD_GAP));
-              if (idx >= 0 && idx < children.length && idx !== activeChildIndex) {
-                setActiveChildIndex(idx);
-              }
-            }}
-            scrollEventThrottle={16}
+            contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}
           >
-            {children.map((child, idx) => (
+            {children.map(child => (
               <TouchableOpacity
                 key={`${child.id}-${child.team_id || child.season_id}`}
-                style={[
-                  s.heroCard,
-                  { width: HERO_CARD_WIDTH },
-                  idx > 0 && { marginLeft: HERO_CARD_GAP },
-                ]}
+                style={s.playerMiniCard}
                 onPress={() => router.push(('/child-detail?playerId=' + child.id) as any)}
-                activeOpacity={0.92}
+                activeOpacity={0.9}
               >
+                {/* Background */}
                 {child.photo_url ? (
                   <Image source={{ uri: child.photo_url }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
                 ) : (
                   <LinearGradient
-                    colors={[child.sport_color || colors.primary, colors.bgSecondary]}
+                    colors={[child.sport_color || '#2C5F7C', '#14B8A6']}
                     style={StyleSheet.absoluteFillObject}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                   >
-                    <View style={s.tradingCardInitials}>
-                      <Text style={s.tradingCardInitialsText}>
+                    <View style={s.playerMiniInitials}>
+                      <Text style={s.playerMiniInitialsText}>
                         {child.first_name?.charAt(0)}{child.last_name?.charAt(0)}
                       </Text>
                     </View>
                   </LinearGradient>
                 )}
-                {child.sport_icon && (
-                  <View style={s.tradingCardSportBadge}>
-                    <Text style={s.tradingCardSportEmoji}>{child.sport_icon}</Text>
-                  </View>
-                )}
+                {/* Top-right volleyball icon */}
+                <View style={s.playerMiniBadge}>
+                  <Ionicons name="globe-outline" size={12} color={colors.primary} />
+                </View>
+                {/* Bottom gradient + text */}
                 <LinearGradient
-                  colors={['transparent', 'rgba(0,0,0,0.75)']}
-                  style={s.tradingCardBottomGradient}
+                  colors={['transparent', 'rgba(27,40,56,0.8)', '#1B2838']}
+                  style={s.playerMiniGradient}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 0, y: 1 }}
                 >
-                  <Text style={s.tradingCardName} numberOfLines={1}>
-                    {child.first_name} {child.last_name}
+                  <Text style={s.playerMiniName} numberOfLines={1}>
+                    {child.first_name} {child.last_name?.charAt(0)}.
                   </Text>
-                  <View style={s.tradingCardPills}>
-                    {child.team_name && (
-                      <View style={s.tradingCardPill}>
-                        <Text style={s.tradingCardPillText}>{child.team_name}</Text>
-                      </View>
-                    )}
+                  {child.team_name && (
+                    <Text style={s.playerMiniTeam} numberOfLines={1}>{child.team_name}</Text>
+                  )}
+                  <View style={s.playerMiniPillRow}>
                     {child.jersey_number && (
-                      <View style={s.tradingCardPill}>
-                        <Text style={s.tradingCardPillText}>#{child.jersey_number}</Text>
+                      <View style={s.playerMiniPillNum}>
+                        <Text style={s.playerMiniPillNumText}>#{child.jersey_number}</Text>
                       </View>
                     )}
                     {child.position && (
-                      <View style={s.tradingCardPill}>
-                        <Text style={s.tradingCardPillText}>{child.position}</Text>
+                      <View style={s.playerMiniPillPos}>
+                        <Text style={s.playerMiniPillPosText}>{child.position}</Text>
                       </View>
                     )}
                   </View>
@@ -1144,434 +1188,144 @@ export default function ParentDashboard() {
               </TouchableOpacity>
             ))}
           </ScrollView>
-
-          {/* Pagination dots */}
-          {children.length > 1 && (
-            <View style={s.heroDots}>
-              {children.map((_, idx) => (
-                <View
-                  key={idx}
-                  style={[
-                    s.heroDot,
-                    idx === activeChildIndex && s.heroDotActive,
-                  ]}
-                />
-              ))}
-            </View>
-          )}
         </View>
       )}
 
       {/* ================================================================ */}
-      {/* CONTENT — Cross-dissolves when active child changes               */}
-      {/* ================================================================ */}
-      <Animated.View style={{ opacity: contentOpacity }}>
-
-      {/* ================================================================ */}
-      {/* PRIDE MOMENT -- Latest Achievement/Stat                           */}
-      {/* ================================================================ */}
-      {activeChild && (
-        <View style={s.sectionBlock}>
-          <Text style={s.sectionLabel}>LATEST</Text>
-          <View style={s.prideCard}>
-            <View style={s.prideIconWrap}>
-              <Ionicons name={prideMoment.icon as any} size={24} color={colors.primary} />
-            </View>
-            <Text style={s.prideText}>{prideMoment.text}</Text>
-          </View>
-        </View>
-      )}
-
-      {/* ================================================================ */}
-      {/* GAME DAY (if today)                                               */}
-      {/* ================================================================ */}
-      {todayGame && (
-        <TouchableOpacity
-          style={s.gameDayCard}
-          onPress={() => router.push(`/game-day-parent?eventId=${todayGame.id}` as any)}
-          activeOpacity={0.8}
-        >
-          <View style={s.gameDayLeft}>
-            <View style={s.gameDayIconWrap}>
-              <Ionicons name="flame" size={28} color={colors.danger} />
-            </View>
-            <View style={s.gameDayInfo}>
-              <Text style={s.gameDayTitle}>GAME DAY</Text>
-              <Text style={s.gameDayOpponent}>
-                {todayGame.opponent ? `vs ${todayGame.opponent}` : todayGame.title}
-              </Text>
-              <Text style={s.gameDayMeta}>
-                {todayGame.team_name}
-                {todayGame.event_time ? ` \u2022 ${formatTime(todayGame.event_time)}` : ''}
-              </Text>
-            </View>
-          </View>
-          <Ionicons name="chevron-forward" size={22} color={colors.danger} />
-        </TouchableOpacity>
-      )}
-
-      {/* ================================================================ */}
-      {/* NEXT UP -- Horizontal Carousel of Upcoming Events                 */}
+      {/* 6. ANNOUNCEMENTS — Teal left-accent cards                         */}
       {/* ================================================================ */}
       <View style={s.sectionBlock}>
-        <Text style={s.sectionLabel}>NEXT UP</Text>
-        {filteredUpcomingEvents.length === 0 ? (
-          <View style={s.glassCard}>
-            <View style={s.emptyNextUp}>
-              <Ionicons name="checkmark-circle" size={32} color={colors.success} />
-              <Text style={s.emptyNextUpText}>
-                All caught up! No upcoming events
-                {upcomingEvents.length > 0 && filteredUpcomingEvents.length === 0
-                  ? ` for ${activeChild?.first_name || 'this player'}.`
-                  : '.'}
-              </Text>
-              {upcomingEvents.length > 0 && filteredUpcomingEvents.length === 0 && children.length > 1 && (
-                <Text style={s.emptyNextUpSubtext}>
-                  Swipe the player cards above to view events for other players.
-                </Text>
-              )}
+        <View style={{ paddingHorizontal: 16 }}>
+          <SectionHeader title="Announcements" />
+        </View>
+        {/* Pride moment as announcement */}
+        {activeChild && (
+          <View style={s.announcementCard}>
+            <Text style={s.announcementEmoji}>
+              {prideMoment.icon === 'trophy' ? '\u{1F3C6}' : prideMoment.icon === 'flash' ? '\u26A1' : '\u2B50'}
+            </Text>
+            <View style={{ flex: 1 }}>
+              <Text style={s.announcementText}>{prideMoment.text}</Text>
             </View>
           </View>
-        ) : (
-          <>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              snapToInterval={NEXT_UP_CARD_WIDTH + NEXT_UP_CARD_GAP}
-              decelerationRate="fast"
-              contentContainerStyle={{ paddingRight: 20 }}
-              onScroll={(e) => {
-                const x = e.nativeEvent.contentOffset.x;
-                const idx = Math.round(x / (NEXT_UP_CARD_WIDTH + NEXT_UP_CARD_GAP));
-                if (idx !== activeNextUpIndex) setActiveNextUpIndex(idx);
-              }}
-              scrollEventThrottle={16}
-            >
-              {filteredUpcomingEvents.slice(0, 5).map((evt, idx) => (
-                <TouchableOpacity
-                  key={evt.id}
-                  activeOpacity={0.85}
-                  style={[
-                    s.nextUpCard,
-                    { width: NEXT_UP_CARD_WIDTH },
-                    idx > 0 && { marginLeft: NEXT_UP_CARD_GAP },
-                  ]}
-                  onPress={() => openEventDetail(evt)}
-                >
-                  {/* Event type badge + team */}
-                  <View style={s.nextUpTop}>
-                    <View style={[
-                      s.nextUpTypeBadge,
-                      evt.type === 'game'
-                        ? { backgroundColor: colors.danger + '20' }
-                        : { backgroundColor: colors.info + '20' },
-                    ]}>
-                      <Ionicons
-                        name={evt.type === 'game' ? 'shield' : 'fitness'}
-                        size={12}
-                        color={evt.type === 'game' ? colors.danger : colors.info}
-                      />
-                      <Text style={[
-                        s.nextUpTypeBadgeText,
-                        { color: evt.type === 'game' ? colors.danger : colors.info },
-                      ]}>
-                        {evt.type === 'game' ? 'GAME' : 'PRACTICE'}
-                      </Text>
-                    </View>
-                    <Text style={s.nextUpTeam} numberOfLines={1}>{evt.team_name}</Text>
-                  </View>
-
-                  {/* Countdown */}
-                  <Text style={s.nextUpCountdown}>{getCountdownText(evt.date)}</Text>
-
-                  {/* Title */}
-                  <Text style={s.nextUpTitle} numberOfLines={1}>
-                    {evt.type === 'game' && evt.opponent
-                      ? `vs ${evt.opponent}`
-                      : evt.title}
-                  </Text>
-
-                  {/* Date, time, venue (compact single-row) */}
-                  <View style={s.nextUpDetails}>
-                    <View style={s.nextUpDetailRow}>
-                      <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
-                      <Text style={s.nextUpDetailText}>{formatDate(evt.date)}</Text>
-                      {evt.time ? (
-                        <>
-                          <Ionicons name="time-outline" size={14} color={colors.textMuted} style={{ marginLeft: 10 }} />
-                          <Text style={s.nextUpDetailText}>{formatTime(evt.time)}</Text>
-                        </>
-                      ) : null}
-                    </View>
-                    {(evt.venue_name || evt.location) ? (
-                      <View style={s.nextUpDetailRow}>
-                        <Ionicons name="location-outline" size={14} color={colors.textMuted} />
-                        <Text style={s.nextUpDetailText} numberOfLines={1}>{evt.venue_name || evt.location}</Text>
-                      </View>
-                    ) : null}
-                  </View>
-
-                  {/* Tap hint */}
-                  <View style={s.nextUpTapHint}>
-                    <Text style={s.nextUpTapHintText}>Tap for details</Text>
-                    <Ionicons name="chevron-forward" size={14} color={colors.primary} />
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            {/* Dot indicators */}
-            {filteredUpcomingEvents.length > 1 && (
-              <View style={s.nextUpDots}>
-                {filteredUpcomingEvents.slice(0, 5).map((_, idx) => (
-                  <View
-                    key={idx}
-                    style={[
-                      s.nextUpDot,
-                      idx === activeNextUpIndex && s.nextUpDotActive,
-                    ]}
-                  />
-                ))}
-              </View>
-            )}
-          </>
+        )}
+        {/* Latest team wall post as announcement */}
+        {latestPost && (
+          <TouchableOpacity
+            style={s.announcementCard}
+            onPress={() => router.push('/(tabs)/connect' as any)}
+            activeOpacity={0.8}
+          >
+            <Text style={s.announcementEmoji}>{'\u{1F4E2}'}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={s.announcementText} numberOfLines={2}>{latestPost.content}</Text>
+              <Text style={s.announcementTime}>
+                {(() => {
+                  const diffMs = Date.now() - new Date(latestPost.created_at).getTime();
+                  const diffMins = Math.floor(diffMs / 60000);
+                  const diffHours = Math.floor(diffMs / 3600000);
+                  const diffDays = Math.floor(diffMs / 86400000);
+                  if (diffMins < 1) return 'Just now';
+                  if (diffMins < 60) return `${diffMins}m ago`;
+                  if (diffHours < 24) return `${diffHours}h ago`;
+                  if (diffDays < 7) return `${diffDays}d ago`;
+                  return new Date(latestPost.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                })()}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        )}
+        {!activeChild && !latestPost && (
+          <View style={[s.announcementCard, { justifyContent: 'center' }]}>
+            <Text style={[s.announcementText, { color: colors.textMuted }]}>No announcements yet</Text>
+          </View>
         )}
       </View>
 
       {/* ================================================================ */}
-      {/* QUICK PULSE -- 3 Status Cards                                     */}
+      {/* 7. SECONDARY — Banners & Payment (subtle, bottom)                 */}
       {/* ================================================================ */}
-      <View style={s.sectionBlock}>
-        <Text style={s.sectionLabel}>AT A GLANCE</Text>
-        <View style={s.pulseRow}>
-          {/* Registration */}
-          <TouchableOpacity style={s.pulseCard} onPress={() => router.push('/parent-registration-hub' as any)} activeOpacity={0.7}>
-            <Ionicons
-              name={getRegistrationComplete() ? 'checkmark-circle' : 'time'}
-              size={24}
-              color={getRegistrationComplete() ? colors.success : colors.warning}
-            />
-            <Text style={[
-              s.pulseValue,
-              { color: getRegistrationComplete() ? colors.success : colors.warning },
-            ]}>
-              {getRegistrationComplete() ? 'Complete' : 'Pending'}
-            </Text>
-            <Text style={s.pulseLabel}>Registration</Text>
-          </TouchableOpacity>
+      <View style={{ paddingHorizontal: 16 }}>
+        {/* Re-enrollment Banner */}
+        <ReenrollmentBanner />
 
-          {/* Payments */}
-          <TouchableOpacity style={s.pulseCard} onPress={() => router.push('/family-payments' as any)} activeOpacity={0.7}>
-            <Ionicons
-              name="wallet"
-              size={24}
-              color={paymentStatus.balance > 0 ? colors.warning : paymentStatus.total_pending > 0 ? '#FF9500' : colors.success}
-            />
-            <Text style={[
-              s.pulseValue,
-              { color: paymentStatus.balance > 0 ? colors.warning : paymentStatus.total_pending > 0 ? '#FF9500' : colors.success },
-            ]}>
-              {paymentStatus.balance > 0
-                ? `$${Number(paymentStatus.balance).toFixed(2)} Due`
-                : paymentStatus.total_pending > 0
-                  ? 'Pending'
-                  : '$0.00 Due'}
-            </Text>
-            <Text style={s.pulseLabel}>Payments</Text>
-          </TouchableOpacity>
+        {/* Announcement Banner */}
+        {user && (
+          <AnnouncementBanner
+            alerts={activeAlerts}
+            userId={user.id}
+            onDismiss={(id) => setActiveAlerts(prev => prev.filter(a => a.id !== id))}
+          />
+        )}
 
-          {/* Next Event */}
-          <TouchableOpacity style={s.pulseCard} onPress={() => router.push('/schedule')} activeOpacity={0.7}>
-            <Ionicons name="calendar" size={24} color={colors.info} />
-            <Text style={[s.pulseValue, { color: colors.info }]}>{getNextEventShortDate()}</Text>
-            <Text style={s.pulseLabel}>Next Event</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+        {/* Registration Banner */}
+        <RegistrationBanner count={openRegistrationCount} />
 
-      {/* ================================================================ */}
-      {/* SEASON STATS -- Child's Numbers                                   */}
-      {/* ================================================================ */}
-      {activeChild && (
-        <View style={s.sectionBlock}>
-          <Text style={s.sectionLabel}>SEASON STATS</Text>
-          <View style={s.statsGrid}>
-            {/* Games Played */}
-            <View style={s.statCard}>
-              <Ionicons name="trophy-outline" size={18} color={colors.textMuted} style={s.statCardIcon} />
-              <Text style={s.statNumber}>{childStats?.games_played ?? 0}</Text>
-              <Text style={s.statCardLabel}>Games Played</Text>
-            </View>
-
-            {/* Total Kills */}
-            <View style={s.statCard}>
-              <Ionicons name="flash-outline" size={18} color={colors.textMuted} style={s.statCardIcon} />
-              <Text style={s.statNumber}>{childStats?.total_kills ?? 0}</Text>
-              <Text style={s.statCardLabel}>Total Kills</Text>
-            </View>
-
-            {/* Total Aces */}
-            <View style={s.statCard}>
-              <Ionicons name="star-outline" size={18} color={colors.textMuted} style={s.statCardIcon} />
-              <Text style={s.statNumber}>{childStats?.total_aces ?? 0}</Text>
-              <Text style={s.statCardLabel}>Total Aces</Text>
-            </View>
-
-            {/* Attendance Rate */}
-            <View style={s.statCard}>
-              <Ionicons name="checkmark-done-outline" size={18} color={colors.textMuted} style={s.statCardIcon} />
-              <Text style={s.statNumber}>
-                {totalTeamEvents > 0
-                  ? `${Math.round(((childStats?.games_played ?? 0) / totalTeamEvents) * 100)}%`
-                  : '--'}
-              </Text>
-              <Text style={s.statCardLabel}>Attendance</Text>
-            </View>
-          </View>
-        </View>
-      )}
-
-      {/* ================================================================ */}
-      {/* TEAM FEED -- Recent Activity                                      */}
-      {/* ================================================================ */}
-      {recentGames.length > 0 && (
-        <View style={s.sectionBlock}>
-          <Text style={s.sectionLabel}>TEAM FEED</Text>
-          {recentGames.slice(0, 3).map(game => (
-            <TouchableOpacity
-              key={game.id}
-              style={s.feedCard}
-              onPress={() => router.push(`/game-results?eventId=${game.id}` as any)}
-              activeOpacity={0.8}
-            >
-              <View style={[
-                s.feedResultIcon,
-                { backgroundColor: game.game_result === 'win' ? colors.success + '20' : colors.danger + '20' },
-              ]}>
-                <Text style={[
-                  s.feedResultText,
-                  { color: game.game_result === 'win' ? colors.success : colors.danger },
-                ]}>
-                  {game.game_result === 'win' ? 'W' : 'L'}
-                </Text>
-              </View>
-              <View style={s.feedContent}>
-                <Text style={s.feedTitle}>
-                  {game.opponent ? `vs ${game.opponent}` : 'Game'}
-                </Text>
-                <Text style={s.feedMeta}>
-                  {game.team_name} {'\u2022'} {formatDate(game.event_date)}
-                </Text>
-              </View>
-              <Text style={s.feedScore}>
-                {game.our_score ?? 0}-{game.their_score ?? 0}
-              </Text>
-              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-            </TouchableOpacity>
-          ))}
-          <TouchableOpacity style={s.seeAllBtn} onPress={() => router.push('/schedule')}>
-            <Text style={s.seeAllText}>See All</Text>
-            <Ionicons name="arrow-forward" size={14} color={colors.primary} />
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* ================================================================ */}
-      {/* TEAM WALL PREVIEW                                                 */}
-      {/* ================================================================ */}
-      {latestPost && (
-        <View style={s.sectionBlock}>
-          <Text style={s.sectionLabel}>TEAM WALL</Text>
+        {/* Payment Card */}
+        {(paymentStatus.balance > 0 || paymentStatus.total_pending > 0) && (
           <TouchableOpacity
-            style={s.teamWallPreviewCard}
-            onPress={() => router.push('/(tabs)/connect' as any)}
+            style={s.paymentCard}
+            onPress={() => router.push('/family-payments' as any)}
             activeOpacity={0.8}
           >
-            <View style={s.teamWallPreviewHeader}>
-              <View style={s.teamWallPreviewIconWrap}>
-                <Ionicons name="megaphone" size={18} color={colors.primary} />
+            <View style={s.paymentLeft}>
+              <View style={[s.paymentIconWrap, {
+                backgroundColor: paymentStatus.balance > 0 ? colors.warning + '20' : '#FF950020',
+              }]}>
+                <Ionicons
+                  name={paymentStatus.balance > 0 ? 'wallet-outline' : 'time-outline'}
+                  size={22}
+                  color={paymentStatus.balance > 0 ? colors.warning : '#FF9500'}
+                />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={s.teamWallPreviewAuthor}>{latestPost.author_name}</Text>
-                <Text style={s.teamWallPreviewTime}>
-                  {(() => {
-                    const diffMs = Date.now() - new Date(latestPost.created_at).getTime();
-                    const diffMins = Math.floor(diffMs / 60000);
-                    const diffHours = Math.floor(diffMs / 3600000);
-                    const diffDays = Math.floor(diffMs / 86400000);
-                    if (diffMins < 1) return 'Just now';
-                    if (diffMins < 60) return `${diffMins}m ago`;
-                    if (diffHours < 24) return `${diffHours}h ago`;
-                    if (diffDays < 7) return `${diffDays}d ago`;
-                    return new Date(latestPost.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                  })()}
+                <Text style={s.paymentTitle}>
+                  {paymentStatus.balance > 0 ? 'Outstanding Balance' : 'Pending Verification'}
                 </Text>
+                {paymentStatus.balance > 0 && (
+                  <Text style={s.paymentAmount}>${Number(paymentStatus.balance).toFixed(2)}</Text>
+                )}
+                {paymentStatus.total_pending > 0 && (
+                  <Text style={{ fontSize: 12, color: '#FF9500', marginTop: 2 }}>
+                    ${Number(paymentStatus.total_pending).toFixed(2)} pending verification
+                  </Text>
+                )}
               </View>
             </View>
-            <Text style={s.teamWallPreviewContent} numberOfLines={2}>
-              {latestPost.content}
-            </Text>
-            <View style={s.teamWallPreviewFooter}>
-              <Text style={s.teamWallPreviewCta}>View Team Wall</Text>
-              <Ionicons name="arrow-forward" size={14} color={colors.primary} />
-            </View>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* ================================================================ */}
-      {/* PAYMENT CARD (only if balance > 0)                                */}
-      {/* ================================================================ */}
-      {(paymentStatus.balance > 0 || paymentStatus.total_pending > 0) && (
-        <TouchableOpacity
-          style={s.paymentCard}
-          onPress={() => router.push('/family-payments' as any)}
-          activeOpacity={0.8}
-        >
-          <View style={s.paymentLeft}>
-            <View style={[s.paymentIconWrap, {
-              backgroundColor: paymentStatus.balance > 0 ? colors.warning + '20' : '#FF950020',
-            }]}>
-              <Ionicons
-                name={paymentStatus.balance > 0 ? 'wallet-outline' : 'time-outline'}
-                size={22}
-                color={paymentStatus.balance > 0 ? colors.warning : '#FF9500'}
-              />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={s.paymentTitle}>
-                {paymentStatus.balance > 0 ? 'Outstanding Balance' : 'Pending Verification'}
+            <TouchableOpacity
+              style={s.paymentBtn}
+              onPress={() => router.push('/family-payments' as any)}
+            >
+              <Text style={s.paymentBtnText}>
+                {paymentStatus.balance > 0 ? 'Pay Now' : 'View Details'}
               </Text>
-              {paymentStatus.balance > 0 && (
-                <Text style={s.paymentAmount}>${Number(paymentStatus.balance).toFixed(2)}</Text>
-              )}
-              {paymentStatus.total_pending > 0 && (
-                <Text style={{ fontSize: 12, color: '#FF9500', marginTop: 2 }}>
-                  ${Number(paymentStatus.total_pending).toFixed(2)} pending verification
-                </Text>
-              )}
-            </View>
-          </View>
-          <TouchableOpacity
-            style={s.paymentBtn}
-            onPress={() => router.push('/family-payments' as any)}
-          >
-            <Text style={s.paymentBtnText}>
-              {paymentStatus.balance > 0 ? 'Pay Now' : 'View Details'}
-            </Text>
+            </TouchableOpacity>
           </TouchableOpacity>
-        </TouchableOpacity>
-      )}
+        )}
 
-      {/* Event Detail Modal */}
+        {/* Empty state — no children */}
+        {children.length === 0 && (
+          <View style={s.emptyHeroCard}>
+            <View style={s.emptyHeroIcon}>
+              <Ionicons name="people-outline" size={40} color={colors.textMuted} />
+            </View>
+            <Text style={s.emptyHeroTitle}>No athletes registered yet</Text>
+            <Text style={s.emptyHeroSub}>Register your child to get started</Text>
+            <TouchableOpacity style={s.emptyHeroBtn} onPress={() => router.push('/(auth)/parent-register')}>
+              <Ionicons name="add-circle" size={20} color="#FFF" />
+              <Text style={s.emptyHeroBtnText}>Register a Child</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+
+      {/* Modals (unchanged) */}
       <EventDetailModal
         visible={showEventDetailModal}
         event={selectedModalEvent}
         onClose={() => setShowEventDetailModal(false)}
         onRefresh={() => fetchParentData()}
       />
-
-      {/* Share Registration Modal */}
       <ShareRegistrationModal
         visible={showShare}
         onClose={() => setShowShare(false)}
@@ -1579,8 +1333,6 @@ export default function ParentDashboard() {
         onUnmount={() => setShareMounted(false)}
         onVisibleChange={(v) => setShareVisible(v)}
       />
-
-      {/* Parent Onboarding Modal — shows first */}
       <ParentOnboardingModal
         visible={modalStage === 'onboarding'}
         onDone={handleOnboardingDone}
@@ -1589,10 +1341,6 @@ export default function ParentDashboard() {
         onVisibleChange={(v: boolean) => setOnboardingVisible(v)}
       />
 
-      </Animated.View>
-
-      {/* Bottom padding */}
-      <View style={{ height: 120 }} />
     </ScrollView>
     </Animated.View>
   );
@@ -1607,10 +1355,6 @@ const createStyles = (colors: any) => StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background || colors.card,
   },
-  contentContainer: {
-    paddingHorizontal: 20,
-    paddingTop: 8,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -1621,82 +1365,252 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontSize: 15,
     color: colors.textMuted,
   },
-
-  // Header
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  sectionBlock: {
     marginBottom: 24,
   },
-  greeting: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textMuted,
-    textTransform: 'uppercase' as const,
-    letterSpacing: 1.5,
+
+  // ========== 1. HEADER BAR ==========
+  headerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#2C5F7C',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    minHeight: 48,
   },
-  heroName: {
-    fontSize: 32,
-    fontWeight: '900',
-    color: colors.text,
-    letterSpacing: -0.5,
+
+  // ========== 2. UPCOMING BADGE ==========
+  upcomingBadgeWrap: {
+    alignItems: 'center',
+    marginTop: -6,
+    marginBottom: -10,
+    zIndex: 10,
+  },
+  upcomingBadge: {
+    backgroundColor: '#14B8A6',
+    paddingVertical: 4,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    ...shadows.card,
+  },
+  upcomingBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#FFF',
+    letterSpacing: 2,
+  },
+
+  // ========== 3. GAME DAY HERO CARD ==========
+  heroCard: {
+    height: 220,
+    borderRadius: radii.card,
+    overflow: 'hidden' as const,
+    position: 'relative' as const,
+    marginHorizontal: 16,
+    marginTop: 20,
+    marginBottom: 8,
+    ...shadows.cardHover,
+  },
+  heroCardEmpty: {
+    height: 160,
+    borderRadius: radii.card,
+    overflow: 'hidden' as const,
+    position: 'relative' as const,
+    marginHorizontal: 16,
+    marginTop: 20,
+    marginBottom: 8,
+    justifyContent: 'flex-end',
+  },
+  heroBadge: {
+    position: 'absolute' as const,
+    top: 12,
+    right: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 20,
+    zIndex: 5,
+  },
+  heroBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#FFF',
+    letterSpacing: 0.5,
+  },
+  heroContent: {
+    position: 'absolute' as const,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 16,
+  },
+  heroCountdown: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#14B8A6',
+    letterSpacing: 2,
+    marginBottom: 2,
+  },
+  heroTitle: {
+    ...displayTextStyle,
+    fontSize: 22,
+    color: '#FFF',
+  },
+  heroOpponent: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.9)',
+    marginTop: 4,
+  },
+  heroDate: {
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.7)',
     marginTop: 2,
   },
-  headerIconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.primary + '15',
-    justifyContent: 'center' as const,
-    alignItems: 'center' as const,
+  heroVenue: {
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.6)',
   },
-
-  // Section
-  sectionBlock: {
-    marginBottom: 28,
-  },
-  sectionLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    textTransform: 'uppercase' as const,
-    letterSpacing: 2,
-    color: colors.textMuted,
-    marginBottom: 12,
-  },
-
-  // Glass Card base
-  glassCard: {
-    backgroundColor: colors.glassCard,
+  heroDirectionsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: colors.glassBorder,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 12,
-      },
-      android: {
-        elevation: 6,
-      },
-    }),
+    borderColor: 'rgba(255,255,255,0.2)',
+    alignSelf: 'flex-start',
+    marginTop: 8,
+  },
+  heroDirectionsBtnText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#FFF',
   },
 
-  // ========== HERO -- Empty ==========
+  // ========== 5. PLAYER MINI CARDS ==========
+  playerMiniCard: {
+    width: 150,
+    height: 210,
+    borderRadius: radii.card,
+    overflow: 'hidden' as const,
+    position: 'relative' as const,
+    ...shadows.cardHover,
+  },
+  playerMiniInitials: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  playerMiniInitialsText: {
+    fontSize: 40,
+    fontWeight: '900',
+    color: 'rgba(255,255,255,0.3)',
+    letterSpacing: 4,
+  },
+  playerMiniBadge: {
+    position: 'absolute' as const,
+    top: 8,
+    right: 8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 5,
+  },
+  playerMiniGradient: {
+    position: 'absolute' as const,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingTop: 40,
+    paddingBottom: 10,
+    paddingHorizontal: 10,
+  },
+  playerMiniName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFF',
+    lineHeight: 18,
+  },
+  playerMiniTeam: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.7)',
+    marginTop: 1,
+  },
+  playerMiniPillRow: {
+    flexDirection: 'row',
+    gap: 4,
+    marginTop: 4,
+  },
+  playerMiniPillNum: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 20,
+  },
+  playerMiniPillNumText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#FFF',
+  },
+  playerMiniPillPos: {
+    backgroundColor: 'rgba(20,184,166,0.3)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 20,
+  },
+  playerMiniPillPosText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#14B8A6',
+  },
+
+  // ========== 6. ANNOUNCEMENTS ==========
+  announcementCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: colors.glassCard,
+    borderRadius: radii.card,
+    borderLeftWidth: 4,
+    borderLeftColor: '#14B8A6',
+    padding: 12,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    gap: 8,
+    ...shadows.card,
+  },
+  announcementEmoji: {
+    fontSize: 16,
+    marginTop: 1,
+  },
+  announcementText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.text,
+    lineHeight: 18,
+  },
+  announcementTime: {
+    fontSize: 10,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+
+  // ========== EMPTY STATE ==========
   emptyHeroCard: {
     backgroundColor: colors.glassCard,
-    borderRadius: 20,
+    borderRadius: radii.card,
     borderWidth: 1,
     borderColor: colors.glassBorder,
     padding: 40,
     alignItems: 'center',
     marginBottom: 28,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 6 },
-    }),
+    ...shadows.card,
   },
   emptyHeroIcon: {
     width: 80,
@@ -1730,479 +1644,9 @@ const createStyles = (colors: any) => StyleSheet.create({
     borderRadius: 14,
   },
   emptyHeroBtnText: {
-    color: '#000',
+    color: '#FFF',
     fontWeight: '700',
     fontSize: 15,
-  },
-
-  // ========== HERO CARD -- Unified Carousel ==========
-  heroCard: {
-    height: 240,
-    borderRadius: 20,
-    overflow: 'hidden' as const,
-    position: 'relative' as const,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16 },
-      android: { elevation: 10 },
-    }),
-  },
-  heroDots: {
-    flexDirection: 'row' as const,
-    justifyContent: 'center' as const,
-    alignItems: 'center' as const,
-    gap: 6,
-    marginTop: 12,
-  },
-  heroDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.textMuted + '40',
-  },
-  heroDotActive: {
-    width: 20,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.primary,
-  },
-  tradingCardInitials: {
-    flex: 1,
-    justifyContent: 'center' as const,
-    alignItems: 'center' as const,
-  },
-  tradingCardInitialsText: {
-    fontSize: 56,
-    fontWeight: '900' as const,
-    color: 'rgba(255,255,255,0.3)',
-    letterSpacing: 4,
-  },
-  tradingCardSportBadge: {
-    position: 'absolute' as const,
-    top: 12,
-    right: 12,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    justifyContent: 'center' as const,
-    alignItems: 'center' as const,
-    zIndex: 10,
-  },
-  tradingCardSportEmoji: {
-    fontSize: 18,
-  },
-  tradingCardBottomGradient: {
-    position: 'absolute' as const,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingTop: 48,
-    paddingBottom: 16,
-    paddingHorizontal: 16,
-  },
-  tradingCardName: {
-    fontSize: 24,
-    fontWeight: '900' as const,
-    color: '#FFFFFF',
-    letterSpacing: -0.5,
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
-  },
-  tradingCardPills: {
-    flexDirection: 'row' as const,
-    flexWrap: 'wrap' as const,
-    gap: 6,
-    marginTop: 6,
-  },
-  tradingCardPill: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  tradingCardPillText: {
-    fontSize: 11,
-    fontWeight: '700' as const,
-    color: '#FFFFFF',
-  },
-
-  // ========== PRIDE MOMENT ==========
-  prideCard: {
-    backgroundColor: colors.glassCard,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
-    padding: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 6 },
-    }),
-  },
-  prideIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.primary + '15',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  prideText: {
-    flex: 1,
-    fontSize: 15,
-    lineHeight: 22,
-    color: colors.text,
-    fontWeight: '500',
-  },
-
-  // ========== GAME DAY ==========
-  gameDayCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.danger + '10',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.danger + '30',
-    padding: 16,
-    marginBottom: 28,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 6 },
-    }),
-  },
-  gameDayLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  gameDayIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: colors.danger + '20',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 14,
-  },
-  gameDayInfo: {
-    flex: 1,
-  },
-  gameDayTitle: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: colors.danger,
-    letterSpacing: 1.5,
-    textTransform: 'uppercase' as const,
-  },
-  gameDayOpponent: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: colors.text,
-    marginTop: 2,
-  },
-  gameDayMeta: {
-    fontSize: 13,
-    color: colors.textMuted,
-    marginTop: 2,
-  },
-
-  // ========== NEXT UP CAROUSEL ==========
-  nextUpCard: {
-    backgroundColor: colors.glassCard,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
-    padding: 18,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 6 },
-    }),
-  },
-  nextUpTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 10,
-  },
-  nextUpTypeBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    gap: 4,
-  },
-  nextUpTypeBadgeText: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
-  nextUpTeam: {
-    fontSize: 12,
-    color: colors.textMuted,
-    flex: 1,
-  },
-  nextUpCountdown: {
-    fontSize: 24,
-    fontWeight: '900',
-    color: colors.primary,
-    letterSpacing: -0.5,
-    marginBottom: 2,
-  },
-  nextUpTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: 10,
-  },
-  nextUpDetails: {
-    gap: 5,
-    marginBottom: 10,
-  },
-  nextUpDetailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  nextUpDetailText: {
-    fontSize: 13,
-    color: colors.textMuted,
-  },
-  nextUpTapHint: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: 2,
-    borderTopWidth: 1,
-    borderTopColor: colors.glassBorder,
-    paddingTop: 10,
-    marginTop: 2,
-  },
-  nextUpTapHintText: {
-    fontSize: 12,
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  nextUpDots: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 12,
-  },
-  nextUpDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.textMuted + '40',
-  },
-  nextUpDotActive: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.primary,
-  },
-  emptyNextUp: {
-    padding: 24,
-    alignItems: 'center',
-    gap: 10,
-  },
-  emptyNextUpText: {
-    fontSize: 15,
-    color: colors.textMuted,
-  },
-  emptyNextUpSubtext: {
-    fontSize: 13,
-    color: colors.textMuted,
-    marginTop: 4,
-    textAlign: 'center' as const,
-  },
-
-  // ========== QUICK PULSE ==========
-  pulseRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  pulseCard: {
-    flex: 1,
-    backgroundColor: colors.glassCard,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
-    paddingVertical: 16,
-    paddingHorizontal: 8,
-    alignItems: 'center',
-    gap: 6,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 6 },
-    }),
-  },
-  pulseValue: {
-    fontSize: 13,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  pulseLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: colors.textMuted,
-    textTransform: 'uppercase' as const,
-    letterSpacing: 0.5,
-    textAlign: 'center',
-  },
-
-  // ========== SEASON STATS ==========
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  statCard: {
-    width: '48%' as any,
-    backgroundColor: colors.glassCard,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
-    padding: 18,
-    flexGrow: 1,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 6 },
-    }),
-  },
-  statCardIcon: {
-    marginBottom: 8,
-  },
-  statNumber: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: colors.text,
-    letterSpacing: -0.5,
-  },
-  statCardLabel: {
-    fontSize: 12,
-    color: colors.textMuted,
-    marginTop: 2,
-    fontWeight: '500',
-  },
-
-  // ========== TEAM FEED ==========
-  feedCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.glassCard,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
-    padding: 14,
-    marginBottom: 8,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 6 },
-    }),
-  },
-  feedResultIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  feedResultText: {
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  feedContent: {
-    flex: 1,
-  },
-  feedTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  feedMeta: {
-    fontSize: 12,
-    color: colors.textMuted,
-    marginTop: 2,
-  },
-  feedScore: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.text,
-    marginRight: 8,
-  },
-  seeAllBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-  },
-  seeAllText: {
-    fontSize: 14,
-    color: colors.primary,
-    fontWeight: '600',
-  },
-
-  // ========== TEAM WALL PREVIEW ==========
-  teamWallPreviewCard: {
-    backgroundColor: colors.glassCard,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
-    borderRadius: 20,
-    padding: 16,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 6 },
-    }),
-  },
-  teamWallPreviewHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 10,
-  },
-  teamWallPreviewIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.primary + '15',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  teamWallPreviewAuthor: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  teamWallPreviewTime: {
-    fontSize: 12,
-    color: colors.textMuted,
-    marginTop: 1,
-  },
-  teamWallPreviewContent: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    lineHeight: 20,
-    marginBottom: 10,
-  },
-  teamWallPreviewFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    borderTopWidth: 1,
-    borderTopColor: colors.glassBorder,
-    paddingTop: 10,
-  },
-  teamWallPreviewCta: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.primary,
   },
 
   // ========== PAYMENT CARD ==========
@@ -2211,15 +1655,12 @@ const createStyles = (colors: any) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: colors.glassCard,
-    borderRadius: 20,
+    borderRadius: radii.card,
     borderWidth: 1,
     borderColor: colors.warning + '30',
     padding: 18,
     marginBottom: 28,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 6 },
-    }),
+    ...shadows.card,
   },
   paymentLeft: {
     flexDirection: 'row',
@@ -2256,5 +1697,4 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontWeight: '700',
     color: colors.warning,
   },
-
 });

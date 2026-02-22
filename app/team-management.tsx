@@ -1,6 +1,12 @@
 import AdminContextBar from '@/components/AdminContextBar';
+import AppHeaderBar from '@/components/ui/AppHeaderBar';
+import Badge from '@/components/ui/Badge';
+import Card from '@/components/ui/Card';
+import SectionHeader from '@/components/ui/SectionHeader';
+import StatBox from '@/components/ui/StatBox';
 import { useAuth } from '@/lib/auth';
 import { addAdminToTeamChats, addParentToTeamChats, createTeamChats, getProfileByEmail, syncTeamChats } from '@/lib/chat-utils';
+import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
@@ -464,47 +470,36 @@ export default function TeamManagementScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}>
 
         {/* Header */}
-        <View style={s.header}>
-          <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
-          </TouchableOpacity>
-          <View style={{ flex: 1 }}>
-            <Text style={s.title}>Team Management</Text>
-            {workingSeason && <Text style={s.subtitle}>{workingSeason.name}</Text>}
-          </View>
-          <TouchableOpacity style={s.addBtn} onPress={() => { resetForm(); setShowCreateModal(true); }}>
-            <Ionicons name="add" size={24} color={colors.background} />
-          </TouchableOpacity>
-        </View>
-
         <AdminContextBar />
+        <AppHeaderBar
+          title="TEAM MANAGEMENT"
+          showLogo={false}
+          showAvatar={false}
+          showNotificationBell={false}
+          leftIcon={<Ionicons name="arrow-back" size={22} color="#FFF" />}
+          onLeftPress={() => router.back()}
+          rightIcon={
+            <TouchableOpacity style={s.addBtn} onPress={() => { resetForm(); setShowCreateModal(true); }}>
+              <Ionicons name="add" size={22} color="#FFF" />
+            </TouchableOpacity>
+          }
+        />
 
         {/* Stats Row */}
         <View style={s.statsRow}>
-          <View style={s.statBox}>
-            <Text style={s.statNum}>{teams.length}</Text>
-            <Text style={s.statLabel}>Teams</Text>
-          </View>
-          <View style={s.statBox}>
-            <Text style={s.statNum}>{teamPlayers.length}</Text>
-            <Text style={s.statLabel}>Rostered</Text>
-          </View>
-          <View style={s.statBox}>
-            <Text style={[s.statNum, unrosteredPlayers.length > 0 && { color: colors.warning }]}>
-              {unrosteredPlayers.length}
-            </Text>
-            <Text style={s.statLabel}>Unrostered</Text>
-          </View>
+          <StatBox value={teams.length} label="Teams" accentColor="#2C5F7C" />
+          <StatBox value={teamPlayers.length} label="Rostered" accentColor="#14B8A6" />
+          <StatBox value={unrosteredPlayers.length} label="Unrostered" accentColor={unrosteredPlayers.length > 0 ? '#E8913A' : '#22C55E'} />
         </View>
 
         {/* Unrostered Alert */}
         {unrosteredPlayers.length > 0 && (
-          <View style={s.alertBanner}>
-            <Ionicons name="alert-circle" size={18} color={colors.warning} />
+          <Card accentColor="#E8913A" style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Ionicons name="alert-circle" size={18} color="#E8913A" />
             <Text style={s.alertText}>
               {unrosteredPlayers.length} player{unrosteredPlayers.length > 1 ? 's' : ''} ready for team assignment
             </Text>
-          </View>
+          </Card>
         )}
 
         {/* Search */}
@@ -520,12 +515,13 @@ export default function TeamManagementScreen() {
         </View>
 
         {/* Team Cards */}
+        <SectionHeader title="Teams" />
         {filteredTeams.length === 0 ? (
-          <View style={s.empty}>
+          <Card style={{ alignItems: 'center', paddingVertical: 40 }}>
             <Ionicons name="shirt-outline" size={48} color={colors.textMuted} />
             <Text style={s.emptyTitle}>No teams yet</Text>
             <Text style={s.emptySubtext}>Create your first team to get started!</Text>
-          </View>
+          </Card>
         ) : (
           filteredTeams.map(team => {
             const roster = getTeamPlayers(team.id);
@@ -533,9 +529,9 @@ export default function TeamManagementScreen() {
             const wl = winLossMap[team.id];
             const waiver = waiverCompliance[team.id];
             return (
-              <TouchableOpacity key={team.id} style={s.teamCard}
-                onPress={() => { setSelectedTeam(team); setShowDetailModal(true); }}>
-                <View style={[s.teamStripe, { backgroundColor: team.color }]} />
+              <Card key={team.id} accentColor={team.color}
+                onPress={() => { setSelectedTeam(team); setShowDetailModal(true); }}
+                style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
                 <View style={s.teamBody}>
                   <View style={s.teamTopRow}>
                     <Text style={s.teamName}>{team.name}</Text>
@@ -552,18 +548,18 @@ export default function TeamManagementScreen() {
                     </Text>
                   )}
                   {waiver && waiver.total > 0 && (
-                    <View style={[s.waiverPill, { backgroundColor: waiver.compliant === waiver.total ? colors.success + '20' : '#FF950020' }]}>
+                    <View style={[s.waiverPill, { backgroundColor: waiver.compliant === waiver.total ? '#22C55E20' : '#E8913A20' }]}>
                       <Ionicons name={waiver.compliant === waiver.total ? 'shield-checkmark' : 'alert-circle'}
-                        size={12} color={waiver.compliant === waiver.total ? colors.success : '#FF9500'} />
+                        size={12} color={waiver.compliant === waiver.total ? '#22C55E' : '#E8913A'} />
                       <Text style={{ fontSize: 11, marginLeft: 4,
-                        color: waiver.compliant === waiver.total ? colors.success : '#FF9500' }}>
+                        color: waiver.compliant === waiver.total ? '#22C55E' : '#E8913A' }}>
                         {waiver.compliant}/{waiver.total} waivers
                       </Text>
                     </View>
                   )}
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-              </TouchableOpacity>
+              </Card>
             );
           })
         )}
@@ -571,7 +567,7 @@ export default function TeamManagementScreen() {
         {/* Unrostered Players Section */}
         {unrosteredPlayers.length > 0 && (
           <View style={s.unrosteredSection}>
-            <Text style={s.sectionLabel}>UNROSTERED PLAYERS ({unrosteredPlayers.length})</Text>
+            <SectionHeader title={'Unrostered Players (' + unrosteredPlayers.length + ')'} />
             {(searchQuery
               ? unrosteredPlayers.filter(p => `${p.first_name} ${p.last_name}`.toLowerCase().includes(searchQuery.toLowerCase()))
               : unrosteredPlayers
@@ -806,60 +802,32 @@ export default function TeamManagementScreen() {
 // ================================================================
 
 const createStyles = (colors: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'transparent' },
+  container: { flex: 1, backgroundColor: colors.background },
   scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: 16, paddingTop: 8 },
+  scrollContent: { paddingHorizontal: spacing.screenPadding, paddingTop: 0 },
 
   // Header
-  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 12 },
-  backBtn: { padding: 4 },
-  title: { fontSize: 24, fontWeight: '900', color: colors.text, letterSpacing: -0.5 },
-  subtitle: { fontSize: 13, color: colors.primary, marginTop: 2 },
-  addBtn: { backgroundColor: colors.primary, width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
+  addBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
 
   // Stats
-  statsRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  statBox: {
-    flex: 1, backgroundColor: colors.glassCard, borderRadius: 16, padding: 12, alignItems: 'center',
-    borderWidth: 1, borderColor: colors.glassBorder,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8 },
-      android: { elevation: 4 },
-    }),
-  },
-  statNum: { fontSize: 24, fontWeight: '800', color: colors.text },
-  statLabel: { fontSize: 10, color: colors.textMuted, marginTop: 2, fontWeight: '700', textTransform: 'uppercase' as const, letterSpacing: 0.5 },
+  statsRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
 
   // Alert Banner
-  alertBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: colors.warning + '15', borderRadius: 12, padding: 12, marginBottom: 12,
-    borderWidth: 1, borderColor: colors.warning + '30',
-  },
-  alertText: { fontSize: 14, color: colors.warning, fontWeight: '500', flex: 1 },
+  alertText: { fontSize: 14, color: '#E8913A', fontWeight: '500', flex: 1 },
 
   // Search
   searchRow: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: colors.glassCard,
-    borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 16,
-    borderWidth: 1, borderColor: colors.glassBorder, gap: 8,
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF',
+    borderRadius: radii.card, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 16,
+    borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', gap: 8, ...shadows.card,
   },
   searchInput: { flex: 1, fontSize: 15, color: colors.text, padding: 0 },
 
-  // Team Card
-  teamCard: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: colors.glassCard,
-    borderRadius: 16, overflow: 'hidden', marginBottom: 12, borderWidth: 1, borderColor: colors.glassBorder,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8 },
-      android: { elevation: 4 },
-    }),
-  },
-  teamStripe: { width: 6, alignSelf: 'stretch' },
-  teamBody: { flex: 1, padding: 14 },
+  // Team Card (inner body — Card wrapper handles outer styling)
+  teamBody: { flex: 1 },
   teamTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  teamName: { fontSize: 16, fontWeight: '700', color: colors.text },
-  recordText: { fontSize: 14, fontWeight: '700', color: colors.textSecondary },
+  teamName: { ...displayTextStyle, fontSize: 16, color: colors.text },
+  recordText: { ...displayTextStyle, fontSize: 14, color: colors.textSecondary },
   teamMeta: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
   coachList: { fontSize: 12, color: colors.textSecondary, marginTop: 4 },
   waiverPill: {
@@ -868,16 +836,14 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
 
   // Empty
-  empty: { alignItems: 'center', paddingVertical: 60 },
   emptyTitle: { fontSize: 18, fontWeight: '700', color: colors.text, marginTop: 12 },
   emptySubtext: { fontSize: 14, color: colors.textMuted, marginTop: 4 },
 
   // Unrostered Section
   unrosteredSection: { marginTop: 12 },
-  sectionLabel: { fontSize: 12, fontWeight: '700', color: colors.textMuted, letterSpacing: 1.5, marginBottom: 12 },
   unrosteredCard: {
-    backgroundColor: colors.glassCard, borderRadius: 14, padding: 12, marginBottom: 8,
-    borderWidth: 1, borderColor: colors.glassBorder,
+    backgroundColor: '#FFF', borderRadius: radii.card, padding: 12, marginBottom: 8,
+    borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', ...shadows.card,
   },
   unrosteredInfo: { marginBottom: 8 },
   unrosteredName: { fontSize: 15, fontWeight: '600', color: colors.text },
@@ -893,10 +859,10 @@ const createStyles = (colors: any) => StyleSheet.create({
 
   // Modals
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-  modal: { backgroundColor: colors.glassCard, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '85%', borderWidth: 1, borderColor: colors.glassBorder },
+  modal: { backgroundColor: colors.card || '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '85%' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  modalTitle: { fontSize: 20, fontWeight: '700', color: colors.text },
-  detailModal: { backgroundColor: colors.glassCard, borderTopLeftRadius: 24, borderTopRightRadius: 24, height: '88%', borderWidth: 1, borderColor: colors.glassBorder },
+  modalTitle: { ...displayTextStyle, fontSize: 20, color: colors.text },
+  detailModal: { backgroundColor: colors.card || '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, height: '88%' },
   detailHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: colors.border },
   detailTitle: { fontSize: 20, fontWeight: '700', color: colors.text, flex: 1, textAlign: 'center' },
   detailScroll: { flex: 1, padding: 16 },
@@ -904,7 +870,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   syncBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.info + '15', borderRadius: 12, padding: 12, marginBottom: 16 },
   syncBtnTxt: { fontSize: 14, color: colors.info, fontWeight: '600' },
 
-  section: { backgroundColor: colors.background, borderRadius: 16, padding: 16, marginBottom: 16 },
+  section: { backgroundColor: '#FAFAFA', borderRadius: radii.card, padding: 16, marginBottom: 16 },
   sectionTitle: { fontSize: 12, fontWeight: '700', color: colors.textMuted, marginBottom: 12, letterSpacing: 1 },
   memberRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
   avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primary + '20', justifyContent: 'center', alignItems: 'center', marginRight: 12 },

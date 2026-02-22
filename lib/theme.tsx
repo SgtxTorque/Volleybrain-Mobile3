@@ -4,7 +4,7 @@ import { Platform, ViewStyle } from 'react-native';
 
 type ThemeMode = 'dark' | 'light';
 
-export type AccentColor = 'orange' | 'blue' | 'purple' | 'green' | 'rose' | 'slate';
+export type AccentColor = 'steelblue' | 'orange' | 'blue' | 'purple' | 'green' | 'rose' | 'slate';
 
 type AccentColorSet = {
   primary: string;
@@ -14,6 +14,7 @@ type AccentColorSet = {
 };
 
 export const accentColors: Record<AccentColor, AccentColorSet> = {
+  steelblue: { primary: '#2C5F7C', light: '#E8F0F5', dark: '#1B3A52', glow: 'rgba(44, 95, 124, 0.15)' },
   orange: { primary: '#F97316', light: '#FFEDD5', dark: '#C2410C', glow: 'rgba(249, 115, 22, 0.15)' },
   blue:   { primary: '#0EA5E9', light: '#E0F2FE', dark: '#0369A1', glow: 'rgba(14, 165, 233, 0.15)' },
   purple: { primary: '#8B5CF6', light: '#EDE9FE', dark: '#6D28D9', glow: 'rgba(139, 92, 246, 0.15)' },
@@ -36,7 +37,7 @@ export type ThemeColors = {
   textSecondary: string;
   textMuted: string;
 
-  // Glass (RN-adapted: solid semi-transparent, no backdrop-blur)
+  // Card surfaces (legacy names kept for compatibility)
   glassCard: string;
   glassBorder: string;
 
@@ -46,46 +47,57 @@ export type ThemeColors = {
   warning: string;
   danger: string;
   info: string;
+
+  // V0 design system tokens
+  teal: string;
+  navy: string;
+  secondary: string;
 };
 
-// Dark colors aligned with web (constants/theme.js)
+// Dark colors — v0 design system
 const darkColorsBase: ThemeColors = {
-  background: '#0A0F1A',
-  bgSecondary: '#111827',
-  bgTertiary: '#0A0F1A',
-  card: 'rgba(30, 41, 59, 0.95)',
-  cardAlt: 'rgba(30, 41, 59, 0.85)',
-  border: 'rgba(255, 255, 255, 0.1)',
-  text: '#FFFFFF',
-  textSecondary: 'rgba(255, 255, 255, 0.7)',
-  textMuted: 'rgba(255, 255, 255, 0.4)',
-  glassCard: 'rgba(30, 41, 59, 0.9)',
-  glassBorder: 'rgba(255, 255, 255, 0.1)',
-  primary: '#F97316',
-  success: '#10B981',
-  warning: '#F59E0B',
-  danger: '#EF4444',
-  info: '#0EA5E9',
+  background: '#1B2838',
+  bgSecondary: '#243447',
+  bgTertiary: '#1B2838',
+  card: '#243447',
+  cardAlt: '#2C3E50',
+  border: '#2C3E50',
+  text: '#E8F0F5',
+  textSecondary: '#8899A6',
+  textMuted: '#6B7C8A',
+  glassCard: '#243447',
+  glassBorder: '#2C3E50',
+  primary: '#2C5F7C',
+  success: '#22C55E',
+  warning: '#E8913A',
+  danger: '#D94F4F',
+  info: '#14B8A6',
+  teal: '#14B8A6',
+  navy: '#E8F0F5',
+  secondary: '#2C3E50',
 };
 
-// Light colors aligned with web (Apple-inspired off-white)
+// Light colors — v0 design system
 const lightColorsBase: ThemeColors = {
-  background: '#F5F7FA',
-  bgSecondary: '#FFFFFF',
-  bgTertiary: '#EEF2F7',
-  card: 'rgba(255, 255, 255, 0.85)',
-  cardAlt: 'rgba(255, 255, 255, 0.6)',
-  border: 'rgba(0, 0, 0, 0.06)',
-  text: '#0F172A',
-  textSecondary: 'rgba(15, 23, 42, 0.7)',
-  textMuted: 'rgba(15, 23, 42, 0.4)',
-  glassCard: 'rgba(255, 255, 255, 0.85)',
-  glassBorder: 'rgba(0, 0, 0, 0.06)',
-  primary: '#F97316',
-  success: '#10B981',
-  warning: '#F59E0B',
-  danger: '#EF4444',
-  info: '#0EA5E9',
+  background: '#C8D3DC',
+  bgSecondary: '#E8F0F5',
+  bgTertiary: '#D9E2E9',
+  card: '#FFFFFF',
+  cardAlt: '#F5F7FA',
+  border: '#D9E2E9',
+  text: '#1B2838',
+  textSecondary: '#6B7C8A',
+  textMuted: '#8899A6',
+  glassCard: '#FFFFFF',
+  glassBorder: '#D9E2E9',
+  primary: '#2C5F7C',
+  success: '#22C55E',
+  warning: '#E8913A',
+  danger: '#D94F4F',
+  info: '#14B8A6',
+  teal: '#14B8A6',
+  navy: '#1B2838',
+  secondary: '#E8F0F5',
 };
 
 type ThemeContextType = {
@@ -100,19 +112,19 @@ type ThemeContextType = {
 };
 
 const ThemeContext = createContext<ThemeContextType>({
-  mode: 'dark',
-  colors: darkColorsBase,
-  accent: accentColors.orange,
-  accentColor: 'orange',
+  mode: 'light',
+  colors: lightColorsBase,
+  accent: accentColors.steelblue,
+  accentColor: 'steelblue',
   changeAccent: () => {},
   toggleTheme: () => {},
   setTheme: () => {},
-  isDark: true,
+  isDark: false,
 });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [mode, setMode] = useState<ThemeMode>('dark');
-  const [accentColor, setAccentColor] = useState<AccentColor>('orange');
+  const [mode, setMode] = useState<ThemeMode>('light');
+  const [accentColor, setAccentColor] = useState<AccentColor>('steelblue');
 
   useEffect(() => {
     loadPreferences();
@@ -186,21 +198,21 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
 export const useTheme = () => useContext(ThemeContext);
 
-// Glass card style helper — use in createStyles functions
+// Card style helper — use in createStyles functions
 export const createGlassStyle = (colors: ThemeColors): ViewStyle => ({
   backgroundColor: colors.glassCard,
   borderWidth: 1,
   borderColor: colors.glassBorder,
-  borderRadius: 20,
+  borderRadius: 12,
   ...Platform.select({
     ios: {
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.3,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.08,
       shadowRadius: 12,
     },
     android: {
-      elevation: 6,
+      elevation: 3,
     },
   }),
 });

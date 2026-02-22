@@ -1,5 +1,6 @@
 import { getPositionInfo } from '@/constants/sport-display';
 import { useAuth } from '@/lib/auth';
+import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { pickImage, takePhoto, uploadMedia } from '@/lib/media-utils';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
@@ -237,9 +238,9 @@ const ReactionButton = ({
 const SkeletonPostCard = ({ colors }: { colors: any }) => (
   <View
     style={{
-      backgroundColor: colors.glassCard,
+      backgroundColor: '#FFF',
       borderWidth: 1,
-      borderColor: colors.glassBorder,
+      borderColor: 'rgba(0,0,0,0.06)',
       borderRadius: 16,
       marginBottom: 14,
       padding: 16,
@@ -260,7 +261,7 @@ const SkeletonPostCard = ({ colors }: { colors: any }) => (
     <View style={{ width: '80%', height: 14, borderRadius: 4, backgroundColor: colors.bgSecondary, marginBottom: 8 }} />
     <View style={{ width: '60%', height: 14, borderRadius: 4, backgroundColor: colors.bgSecondary, marginBottom: 16 }} />
     {/* Reaction bar skeleton */}
-    <View style={{ flexDirection: 'row', gap: 6, borderTopWidth: 1, borderTopColor: colors.glassBorder, paddingTop: 10 }}>
+    <View style={{ flexDirection: 'row', gap: 6, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.06)', paddingTop: 10 }}>
       {[1, 2, 3, 4].map((i) => (
         <View key={i} style={{ width: 36, height: 30, borderRadius: 15, backgroundColor: colors.bgSecondary }} />
       ))}
@@ -1588,7 +1589,7 @@ const createStyles = (colors: any) =>
     // Layout
     container: {
       flex: 1,
-      backgroundColor: 'transparent',
+      backgroundColor: colors.background,
     },
     scroll: {
       flex: 1,
@@ -1624,8 +1625,8 @@ const createStyles = (colors: any) =>
       alignItems: 'center',
     },
     headerTitle: {
+      ...displayTextStyle,
       fontSize: 28,
-      fontWeight: '800',
       color: colors.text,
     },
 
@@ -1659,9 +1660,9 @@ const createStyles = (colors: any) =>
     teamPickerCard: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: colors.glassCard,
+      backgroundColor: '#FFF',
       borderWidth: 1,
-      borderColor: colors.glassBorder,
+      borderColor: 'rgba(0,0,0,0.06)',
       borderRadius: 16,
       marginBottom: 10,
       overflow: 'hidden',
@@ -1689,9 +1690,9 @@ const createStyles = (colors: any) =>
     teamBanner: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: colors.glassCard,
+      backgroundColor: '#FFF',
       borderWidth: 1,
-      borderColor: colors.glassBorder,
+      borderColor: 'rgba(0,0,0,0.06)',
       borderLeftWidth: 4,
       marginHorizontal: 16,
       marginTop: 12,
@@ -1814,9 +1815,9 @@ const createStyles = (colors: any) =>
     composeCard: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: colors.glassCard,
+      backgroundColor: '#FFF',
       borderWidth: 1,
-      borderColor: colors.glassBorder,
+      borderColor: 'rgba(0,0,0,0.06)',
       borderRadius: 16,
       padding: 14,
       marginBottom: 16,
@@ -1854,9 +1855,9 @@ const createStyles = (colors: any) =>
 
     // Post Cards
     postCard: {
-      backgroundColor: colors.glassCard,
+      backgroundColor: '#FFF',
       borderWidth: 1,
-      borderColor: colors.glassBorder,
+      borderColor: 'rgba(0,0,0,0.06)',
       borderRadius: 16,
       marginBottom: 14,
       overflow: 'hidden',
@@ -1874,7 +1875,7 @@ const createStyles = (colors: any) =>
       paddingBottom: 8,
       backgroundColor: '#F59E0B10',
       borderBottomWidth: 1,
-      borderBottomColor: colors.glassBorder,
+      borderBottomColor: 'rgba(0,0,0,0.06)',
     },
     pinnedText: {
       fontSize: 11,
@@ -1977,7 +1978,7 @@ const createStyles = (colors: any) =>
       paddingHorizontal: 16,
       paddingVertical: 10,
       borderTopWidth: 1,
-      borderTopColor: colors.glassBorder,
+      borderTopColor: 'rgba(0,0,0,0.06)',
     },
     reactionBar: {
       flexDirection: 'row',
@@ -2026,9 +2027,9 @@ const createStyles = (colors: any) =>
     rosterCard: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: colors.glassCard,
+      backgroundColor: '#FFF',
       borderWidth: 1,
-      borderColor: colors.glassBorder,
+      borderColor: 'rgba(0,0,0,0.06)',
       borderRadius: 16,
       padding: 14,
       marginBottom: 10,
@@ -2080,9 +2081,9 @@ const createStyles = (colors: any) =>
     // Schedule Event Cards
     eventCard: {
       flexDirection: 'row',
-      backgroundColor: colors.glassCard,
+      backgroundColor: '#FFF',
       borderWidth: 1,
-      borderColor: colors.glassBorder,
+      borderColor: 'rgba(0,0,0,0.06)',
       borderRadius: 16,
       overflow: 'hidden',
       marginBottom: 10,
@@ -2175,12 +2176,12 @@ const createStyles = (colors: any) =>
       justifyContent: 'flex-end',
     },
     modalContent: {
-      backgroundColor: colors.glassCard,
+      backgroundColor: '#FFF',
       borderTopLeftRadius: 24,
       borderTopRightRadius: 24,
       maxHeight: '85%',
       borderWidth: 1,
-      borderColor: colors.glassBorder,
+      borderColor: 'rgba(0,0,0,0.06)',
       borderBottomWidth: 0,
     },
     modalHeader: {

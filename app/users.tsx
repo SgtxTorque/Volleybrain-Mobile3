@@ -1,4 +1,6 @@
 import AdminContextBar from '@/components/AdminContextBar';
+import AppHeaderBar from '@/components/ui/AppHeaderBar';
+import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
@@ -744,12 +746,12 @@ export default function UsersScreen() {
 }
 
 const createStyles = (colors: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'transparent' },
+  container: { flex: 1, backgroundColor: colors.background },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { marginTop: 12, fontSize: 16, color: colors.textMuted },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.screenPadding, borderBottomWidth: 1, borderBottomColor: colors.border },
   backBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '600', color: colors.text },
+  headerTitle: { ...displayTextStyle, fontSize: 18, color: colors.text },
   scroll: { flex: 1 },
 
   // Pending Section
@@ -759,7 +761,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   pendingSectionTitle: { fontSize: 16, fontWeight: '600', color: colors.warning },
   pendingCount: { backgroundColor: colors.warning, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
   pendingCountText: { fontSize: 12, fontWeight: 'bold', color: '#fff' },
-  pendingCard: { backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginBottom: 12, borderLeftWidth: 4, borderLeftColor: colors.warning, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
+  pendingCard: { backgroundColor: '#FFF', borderRadius: 16, padding: 16, marginBottom: 12, borderLeftWidth: 4, borderLeftColor: colors.warning, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   pendingCardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   pendingActions: { flexDirection: 'row', gap: 8 },
   actionBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 14, borderRadius: 12 },
@@ -793,7 +795,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   // Users Section
   usersSection: { padding: 16, paddingTop: 8 },
   sectionTitle: { fontSize: 12, fontWeight: '700', color: colors.textMuted, marginBottom: 12, letterSpacing: 1.2, textTransform: 'uppercase' },
-  userCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
+  userCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   emptyState: { alignItems: 'center', padding: 40 },
   emptyStateText: { marginTop: 12, fontSize: 16, fontWeight: '600', color: colors.textMuted },
 

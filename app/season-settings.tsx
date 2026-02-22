@@ -1,6 +1,8 @@
 import AdminContextBar from '@/components/AdminContextBar';
 import SeasonFeesManager from '@/components/SeasonFeesManager';
+import AppHeaderBar from '@/components/ui/AppHeaderBar';
 import { useAuth } from '@/lib/auth';
+import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
@@ -9,7 +11,6 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Modal,
   Platform,
@@ -368,7 +369,30 @@ export default function SeasonSettingsScreen() {
   if (loading) {
     return (
       <SafeAreaView style={s.container}>
-        <View style={s.loadingContainer}><ActivityIndicator size="large" color={colors.primary} /></View>
+        <AdminContextBar />
+        <AppHeaderBar
+          title="SEASON SETTINGS"
+          showLogo={false}
+          showAvatar={false}
+          showNotificationBell={false}
+          leftIcon={
+            <TouchableOpacity onPress={() => router.back()} style={{ padding: 4 }}>
+              <Ionicons name="arrow-back" size={22} color="#FFF" />
+            </TouchableOpacity>
+          }
+        />
+        <View style={s.loadingContainer}>
+          {/* Skeleton */}
+          <View style={{ width: '100%', paddingHorizontal: spacing.screenPadding }}>
+            <View style={{ height: 80, backgroundColor: colors.border, borderRadius: radii.card, marginBottom: 16, opacity: 0.3 }} />
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+              <View style={{ flex: 1, height: 70, backgroundColor: colors.border, borderRadius: radii.card, opacity: 0.3 }} />
+              <View style={{ flex: 1, height: 70, backgroundColor: colors.border, borderRadius: radii.card, opacity: 0.3 }} />
+              <View style={{ flex: 1, height: 70, backgroundColor: colors.border, borderRadius: radii.card, opacity: 0.3 }} />
+            </View>
+            <View style={{ height: 60, backgroundColor: colors.border, borderRadius: radii.card, marginBottom: 16, opacity: 0.3 }} />
+          </View>
+        </View>
       </SafeAreaView>
     );
   }
@@ -376,11 +400,18 @@ export default function SeasonSettingsScreen() {
   if (!season) {
     return (
       <SafeAreaView style={s.container}>
-        <View style={s.header}>
-          <TouchableOpacity onPress={() => router.back()}><Ionicons name="arrow-back" size={24} color={colors.text} /></TouchableOpacity>
-          <Text style={s.headerTitle}>Season Settings</Text>
-          <View style={{ width: 24 }} />
-        </View>
+        <AdminContextBar />
+        <AppHeaderBar
+          title="SEASON SETTINGS"
+          showLogo={false}
+          showAvatar={false}
+          showNotificationBell={false}
+          leftIcon={
+            <TouchableOpacity onPress={() => router.back()} style={{ padding: 4 }}>
+              <Ionicons name="arrow-back" size={22} color="#FFF" />
+            </TouchableOpacity>
+          }
+        />
         <View style={s.emptyContainer}>
           <Ionicons name="calendar-outline" size={64} color={colors.textSecondary} />
           <Text style={s.emptyText}>No season selected</Text>
@@ -393,13 +424,18 @@ export default function SeasonSettingsScreen() {
 
   return (
     <SafeAreaView style={s.container}>
-      <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()}><Ionicons name="arrow-back" size={24} color={colors.text} /></TouchableOpacity>
-        <Text style={s.headerTitle}>Season Settings</Text>
-        <View style={{ width: 24 }} />
-      </View>
-
       <AdminContextBar />
+      <AppHeaderBar
+        title="SEASON SETTINGS"
+        showLogo={false}
+        showAvatar={false}
+        showNotificationBell={false}
+        leftIcon={
+          <TouchableOpacity onPress={() => router.back()} style={{ padding: 4 }}>
+            <Ionicons name="arrow-back" size={22} color="#FFF" />
+          </TouchableOpacity>
+        }
+      />
 
       <ScrollView style={s.scroll} contentContainerStyle={s.scrollContent} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData(); }} />}>
         {/* Season Header */}
@@ -411,9 +447,9 @@ export default function SeasonSettingsScreen() {
             </View>
           )}
           <Text style={s.seasonName}>{season.name}</Text>
-          <View style={[s.statusBadge, { backgroundColor: season.registration_open ? '#34C75920' : colors.border }]}>
-            <View style={[s.statusDot, { backgroundColor: season.registration_open ? '#34C759' : colors.textSecondary }]} />
-            <Text style={[s.statusText, { color: season.registration_open ? '#34C759' : colors.textSecondary }]}>
+          <View style={[s.statusBadge, { backgroundColor: season.registration_open ? '#22C55E20' : colors.border }]}>
+            <View style={[s.statusDot, { backgroundColor: season.registration_open ? '#22C55E' : colors.textSecondary }]} />
+            <Text style={[s.statusText, { color: season.registration_open ? '#22C55E' : colors.textSecondary }]}>
               {season.registration_open ? 'Registration Open' : 'Registration Closed'}
             </Text>
           </View>
@@ -423,7 +459,7 @@ export default function SeasonSettingsScreen() {
         {lowRosterTeams.length > 0 && (
           <View style={s.alertCard}>
             <View style={s.alertHeader}>
-              <Ionicons name="warning" size={20} color="#FF9500" />
+              <Ionicons name="warning" size={20} color="#E8913A" />
               <Text style={s.alertTitle}>Teams Need Players</Text>
             </View>
             <Text style={s.alertDescription}>{lowRosterTeams.length} team(s) have fewer than {season.min_players_per_team || 9} players</Text>
@@ -447,7 +483,7 @@ export default function SeasonSettingsScreen() {
         {/* Registration Toggle */}
         <TouchableOpacity style={s.toggleCard} onPress={toggleRegistration}>
           <View style={s.toggleInfo}>
-            <Ionicons name={season.registration_open ? 'lock-open' : 'lock-closed'} size={24} color={season.registration_open ? '#34C759' : colors.textSecondary} />
+            <Ionicons name={season.registration_open ? 'lock-open' : 'lock-closed'} size={24} color={season.registration_open ? '#22C55E' : colors.textSecondary} />
             <View style={s.toggleText}>
               <Text style={s.toggleTitle}>Registration</Text>
               <Text style={s.toggleSubtitle}>{season.registration_open ? 'Accepting new players' : 'Not accepting players'}</Text>
@@ -528,8 +564,8 @@ export default function SeasonSettingsScreen() {
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                         <Text style={s.ageGroupName}>{ag.name}</Text>
                         {ag.gender && ag.gender !== 'coed' && (
-                          <View style={[s.genderTag, { backgroundColor: ag.gender === 'boys' ? '#5AC8FA20' : '#FF6B9520' }]}>
-                            <Text style={{ fontSize: 10, color: ag.gender === 'boys' ? '#5AC8FA' : '#FF6B95' }}>
+                          <View style={[s.genderTag, { backgroundColor: ag.gender === 'boys' ? '#0EA5E920' : '#FF6B9520' }]}>
+                            <Text style={{ fontSize: 10, color: ag.gender === 'boys' ? '#0EA5E9' : '#FF6B95' }}>
                               {ag.gender === 'boys' ? '♂' : '♀'}
                             </Text>
                           </View>
@@ -575,13 +611,13 @@ export default function SeasonSettingsScreen() {
                       <View style={s.teamInfo}>
                         <Text style={s.teamName}>{team.name}</Text>
                         {(isLow || isFull || isGood) && (
-                          <View style={[s.teamBadge, { backgroundColor: isLow ? '#FF950020' : isFull ? '#5AC8FA20' : '#34C75920' }]}>
-                            <Ionicons name={isLow ? 'warning' : 'checkmark-circle'} size={12} color={isLow ? '#FF9500' : isFull ? '#5AC8FA' : '#34C759'} />
-                            <Text style={[s.teamBadgeText, { color: isLow ? '#FF9500' : isFull ? '#5AC8FA' : '#34C759' }]}>{isLow ? 'Low' : isFull ? 'Full' : 'Good'}</Text>
+                          <View style={[s.teamBadge, { backgroundColor: isLow ? '#E8913A20' : isFull ? '#0EA5E920' : '#22C55E20' }]}>
+                            <Ionicons name={isLow ? 'warning' : 'checkmark-circle'} size={12} color={isLow ? '#E8913A' : isFull ? '#0EA5E9' : '#22C55E'} />
+                            <Text style={[s.teamBadgeText, { color: isLow ? '#E8913A' : isFull ? '#0EA5E9' : '#22C55E' }]}>{isLow ? 'Low' : isFull ? 'Full' : 'Good'}</Text>
                           </View>
                         )}
                       </View>
-                      <Text style={[s.teamCount, { color: isLow ? '#FF9500' : isFull ? '#5AC8FA' : isGood ? '#34C759' : colors.textSecondary }]}>{team.player_count}/{maxPlayers}</Text>
+                      <Text style={[s.teamCount, { color: isLow ? '#E8913A' : isFull ? '#0EA5E9' : isGood ? '#22C55E' : colors.textSecondary }]}>{team.player_count}/{maxPlayers}</Text>
                     </View>
                   </React.Fragment>
                 );
@@ -749,44 +785,42 @@ export default function SeasonSettingsScreen() {
 // STYLES
 // =====================================================
 const createStyles = (colors: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'transparent' },
+  container: { flex: 1, backgroundColor: colors.background },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border },
-  headerTitle: { fontSize: 18, fontWeight: '600', color: colors.text },
   scroll: { flex: 1 },
-  scrollContent: { padding: 16 },
+  scrollContent: { padding: spacing.screenPadding },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyText: { color: colors.textSecondary, fontSize: 16, marginTop: 12 },
 
   seasonHeader: { alignItems: 'center', marginBottom: 20 },
   sportBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, marginBottom: 8 },
   sportBadgeText: { fontSize: 14, fontWeight: '600', marginLeft: 8 },
-  seasonName: { fontSize: 24, fontWeight: 'bold', color: colors.text, marginBottom: 8 },
+  seasonName: { ...displayTextStyle, fontSize: 24, color: colors.text, marginBottom: 8 },
   statusBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 },
   statusDot: { width: 8, height: 8, borderRadius: 4, marginRight: 8 },
   statusText: { fontSize: 13, fontWeight: '600' },
 
-  alertCard: { backgroundColor: '#FF950015', borderRadius: 12, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#FF9500' },
+  alertCard: { backgroundColor: '#E8913A15', borderRadius: radii.card, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#E8913A' },
   alertHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  alertTitle: { color: '#FF9500', fontWeight: '700', fontSize: 14, marginLeft: 8 },
+  alertTitle: { color: '#E8913A', fontWeight: '700', fontSize: 14, marginLeft: 8 },
   alertDescription: { color: colors.text, fontSize: 13, marginBottom: 8 },
   alertItem: { flexDirection: 'row', justifyContent: 'space-between', backgroundColor: colors.card, padding: 10, borderRadius: 8, marginTop: 6 },
   alertItemText: { color: colors.text, fontSize: 13 },
-  alertItemCount: { color: '#FF9500', fontSize: 13, fontWeight: '600' },
+  alertItemCount: { color: '#E8913A', fontSize: 13, fontWeight: '600' },
   alertMore: { color: colors.textSecondary, fontSize: 12, marginTop: 8, textAlign: 'center' },
 
   statsRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  statCard: { flex: 1, backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
-  statNumber: { fontSize: 28, fontWeight: 'bold', color: colors.text },
+  statCard: { flex: 1, backgroundColor: '#FFF', borderRadius: radii.card, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', ...shadows.card },
+  statNumber: { ...displayTextStyle, fontSize: 28, color: colors.text },
   statLabel: { fontSize: 12, color: colors.textSecondary, marginTop: 4 },
 
-  toggleCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
+  toggleCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFF', borderRadius: radii.card, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', ...shadows.card },
   toggleInfo: { flexDirection: 'row', alignItems: 'center', flex: 1 },
   toggleText: { marginLeft: 12 },
   toggleTitle: { fontSize: 16, fontWeight: '600', color: colors.text },
   toggleSubtitle: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
   toggleSwitch: { width: 50, height: 30, borderRadius: 15, backgroundColor: colors.border, padding: 2 },
-  toggleSwitchOn: { backgroundColor: '#34C759' },
+  toggleSwitchOn: { backgroundColor: '#22C55E' },
   toggleKnob: { width: 26, height: 26, borderRadius: 13, backgroundColor: '#fff' },
   toggleKnobOn: { marginLeft: 'auto' },
 
@@ -794,7 +828,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   sectionTitle: { fontSize: 13, fontWeight: '700', color: colors.textMuted, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1.2 },
   sectionSubtitle: { fontSize: 14, color: colors.primary, fontWeight: '600' },
-  card: { backgroundColor: colors.glassCard, borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
+  card: { backgroundColor: '#FFF', borderRadius: radii.card, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', ...shadows.card },
   divider: { height: 1, backgroundColor: colors.border, marginHorizontal: 16 },
 
   settingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16 },
@@ -821,14 +855,14 @@ const createStyles = (colors: any) => StyleSheet.create({
 
   addButton: { flexDirection: 'row', alignItems: 'center' },
   addButtonText: { fontSize: 14, color: colors.primary, fontWeight: '600' },
-  emptyCard: { backgroundColor: colors.glassCard, borderRadius: 16, padding: 24, alignItems: 'center', borderWidth: 1, borderColor: colors.glassBorder },
+  emptyCard: { backgroundColor: '#FFF', borderRadius: radii.card, padding: 24, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', ...shadows.card },
   emptyCardText: { color: colors.textSecondary, fontSize: 14 },
   emptyCardButton: { marginTop: 12, paddingHorizontal: 16, paddingVertical: 8, backgroundColor: colors.primary + '20', borderRadius: 8 },
   emptyCardButtonText: { color: colors.primary, fontWeight: '600' },
 
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 24 },
   
-  datePickerModal: { backgroundColor: colors.card, borderRadius: 24, padding: 24, width: '100%', maxWidth: 350 },
+  datePickerModal: { backgroundColor: colors.card || '#FFF', borderRadius: radii.card, padding: 24, width: '100%', maxWidth: 350 },
   datePickerTitle: { fontSize: 18, fontWeight: '600', color: colors.text, marginBottom: 16, textAlign: 'center' },
   datePickerButtons: { flexDirection: 'row', gap: 12, marginTop: 16 },
   datePickerCancel: { flex: 1, padding: 14, borderRadius: 12, backgroundColor: colors.background, alignItems: 'center' },
@@ -836,7 +870,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   datePickerConfirm: { flex: 1, padding: 14, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center' },
   datePickerConfirmText: { color: colors.background, fontWeight: '600' },
 
-  editModal: { backgroundColor: colors.card, borderRadius: 24, padding: 24, width: '100%', maxWidth: 350 },
+  editModal: { backgroundColor: colors.card || '#FFF', borderRadius: radii.card, padding: 24, width: '100%', maxWidth: 350 },
   editModalTitle: { fontSize: 18, fontWeight: '600', color: colors.text, marginBottom: 16, textAlign: 'center' },
   editInput: { backgroundColor: colors.background, borderRadius: 12, padding: 16, fontSize: 18, color: colors.text, borderWidth: 1, borderColor: colors.border, textAlign: 'center' },
   editModalButtons: { flexDirection: 'row', gap: 12, marginTop: 16 },
@@ -845,7 +879,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   editModalSave: { flex: 1, padding: 14, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center' },
   editModalSaveText: { color: colors.background, fontWeight: '600' },
 
-  ageGroupModal: { backgroundColor: colors.card, borderRadius: 24, padding: 24, width: '100%', maxWidth: 400, maxHeight: '80%' },
+  ageGroupModal: { backgroundColor: colors.card || '#FFF', borderRadius: radii.card, padding: 24, width: '100%', maxWidth: 400, maxHeight: '80%' },
   ageGroupModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   ageGroupModalTitle: { fontSize: 20, fontWeight: 'bold', color: colors.text },
 

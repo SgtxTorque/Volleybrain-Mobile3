@@ -1,4 +1,5 @@
 import { useAuth } from '@/lib/auth';
+import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
@@ -173,8 +174,8 @@ export default function ManageScreen() {
     { icon: 'megaphone', label: 'Blast Composer', route: '/blast-composer', iconColor: colors.warning, iconBg: colors.warning + '15' },
     { icon: 'calendar-outline', label: 'Coach Availability', route: '/coach-availability', iconColor: colors.primary, iconBg: colors.primary + '15' },
     { icon: 'person-circle', label: 'Coach Profile', route: '/coach-profile', iconColor: colors.textSecondary, iconBg: colors.textMuted + '15' },
-    { icon: 'analytics', label: 'Game Prep', route: '/game-prep', iconColor: '#FF6B6B', iconBg: '#FF6B6B15' },
-    { icon: 'time', label: 'Blast History', route: '/blast-history', iconColor: '#5AC8FA', iconBg: '#5AC8FA15' },
+    { icon: 'analytics', label: 'Game Prep', route: '/game-prep', iconColor: '#D94F4F', iconBg: '#D94F4F15' },
+    { icon: 'time', label: 'Blast History', route: '/blast-history', iconColor: '#0EA5E9', iconBg: '#0EA5E915' },
   ];
 
   // =========================================================================
@@ -184,8 +185,8 @@ export default function ManageScreen() {
     { icon: 'person-add', label: 'Registration Hub', route: '/registration-hub', iconColor: colors.primary, iconBg: colors.primary + '15', badge: badgeCounts.pendingRegs },
     { icon: 'people-circle', label: 'User Management', route: '/users', iconColor: colors.warning, iconBg: colors.warning + '15', badge: badgeCounts.pendingApprovals },
     { icon: 'card', label: 'Payment Admin', route: '/(tabs)/payments', iconColor: colors.danger, iconBg: colors.danger + '15', badge: badgeCounts.pendingPay },
-    { icon: 'shirt', label: 'Team Management', route: '/team-management', iconColor: '#FF6B6B', iconBg: '#FF6B6B15', badge: badgeCounts.unrostered },
-    { icon: 'shirt-outline', label: 'Jersey Management', route: '/(tabs)/jersey-management', iconColor: '#FF6B6B', iconBg: '#FF6B6B15' },
+    { icon: 'shirt', label: 'Team Management', route: '/team-management', iconColor: '#D94F4F', iconBg: '#FF6B6B15', badge: badgeCounts.unrostered },
+    { icon: 'shirt-outline', label: 'Jersey Management', route: '/(tabs)/jersey-management', iconColor: '#D94F4F', iconBg: '#FF6B6B15' },
     { icon: 'clipboard', label: 'Coach Directory', route: '/coach-directory', iconColor: colors.info, iconBg: colors.info + '15' },
     { icon: 'calendar', label: 'Season Management', route: '/season-settings', iconColor: colors.success, iconBg: colors.success + '15' },
     { icon: 'bar-chart', label: 'Reports', route: '/(tabs)/reports-tab', iconColor: '#AF52DE', iconBg: '#AF52DE15' },
@@ -193,7 +194,7 @@ export default function ManageScreen() {
     { icon: 'archive', label: 'Season Archives', route: '/season-archives', iconColor: '#6B7280', iconBg: '#6B728015' },
     { icon: 'settings', label: 'Org Settings', route: '/web-features', iconColor: colors.textSecondary, iconBg: colors.textMuted + '15', params: { featureName: 'Organization Settings', description: 'Configure organization name, logo, and details on the web portal.' } },
     { icon: 'document-text', label: 'Form Builder', route: '/web-features', iconColor: '#5AC8FA', iconBg: '#5AC8FA15', params: { featureName: 'Registration Form Builder', description: 'Build custom registration forms with questions — works best on a larger screen.' } },
-    { icon: 'shield-checkmark', label: 'Waiver Editor', route: '/web-features', iconColor: '#34C759', iconBg: '#34C75915', params: { featureName: 'Waiver Template Editor', description: 'Create and manage digital waivers for your organization.' } },
+    { icon: 'shield-checkmark', label: 'Waiver Editor', route: '/web-features', iconColor: '#22C55E', iconBg: '#34C75915', params: { featureName: 'Waiver Template Editor', description: 'Create and manage digital waivers for your organization.' } },
     { icon: 'card', label: 'Payment Gateway', route: '/web-features', iconColor: '#635BFF', iconBg: '#635BFF15', params: { featureName: 'Payment Gateway Setup', description: 'Connect your Stripe account to accept online payments.' } },
   ];
 
@@ -285,13 +286,13 @@ const createStyles = (colors: any) =>
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: 'transparent',
+      backgroundColor: colors.background,
     },
     scroll: {
       flex: 1,
     },
     scrollContent: {
-      paddingHorizontal: 16,
+      paddingHorizontal: spacing.screenPadding,
       paddingTop: 8,
     },
     header: {
@@ -299,28 +300,17 @@ const createStyles = (colors: any) =>
       paddingHorizontal: 4,
     },
     title: {
+      ...displayTextStyle,
       fontSize: 28,
-      fontWeight: '900',
       color: colors.text,
-      letterSpacing: -0.5,
     },
     menuCard: {
-      backgroundColor: colors.glassCard,
+      backgroundColor: '#FFF',
       borderWidth: 1,
-      borderColor: colors.glassBorder,
-      borderRadius: 20,
-      overflow: 'hidden',
-      ...Platform.select({
-        ios: {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.08,
-          shadowRadius: 8,
-        },
-        android: {
-          elevation: 3,
-        },
-      }),
+      borderColor: 'rgba(0,0,0,0.06)',
+      borderRadius: radii.card,
+      overflow: 'hidden' as const,
+      ...shadows.card,
     },
     menuItem: {
       flexDirection: 'row',
@@ -345,7 +335,7 @@ const createStyles = (colors: any) =>
       color: colors.text,
     },
     menuBadge: {
-      backgroundColor: '#FF3B30',
+      backgroundColor: '#D94F4F',
       borderRadius: 10,
       minWidth: 20,
       height: 20,

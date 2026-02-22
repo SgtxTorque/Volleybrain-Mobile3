@@ -1,13 +1,16 @@
 import { useAuth } from '@/lib/auth';
+import { getDefaultHeroImage } from '@/lib/default-images';
+import { displayTextStyle, radii, shadows } from '@/lib/design-tokens';
 import { useSeason } from '@/lib/season';
+import { useSport } from '@/lib/sport';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Platform,
+  Image,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -15,7 +18,13 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import RoleSelector from './RoleSelector';
+import AppHeaderBar from './ui/AppHeaderBar';
+import Avatar from './ui/Avatar';
+import Badge from './ui/Badge';
+import Card from './ui/Card';
+import MatchCard from './ui/MatchCard';
+import PillTabs from './ui/PillTabs';
+import SectionHeader from './ui/SectionHeader';
 
 // ============================================
 // TYPES
@@ -60,6 +69,7 @@ export default function CoachDashboard() {
   const { colors } = useTheme();
   const { user, profile } = useAuth();
   const { workingSeason } = useSeason();
+  const { activeSport } = useSport();
   const router = useRouter();
 
   const [refreshing, setRefreshing] = useState(false);
@@ -516,12 +526,25 @@ export default function CoachDashboard() {
 
   const nextEvent = activeTeamEvents.length > 0 ? activeTeamEvents[0] : null;
 
-  const firstName = profile?.full_name?.split(' ')[0] || 'Coach';
-
   // Season progress (scoped to active team)
   const totalWins = activeTeam ? activeTeam.wins : teams.reduce((sum, t) => sum + t.wins, 0);
   const totalLosses = activeTeam ? activeTeam.losses : teams.reduce((sum, t) => sum + t.losses, 0);
   const winRate = gamesPlayed > 0 ? Math.round((totalWins / gamesPlayed) * 100) : 0;
+
+  const userInitials = (() => {
+    const name = profile?.full_name || '';
+    const parts = name.split(' ').filter(Boolean);
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    if (parts.length === 1) return parts[0][0].toUpperCase();
+    return '?';
+  })();
+
+  // Find secondary event: next game if hero is practice, or next practice if hero is game
+  const secondaryEvent = React.useMemo(() => {
+    if (!nextEvent || activeTeamEvents.length < 2) return null;
+    const heroType = nextEvent.type;
+    return activeTeamEvents.slice(1).find(e => e.type !== heroType) || null;
+  }, [nextEvent, activeTeamEvents]);
 
   const s = createStyles(colors);
 
@@ -531,310 +554,425 @@ export default function CoachDashboard() {
 
   if (loading) {
     return (
-      <View style={[s.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={{ color: colors.textMuted, marginTop: 12, fontSize: 15 }}>Loading Command Center...</Text>
-      </View>
+      <ScrollView style={s.container} contentContainerStyle={{ paddingTop: 0 }}>
+        <View style={[s.headerBar, { justifyContent: 'space-between' }]}>
+          <View style={{ width: 120, height: 14, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.15)' }} />
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: 'rgba(255,255,255,0.15)' }} />
+            <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.15)' }} />
+          </View>
+        </View>
+        <View style={{ marginHorizontal: 16, marginTop: 16, height: 260, borderRadius: radii.card, backgroundColor: colors.bgSecondary }} />
+        <View style={{ marginHorizontal: 16, marginTop: 16, gap: 12 }}>
+          {[1, 2].map(i => (
+            <View key={i} style={{ height: 80, borderRadius: radii.card, backgroundColor: colors.glassCard, borderWidth: 1, borderColor: colors.glassBorder }} />
+          ))}
+        </View>
+      </ScrollView>
     );
   }
 
   // ============================================
-  // RENDER
+  // RENDER — v0 layout
   // ============================================
 
   return (
     <ScrollView
       style={s.container}
+      contentContainerStyle={{ paddingBottom: 120 }}
       showsVerticalScrollIndicator={false}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FFF" />}
     >
-      {/* Header */}
-      <View style={s.header}>
-        <View>
-          <Text style={s.greeting}>Welcome back,</Text>
-          <Text style={s.heroName}>{firstName}</Text>
-        </View>
-        <RoleSelector />
-      </View>
 
-      {/* Team Selector Pills (if multiple teams) */}
+      {/* ================================================================ */}
+      {/* 1. HEADER BAR — Steel blue                                        */}
+      {/* ================================================================ */}
+      <AppHeaderBar initials={userInitials} />
+
+      {/* ================================================================ */}
+      {/* 2. TEAM SELECTOR — PillTabs                                       */}
+      {/* ================================================================ */}
       {teams.length > 1 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={s.teamSelectorContainer}
-          contentContainerStyle={s.teamSelectorContent}
-        >
-          {teams.map((team, index) => (
-            <TouchableOpacity
-              key={team.id}
-              style={[
-                s.teamPill,
-                index === activeTeamIndex && s.teamPillActive,
-              ]}
-              onPress={() => setActiveTeamIndex(index)}
-            >
-              <Text style={[
-                s.teamPillText,
-                index === activeTeamIndex && s.teamPillTextActive,
-              ]}>
-                {team.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        <View style={{ marginBottom: 4, paddingHorizontal: 16 }}>
+          <PillTabs
+            tabs={teams.map(t => ({ key: t.id, label: t.name }))}
+            activeKey={activeTeam?.id || teams[0]?.id}
+            onChange={(key) => setActiveTeamIndex(teams.findIndex(t => t.id === key))}
+          />
+        </View>
       )}
 
-      {/* HERO SECTION - Team Card */}
-      {activeTeam ? (
+      {/* ================================================================ */}
+      {/* 3. HERO CARD — Next Event with photo + gradient                    */}
+      {/* ================================================================ */}
+      {activeTeam && nextEvent ? (
         <View style={s.heroCard}>
-          <View style={s.heroAccentBar} />
-          <View style={s.heroBody}>
-            <Text style={s.heroTeamName}>{activeTeam.name}</Text>
+          {/* Background — default sport image */}
+          <Image
+            source={getDefaultHeroImage(activeSport?.name, nextEvent?.type)}
+            style={StyleSheet.absoluteFillObject}
+            resizeMode="cover"
+          />
+          {/* Dark gradient overlay for text readability */}
+          <LinearGradient
+            colors={['transparent', 'rgba(27,40,56,0.5)', 'rgba(27,40,56,0.95)']}
+            style={StyleSheet.absoluteFillObject}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+          />
 
-            <View style={s.heroStatsRow}>
-              <View style={s.heroRecordContainer}>
-                <Text style={[s.heroRecordLetter, { color: colors.success }]}>W</Text>
-                <Text style={s.heroRecordNum}>{activeTeam.wins}</Text>
-                <Text style={s.heroRecordDash}> - </Text>
-                <Text style={[s.heroRecordLetter, { color: colors.danger }]}>L</Text>
-                <Text style={s.heroRecordNum}>{activeTeam.losses}</Text>
-              </View>
-
-              <View style={s.heroStatDivider} />
-
-              <View style={s.heroRosterContainer}>
-                <Ionicons name="people" size={16} color={colors.primary} />
-                <Text style={s.heroRosterText}>{activeTeam.player_count} Players</Text>
-              </View>
-            </View>
-
-            <Text style={s.heroSeasonText}>
-              {activeTeam.season_name}
-              {activeTeam.age_group_name ? ` \u00B7 ${activeTeam.age_group_name}` : ''}
+          {/* Top-right event type badge */}
+          <View style={[
+            s.heroBadge,
+            { backgroundColor: nextEvent.type === 'game' ? '#D94F4F' : '#14B8A6' },
+          ]}>
+            <Text style={s.heroBadgeText}>
+              {nextEvent.type === 'game' ? 'GAME DAY' : 'PRACTICE'}
             </Text>
           </View>
-        </View>
-      ) : (
-        <View style={s.emptyCard}>
-          <Ionicons name="shirt-outline" size={36} color={colors.textMuted} />
-          <Text style={s.emptyTitle}>No Teams Assigned</Text>
-          <Text style={s.emptySubtext}>No teams found for this season</Text>
-        </View>
-      )}
 
-      {/* MISSION BRIEFING - Next Event */}
-      <Text style={s.sectionLabel}>MISSION BRIEFING</Text>
-      {nextEvent ? (
-        <View style={s.missionCard}>
-          <View style={s.missionTop}>
-            <View style={[
-              s.eventTypeBadge,
-              { backgroundColor: nextEvent.type === 'game' ? colors.danger + '20' : colors.info + '20' },
-            ]}>
-              <View style={[
-                s.eventTypeDot,
-                { backgroundColor: nextEvent.type === 'game' ? colors.danger : colors.info },
-              ]} />
-              <Text style={[
-                s.eventTypeBadgeText,
-                { color: nextEvent.type === 'game' ? colors.danger : colors.info },
-              ]}>
-                {nextEvent.type === 'game' ? 'GAME' : 'PRACTICE'}
-              </Text>
-            </View>
-
-            <Text style={s.countdownText}>{getCountdownText(nextEvent.date)}</Text>
-          </View>
-
-          {nextEvent.type === 'game' && nextEvent.opponent && (
-            <Text style={s.missionOpponent}>vs {nextEvent.opponent}</Text>
-          )}
-
-          {nextEvent.type !== 'game' && (
-            <Text style={s.missionTitle}>{nextEvent.title}</Text>
-          )}
-
-          <View style={s.missionDetails}>
-            <View style={s.missionDetailRow}>
-              <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
-              <Text style={s.missionDetailText}>{formatDate(nextEvent.date)}</Text>
-            </View>
-            {nextEvent.time ? (
-              <View style={s.missionDetailRow}>
-                <Ionicons name="time-outline" size={14} color={colors.textMuted} />
-                <Text style={s.missionDetailText}>{formatTime(nextEvent.time)}</Text>
-              </View>
-            ) : null}
-            {nextEvent.location ? (
-              <View style={s.missionDetailRow}>
-                <Ionicons name="location-outline" size={14} color={colors.textMuted} />
-                <Text style={s.missionDetailText}>{nextEvent.location}</Text>
-              </View>
-            ) : null}
-          </View>
-
-          <View style={s.missionActions}>
-            <TouchableOpacity
-              style={s.missionBtn}
-              onPress={() => router.push({ pathname: '/lineup-builder', params: { teamId: activeTeam?.id } } as any)}
-            >
-              <Ionicons name="list" size={16} color={colors.primary} />
-              <Text style={s.missionBtnText}>Prep Lineup</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={s.missionBtn}
-              onPress={() => router.push('/(tabs)/players' as any)}
-            >
-              <Ionicons name="people" size={16} color={colors.primary} />
-              <Text style={s.missionBtnText}>View Roster</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      ) : (
-        <View style={s.emptyCard}>
-          <Ionicons name="calendar-outline" size={32} color={colors.textMuted} />
-          <Text style={s.emptyTitle}>All Clear</Text>
-          <Text style={s.emptySubtext}>No upcoming events scheduled</Text>
-        </View>
-      )}
-
-      {/* TEAM HEALTH - Quick Indicators */}
-      <Text style={s.sectionLabel}>TEAM HEALTH</Text>
-      <View style={s.healthRow}>
-        <TouchableOpacity style={s.healthCard} activeOpacity={0.7} onPress={() => router.push('/attendance' as any)}>
-          <Ionicons
-            name="checkmark-circle"
-            size={24}
-            color={attendanceRate !== null ? getAttendanceColor(attendanceRate) : colors.textMuted}
-          />
-          <Text style={[
-            s.healthNum,
-            attendanceRate !== null && { color: getAttendanceColor(attendanceRate) },
-          ]}>
-            {attendanceRate !== null ? `${attendanceRate}%` : '--'}
-          </Text>
-          <Text style={s.healthLabel}>Attendance</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={s.healthCard} activeOpacity={0.7} onPress={() => router.push(nextEventId ? `/attendance?eventId=${nextEventId}` as any : '/attendance' as any)}>
-          <Ionicons name="hand-left" size={24} color={colors.info} />
-          <Text style={s.healthNum}>
-            {availableCount ? `${availableCount.available}/${availableCount.total}` : '--'}
-          </Text>
-          <Text style={s.healthLabel}>Available</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={s.healthCard} activeOpacity={0.7} onPress={() => router.push('/achievements' as any)}>
-          <Ionicons name="ribbon" size={24} color={colors.warning} />
-          <Text style={[s.healthNum, { color: colors.warning }]}>
-            {badgesEarnedCount}
-          </Text>
-          <Text style={s.healthLabel}>Badges</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* TOP PERFORMERS */}
-      <Text style={s.sectionLabel}>TOP PERFORMERS</Text>
-      {topPerformers.length > 0 ? (
-        <View style={s.performersRow}>
-          {topPerformers.map((performer, idx) => {
-            const accentColors = [colors.warning, '#C0C0C0', '#CD7F32'];
-            const accent = accentColors[idx] || colors.textMuted;
-            return (
-              <View key={performer.player_id} style={s.performerCard}>
-                <View style={[s.performerBadge, { borderColor: accent }]}>
-                  <Text style={s.performerInitials}>{performer.initials}</Text>
-                </View>
-                <Text style={s.performerName} numberOfLines={1}>{performer.player_name}</Text>
-                <Text style={[s.performerStat, { color: accent }]}>
-                  {performer.stat_value} {performer.stat_label}
+          {/* Bottom content */}
+          <View style={s.heroContent}>
+            <View style={s.heroContentRow}>
+              {/* Left: event info */}
+              <View style={{ flex: 1 }}>
+                <Text style={s.heroCountdown}>{getCountdownText(nextEvent.date)}</Text>
+                <Text style={s.heroTitle}>
+                  {nextEvent.type === 'game' ? 'GAME DAY' : 'PRACTICE'}
                 </Text>
+                <Text style={s.heroTeamName}>{activeTeam.name}</Text>
+                <View style={s.heroMetaRow}>
+                  {nextEvent.time ? (
+                    <>
+                      <Ionicons name="time-outline" size={11} color="rgba(255,255,255,0.7)" />
+                      <Text style={s.heroMetaText}>{formatTime(nextEvent.time)}</Text>
+                    </>
+                  ) : null}
+                  {nextEvent.location ? (
+                    <>
+                      <Ionicons name="location-outline" size={11} color="rgba(255,255,255,0.7)" style={{ marginLeft: 8 }} />
+                      <Text style={s.heroMetaText}>{nextEvent.location}</Text>
+                    </>
+                  ) : null}
+                </View>
+                {nextEvent.type === 'game' && nextEvent.opponent && (
+                  <Text style={s.heroOpponent}>vs {nextEvent.opponent}</Text>
+                )}
               </View>
-            );
-          })}
-        </View>
-      ) : (
-        <View style={s.emptyCard}>
-          <Ionicons name="trophy-outline" size={32} color={colors.textMuted} />
-          <Text style={s.emptySubtext}>Play a game to see top performers</Text>
-        </View>
-      )}
 
-      {/* QUICK ACTIONS */}
-      <Text style={s.sectionLabel}>QUICK ACTIONS</Text>
-      <View style={s.actionsGrid}>
-        <TouchableOpacity style={s.actionCard} onPress={() => router.push('/attendance' as any)}>
-          <View style={[s.actionIconCircle, { backgroundColor: colors.success + '26' }]}>
-            <Ionicons name="checkmark-circle" size={32} color={colors.success} />
-          </View>
-          <Text style={s.actionLabel}>Take Attendance</Text>
-        </TouchableOpacity>
+              {/* Right: RSVP pill */}
+              {availableCount && (
+                <LinearGradient
+                  colors={['#2C5F7C', '#14B8A6']}
+                  style={s.heroRsvpPill}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                >
+                  <Text style={s.heroRsvpLabel}>RSVP</Text>
+                  <Text style={s.heroRsvpCount}>
+                    {availableCount.available}/{availableCount.total}
+                  </Text>
+                  <Text style={s.heroRsvpSub}>Confirmed</Text>
+                </LinearGradient>
+              )}
+            </View>
 
-        <TouchableOpacity style={s.actionCard} onPress={() => router.push('/game-prep' as any)}>
-          <View style={[s.actionIconCircle, { backgroundColor: colors.info + '26' }]}>
-            <Ionicons name="stats-chart" size={32} color={colors.info} />
-            {pendingStatsCount > 0 && (
-              <View style={s.pendingBadge}>
-                <Text style={s.pendingBadgeText}>{pendingStatsCount}</Text>
+            {/* Attendance dots */}
+            {availableCount && availableCount.total > 0 && (
+              <View style={s.heroDotsRow}>
+                {Array.from({ length: Math.min(availableCount.total, 20) }).map((_, i) => (
+                  <View
+                    key={i}
+                    style={[
+                      s.heroDot,
+                      i < availableCount.available
+                        ? { backgroundColor: '#22C55E' }
+                        : { backgroundColor: '#D9E2E9' },
+                    ]}
+                  >
+                    <Text style={s.heroDotIcon}>
+                      {i < availableCount.available ? '\u2713' : '\u2022'}
+                    </Text>
+                  </View>
+                ))}
               </View>
             )}
           </View>
-          <Text style={s.actionLabel}>Enter Stats</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={s.actionCard} onPress={() => router.push('/blast-composer' as any)}>
-          <View style={[s.actionIconCircle, { backgroundColor: colors.warning + '26' }]}>
-            <Ionicons name="megaphone" size={32} color={colors.warning} />
-          </View>
-          <Text style={s.actionLabel}>Send Message</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={s.actionCard} onPress={() => router.push('/game-prep' as any)}>
-          <View style={[s.actionIconCircle, { backgroundColor: colors.primary + '26' }]}>
-            <Ionicons name="analytics" size={32} color={colors.primary} />
-          </View>
-          <Text style={s.actionLabel}>Game Prep</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={s.actionCard} onPress={() => router.push('/(tabs)/schedule' as any)}>
-          <View style={[s.actionIconCircle, { backgroundColor: '#6366F1' + '26' }]}>
-            <Ionicons name="calendar" size={32} color="#6366F1" />
-          </View>
-          <Text style={s.actionLabel}>Schedule</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* SEASON PROGRESS */}
-      <Text style={s.sectionLabel}>SEASON PROGRESS</Text>
-      <View style={s.progressCard}>
-        <Text style={s.progressTitle}>
-          Game {gamesPlayed} of {totalGames} completed
-        </Text>
-        <View style={s.progressBarBg}>
-          <View style={[
-            s.progressBarFill,
-            { width: totalGames > 0 ? `${Math.round((gamesPlayed / totalGames) * 100)}%` : '0%' },
-          ]} />
         </View>
-        <View style={s.progressStatsRow}>
-          <View style={s.progressStat}>
-            <Text style={s.progressStatNum}>{totalWins}</Text>
-            <Text style={s.progressStatLabel}>Won</Text>
-          </View>
-          <View style={s.progressStat}>
-            <Text style={s.progressStatNum}>{winRate}%</Text>
-            <Text style={s.progressStatLabel}>Win %</Text>
-          </View>
-          <View style={s.progressStat}>
-            <Text style={s.progressStatNum}>{totalGames - gamesPlayed}</Text>
-            <Text style={s.progressStatLabel}>Remaining</Text>
+      ) : activeTeam ? (
+        /* No upcoming events — All Clear card */
+        <View style={s.heroCardEmpty}>
+          <LinearGradient
+            colors={['#2C5F7C', '#1B2838']}
+            style={StyleSheet.absoluteFillObject}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0.3, y: 1 }}
+          />
+          <View style={s.heroContent}>
+            <Ionicons name="calendar-outline" size={32} color="rgba(255,255,255,0.6)" />
+            <Text style={[s.heroTitle, { marginTop: 8 }]}>ALL CLEAR</Text>
+            <Text style={s.heroTeamName}>{activeTeam.name}</Text>
+            <Text style={[s.heroMetaText, { marginTop: 4 }]}>No upcoming events scheduled</Text>
           </View>
         </View>
+      ) : (
+        <Card style={{ marginHorizontal: 16, marginTop: 12, marginBottom: 16, padding: 28, alignItems: 'center' }}>
+          <Ionicons name="shirt-outline" size={36} color={colors.textMuted} />
+          <Text style={s.emptyTitle}>No Teams Assigned</Text>
+          <Text style={s.emptySubtext}>No teams found for this season</Text>
+        </Card>
+      )}
+
+      {/* ================================================================ */}
+      {/* 4. MISSION BRIEFING — Secondary event (different type from hero)   */}
+      {/* ================================================================ */}
+      {secondaryEvent && (
+        <View style={s.sectionBlock}>
+          <View style={{ paddingHorizontal: 16 }}>
+            <SectionHeader title="Mission Briefing" />
+          </View>
+          <Card
+            accentColor={secondaryEvent.type === 'game' ? colors.danger : colors.info}
+            style={{ marginHorizontal: 16 }}
+          >
+            <View style={s.missionTop}>
+              <Badge
+                label={secondaryEvent.type === 'game' ? 'GAME' : 'PRACTICE'}
+                color={secondaryEvent.type === 'game' ? colors.danger : colors.info}
+              />
+              <Text style={s.countdownText}>{getCountdownText(secondaryEvent.date)}</Text>
+            </View>
+            {secondaryEvent.type === 'game' && secondaryEvent.opponent ? (
+              <Text style={s.missionOpponent}>vs {secondaryEvent.opponent}</Text>
+            ) : (
+              <Text style={s.missionTitle}>{secondaryEvent.title}</Text>
+            )}
+            <View style={s.missionDetails}>
+              <View style={s.missionDetailRow}>
+                <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
+                <Text style={s.missionDetailText}>
+                  {formatDate(secondaryEvent.date)}
+                  {secondaryEvent.time ? ` \u2022 ${formatTime(secondaryEvent.time)}` : ''}
+                </Text>
+              </View>
+              {secondaryEvent.location ? (
+                <View style={s.missionDetailRow}>
+                  <Ionicons name="location-outline" size={14} color={colors.textMuted} />
+                  <Text style={s.missionDetailText}>{secondaryEvent.location}</Text>
+                </View>
+              ) : null}
+            </View>
+          </Card>
+        </View>
+      )}
+
+      {/* ================================================================ */}
+      {/* 5. TEAM HEALTH — 3 stat cards                                     */}
+      {/* ================================================================ */}
+      <View style={s.sectionBlock}>
+        <View style={{ paddingHorizontal: 16 }}>
+          <SectionHeader title="Team Health" />
+        </View>
+        <View style={[s.healthRow, { paddingHorizontal: 16 }]}>
+          <TouchableOpacity style={s.healthCard} activeOpacity={0.7} onPress={() => router.push('/attendance' as any)}>
+            <Ionicons
+              name="checkmark-circle"
+              size={24}
+              color={attendanceRate !== null ? getAttendanceColor(attendanceRate) : colors.textMuted}
+            />
+            <Text style={[
+              s.healthNum,
+              attendanceRate !== null && { color: getAttendanceColor(attendanceRate) },
+            ]}>
+              {attendanceRate !== null ? `${attendanceRate}%` : '--'}
+            </Text>
+            <Text style={s.healthLabel}>Attendance</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={s.healthCard} activeOpacity={0.7} onPress={() => router.push(nextEventId ? `/attendance?eventId=${nextEventId}` as any : '/attendance' as any)}>
+            <Ionicons name="hand-left" size={24} color={colors.info} />
+            <Text style={s.healthNum}>
+              {availableCount ? `${availableCount.available}/${availableCount.total}` : '--'}
+            </Text>
+            <Text style={s.healthLabel}>Available</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={s.healthCard} activeOpacity={0.7} onPress={() => router.push('/achievements' as any)}>
+            <Ionicons name="ribbon" size={24} color={colors.warning} />
+            <Text style={[s.healthNum, { color: colors.warning }]}>
+              {badgesEarnedCount}
+            </Text>
+            <Text style={s.healthLabel}>Badges</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Bottom padding for tab bar */}
-      <View style={{ height: 120 }} />
+      {/* ================================================================ */}
+      {/* 6. SEASON OVERVIEW — 4 stat boxes                                 */}
+      {/* ================================================================ */}
+      {activeTeam && (
+        <View style={s.sectionBlock}>
+          <View style={{ paddingHorizontal: 16 }}>
+            <SectionHeader title="Season Overview" action="Details" onAction={() => router.push('/game-prep' as any)} />
+          </View>
+          <View style={[s.seasonStatsRow, { paddingHorizontal: 16 }]}>
+            <View style={[s.seasonStatBox, { borderTopColor: colors.success }]}>
+              <Text style={[s.seasonStatNum, { color: colors.success }]}>{totalWins}</Text>
+              <Text style={s.seasonStatLabel}>WINS</Text>
+            </View>
+            <View style={[s.seasonStatBox, { borderTopColor: colors.danger }]}>
+              <Text style={[s.seasonStatNum, { color: colors.danger }]}>{totalLosses}</Text>
+              <Text style={s.seasonStatLabel}>LOSSES</Text>
+            </View>
+            <View style={[s.seasonStatBox, { borderTopColor: '#2C5F7C' }]}>
+              <Text style={[s.seasonStatNum, { color: '#2C5F7C' }]}>{activeTeam.player_count}</Text>
+              <Text style={s.seasonStatLabel}>PLAYERS</Text>
+            </View>
+            <View style={[s.seasonStatBox, { borderTopColor: '#14B8A6' }]}>
+              <Text style={[s.seasonStatNum, { color: '#14B8A6' }]}>
+                {gamesPlayed > 0 ? `.${String(Math.round((totalWins / gamesPlayed) * 1000)).padStart(3, '0')}` : '--'}
+              </Text>
+              <Text style={s.seasonStatLabel}>WIN %</Text>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* ================================================================ */}
+      {/* 7. TOP PERFORMERS                                                 */}
+      {/* ================================================================ */}
+      <View style={s.sectionBlock}>
+        <View style={{ paddingHorizontal: 16 }}>
+          <SectionHeader title="Top Performers" />
+        </View>
+        {topPerformers.length > 0 ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 16, gap: 10 }}
+          >
+            {topPerformers.map((performer, idx) => {
+              const accentColors = [colors.warning, '#C0C0C0', '#CD7F32'];
+              const accent = accentColors[idx] || colors.textMuted;
+              return (
+                <View key={performer.player_id} style={s.performerCard}>
+                  <Avatar name={performer.player_name} size={44} color={accent} />
+                  <Text style={s.performerName} numberOfLines={1}>{performer.player_name}</Text>
+                  <Text style={[s.performerStat, { color: accent }]}>
+                    {performer.stat_value} {performer.stat_label}
+                  </Text>
+                </View>
+              );
+            })}
+          </ScrollView>
+        ) : (
+          <Card style={{ marginHorizontal: 16, padding: 28, alignItems: 'center' }}>
+            <Ionicons name="trophy-outline" size={32} color={colors.textMuted} />
+            <Text style={s.emptySubtext}>Play a game to see top performers</Text>
+          </Card>
+        )}
+      </View>
+
+      {/* ================================================================ */}
+      {/* 8. UPCOMING MATCHES — MatchCards                                   */}
+      {/* ================================================================ */}
+      {activeTeamEvents.length > 1 && (
+        <View style={s.sectionBlock}>
+          <View style={{ paddingHorizontal: 16 }}>
+            <SectionHeader title="Upcoming Matches" action="Full Schedule" onAction={() => router.push('/(tabs)/schedule' as any)} />
+          </View>
+          {activeTeamEvents.slice(1, 4).map(evt => (
+            <MatchCard
+              key={evt.id}
+              homeTeam={activeTeam?.name || ''}
+              awayTeam={evt.opponent || evt.title}
+              time={formatTime(evt.time)}
+              date={formatDate(evt.date).toUpperCase()}
+              venue={evt.location || ''}
+              accentColor={colors.primary}
+              style={{ marginHorizontal: 16, marginBottom: 12 }}
+            />
+          ))}
+        </View>
+      )}
+
+      {/* ================================================================ */}
+      {/* 9. QUICK ACTIONS — 2x2 Grid                                       */}
+      {/* ================================================================ */}
+      <View style={s.sectionBlock}>
+        <View style={{ paddingHorizontal: 16 }}>
+          <SectionHeader title="Quick Actions" />
+        </View>
+        <View style={[s.actionsGrid, { paddingHorizontal: 16 }]}>
+          <TouchableOpacity style={s.actionCard} onPress={() => router.push('/attendance' as any)}>
+            <View style={[s.actionIconCircle, { backgroundColor: colors.success + '26' }]}>
+              <Ionicons name="checkmark-circle" size={32} color={colors.success} />
+            </View>
+            <Text style={s.actionLabel}>Take Attendance</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={s.actionCard} onPress={() => router.push('/game-prep' as any)}>
+            <View style={[s.actionIconCircle, { backgroundColor: colors.info + '26' }]}>
+              <Ionicons name="stats-chart" size={32} color={colors.info} />
+              {pendingStatsCount > 0 && (
+                <View style={s.pendingBadge}>
+                  <Text style={s.pendingBadgeText}>{pendingStatsCount}</Text>
+                </View>
+              )}
+            </View>
+            <Text style={s.actionLabel}>Enter Stats</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={s.actionCard} onPress={() => router.push('/blast-composer' as any)}>
+            <View style={[s.actionIconCircle, { backgroundColor: colors.warning + '26' }]}>
+              <Ionicons name="megaphone" size={32} color={colors.warning} />
+            </View>
+            <Text style={s.actionLabel}>Send Message</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={s.actionCard} onPress={() => router.push('/game-prep' as any)}>
+            <View style={[s.actionIconCircle, { backgroundColor: colors.primary + '26' }]}>
+              <Ionicons name="analytics" size={32} color={colors.primary} />
+            </View>
+            <Text style={s.actionLabel}>Game Prep</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* ================================================================ */}
+      {/* 10. SEASON PROGRESS — Progress bar + stats                        */}
+      {/* ================================================================ */}
+      <View style={s.sectionBlock}>
+        <View style={{ paddingHorizontal: 16 }}>
+          <SectionHeader title="Season Progress" />
+        </View>
+        <Card style={{ marginHorizontal: 16 }}>
+          <Text style={s.progressTitle}>
+            Game {gamesPlayed} of {totalGames} completed
+          </Text>
+          <View style={s.progressBarBg}>
+            <View style={[
+              s.progressBarFill,
+              { width: totalGames > 0 ? `${Math.round((gamesPlayed / totalGames) * 100)}%` : '0%' },
+            ]} />
+          </View>
+          <View style={s.progressStatsRow}>
+            <View style={s.progressStat}>
+              <Text style={s.progressStatNum}>{totalWins}</Text>
+              <Text style={s.progressStatLabel}>Won</Text>
+            </View>
+            <View style={s.progressStat}>
+              <Text style={s.progressStatNum}>{winRate}%</Text>
+              <Text style={s.progressStatLabel}>Win %</Text>
+            </View>
+            <View style={s.progressStat}>
+              <Text style={s.progressStatNum}>{totalGames - gamesPlayed}</Text>
+              <Text style={s.progressStatLabel}>Remaining</Text>
+            </View>
+          </View>
+        </Card>
+      </View>
+
     </ScrollView>
   );
 }
@@ -846,200 +984,177 @@ export default function CoachDashboard() {
 const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
-    paddingHorizontal: 20,
+    backgroundColor: colors.background || colors.card,
+  },
+  sectionBlock: {
+    marginBottom: 24,
   },
 
-  // Header
-  header: {
+  // ========== 1. HEADER BAR ==========
+  headerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#2C5F7C',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    minHeight: 48,
+  },
+
+  // ========== 3. HERO CARD ==========
+  heroCard: {
+    height: 260,
+    borderRadius: radii.card,
+    overflow: 'hidden' as const,
+    position: 'relative' as const,
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 16,
+    ...shadows.cardHover,
+  },
+  heroCardEmpty: {
+    height: 180,
+    borderRadius: radii.card,
+    overflow: 'hidden' as const,
+    position: 'relative' as const,
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 16,
+    justifyContent: 'flex-end',
+  },
+  heroBadge: {
+    position: 'absolute' as const,
+    top: 12,
+    right: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 20,
+    zIndex: 5,
+  },
+  heroBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#FFF',
+    letterSpacing: 0.5,
+  },
+  heroContent: {
+    position: 'absolute' as const,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 16,
+  },
+  heroContentRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 4,
+    alignItems: 'flex-end',
   },
-  greeting: {
-    fontSize: 15,
-    color: colors.textMuted,
-    lineHeight: 22,
+  heroCountdown: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#14B8A6',
+    letterSpacing: 2,
+    marginBottom: 2,
   },
-  heroName: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: colors.text,
-    letterSpacing: -0.5,
-  },
-
-  // Team Selector Pills
-  teamSelectorContainer: {
-    marginBottom: 16,
-    flexGrow: 0,
-  },
-  teamSelectorContent: {
-    gap: 8,
-    paddingVertical: 4,
-  },
-  teamPill: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: colors.glassCard,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
-  },
-  teamPillActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  teamPillText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  teamPillTextActive: {
-    color: '#000',
-  },
-
-  // Hero Card
-  heroCard: {
-    backgroundColor: colors.glassCard,
-    borderRadius: 20,
-    overflow: 'hidden',
-    marginBottom: 28,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 6 },
-    }),
-  },
-  heroAccentBar: {
-    height: 4,
-    backgroundColor: colors.primary,
-  },
-  heroBody: {
-    padding: 20,
+  heroTitle: {
+    ...displayTextStyle,
+    fontSize: 22,
+    color: '#FFF',
   },
   heroTeamName: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: colors.text,
-    letterSpacing: -0.5,
-    marginBottom: 12,
-  },
-  heroStatsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  heroRecordContainer: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-  },
-  heroRecordLetter: {
-    fontSize: 14,
-    fontWeight: '800',
-    marginRight: 4,
-  },
-  heroRecordNum: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: colors.text,
-  },
-  heroRecordDash: {
-    fontSize: 20,
-    color: colors.textMuted,
-    marginHorizontal: 4,
-  },
-  heroStatDivider: {
-    width: 1,
-    height: 28,
-    backgroundColor: colors.glassBorder,
-    marginHorizontal: 16,
-  },
-  heroRosterContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  heroRosterText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  heroSeasonText: {
     fontSize: 13,
-    color: colors.textMuted,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 2,
+  },
+  heroMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  heroMetaText: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.7)',
+    marginLeft: 3,
+  },
+  heroOpponent: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.9)',
     marginTop: 4,
   },
 
-  // Section Label
-  sectionLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.textMuted,
-    letterSpacing: 2,
-    textTransform: 'uppercase' as const,
-    marginBottom: 12,
+  // RSVP pill
+  heroRsvpPill: {
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    minWidth: 64,
+  },
+  heroRsvpLabel: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.8)',
+    letterSpacing: 1,
+  },
+  heroRsvpCount: {
+    ...displayTextStyle,
+    fontSize: 22,
+    color: '#FFF',
+    marginVertical: 1,
+  },
+  heroRsvpSub: {
+    fontSize: 9,
+    color: 'rgba(255,255,255,0.7)',
   },
 
-  // Mission Briefing Card
-  missionCard: {
-    backgroundColor: colors.glassCard,
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 28,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 6 },
-    }),
+  // Attendance dots
+  heroDotsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 3,
+    marginTop: 10,
   },
+  heroDot: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  heroDotIcon: {
+    fontSize: 8,
+    fontWeight: '800',
+    color: '#FFF',
+  },
+
+  // ========== 4. MISSION BRIEFING ==========
   missionTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
   },
-  eventTypeBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-  },
-  eventTypeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  eventTypeBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
   countdownText: {
-    fontSize: 24,
-    fontWeight: '800',
+    ...displayTextStyle,
+    fontSize: 20,
     color: colors.primary,
   },
   missionOpponent: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
     color: colors.text,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   missionTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: colors.text,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   missionDetails: {
-    gap: 6,
-    marginBottom: 16,
+    gap: 4,
   },
   missionDetailRow: {
     flexDirection: 'row',
@@ -1047,129 +1162,111 @@ const createStyles = (colors: any) => StyleSheet.create({
     gap: 6,
   },
   missionDetailText: {
-    fontSize: 14,
+    fontSize: 13,
     color: colors.textMuted,
   },
-  missionActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  missionBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: colors.glassCard,
-    borderRadius: 12,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
-  },
-  missionBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.primary,
-  },
 
-  // Team Health
+  // ========== 5. TEAM HEALTH ==========
   healthRow: {
     flexDirection: 'row',
     gap: 10,
-    marginBottom: 28,
   },
   healthCard: {
     flex: 1,
     backgroundColor: colors.glassCard,
-    borderRadius: 20,
+    borderRadius: radii.card,
+    borderTopWidth: 3,
+    borderTopColor: colors.primary,
     padding: 14,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.glassBorder,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 6 },
-    }),
+    ...shadows.card,
   },
   healthNum: {
+    ...displayTextStyle,
     fontSize: 18,
-    fontWeight: '800',
     color: colors.text,
     marginTop: 6,
     textAlign: 'center',
   },
   healthLabel: {
-    fontSize: 11,
+    fontSize: 10,
+    fontWeight: '600',
     color: colors.textMuted,
     marginTop: 2,
     textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 
-  // Top Performers
-  performersRow: {
+  // ========== 6. SEASON OVERVIEW ==========
+  seasonStatsRow: {
     flexDirection: 'row',
-    gap: 10,
-    marginBottom: 28,
+    gap: 8,
   },
-  performerCard: {
+  seasonStatBox: {
     flex: 1,
     backgroundColor: colors.glassCard,
-    borderRadius: 20,
-    padding: 14,
+    borderRadius: radii.card,
+    borderTopWidth: 3,
+    padding: 12,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.glassBorder,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 6 },
-    }),
+    ...shadows.card,
   },
-  performerBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.primary + '15',
-    justifyContent: 'center',
+  seasonStatNum: {
+    ...displayTextStyle,
+    fontSize: 22,
+  },
+  seasonStatLabel: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: colors.textMuted,
+    marginTop: 2,
+    letterSpacing: 0.5,
+  },
+
+  // ========== 7. TOP PERFORMERS ==========
+  performerCard: {
+    width: 90,
+    backgroundColor: colors.glassCard,
+    borderRadius: radii.card,
+    padding: 12,
     alignItems: 'center',
-    borderWidth: 2,
-    marginBottom: 6,
-  },
-  performerInitials: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.text,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    ...shadows.card,
   },
   performerName: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '700',
     color: colors.text,
     textAlign: 'center',
+    marginTop: 6,
     marginBottom: 2,
   },
   performerStat: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
   },
 
-  // Quick Actions
+  // ========== 9. QUICK ACTIONS ==========
   actionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 28,
+    gap: 10,
   },
   actionCard: {
-    width: '47%',
+    width: '47%' as any,
     backgroundColor: colors.glassCard,
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: radii.card,
+    padding: 16,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.glassBorder,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 6 },
-    }),
+    ...shadows.card,
   },
   actionIconCircle: {
     width: 56,
@@ -1180,7 +1277,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     marginBottom: 10,
   },
   actionLabel: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     color: colors.text,
     textAlign: 'center',
@@ -1203,19 +1300,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     color: '#fff',
   },
 
-  // Season Progress
-  progressCard: {
-    backgroundColor: colors.glassCard,
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 28,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 6 },
-    }),
-  },
+  // ========== 10. SEASON PROGRESS ==========
   progressTitle: {
     fontSize: 15,
     fontWeight: '600',
@@ -1233,7 +1318,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   progressBarFill: {
     height: '100%',
     borderRadius: 4,
-    backgroundColor: colors.primary,
+    backgroundColor: '#14B8A6',
   },
   progressStatsRow: {
     flexDirection: 'row',
@@ -1243,8 +1328,8 @@ const createStyles = (colors: any) => StyleSheet.create({
     alignItems: 'center',
   },
   progressStatNum: {
+    ...displayTextStyle,
     fontSize: 22,
-    fontWeight: '800',
     color: colors.text,
   },
   progressStatLabel: {
@@ -1253,20 +1338,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     marginTop: 2,
   },
 
-  // Empty / Placeholder Cards
-  emptyCard: {
-    backgroundColor: colors.glassCard,
-    borderRadius: 20,
-    padding: 28,
-    alignItems: 'center',
-    marginBottom: 28,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-      android: { elevation: 6 },
-    }),
-  },
+  // ========== EMPTY STATES ==========
   emptyTitle: {
     fontSize: 16,
     fontWeight: '700',

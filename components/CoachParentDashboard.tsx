@@ -15,7 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import RoleSelector from './RoleSelector';
+import AppHeaderBar from './ui/AppHeaderBar';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -339,6 +339,12 @@ export default function CoachParentDashboard() {
 
   const s = createStyles(colors);
   const firstName = profile?.full_name?.split(' ')[0] || 'Coach';
+  const userInitials = (profile?.full_name || '')
+    .split(' ')
+    .map((n: string) => n[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 
   // -------------------------------------------------------------------------
   // Loading state
@@ -361,6 +367,8 @@ export default function CoachParentDashboard() {
   // -------------------------------------------------------------------------
 
   return (
+    <View style={{ flex: 1 }}>
+      <AppHeaderBar initials={userInitials} />
     <ScrollView
       style={s.container}
       contentContainerStyle={s.contentContainer}
@@ -373,7 +381,6 @@ export default function CoachParentDashboard() {
           <Text style={s.greeting}>Welcome back,</Text>
           <Text style={s.heroName}>{firstName}</Text>
         </View>
-        <RoleSelector />
       </View>
 
       {/* ================================================================ */}
@@ -734,6 +741,7 @@ export default function CoachParentDashboard() {
       {/* Bottom padding */}
       <View style={{ height: 120 }} />
     </ScrollView>
+    </View>
   );
 }
 

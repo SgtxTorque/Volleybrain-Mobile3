@@ -1,7 +1,6 @@
+import { displayTextStyle, radii, shadows } from '@/lib/design-tokens';
 import { usePermissions } from '@/lib/permissions-context';
-import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -9,22 +8,20 @@ type RoleOption = {
   key: string;
   label: string;
   shortLabel: string;
-  icon: string;
+  icon: keyof typeof Ionicons.glyphMap;
   color: string;
 };
 
 const roleOptions: RoleOption[] = [
-  { key: 'league_admin', label: 'League Admin', shortLabel: 'Admin', icon: 'shield', color: '#FF9500' },
-  { key: 'head_coach', label: 'Head Coach', shortLabel: 'Coach', icon: 'clipboard', color: '#007AFF' },
-  { key: 'assistant_coach', label: 'Assistant Coach', shortLabel: 'Asst', icon: 'people', color: '#5AC8FA' },
-  { key: 'parent', label: 'Parent', shortLabel: 'Parent', icon: 'heart', color: '#34C759' },
+  { key: 'league_admin', label: 'Admin', shortLabel: 'Admin', icon: 'shield', color: '#2C5F7C' },
+  { key: 'head_coach', label: 'Head Coach', shortLabel: 'Coach', icon: 'clipboard', color: '#14B8A6' },
+  { key: 'assistant_coach', label: 'Asst Coach', shortLabel: 'Asst', icon: 'people', color: '#0EA5E9' },
+  { key: 'parent', label: 'Parent', shortLabel: 'Parent', icon: 'heart', color: '#E8913A' },
   { key: 'player', label: 'Player', shortLabel: 'Player', icon: 'basketball', color: '#AF52DE' },
 ];
 
 export default function RoleSelector() {
-  const { colors } = useTheme();
   const { actualRoles, devViewAs, setDevViewAs } = usePermissions();
-  const router = useRouter();
   const [showPicker, setShowPicker] = useState(false);
 
   // Only show if user has multiple roles
@@ -40,7 +37,6 @@ export default function RoleSelector() {
     if (devViewAs) {
       return roleOptions.find(r => r.key === devViewAs) || availableRoles[0];
     }
-    // Default: highest privilege role (first in actualRoles based on priority)
     const priorityOrder = ['league_admin', 'head_coach', 'assistant_coach', 'parent', 'player'];
     for (const role of priorityOrder) {
       if (actualRoles.includes(role as any)) {
@@ -52,134 +48,123 @@ export default function RoleSelector() {
 
   const currentRole = getCurrentRole();
 
-  const handleSelectRole = (roleKey: string | null) => {
+  const handleSelectRole = (roleKey: string) => {
     setDevViewAs(roleKey as any);
     setShowPicker(false);
-    // Reset to dashboard on role switch (matches web behavior)
-    setTimeout(() => router.replace('/(tabs)' as any), 100);
   };
-
-  const s = createStyles(colors, currentRole.color);
 
   return (
     <>
-      <TouchableOpacity style={s.selector} onPress={() => setShowPicker(true)}>
-        <Ionicons name={currentRole.icon as any} size={14} color={currentRole.color} />
-        <Text style={s.selectorText}>{currentRole.shortLabel}</Text>
-        <Ionicons name="chevron-down" size={12} color={currentRole.color} />
+      <TouchableOpacity style={s.pill} onPress={() => setShowPicker(true)} activeOpacity={0.7}>
+        <Ionicons name={currentRole.icon} size={12} color="#FFF" />
+        <Text style={s.pillText}>{currentRole.shortLabel}</Text>
+        <Ionicons name="chevron-down" size={10} color="#FFF" />
       </TouchableOpacity>
 
-      {showPicker && (
-        <Modal visible={showPicker} animationType="fade" transparent>
-          <TouchableOpacity 
-            style={s.overlay} 
-            activeOpacity={1} 
-            onPress={() => setShowPicker(false)}
-            {...{ pointerEvents: showPicker ? 'auto' : 'none' } as any}
-          >
-            <View style={s.modal}>
-            <Text style={s.modalTitle}>Switch View</Text>
-            <Text style={s.modalSubtitle}>You have multiple roles</Text>
+      <Modal visible={showPicker} animationType="slide" transparent>
+        <TouchableOpacity
+          style={s.overlay}
+          activeOpacity={1}
+          onPress={() => setShowPicker(false)}
+        >
+          <View style={s.sheet} onStartShouldSetResponder={() => true}>
+            <View style={s.handle} />
+            <Text style={s.sheetTitle}>Switch View</Text>
 
-            {availableRoles.map(role => {
-              const isActive = currentRole.key === role.key;
-              return (
-                <TouchableOpacity
-                  key={role.key}
-                  style={[s.roleOption, isActive && s.roleOptionActive]}
-                  onPress={() => handleSelectRole(role.key)}
-                >
-                  <View style={[s.roleIcon, { backgroundColor: role.color + '20' }]}>
-                    <Ionicons name={role.icon as any} size={20} color={role.color} />
-                  </View>
-                  <View style={s.roleInfo}>
-                    <Text style={[s.roleLabel, isActive && { color: role.color }]}>
+            <View style={s.roleList}>
+              {availableRoles.map(role => {
+                const isActive = currentRole.key === role.key;
+                return (
+                  <TouchableOpacity
+                    key={role.key}
+                    style={[s.roleCard, isActive && s.roleCardActive]}
+                    onPress={() => handleSelectRole(role.key)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[s.roleIcon, { backgroundColor: isActive ? 'rgba(255,255,255,0.2)' : role.color + '15' }]}>
+                      <Ionicons name={role.icon} size={20} color={isActive ? '#FFF' : role.color} />
+                    </View>
+                    <Text style={[s.roleLabel, isActive && s.roleLabelActive]}>
                       {role.label}
                     </Text>
-                    <Text style={s.roleDesc}>
-                      {role.key === 'league_admin' && 'Manage league, teams, players'}
-                      {role.key === 'head_coach' && 'Manage your teams & rosters'}
-                      {role.key === 'assistant_coach' && 'View team info & help coach'}
-                      {role.key === 'parent' && 'View your children & schedule'}
-                      {role.key === 'player' && 'View your team & schedule'}
-                    </Text>
-                  </View>
-                  {isActive && (
-                    <Ionicons name="checkmark-circle" size={22} color={role.color} />
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-
-            <TouchableOpacity style={s.cancelBtn} onPress={() => setShowPicker(false)}>
-              <Text style={s.cancelBtnText}>Cancel</Text>
-            </TouchableOpacity>
+                    {isActive && (
+                      <Ionicons name="checkmark-circle" size={22} color="#FFF" />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
-          </TouchableOpacity>
-        </Modal>
-      )}
+        </TouchableOpacity>
+      </Modal>
     </>
   );
 }
 
-const createStyles = (colors: any, activeColor: string) => StyleSheet.create({
-  selector: {
+const s = StyleSheet.create({
+  // Pill (closed state) — designed for steel blue header
+  pill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: activeColor + '15',
+    backgroundColor: 'rgba(255,255,255,0.2)',
     paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: activeColor + '40',
+    paddingVertical: 4,
+    borderRadius: 20,
   },
-  selectorText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: activeColor,
+  pillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFF',
   },
 
+  // Bottom sheet overlay
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    backgroundColor: '#FFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     padding: 24,
+    paddingBottom: 40,
   },
-  modal: {
-    backgroundColor: colors.card,
-    borderRadius: 20,
-    padding: 20,
-    width: '100%',
-    maxWidth: 340,
+  handle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#D1D5DB',
+    alignSelf: 'center',
+    marginBottom: 16,
   },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.text,
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  modalSubtitle: {
-    fontSize: 13,
-    color: colors.textMuted,
+  sheetTitle: {
+    ...displayTextStyle,
+    fontSize: 18,
+    color: '#1B2838',
     textAlign: 'center',
     marginBottom: 20,
   },
 
-  roleOption: {
+  // Role cards
+  roleList: {
+    gap: 8,
+  },
+  roleCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 8,
-    backgroundColor: colors.background,
-  },
-  roleOptionActive: {
-    backgroundColor: colors.background,
+    backgroundColor: '#FFF',
+    borderRadius: radii.card,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: 'rgba(0,0,0,0.06)',
+    ...shadows.card,
+  },
+  roleCardActive: {
+    backgroundColor: '#2C5F7C',
+    borderColor: '#2C5F7C',
   },
   roleIcon: {
     width: 40,
@@ -189,28 +174,13 @@ const createStyles = (colors: any, activeColor: string) => StyleSheet.create({
     alignItems: 'center',
     marginRight: 12,
   },
-  roleInfo: {
-    flex: 1,
-  },
   roleLabel: {
+    flex: 1,
     fontSize: 15,
     fontWeight: '600',
-    color: colors.text,
-    marginBottom: 2,
+    color: '#1B2838',
   },
-  roleDesc: {
-    fontSize: 12,
-    color: colors.textMuted,
-  },
-
-  cancelBtn: {
-    marginTop: 8,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  cancelBtnText: {
-    fontSize: 15,
-    color: colors.textMuted,
-    fontWeight: '500',
+  roleLabelActive: {
+    color: '#FFF',
   },
 });

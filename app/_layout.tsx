@@ -1,22 +1,24 @@
-import AppBackground from '@/components/AppBackground';
 import { AuthProvider, useAuth } from '@/lib/auth';
-import { BackgroundProvider } from '@/lib/background';
 import { PermissionsProvider } from '@/lib/permissions-context';
 import { SeasonProvider } from '@/lib/season';
 import { SportProvider } from '@/lib/sport';
-import { ThemeProvider } from '@/lib/theme';
+import { ThemeProvider, useTheme } from '@/lib/theme';
 import { DarkTheme, DefaultTheme, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
+import { useFonts } from 'expo-font';
 import * as Notifications from 'expo-notifications';
 import { Stack, useRouter, useSegments } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useRef } from 'react';
-import { KeyboardAvoidingView, Platform, useColorScheme, View } from 'react-native';
+import { KeyboardAvoidingView, Platform } from 'react-native';
+
+SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
   const { session, loading, profile, needsOnboarding } = useAuth();
+  const { colors, isDark } = useTheme();
   const segments = useSegments();
   const router = useRouter();
-  const colorScheme = useColorScheme();
   const hasNavigated = useRef(false);
 
   useEffect(() => {
@@ -25,9 +27,9 @@ function RootLayoutNav() {
       return;
     }
     if (hasNavigated.current) return;
-    
+
     const inAuthGroup = segments[0] === '(auth)';
-    
+
     if (!session && !inAuthGroup) {
       hasNavigated.current = true;
       router.replace('/(auth)/welcome');
@@ -94,47 +96,57 @@ function RootLayoutNav() {
     return null;
   }
 
-  // Override Nav themes to use transparent backgrounds so AppBackground shows through
   const navTheme = useMemo(() => {
-    const base = colorScheme === 'dark' ? DarkTheme : DefaultTheme;
+    const base = isDark ? DarkTheme : DefaultTheme;
     return {
       ...base,
-      colors: { ...base.colors, background: 'transparent', card: 'transparent' },
+      colors: {
+        ...base.colors,
+        background: colors.background,
+        card: colors.card,
+      },
     };
-  }, [colorScheme]);
+  }, [isDark, colors.background, colors.card]);
 
   return (
     <NavThemeProvider value={navTheme}>
-      <View style={{ flex: 1 }}>
-        <AppBackground />
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: 'transparent' } }}>
-            <Stack.Screen name="(auth)" />
-            <Stack.Screen name="(tabs)" />
-          </Stack>
-        </KeyboardAvoidingView>
-      </View>
-      <StatusBar style="auto" />
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(tabs)" />
+        </Stack>
+      </KeyboardAvoidingView>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
     </NavThemeProvider>
   );
 }
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    'Oswald-Bold': require('../assets/fonts/Oswald-Bold.ttf'),
+  });
+
+  useEffect(() => {
+    if (fontsLoaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) return null;
+
   return (
     <AuthProvider>
       <ThemeProvider>
-        <BackgroundProvider>
-          <SportProvider>
-            <SeasonProvider>
-              <PermissionsProvider>
-                <RootLayoutNav />
-              </PermissionsProvider>
-            </SeasonProvider>
-          </SportProvider>
-        </BackgroundProvider>
+        <SportProvider>
+          <SeasonProvider>
+            <PermissionsProvider>
+              <RootLayoutNav />
+            </PermissionsProvider>
+          </SeasonProvider>
+        </SportProvider>
       </ThemeProvider>
     </AuthProvider>
   );

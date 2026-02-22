@@ -1,5 +1,8 @@
 import AdminContextBar from '@/components/AdminContextBar';
+import AppHeaderBar from '@/components/ui/AppHeaderBar';
+import StatBox from '@/components/ui/StatBox';
 import { useAuth } from '@/lib/auth';
+import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
@@ -790,7 +793,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
       case 'cashapp': return '#00D632';
       case 'venmo': return '#008CFF';
       case 'zelle': return '#6D1ED4';
-      case 'cash': return '#34C759';
+      case 'cash': return '#22C55E';
       case 'check': return '#5856D6';
       default: return colors.textSecondary;
     }
@@ -810,9 +813,9 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
 
   const getStatusInfo = (status: string) => {
     switch (status) {
-      case 'verified': return { label: 'Paid', color: '#34C759', icon: 'checkmark-circle' };
-      case 'pending': return { label: 'Pending', color: '#FF9500', icon: 'time' };
-      default: return { label: 'Due', color: '#FF3B30', icon: 'alert-circle' };
+      case 'verified': return { label: 'Paid', color: '#22C55E', icon: 'checkmark-circle' };
+      case 'pending': return { label: 'Pending', color: '#E8913A', icon: 'time' };
+      default: return { label: 'Due', color: '#D94F4F', icon: 'alert-circle' };
     }
   };
 
@@ -842,17 +845,17 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
   const selectedPendingCount = getSelectedPayments().filter(s => s.payment.status === 'pending').length;
 
   const renderFamilyCard = (family: FamilyGroup) => {
-    const rateColor = family.collectionRate >= 80 ? '#34C759' : family.collectionRate >= 50 ? '#FF9500' : '#FF3B30';
+    const rateColor = family.collectionRate >= 80 ? '#22C55E' : family.collectionRate >= 50 ? '#E8913A' : '#D94F4F';
     return (
       <View
         key={family.family_id || family.family_name}
         style={{
-          backgroundColor: colors.glassCard,
+          backgroundColor: '#FFF',
           borderRadius: 16,
           marginBottom: 12,
           overflow: 'hidden',
           borderWidth: 1,
-          borderColor: family.outstanding > 0 ? '#FF3B3040' : colors.glassBorder,
+          borderColor: family.outstanding > 0 ? '#D94F4F40' : colors.glassBorder,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 4 },
           shadowOpacity: 0.15,
@@ -899,7 +902,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
               Paid: ${family.totalPaid}
             </Text>
             {family.outstanding > 0 && (
-              <Text style={{ fontSize: 12, color: '#FF3B30', fontWeight: '600' }}>
+              <Text style={{ fontSize: 12, color: '#D94F4F', fontWeight: '600' }}>
                 Outstanding: ${family.outstanding}
               </Text>
             )}
@@ -922,7 +925,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
                   {player.paidCount} paid · {player.unpaidCount + player.pendingCount} outstanding
                 </Text>
               </View>
-              <Text style={{ fontSize: 14, fontWeight: '600', color: player.totalDue > 0 ? '#FF3B30' : '#34C759' }}>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: player.totalDue > 0 ? '#D94F4F' : '#22C55E' }}>
                 ${player.totalDue > 0 ? player.totalDue : 'Paid'}
               </Text>
             </View>
@@ -933,51 +936,33 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
   };
 
   return (
-    <Wrapper style={{ flex: 1, backgroundColor: 'transparent' }} {...wrapperProps}>
+    <Wrapper style={{ flex: 1, backgroundColor: colors.background }} {...wrapperProps}>
       {/* Header */}
       {!hideHeader && (
-        <View style={{
-          padding: 16,
-          borderBottomWidth: 1,
-          borderBottomColor: colors.border,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}>
-          <View>
-            <Text style={{ fontSize: 28, fontWeight: '800', color: colors.text }}>
-              Payments
-            </Text>
-            {workingSeason && (
-              <Text style={{ fontSize: 14, color: colors.textSecondary, marginTop: 2 }}>
-                {workingSeason.name}
-              </Text>
-            )}
-          </View>
-          <TouchableOpacity
-            onPress={handleGenerateMissingFees}
-            disabled={generatingFees}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              backgroundColor: colors.primary + '15',
-              paddingHorizontal: 12,
-              paddingVertical: 6,
-              borderRadius: 8,
-              gap: 4,
-            }}
-          >
-            {generatingFees ? (
-              <ActivityIndicator size="small" color={colors.primary} />
-            ) : (
-              <Ionicons name="add-circle-outline" size={16} color={colors.primary} />
-            )}
-            <Text style={{ fontSize: 12, fontWeight: '600', color: colors.primary }}>Generate Fees</Text>
-          </TouchableOpacity>
-        </View>
+        <>
+          <AdminContextBar />
+          <AppHeaderBar
+            title="PAYMENTS"
+            showLogo={false}
+            showAvatar={false}
+            showNotificationBell={false}
+            rightIcon={
+              <TouchableOpacity
+                onPress={handleGenerateMissingFees}
+                disabled={generatingFees}
+                style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 16, gap: 4 }}
+              >
+                {generatingFees ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <Ionicons name="add-circle-outline" size={14} color="#FFF" />
+                )}
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#FFF' }}>GENERATE FEES</Text>
+              </TouchableOpacity>
+            }
+          />
+        </>
       )}
-
-      {!hideHeader && <AdminContextBar />}
 
       {/* Compact header when hideHeader */}
       {hideHeader && (
@@ -989,54 +974,10 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
       )}
 
       {/* Stats Row */}
-      <View style={{
-        flexDirection: 'row',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        gap: 10,
-      }}>
-        <View style={{
-          flex: 1,
-          backgroundColor: '#FF3B3020',
-          borderRadius: 16,
-          padding: 12,
-          borderWidth: 1,
-          borderColor: 'rgba(255,59,48,0.15)',
-        }}>
-          <Text style={{ fontSize: 11, color: '#FF3B30', fontWeight: '600' }}>UNPAID</Text>
-          <Text style={{ fontSize: 18, fontWeight: '700', color: '#FF3B30', marginTop: 2 }}>
-            ${stats.totalUnpaid}
-          </Text>
-        </View>
-        <View style={{
-          flex: 1,
-          backgroundColor: '#FF950020',
-          borderRadius: 16,
-          padding: 12,
-          borderWidth: 1,
-          borderColor: 'rgba(255,149,0,0.15)',
-        }}>
-          <Text style={{ fontSize: 11, color: '#FF9500', fontWeight: '600' }}>PENDING</Text>
-          <Text style={{ fontSize: 18, fontWeight: '700', color: '#FF9500', marginTop: 2 }}>
-            ${stats.totalPending}
-          </Text>
-          <Text style={{ fontSize: 10, color: colors.textSecondary }}>
-            {stats.pendingCount} to verify
-          </Text>
-        </View>
-        <View style={{
-          flex: 1,
-          backgroundColor: '#34C75920',
-          borderRadius: 16,
-          padding: 12,
-          borderWidth: 1,
-          borderColor: 'rgba(52,199,89,0.15)',
-        }}>
-          <Text style={{ fontSize: 11, color: '#34C759', fontWeight: '600' }}>PAID</Text>
-          <Text style={{ fontSize: 18, fontWeight: '700', color: '#34C759', marginTop: 2 }}>
-            ${stats.totalPaid}
-          </Text>
-        </View>
+      <View style={{ flexDirection: 'row', paddingHorizontal: spacing.screenPadding, paddingVertical: 12, gap: 10 }}>
+        <StatBox value={'$' + stats.totalUnpaid} label="Unpaid" accentColor="#D94F4F" />
+        <StatBox value={'$' + stats.totalPending} label="Pending" accentColor="#E8913A" />
+        <StatBox value={'$' + stats.totalPaid} label="Paid" accentColor="#22C55E" />
       </View>
 
       {/* Tab Switcher */}
@@ -1068,7 +1009,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
           </Text>
           {stats.pendingCount > 0 && (
             <View style={{
-              backgroundColor: activeTab === 'verification' ? '#00000030' : '#FF9500',
+              backgroundColor: activeTab === 'verification' ? '#00000030' : '#E8913A',
               borderRadius: 10,
               paddingHorizontal: 6,
               paddingVertical: 2,
@@ -1140,12 +1081,12 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
             paddingHorizontal: 14,
             paddingVertical: 8,
             borderRadius: 20,
-            backgroundColor: showOutstandingOnly ? '#FF3B3020' : colors.card,
+            backgroundColor: showOutstandingOnly ? '#D94F4F20' : colors.card,
             borderWidth: 1,
-            borderColor: showOutstandingOnly ? '#FF3B30' : colors.border,
+            borderColor: showOutstandingOnly ? '#D94F4F' : colors.border,
           }}
         >
-          <Text style={{ fontSize: 13, fontWeight: '600', color: showOutstandingOnly ? '#FF3B30' : colors.textSecondary }}>
+          <Text style={{ fontSize: 13, fontWeight: '600', color: showOutstandingOnly ? '#D94F4F' : colors.textSecondary }}>
             Outstanding
           </Text>
         </TouchableOpacity>
@@ -1191,17 +1132,17 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
           // Player view
           filteredGroups.filter(g => !showOutstandingOnly || g.totalDue > 0).length === 0 ? (
             <View style={{
-              backgroundColor: colors.glassCard,
+              backgroundColor: '#FFF',
               borderRadius: 16,
               padding: 32,
               alignItems: 'center',
               borderWidth: 1,
-              borderColor: colors.glassBorder,
+              borderColor: 'rgba(0,0,0,0.06)',
             }}>
               <Ionicons
                 name={activeTab === 'verification' ? 'checkmark-circle' : 'receipt-outline'}
                 size={48}
-                color={activeTab === 'verification' ? '#34C759' : colors.textSecondary}
+                color={activeTab === 'verification' ? '#22C55E' : colors.textSecondary}
               />
               <Text style={{ color: colors.text, marginTop: 12, fontSize: 16, fontWeight: '600' }}>
                 {activeTab === 'verification' ? 'All Caught Up!' : 'No Payments Found'}
@@ -1234,7 +1175,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
                 <View
                   key={group.player_id}
                   style={{
-                    backgroundColor: colors.glassCard,
+                    backgroundColor: '#FFF',
                     borderRadius: 16,
                     marginBottom: 12,
                     overflow: 'hidden',
@@ -1357,12 +1298,12 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
                                 width: 22,
                                 height: 22,
                                 borderRadius: 4,
-                                backgroundColor: '#34C75920',
+                                backgroundColor: '#22C55E20',
                                 justifyContent: 'center',
                                 alignItems: 'center',
                                 marginRight: 12,
                               }}>
-                                <Ionicons name="checkmark" size={14} color="#34C759" />
+                                <Ionicons name="checkmark" size={14} color="#22C55E" />
                               </View>
                             )}
 
@@ -1446,11 +1387,11 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
                                 style={{
                                   marginLeft: 10,
                                   padding: 6,
-                                  backgroundColor: '#34C75920',
+                                  backgroundColor: '#22C55E20',
                                   borderRadius: 6,
                                 }}
                               >
-                                <Ionicons name="checkmark" size={18} color="#34C759" />
+                                <Ionicons name="checkmark" size={18} color="#22C55E" />
                               </TouchableOpacity>
                             )}
 
@@ -1484,12 +1425,12 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
               .filter(f => !searchQuery.trim() || f.family_name.toLowerCase().includes(searchQuery.toLowerCase()) || f.players.some(p => p.player_name.toLowerCase().includes(searchQuery.toLowerCase())));
             return filtered.length === 0 ? (
               <View style={{
-                backgroundColor: colors.glassCard,
+                backgroundColor: '#FFF',
                 borderRadius: 16,
                 padding: 32,
                 alignItems: 'center',
                 borderWidth: 1,
-                borderColor: colors.glassBorder,
+                borderColor: 'rgba(0,0,0,0.06)',
               }}>
                 <Ionicons name="people-outline" size={48} color={colors.textSecondary} />
                 <Text style={{ color: colors.text, marginTop: 12, fontSize: 16, fontWeight: '600' }}>No Families Found</Text>
@@ -1536,10 +1477,10 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
                     paddingHorizontal: 16,
                     paddingVertical: 10,
                     borderRadius: 8,
-                    backgroundColor: '#FF3B3020',
+                    backgroundColor: '#D94F4F20',
                   }}
                 >
-                  <Text style={{ fontSize: 14, fontWeight: '600', color: '#FF3B30' }}>
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: '#D94F4F' }}>
                     Reject
                   </Text>
                 </TouchableOpacity>
@@ -1550,7 +1491,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
                     paddingHorizontal: 16,
                     paddingVertical: 10,
                     borderRadius: 8,
-                    backgroundColor: '#34C759',
+                    backgroundColor: '#22C55E',
                   }}
                 >
                   {submitting ? (
@@ -1662,7 +1603,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
               onPress={handleRecordPayment}
               disabled={submitting}
               style={{
-                backgroundColor: '#34C759',
+                backgroundColor: '#22C55E',
                 borderRadius: 12,
                 padding: 16,
                 alignItems: 'center',

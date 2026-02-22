@@ -1,4 +1,6 @@
 import AdminContextBar from '@/components/AdminContextBar';
+import AppHeaderBar from '@/components/ui/AppHeaderBar';
+import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
@@ -498,21 +500,21 @@ export default function CoachDirectoryScreen() {
 // ================================================================
 
 const createStyles = (colors: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'transparent' },
+  container: { flex: 1, backgroundColor: colors.background },
   scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: 16, paddingTop: 8 },
+  scrollContent: { paddingHorizontal: spacing.screenPadding, paddingTop: 8 },
 
   // Header
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 12 },
   backBtn: { padding: 4 },
-  title: { fontSize: 24, fontWeight: '900', color: colors.text, letterSpacing: -0.5 },
+  title: { ...displayTextStyle, fontSize: 24, color: colors.text },
   subtitle: { fontSize: 13, color: colors.primary, marginTop: 2 },
 
   // Stats
   statsRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
   statBox: {
-    flex: 1, backgroundColor: colors.glassCard, borderRadius: 16, padding: 12, alignItems: 'center',
-    borderWidth: 1, borderColor: colors.glassBorder,
+    flex: 1, backgroundColor: '#FFF', borderRadius: 16, padding: 12, alignItems: 'center',
+    borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)',
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8 },
       android: { elevation: 4 },
@@ -523,9 +525,9 @@ const createStyles = (colors: any) => StyleSheet.create({
 
   // Search
   searchRow: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: colors.glassCard,
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF',
     borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12,
-    borderWidth: 1, borderColor: colors.glassBorder, gap: 8,
+    borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', gap: 8,
   },
   searchInput: { flex: 1, fontSize: 15, color: colors.text, padding: 0 },
 
@@ -533,7 +535,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   filterRow: { flexGrow: 0, marginBottom: 16 },
   filterPill: {
     paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
-    backgroundColor: colors.glassCard, borderWidth: 1, borderColor: colors.glassBorder, marginRight: 8,
+    backgroundColor: '#FFF', borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', marginRight: 8,
   },
   filterPillActive: { backgroundColor: colors.primary + '20', borderColor: colors.primary },
   filterPillText: { fontSize: 13, color: colors.textMuted, fontWeight: '600' },
@@ -541,8 +543,8 @@ const createStyles = (colors: any) => StyleSheet.create({
 
   // Coach Card
   coachCard: {
-    backgroundColor: colors.glassCard, borderRadius: 16, marginBottom: 12,
-    borderWidth: 1, borderColor: colors.glassBorder,
+    backgroundColor: '#FFF', borderRadius: 16, marginBottom: 12,
+    borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)',
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8 },
       android: { elevation: 4 },
@@ -575,7 +577,7 @@ const createStyles = (colors: any) => StyleSheet.create({
 
   // Detail Modal
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-  detailModal: { backgroundColor: colors.glassCard, borderTopLeftRadius: 24, borderTopRightRadius: 24, height: '88%', borderWidth: 1, borderColor: colors.glassBorder },
+  detailModal: { backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, height: '88%', borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)' },
   detailHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: colors.border },
   detailTitle: { fontSize: 20, fontWeight: '700', color: colors.text },
   detailScroll: { flex: 1, padding: 16 },
@@ -605,7 +607,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   teamAssignRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border, gap: 8 },
   teamDot: { width: 10, height: 10, borderRadius: 5 },
   teamAssignName: { flex: 1, fontSize: 15, color: colors.text, fontWeight: '500' },
-  roleToggle: { backgroundColor: colors.glassCard, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, marginRight: 8 },
+  roleToggle: { backgroundColor: '#FFF', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, marginRight: 8 },
   roleToggleText: { fontSize: 12, color: colors.textMuted },
 
   assignRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border, gap: 8 },

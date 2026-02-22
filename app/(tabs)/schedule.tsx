@@ -1,7 +1,9 @@
 import EventCard, { ScheduleEvent } from '@/components/EventCard';
 import EventDetailModal from '@/components/EventDetailModal';
 import NotificationBell from '@/components/NotificationBell';
+import AppHeaderBar from '@/components/ui/AppHeaderBar';
 import { useAuth } from '@/lib/auth';
+import { displayTextStyle, radii } from '@/lib/design-tokens';
 import { runScheduledChecks } from '@/lib/notifications';
 import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
@@ -525,7 +527,7 @@ export default function ScheduleScreen() {
           </View>
           <View style={{ flexDirection: 'row', marginTop: 4, gap: 3 }}>
             {dayEvents.slice(0, 3).map((evt, idx) => (
-              <View key={idx} style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: evt.event_type === 'game' ? '#FF6B6B' : evt.event_type === 'practice' ? '#4ECDC4' : '#96CEB4' }} />
+              <View key={idx} style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: evt.event_type === 'game' ? '#D94F4F' : evt.event_type === 'practice' ? '#14B8A6' : '#2C5F7C' }} />
             ))}
             {dayEvents.length > 3 && <Text style={{ fontSize: 8, color: colors.textMuted }}>+{dayEvents.length - 3}</Text>}
           </View>
@@ -537,7 +539,7 @@ export default function ScheduleScreen() {
       <View>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12 }}>
           <TouchableOpacity onPress={goToPreviousMonth} style={{ padding: 8 }}><Ionicons name="chevron-back" size={24} color={colors.text} /></TouchableOpacity>
-          <Text style={{ color: colors.text, fontSize: 18, fontWeight: 'bold' }}>{MONTHS[month]} {year}</Text>
+          <Text style={{ ...displayTextStyle, color: colors.text, fontSize: 18 }}>{MONTHS[month].toUpperCase()} {year}</Text>
           <TouchableOpacity onPress={goToNextMonth} style={{ padding: 8 }}><Ionicons name="chevron-forward" size={24} color={colors.text} /></TouchableOpacity>
         </View>
         <View style={{ flexDirection: 'row', paddingHorizontal: 16 }}>
@@ -637,23 +639,23 @@ export default function ScheduleScreen() {
   const s = createStyles(colors);
 
   if (!workingSeason) {
-    return (<SafeAreaView style={s.container}><View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Ionicons name="calendar-outline" size={64} color={colors.textMuted} /><Text style={{ color: colors.textMuted, marginTop: 16 }}>No season selected</Text></View></SafeAreaView>);
+    return (<SafeAreaView style={s.container} edges={['top']}><AppHeaderBar title="SCHEDULE" showLogo={false} showNotificationBell={false} showAvatar={false} /><View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Ionicons name="calendar-outline" size={64} color={colors.textMuted} /><Text style={{ color: colors.textMuted, marginTop: 16 }}>No season selected</Text></View></SafeAreaView>);
   }
 
   return (
-    <SafeAreaView style={s.container}>
+    <SafeAreaView style={s.container} edges={['top']}>
       {/* Header */}
-      <View style={s.header}>
-        <View>
-          <Text style={s.title}>Schedule</Text>
-          <Text style={s.subtitle}>{workingSeason.name}</Text>
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <NotificationBell />
-          {isCoachOrAdmin && (<TouchableOpacity style={s.bulkBtn} onPress={() => setShowBulkModal(true)}><Ionicons name="layers" size={20} color={colors.primary} /></TouchableOpacity>)}
-          {isCoachOrAdmin && (<TouchableOpacity style={s.addBtn} onPress={() => setShowAddModal(true)}><Ionicons name="add" size={24} color="#fff" /></TouchableOpacity>)}
-        </View>
-      </View>
+      <AppHeaderBar
+        title="SCHEDULE"
+        showLogo={false}
+        rightIcon={
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <NotificationBell />
+            {isCoachOrAdmin && (<TouchableOpacity style={s.bulkBtn} onPress={() => setShowBulkModal(true)}><Ionicons name="layers" size={18} color="#FFF" /></TouchableOpacity>)}
+            {isCoachOrAdmin && (<TouchableOpacity style={s.addBtn} onPress={() => setShowAddModal(true)}><Ionicons name="add" size={22} color="#FFF" /></TouchableOpacity>)}
+          </View>
+        }
+      />
 
       {/* View mode toggle */}
       <View style={s.viewToggle}>
@@ -667,7 +669,7 @@ export default function ScheduleScreen() {
 
       {/* Filters */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filterRow} contentContainerStyle={{ paddingHorizontal: 16 }}>
-        {[{ key: 'all', label: 'All', color: colors.primary }, { key: 'game', label: 'Games', color: '#FF6B6B' }, { key: 'practice', label: 'Practices', color: '#4ECDC4' }, { key: 'event', label: 'Events', color: '#96CEB4' }].map((filter, idx) => (
+        {[{ key: 'all', label: 'All', color: colors.primary }, { key: 'game', label: 'Games', color: '#D94F4F' }, { key: 'practice', label: 'Practices', color: '#14B8A6' }, { key: 'event', label: 'Events', color: '#2C5F7C' }].map((filter, idx) => (
           <TouchableOpacity key={filter.key} onPress={() => setEventFilter(filter.key as EventFilter)} style={[s.filterChip, eventFilter === filter.key && { backgroundColor: filter.color + '20', borderColor: filter.color }, idx > 0 && { marginLeft: 8 }]}>
             <Text style={[s.filterText, eventFilter === filter.key && { color: filter.color, fontWeight: '600' }]}>{filter.label}</Text>
           </TouchableOpacity>
@@ -700,7 +702,7 @@ export default function ScheduleScreen() {
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
             <Text style={s.label}>EVENT TYPE</Text>
             <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
-              {[{ key: 'game', label: 'Game', icon: 'trophy', color: '#FF6B6B' }, { key: 'practice', label: 'Practice', icon: 'fitness', color: '#4ECDC4' }, { key: 'event', label: 'Event', icon: 'calendar', color: '#96CEB4' }].map(type => (
+              {[{ key: 'game', label: 'Game', icon: 'trophy', color: '#D94F4F' }, { key: 'practice', label: 'Practice', icon: 'fitness', color: '#14B8A6' }, { key: 'event', label: 'Event', icon: 'calendar', color: '#2C5F7C' }].map(type => (
                 <TouchableOpacity key={type.key} onPress={() => setNewEvent(prev => ({ ...prev, event_type: type.key as any }))} style={[s.typeBtn, newEvent.event_type === type.key && { backgroundColor: type.color + '20', borderColor: type.color }]}>
                   <Ionicons name={type.icon as any} size={24} color={type.color} /><Text style={{ color: type.color, marginTop: 6, fontWeight: '600' }}>{type.label}</Text>
                 </TouchableOpacity>
@@ -1014,13 +1016,10 @@ export default function ScheduleScreen() {
 }
 
 const createStyles = (colors: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'transparent' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
-  title: { fontSize: 28, fontWeight: '800', color: colors.text },
-  subtitle: { fontSize: 14, color: colors.primary, marginTop: 2 },
-  addBtn: { backgroundColor: colors.primary, width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
-  bulkBtn: { backgroundColor: colors.primary + '20', width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
-  viewToggle: { flexDirection: 'row', backgroundColor: colors.card, marginHorizontal: 16, borderRadius: 10, padding: 4, marginBottom: 12 },
+  container: { flex: 1, backgroundColor: colors.background },
+  addBtn: { backgroundColor: 'rgba(255,255,255,0.2)', width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
+  bulkBtn: { backgroundColor: 'rgba(255,255,255,0.2)', width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
+  viewToggle: { flexDirection: 'row', backgroundColor: colors.card, marginHorizontal: 16, borderRadius: radii.card, padding: 4, marginBottom: 12 },
   viewBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 8, borderRadius: 8, gap: 6 },
   viewBtnActive: { backgroundColor: colors.background },
   viewBtnText: { color: colors.textMuted, fontSize: 13 },
