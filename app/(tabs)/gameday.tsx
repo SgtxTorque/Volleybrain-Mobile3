@@ -1,16 +1,21 @@
 import AdminGameDay from '@/components/AdminGameDay';
 import EventDetailModal from '@/components/EventDetailModal';
 import { ScheduleEvent } from '@/components/EventCard';
+import AppHeaderBar from '@/components/ui/AppHeaderBar';
+import Badge from '@/components/ui/Badge';
+import Card from '@/components/ui/Card';
+import SectionHeader from '@/components/ui/SectionHeader';
 import { useAuth } from '@/lib/auth';
+import { displayTextStyle, radii, shadows } from '@/lib/design-tokens';
 import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
-import { useTheme, createGlassStyle } from '@/lib/theme';
+import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Linking,
   Platform,
@@ -87,16 +92,16 @@ const formatDateHeader = (dateStr: string): string => {
 
 // ─── Event Type Config ─────────────────────────────────────
 const eventTypeConfig: Record<string, { icon: string; color: string; label: string }> = {
-  game: { icon: 'trophy', color: '#FF6B6B', label: 'Game' },
-  practice: { icon: 'fitness', color: '#4ECDC4', label: 'Practice' },
-  event: { icon: 'calendar', color: '#96CEB4', label: 'Event' },
-  tournament: { icon: 'medal', color: '#FFB347', label: 'Tournament' },
-  other: { icon: 'calendar', color: '#5AC8FA', label: 'Other' },
+  game: { icon: 'trophy', color: '#D94F4F', label: 'Game' },
+  practice: { icon: 'fitness', color: '#14B8A6', label: 'Practice' },
+  event: { icon: 'calendar', color: '#2C5F7C', label: 'Event' },
+  tournament: { icon: 'medal', color: '#E8913A', label: 'Tournament' },
+  other: { icon: 'calendar', color: '#2C5F7C', label: 'Other' },
 };
 
 const locationTypeConfig: Record<string, { label: string; color: string; icon: string }> = {
-  home: { label: 'HOME', color: '#10B981', icon: 'home' },
-  away: { label: 'AWAY', color: '#EF4444', icon: 'airplane' },
+  home: { label: 'HOME', color: '#14B8A6', icon: 'home' },
+  away: { label: 'AWAY', color: '#E8913A', icon: 'airplane' },
   neutral: { label: 'NEUTRAL', color: '#0EA5E9', icon: 'location' },
 };
 
@@ -126,7 +131,6 @@ export default function GameDayScreen() {
   const [showEventModal, setShowEventModal] = useState(false);
 
   const s = useMemo(() => createStyles(colors), [colors]);
-  const glassCard = useMemo(() => createGlassStyle(colors), [colors]);
 
   // ─── Data Fetching ─────────────────────────────────────
   const fetchData = useCallback(async () => {
@@ -313,7 +317,8 @@ export default function GameDayScreen() {
   // ─── No Season State ──────────────────────────────────
   if (!workingSeason) {
     return (
-      <SafeAreaView style={s.container}>
+      <SafeAreaView style={s.container} edges={['top']}>
+        <AppHeaderBar title="GAME DAY" showLogo={false} showNotificationBell={false} showAvatar={false} />
         <View style={s.emptyCenter}>
           <Ionicons name="flash-outline" size={64} color={colors.textMuted} />
           <Text style={[s.emptyTitle, { color: colors.textMuted }]}>Pick Your Season</Text>
@@ -328,9 +333,13 @@ export default function GameDayScreen() {
   // ─── Loading State ─────────────────────────────────────
   if (loading) {
     return (
-      <SafeAreaView style={s.container}>
-        <View style={s.emptyCenter}>
-          <ActivityIndicator size="large" color={colors.primary} />
+      <SafeAreaView style={s.container} edges={['top']}>
+        <AppHeaderBar title="GAME DAY" showLogo={false} showNotificationBell={false} showAvatar={false} />
+        <View style={{ marginHorizontal: 16, marginTop: 16, height: 260, borderRadius: radii.card, backgroundColor: colors.bgSecondary }} />
+        <View style={{ marginHorizontal: 16, marginTop: 16, gap: 10 }}>
+          {[1, 2].map(i => (
+            <View key={i} style={{ height: 80, borderRadius: radii.card, backgroundColor: colors.bgSecondary, opacity: 0.6 }} />
+          ))}
         </View>
       </SafeAreaView>
     );
@@ -339,394 +348,211 @@ export default function GameDayScreen() {
   // ═══════════════════════════════════════════════════════
   // RENDER
   // ═══════════════════════════════════════════════════════
+  const heroTypeConf = nextEvent ? (eventTypeConfig[nextEvent.event_type] || eventTypeConfig.other) : null;
+  const heroCountdown = nextEvent ? getCountdown(nextEvent.event_date) : null;
+
   return (
-    <SafeAreaView style={s.container}>
-      {/* ─── HEADER ─────────────────────────────────── */}
-      <View style={s.header}>
-        <View>
-          <Text style={[s.heroTitle, { color: colors.text }]}>Game Day</Text>
-          <Text style={[s.seasonSubtitle, { color: colors.primary }]}>
-            {workingSeason.name}
-          </Text>
-        </View>
-        <TouchableOpacity
-          style={s.scheduleBtn}
-          onPress={() => router.push('/(tabs)/schedule' as any)}
-        >
-          <Ionicons name="calendar-outline" size={16} color={colors.primary} />
-          <Text style={[s.scheduleBtnText, { color: colors.primary }]}>Full Schedule</Text>
-        </TouchableOpacity>
-      </View>
+    <SafeAreaView style={s.container} edges={['top']}>
+      <AppHeaderBar title="GAME DAY" showLogo={false} showNotificationBell={false} showAvatar={false} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.primary}
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
-        contentContainerStyle={s.scrollContent}
+        contentContainerStyle={{ paddingBottom: 120 }}
       >
-        {/* ─── NEXT EVENT -- HERO CARD ───────────────── */}
+        {/* ================================================================ */}
+        {/* HERO CARD — Photo gradient treatment                              */}
+        {/* ================================================================ */}
         {nextEvent ? (
-          <View style={s.section}>
-            {nextEvent.event_type === 'game' ? (
-              // ───── GAME HERO ─────
-              <TouchableOpacity
-                activeOpacity={0.85}
-                onPress={() => handleEventPress(nextEvent)}
-                style={[glassCard, s.heroCard]}
-              >
-                {/* Team accent bar */}
-                <View
-                  style={[
-                    s.accentBar,
-                    { backgroundColor: nextEvent.team_color || colors.primary },
-                  ]}
-                />
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => handleEventPress(nextEvent)}
+            style={s.heroCard}
+          >
+            <LinearGradient
+              colors={['#2C5F7C', '#1B2838']}
+              style={StyleSheet.absoluteFillObject}
+            />
+            <LinearGradient
+              colors={['transparent', 'rgba(27,40,56,0.5)', 'rgba(27,40,56,0.95)']}
+              style={StyleSheet.absoluteFillObject}
+            />
 
-                <View style={s.heroContent}>
-                  {/* Top row: badge + location type */}
-                  <View style={s.heroTopRow}>
-                    <Text style={[s.gameDayLabel, { color: colors.primary }]}>GAME DAY</Text>
-                    {nextEvent.location_type && locationTypeConfig[nextEvent.location_type] && (
-                      <View
-                        style={[
-                          s.locationBadge,
-                          {
-                            backgroundColor:
-                              locationTypeConfig[nextEvent.location_type].color + '20',
-                          },
-                        ]}
-                      >
-                        <Ionicons
-                          name={locationTypeConfig[nextEvent.location_type].icon as any}
-                          size={12}
-                          color={locationTypeConfig[nextEvent.location_type].color}
-                        />
-                        <Text
-                          style={[
-                            s.locationBadgeText,
-                            { color: locationTypeConfig[nextEvent.location_type].color },
-                          ]}
-                        >
-                          {locationTypeConfig[nextEvent.location_type].label}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-
-                  {/* Countdown */}
-                  {(() => {
-                    const countdown = getCountdown(nextEvent.event_date);
-                    return (
-                      <Text
-                        style={[
-                          s.countdownText,
-                          {
-                            color: countdown.urgent ? colors.primary : colors.text,
-                          },
-                        ]}
-                      >
-                        {countdown.text}
-                      </Text>
-                    );
-                  })()}
-
-                  {/* Opponent */}
-                  {(nextEvent.opponent_name || nextEvent.opponent) && (
-                    <Text style={[s.opponentText, { color: colors.text }]}>
-                      vs {nextEvent.opponent_name || nextEvent.opponent}
-                    </Text>
-                  )}
-
-                  {/* Date + Time + Venue */}
-                  <View style={s.heroDetails}>
-                    <View style={s.heroDetailRow}>
-                      <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
-                      <Text style={[s.heroDetailText, { color: colors.textMuted }]}>
-                        {formatFullDate(nextEvent.event_date)}
-                      </Text>
-                    </View>
-                    <View style={s.heroDetailRow}>
-                      <Ionicons name="time-outline" size={14} color={colors.textMuted} />
-                      <Text style={[s.heroDetailText, { color: colors.textMuted }]}>
-                        {formatTime(nextEvent.start_time)}
-                        {nextEvent.end_time ? ` - ${formatTime(nextEvent.end_time)}` : ''}
-                      </Text>
-                    </View>
-                    {(nextEvent.venue_name || nextEvent.location) && (
-                      <View style={s.heroDetailRow}>
-                        <Ionicons name="location-outline" size={14} color={colors.textMuted} />
-                        <Text
-                          style={[s.heroDetailText, { color: colors.textMuted }]}
-                          numberOfLines={1}
-                        >
-                          {nextEvent.venue_name || nextEvent.location}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-
-                  {/* Action Buttons */}
-                  <View style={s.heroActions}>
-                    {isCoachOrAdmin && (
-                      <TouchableOpacity
-                        style={[s.heroActionBtn, { backgroundColor: colors.primary }]}
-                        onPress={() => {
-                          router.push('/lineup-builder' as any);
-                        }}
-                      >
-                        <Ionicons name="grid-outline" size={16} color="#fff" />
-                        <Text style={s.heroActionBtnTextLight}>Prep Lineup</Text>
-                      </TouchableOpacity>
-                    )}
-                    {(nextEvent.venue_address || nextEvent.venue_name || nextEvent.location) && (
-                      <TouchableOpacity
-                        style={[
-                          s.heroActionBtn,
-                          {
-                            backgroundColor: colors.primary + '15',
-                            borderWidth: 1,
-                            borderColor: colors.primary + '30',
-                          },
-                        ]}
-                        onPress={() => openDirections(nextEvent)}
-                      >
-                        <Ionicons name="navigate-outline" size={16} color={colors.primary} />
-                        <Text style={[s.heroActionBtnTextDark, { color: colors.primary }]}>
-                          Get Directions
-                        </Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ) : (
-              // ───── PRACTICE / EVENT HERO ─────
-              <TouchableOpacity
-                activeOpacity={0.85}
-                onPress={() => handleEventPress(nextEvent)}
-                style={[glassCard, s.heroCard]}
-              >
-                <View
-                  style={[
-                    s.accentBar,
-                    {
-                      backgroundColor:
-                        eventTypeConfig[nextEvent.event_type]?.color || '#4ECDC4',
-                    },
-                  ]}
-                />
-                <View style={s.heroContent}>
-                  <Text
-                    style={[
-                      s.practiceLabel,
-                      {
-                        color:
-                          eventTypeConfig[nextEvent.event_type]?.color || '#4ECDC4',
-                      },
-                    ]}
-                  >
-                    {(eventTypeConfig[nextEvent.event_type]?.label || 'Event').toUpperCase()}
-                  </Text>
-
-                  {(() => {
-                    const countdown = getCountdown(nextEvent.event_date);
-                    return (
-                      <Text
-                        style={[
-                          s.practiceCountdown,
-                          { color: countdown.urgent ? colors.text : colors.textMuted },
-                        ]}
-                      >
-                        {countdown.text}
-                      </Text>
-                    );
-                  })()}
-
-                  <Text style={[s.practiceTitle, { color: colors.text }]} numberOfLines={1}>
-                    {nextEvent.title}
-                  </Text>
-
-                  <View style={s.heroDetails}>
-                    <View style={s.heroDetailRow}>
-                      <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
-                      <Text style={[s.heroDetailText, { color: colors.textMuted }]}>
-                        {formatEventDate(nextEvent.event_date)}
-                      </Text>
-                    </View>
-                    <View style={s.heroDetailRow}>
-                      <Ionicons name="time-outline" size={14} color={colors.textMuted} />
-                      <Text style={[s.heroDetailText, { color: colors.textMuted }]}>
-                        {formatTime(nextEvent.start_time)}
-                      </Text>
-                    </View>
-                    {(nextEvent.venue_name || nextEvent.location) && (
-                      <View style={s.heroDetailRow}>
-                        <Ionicons name="location-outline" size={14} color={colors.textMuted} />
-                        <Text
-                          style={[s.heroDetailText, { color: colors.textMuted }]}
-                          numberOfLines={1}
-                        >
-                          {nextEvent.venue_name || nextEvent.location}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                </View>
-              </TouchableOpacity>
+            {/* Location badge — top right */}
+            {nextEvent.location_type && locationTypeConfig[nextEvent.location_type] && (
+              <View style={[s.heroBadge, { backgroundColor: locationTypeConfig[nextEvent.location_type].color }]}>
+                <Text style={s.heroBadgeText}>
+                  {locationTypeConfig[nextEvent.location_type].label}
+                </Text>
+              </View>
             )}
-          </View>
-        ) : (
-          // ───── NO UPCOMING EVENTS ─────
-          <View style={s.section}>
-            <View style={[glassCard, s.emptyHero]}>
-              <Ionicons name="sunny-outline" size={48} color={colors.textMuted} />
-              <Text style={[s.emptyHeroTitle, { color: colors.text }]}>No events on deck</Text>
-              <Text style={[s.emptyHeroSubtitle, { color: colors.textMuted }]}>
-                Rest up — when game day hits, this is your command center.
+
+            {/* Event type badge — top right (if no location) */}
+            {!nextEvent.location_type && heroTypeConf && (
+              <View style={[s.heroBadge, { backgroundColor: heroTypeConf.color }]}>
+                <Text style={s.heroBadgeText}>{heroTypeConf.label.toUpperCase()}</Text>
+              </View>
+            )}
+
+            {/* Hero content — bottom */}
+            <View style={s.heroContent}>
+              <Text style={s.heroCountdown}>{heroCountdown?.text}</Text>
+
+              <Text style={s.heroTitle}>
+                {nextEvent.event_type === 'game'
+                  ? 'GAME DAY'
+                  : (heroTypeConf?.label || 'EVENT').toUpperCase()}
               </Text>
+
+              {(nextEvent.opponent_name || nextEvent.opponent) && (
+                <Text style={s.heroOpponent}>
+                  vs {nextEvent.opponent_name || nextEvent.opponent}
+                </Text>
+              )}
+
+              <View style={s.heroMetaRow}>
+                <Ionicons name="calendar-outline" size={12} color="rgba(255,255,255,0.7)" />
+                <Text style={s.heroMetaText}>{formatFullDate(nextEvent.event_date)}</Text>
+              </View>
+
+              <View style={s.heroMetaRow}>
+                <Ionicons name="time-outline" size={12} color="rgba(255,255,255,0.7)" />
+                <Text style={s.heroMetaText}>
+                  {formatTime(nextEvent.start_time)}
+                  {nextEvent.end_time ? ` - ${formatTime(nextEvent.end_time)}` : ''}
+                </Text>
+              </View>
+
+              {(nextEvent.venue_name || nextEvent.location) && (
+                <View style={s.heroMetaRow}>
+                  <Ionicons name="location-outline" size={12} color="rgba(255,255,255,0.7)" />
+                  <Text style={s.heroMetaText} numberOfLines={1}>
+                    {nextEvent.venue_name || nextEvent.location}
+                  </Text>
+                </View>
+              )}
+
+              {/* Action buttons */}
+              <View style={s.heroActions}>
+                {isCoachOrAdmin && (
+                  <TouchableOpacity
+                    style={s.heroActionPrimary}
+                    onPress={() => router.push('/lineup-builder' as any)}
+                  >
+                    <Ionicons name="grid-outline" size={14} color="#FFF" />
+                    <Text style={s.heroActionPrimaryText}>Prep Lineup</Text>
+                  </TouchableOpacity>
+                )}
+                {(nextEvent.venue_address || nextEvent.venue_name || nextEvent.location) && (
+                  <TouchableOpacity style={s.heroActionSecondary} onPress={() => openDirections(nextEvent)}>
+                    <Ionicons name="navigate-outline" size={14} color="#FFF" />
+                    <Text style={s.heroActionSecondaryText}>Get Directions</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
+          </TouchableOpacity>
+        ) : (
+          <View style={s.heroCardEmpty}>
+            <LinearGradient
+              colors={['#2C5F7C', '#1B2838']}
+              style={StyleSheet.absoluteFillObject}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            />
+            <Ionicons name="sunny-outline" size={48} color="rgba(255,255,255,0.5)" />
+            <Text style={s.emptyHeroTitle}>No events on deck</Text>
+            <Text style={s.emptyHeroSub}>
+              Rest up — when game day hits, this is your command center.
+            </Text>
           </View>
         )}
 
-        {/* ─── THIS WEEK ────────────────────────────── */}
+        {/* ================================================================ */}
+        {/* THIS WEEK                                                         */}
+        {/* ================================================================ */}
         {thisWeekEvents.length > 0 && (
-          <View style={s.section}>
-            <Text style={[s.sectionLabel, { color: colors.textMuted }]}>THIS WEEK</Text>
+          <View style={s.sectionBlock}>
+            <SectionHeader title="This Week" />
             {thisWeekEvents.map((event) => {
               const typeConf = eventTypeConfig[event.event_type] || eventTypeConfig.other;
               const rsvp = event.rsvp_count;
               return (
-                <TouchableOpacity
+                <Card
                   key={event.id}
-                  activeOpacity={0.8}
+                  accentColor={typeConf.color}
                   onPress={() => handleEventPress(event)}
-                  style={[glassCard, s.weekCard]}
+                  style={{ marginHorizontal: 16, marginBottom: 10 }}
                 >
-                  {/* Left color bar */}
-                  <View style={[s.weekColorBar, { backgroundColor: typeConf.color }]} />
-
-                  <View style={s.weekCardContent}>
-                    <View style={s.weekCardTop}>
-                      <View style={s.weekCardIcon}>
-                        <Ionicons name={typeConf.icon as any} size={18} color={typeConf.color} />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[s.weekCardTitle, { color: colors.text }]} numberOfLines={1}>
-                          {event.title}
-                        </Text>
-                        {(event.opponent_name || event.opponent) && (
-                          <Text style={[s.weekCardOpponent, { color: colors.textMuted }]}>
-                            vs {event.opponent_name || event.opponent}
-                          </Text>
-                        )}
-                      </View>
-                      {event.event_type === 'game' &&
-                        event.location_type &&
-                        locationTypeConfig[event.location_type] && (
-                          <View
-                            style={[
-                              s.weekLocBadge,
-                              {
-                                backgroundColor:
-                                  locationTypeConfig[event.location_type].color + '20',
-                              },
-                            ]}
-                          >
-                            <Text
-                              style={[
-                                s.weekLocBadgeText,
-                                {
-                                  color: locationTypeConfig[event.location_type].color,
-                                },
-                              ]}
-                            >
-                              {locationTypeConfig[event.location_type].label}
-                            </Text>
-                          </View>
-                        )}
+                  <View style={s.eventCardRow}>
+                    <View style={[s.eventCardIcon, { backgroundColor: typeConf.color + '20' }]}>
+                      <Ionicons name={typeConf.icon as any} size={18} color={typeConf.color} />
                     </View>
-
-                    <View style={s.weekCardBottom}>
-                      <View style={s.weekCardMeta}>
-                        <Ionicons name="calendar-outline" size={12} color={colors.textMuted} />
-                        <Text style={[s.weekCardMetaText, { color: colors.textMuted }]}>
-                          {formatEventDate(event.event_date)}
+                    <View style={{ flex: 1 }}>
+                      <Text style={[s.eventCardTitle, { color: colors.text }]} numberOfLines={1}>
+                        {event.title}
+                      </Text>
+                      {(event.opponent_name || event.opponent) && (
+                        <Text style={[s.eventCardOpponent, { color: colors.textMuted }]}>
+                          vs {event.opponent_name || event.opponent}
                         </Text>
-                      </View>
-                      <View style={s.weekCardMeta}>
-                        <Ionicons name="time-outline" size={12} color={colors.textMuted} />
-                        <Text style={[s.weekCardMetaText, { color: colors.textMuted }]}>
-                          {formatTime(event.start_time)}
-                        </Text>
-                      </View>
+                      )}
                     </View>
-
-                    {/* RSVP counts */}
-                    {rsvp && (
-                      <View style={[s.rsvpRow, { borderTopColor: colors.glassBorder }]}>
-                        <Text style={{ color: '#4ECDC4', fontSize: 12, fontWeight: '600' }}>
-                          {rsvp.yes} going
-                        </Text>
-                        {rsvp.maybe > 0 && (
-                          <Text style={{ color: '#FFB347', fontSize: 12 }}>
-                            {rsvp.maybe} maybe
-                          </Text>
-                        )}
-                        {rsvp.pending > 0 && (
-                          <Text style={{ color: colors.textMuted, fontSize: 12 }}>
-                            {rsvp.pending} pending
-                          </Text>
-                        )}
-                      </View>
-                    )}
+                    {event.event_type === 'game' &&
+                      event.location_type &&
+                      locationTypeConfig[event.location_type] && (
+                        <Badge
+                          label={locationTypeConfig[event.location_type].label}
+                          color={locationTypeConfig[event.location_type].color}
+                        />
+                      )}
                   </View>
-                </TouchableOpacity>
+
+                  <View style={s.eventCardMeta}>
+                    <Ionicons name="calendar-outline" size={11} color={colors.textMuted} />
+                    <Text style={[s.eventCardMetaText, { color: colors.textMuted }]}>
+                      {formatEventDate(event.event_date)} {'\u00B7'} {formatTime(event.start_time)}
+                    </Text>
+                  </View>
+
+                  {rsvp && (
+                    <View style={s.eventCardRsvp}>
+                      <Text style={{ color: '#14B8A6', fontSize: 12, fontWeight: '600' }}>
+                        {rsvp.yes} going
+                      </Text>
+                      {rsvp.maybe > 0 && (
+                        <Text style={{ color: '#E8913A', fontSize: 12 }}>
+                          {rsvp.maybe} maybe
+                        </Text>
+                      )}
+                      {rsvp.pending > 0 && (
+                        <Text style={{ color: colors.textMuted, fontSize: 12 }}>
+                          {rsvp.pending} pending
+                        </Text>
+                      )}
+                    </View>
+                  )}
+                </Card>
               );
             })}
           </View>
         )}
 
-        {/* ─── SEASON OVERVIEW ──────────────────────── */}
-        <View style={s.section}>
-          <Text style={[s.sectionLabel, { color: colors.textMuted }]}>SEASON</Text>
-          <View style={s.overviewRow}>
-            <TouchableOpacity
-              style={[glassCard, s.overviewCard]}
-              activeOpacity={0.8}
-              onPress={() => router.push('/standings' as any)}
-            >
-              <Ionicons name="trophy-outline" size={28} color={colors.primary} />
-              <Text style={[s.overviewCardLabel, { color: colors.text }]}>Standings</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[glassCard, s.overviewCard]}
-              activeOpacity={0.8}
-              onPress={() => router.push('/season-archives' as any)}
-            >
-              <Ionicons name="archive-outline" size={28} color={colors.primary} />
-              <Text style={[s.overviewCardLabel, { color: colors.text }]}>Season History</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* ─── SEASON PROGRESS ──────────────────────── */}
+        {/* ================================================================ */}
+        {/* SEASON PROGRESS                                                   */}
+        {/* ================================================================ */}
         {seasonStats.totalGames > 0 && (
-          <View style={s.section}>
-            <Text style={[s.sectionLabel, { color: colors.textMuted }]}>PROGRESS</Text>
-            <View style={[glassCard, s.progressCard]}>
-              {/* Progress bar */}
+          <View style={s.sectionBlock}>
+            <SectionHeader title="Season Progress" />
+            <Card style={{ marginHorizontal: 16 }}>
               <View style={s.progressBarContainer}>
-                <View style={[s.progressBarBg, { backgroundColor: colors.glassBorder }]}>
+                <View style={s.progressBarBg}>
                   <View
                     style={[
                       s.progressBarFill,
                       {
-                        backgroundColor: colors.primary,
                         width:
                           seasonStats.totalGames > 0
                             ? `${(seasonStats.completedGames / seasonStats.totalGames) * 100}%`
@@ -740,89 +566,91 @@ export default function GameDayScreen() {
                 </Text>
               </View>
 
-              {/* Stats row */}
               <View style={s.statsRow}>
                 <View style={s.statItem}>
-                  <Text style={[s.statValue, { color: '#10B981' }]}>
-                    {seasonStats.wins}
-                  </Text>
+                  <Text style={[s.statValue, { color: '#22C55E' }]}>{seasonStats.wins}</Text>
                   <Text style={[s.statLabel, { color: colors.textMuted }]}>Won</Text>
                 </View>
                 <View style={[s.statDivider, { backgroundColor: colors.glassBorder }]} />
                 <View style={s.statItem}>
-                  <Text style={[s.statValue, { color: '#EF4444' }]}>
-                    {seasonStats.losses}
-                  </Text>
+                  <Text style={[s.statValue, { color: '#D94F4F' }]}>{seasonStats.losses}</Text>
                   <Text style={[s.statLabel, { color: colors.textMuted }]}>Lost</Text>
                 </View>
                 <View style={[s.statDivider, { backgroundColor: colors.glassBorder }]} />
                 <View style={s.statItem}>
-                  <Text style={[s.statValue, { color: colors.primary }]}>
-                    {seasonStats.winPct}%
-                  </Text>
+                  <Text style={[s.statValue, { color: '#14B8A6' }]}>{seasonStats.winPct}%</Text>
                   <Text style={[s.statLabel, { color: colors.textMuted }]}>Win %</Text>
                 </View>
               </View>
-            </View>
+            </Card>
           </View>
         )}
 
-        {/* ─── ALL UPCOMING ─────────────────────────── */}
+        {/* ================================================================ */}
+        {/* SEASON OVERVIEW (Standings + History)                              */}
+        {/* ================================================================ */}
+        <View style={s.sectionBlock}>
+          <SectionHeader title="Season" />
+          <View style={s.overviewRow}>
+            <Card onPress={() => router.push('/standings' as any)} style={{ flex: 1 }}>
+              <View style={s.overviewCardInner}>
+                <Ionicons name="trophy-outline" size={28} color={colors.primary} />
+                <Text style={[s.overviewCardLabel, { color: colors.text }]}>Standings</Text>
+              </View>
+            </Card>
+            <Card onPress={() => router.push('/season-archives' as any)} style={{ flex: 1 }}>
+              <View style={s.overviewCardInner}>
+                <Ionicons name="archive-outline" size={28} color={colors.primary} />
+                <Text style={[s.overviewCardLabel, { color: colors.text }]}>Season History</Text>
+              </View>
+            </Card>
+          </View>
+        </View>
+
+        {/* ================================================================ */}
+        {/* UPCOMING EVENTS                                                   */}
+        {/* ================================================================ */}
         {Object.keys(groupedUpcoming).length > 0 && (
-          <View style={s.section}>
-            <Text style={[s.sectionLabel, { color: colors.textMuted }]}>UPCOMING</Text>
+          <View style={s.sectionBlock}>
+            <SectionHeader
+              title="Upcoming"
+              action="Full Schedule"
+              onAction={() => router.push('/(tabs)/schedule' as any)}
+            />
             {Object.keys(groupedUpcoming)
               .sort()
               .map((dateKey) => (
-                <View key={dateKey} style={s.upcomingDateGroup}>
+                <View key={dateKey} style={{ marginBottom: 12, paddingHorizontal: 16 }}>
                   <Text style={[s.dateGroupHeader, { color: colors.text }]}>
                     {formatDateHeader(dateKey)}
                   </Text>
                   {groupedUpcoming[dateKey].map((event) => {
-                    const typeConf =
-                      eventTypeConfig[event.event_type] || eventTypeConfig.other;
+                    const typeConf = eventTypeConfig[event.event_type] || eventTypeConfig.other;
                     return (
-                      <TouchableOpacity
+                      <Card
                         key={event.id}
-                        activeOpacity={0.8}
+                        accentColor={typeConf.color}
                         onPress={() => handleEventPress(event)}
-                        style={[
-                          s.compactCard,
-                          {
-                            backgroundColor: colors.glassCard,
-                            borderColor: colors.glassBorder,
-                          },
-                        ]}
+                        style={{ marginBottom: 6 }}
                       >
-                        <View
-                          style={[s.compactIcon, { backgroundColor: typeConf.color + '20' }]}
-                        >
-                          <Ionicons
-                            name={typeConf.icon as any}
-                            size={16}
-                            color={typeConf.color}
-                          />
+                        <View style={s.compactRow}>
+                          <View style={[s.compactIcon, { backgroundColor: typeConf.color + '20' }]}>
+                            <Ionicons name={typeConf.icon as any} size={16} color={typeConf.color} />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={[s.compactTitle, { color: colors.text }]} numberOfLines={1}>
+                              {event.title}
+                            </Text>
+                            <Text style={[s.compactMeta, { color: colors.textMuted }]}>
+                              {formatTime(event.start_time)}
+                              {event.venue_name || event.location
+                                ? ` \u00B7 ${event.venue_name || event.location}`
+                                : ''}
+                            </Text>
+                          </View>
+                          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
                         </View>
-                        <View style={{ flex: 1 }}>
-                          <Text
-                            style={[s.compactTitle, { color: colors.text }]}
-                            numberOfLines={1}
-                          >
-                            {event.title}
-                          </Text>
-                          <Text style={[s.compactMeta, { color: colors.textMuted }]}>
-                            {formatTime(event.start_time)}
-                            {event.venue_name || event.location
-                              ? ` \u00B7 ${event.venue_name || event.location}`
-                              : ''}
-                          </Text>
-                        </View>
-                        <Ionicons
-                          name="chevron-forward"
-                          size={16}
-                          color={colors.textMuted}
-                        />
-                      </TouchableOpacity>
+                      </Card>
                     );
                   })}
                 </View>
@@ -832,131 +660,109 @@ export default function GameDayScreen() {
                 style={s.viewAllBtn}
                 onPress={() => router.push('/(tabs)/schedule' as any)}
               >
-                <Text style={[s.viewAllBtnText, { color: colors.primary }]}>
-                  View Full Schedule
-                </Text>
+                <Text style={[s.viewAllBtnText, { color: colors.primary }]}>View Full Schedule</Text>
                 <Ionicons name="arrow-forward" size={16} color={colors.primary} />
               </TouchableOpacity>
             )}
           </View>
         )}
 
-        {/* ─── RECENT RESULTS ─────────────────────────── */}
+        {/* ================================================================ */}
+        {/* RECENT RESULTS                                                    */}
+        {/* ================================================================ */}
         {(() => {
-          const completedGames = events.filter(
-            (e) =>
-              e.event_type === 'game' &&
-              e.event_date < todayStr &&
-              e.our_score != null &&
-              e.opponent_score != null
-          ).slice(-5).reverse();
+          const completedGames = events
+            .filter(
+              (e) =>
+                e.event_type === 'game' &&
+                e.event_date < todayStr &&
+                e.our_score != null &&
+                e.opponent_score != null
+            )
+            .slice(-5)
+            .reverse();
 
           if (completedGames.length === 0) return null;
 
           return (
-            <View style={s.section}>
-              <Text style={[s.sectionLabel, { color: colors.textMuted }]}>RECENT RESULTS</Text>
+            <View style={s.sectionBlock}>
+              <SectionHeader title="Recent Results" />
               {completedGames.map((game) => {
                 const won = (game.our_score ?? 0) > (game.opponent_score ?? 0);
                 const team = teams.find((t) => t.id === game.team_id);
                 return (
-                  <TouchableOpacity
+                  <Card
                     key={game.id}
-                    activeOpacity={0.8}
+                    accentColor={won ? '#22C55E' : '#D94F4F'}
                     onPress={() => router.push(`/game-results?eventId=${game.id}` as any)}
-                    style={[
-                      s.compactCard,
-                      {
-                        backgroundColor: colors.glassCard,
-                        borderColor: colors.glassBorder,
-                      },
-                    ]}
+                    style={{ marginHorizontal: 16, marginBottom: 8 }}
                   >
-                    <View style={[s.compactIcon, { backgroundColor: (won ? '#10B981' : '#EF4444') + '20' }]}>
-                      <Ionicons
-                        name={won ? 'trophy' : 'close-circle'}
-                        size={16}
-                        color={won ? '#10B981' : '#EF4444'}
-                      />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[s.compactTitle, { color: colors.text }]} numberOfLines={1}>
-                        vs {game.opponent_name || game.opponent || 'TBD'}
+                    <View style={s.compactRow}>
+                      <View style={[s.compactIcon, { backgroundColor: (won ? '#22C55E' : '#D94F4F') + '20' }]}>
+                        <Ionicons
+                          name={won ? 'trophy' : 'close-circle'}
+                          size={16}
+                          color={won ? '#22C55E' : '#D94F4F'}
+                        />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[s.compactTitle, { color: colors.text }]} numberOfLines={1}>
+                          vs {game.opponent_name || game.opponent || 'TBD'}
+                        </Text>
+                        <Text style={[s.compactMeta, { color: colors.textMuted }]}>
+                          {formatEventDate(game.event_date)}
+                          {team ? ` \u00B7 ${team.name}` : ''}
+                        </Text>
+                      </View>
+                      <Text
+                        style={[
+                          s.resultScore,
+                          { color: won ? '#22C55E' : '#D94F4F' },
+                        ]}
+                      >
+                        {game.our_score} - {game.opponent_score}
                       </Text>
-                      <Text style={[s.compactMeta, { color: colors.textMuted }]}>
-                        {formatEventDate(game.event_date)}
-                        {team ? ` · ${team.name}` : ''}
-                      </Text>
                     </View>
-                    <Text style={{ fontSize: 16, fontWeight: '800', color: won ? '#10B981' : '#EF4444', marginRight: 8 }}>
-                      {game.our_score} - {game.opponent_score}
-                    </Text>
-                    <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-                  </TouchableOpacity>
+                  </Card>
                 );
               })}
             </View>
           );
         })()}
 
-        {/* ─── COACH TOOLS ──────────────────────────── */}
+        {/* ================================================================ */}
+        {/* COACH TOOLS                                                       */}
+        {/* ================================================================ */}
         {isCoachOrAdmin && (
-          <View style={s.section}>
-            <Text style={[s.sectionLabel, { color: colors.textMuted }]}>COACH TOOLS</Text>
+          <View style={s.sectionBlock}>
+            <SectionHeader title="Coach Tools" />
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={s.coachToolsScroll}
+              contentContainerStyle={{ paddingHorizontal: 16, gap: 10 }}
             >
-              <TouchableOpacity
-                style={[glassCard, s.coachToolCard]}
-                activeOpacity={0.8}
-                onPress={() => router.push('/(tabs)/schedule' as any)}
-              >
-                <View style={[s.coachToolIcon, { backgroundColor: colors.primary + '20' }]}>
-                  <Ionicons name="add" size={24} color={colors.primary} />
-                </View>
-                <Text style={[s.coachToolLabel, { color: colors.text }]}>Add Event</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[glassCard, s.coachToolCard]}
-                activeOpacity={0.8}
-                onPress={() => router.push('/attendance' as any)}
-              >
-                <View style={[s.coachToolIcon, { backgroundColor: '#10B98120' }]}>
-                  <Ionicons name="checkmark-circle-outline" size={24} color="#10B981" />
-                </View>
-                <Text style={[s.coachToolLabel, { color: colors.text }]}>Attendance</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[glassCard, s.coachToolCard]}
-                activeOpacity={0.8}
-                onPress={() => router.push('/lineup-builder' as any)}
-              >
-                <View style={[s.coachToolIcon, { backgroundColor: '#8B5CF620' }]}>
-                  <Ionicons name="grid-outline" size={24} color="#8B5CF6" />
-                </View>
-                <Text style={[s.coachToolLabel, { color: colors.text }]}>Lineup</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[glassCard, s.coachToolCard]}
-                activeOpacity={0.8}
-                onPress={() => router.push('/game-prep' as any)}
-              >
-                <View style={[s.coachToolIcon, { backgroundColor: '#FF6B6B20' }]}>
-                  <Ionicons name="analytics-outline" size={24} color="#FF6B6B" />
-                </View>
-                <Text style={[s.coachToolLabel, { color: colors.text }]}>Game Prep</Text>
-              </TouchableOpacity>
+              {[
+                { icon: 'add', color: '#2C5F7C', label: 'Add Event', route: '/(tabs)/schedule' },
+                { icon: 'checkmark-circle-outline', color: '#22C55E', label: 'Attendance', route: '/attendance' },
+                { icon: 'grid-outline', color: '#8B5CF6', label: 'Lineup', route: '/lineup-builder' },
+                { icon: 'analytics-outline', color: '#D94F4F', label: 'Game Prep', route: '/game-prep' },
+              ].map((tool) => (
+                <Card
+                  key={tool.label}
+                  onPress={() => router.push(tool.route as any)}
+                  style={{ width: 90 }}
+                >
+                  <View style={s.coachToolInner}>
+                    <View style={[s.coachToolIcon, { backgroundColor: tool.color + '20' }]}>
+                      <Ionicons name={tool.icon as any} size={24} color={tool.color} />
+                    </View>
+                    <Text style={[s.coachToolLabel, { color: colors.text }]}>{tool.label}</Text>
+                  </View>
+                </Card>
+              ))}
             </ScrollView>
           </View>
         )}
-
-        {/* Bottom padding for tab bar */}
-        <View style={{ height: 120 }} />
       </ScrollView>
 
       {/* ─── EVENT DETAIL MODAL ─────────────────────── */}
@@ -979,286 +785,198 @@ const createStyles = (colors: any) =>
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: 'transparent',
-    },
-
-    // ─── Header ──────────────────────────────────
-    header: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingHorizontal: 20,
-      paddingVertical: 12,
-    },
-    heroTitle: {
-      fontSize: 28,
-      fontWeight: '900',
-      letterSpacing: -0.5,
-    },
-    seasonSubtitle: {
-      fontSize: 14,
-      fontWeight: '600',
-      marginTop: 2,
-    },
-    scheduleBtn: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      borderRadius: 10,
-      backgroundColor: colors.primary + '15',
-    },
-    scheduleBtnText: {
-      fontSize: 13,
-      fontWeight: '600',
-    },
-
-    scrollContent: {
-      paddingHorizontal: 20,
+      backgroundColor: colors.background,
     },
 
     // ─── Sections ────────────────────────────────
-    section: {
-      marginBottom: 28,
-    },
-    sectionLabel: {
-      fontSize: 12,
-      fontWeight: '700',
-      textTransform: 'uppercase',
-      letterSpacing: 2,
-      marginBottom: 14,
+    sectionBlock: {
+      marginBottom: 8,
     },
 
     // ─── Hero Card ───────────────────────────────
     heroCard: {
-      overflow: 'hidden',
-      flexDirection: 'row',
-    },
-    accentBar: {
-      width: 5,
-    },
-    heroContent: {
-      flex: 1,
-      padding: 20,
-    },
-    heroTopRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
+      height: 300,
+      borderRadius: radii.card,
+      overflow: 'hidden' as const,
+      marginHorizontal: 16,
+      marginTop: 12,
       marginBottom: 8,
+      ...shadows.card,
     },
-    gameDayLabel: {
-      fontSize: 24,
-      fontWeight: '900',
-      letterSpacing: 1,
-    },
-    locationBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
+    heroBadge: {
+      position: 'absolute' as const,
+      top: 12,
+      right: 12,
       paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: 8,
-      gap: 4,
+      paddingVertical: 4,
+      borderRadius: 20,
     },
-    locationBadgeText: {
-      fontSize: 11,
+    heroBadgeText: {
+      fontSize: 9,
       fontWeight: '800',
+      color: '#FFF',
+      textTransform: 'uppercase',
       letterSpacing: 0.5,
     },
-    countdownText: {
-      fontSize: 36,
-      fontWeight: '900',
-      letterSpacing: -0.5,
+    heroContent: {
+      position: 'absolute' as const,
+      bottom: 0,
+      left: 0,
+      right: 0,
+      padding: 16,
+    },
+    heroCountdown: {
+      color: '#14B8A6',
+      fontSize: 12,
+      fontWeight: '800',
+      textTransform: 'uppercase',
+      letterSpacing: 2,
+      marginBottom: 2,
+    },
+    heroTitle: {
+      ...displayTextStyle,
+      color: '#FFF',
+      fontSize: 28,
       marginBottom: 4,
     },
-    opponentText: {
-      fontSize: 20,
-      fontWeight: '700',
-      marginBottom: 12,
+    heroOpponent: {
+      color: 'rgba(255,255,255,0.9)',
+      fontSize: 16,
+      fontWeight: '600',
+      marginBottom: 8,
     },
-    heroDetails: {
-      gap: 6,
-      marginBottom: 16,
-    },
-    heroDetailRow: {
+    heroMetaRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8,
+      gap: 6,
+      marginBottom: 3,
     },
-    heroDetailText: {
-      fontSize: 14,
-      lineHeight: 20,
+    heroMetaText: {
+      color: 'rgba(255,255,255,0.7)',
+      fontSize: 11,
     },
     heroActions: {
       flexDirection: 'row',
       gap: 10,
+      marginTop: 12,
     },
-    heroActionBtn: {
+    heroActionPrimary: {
       flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      paddingVertical: 12,
-      borderRadius: 12,
+      backgroundColor: '#2C5F7C',
+      paddingVertical: 10,
+      borderRadius: 24,
       gap: 6,
     },
-    heroActionBtnTextLight: {
-      color: '#fff',
-      fontSize: 14,
+    heroActionPrimaryText: {
+      color: '#FFF',
+      fontSize: 13,
       fontWeight: '700',
     },
-    heroActionBtnTextDark: {
-      fontSize: 14,
+    heroActionSecondary: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: 'rgba(255,255,255,0.15)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.25)',
+      paddingVertical: 10,
+      borderRadius: 24,
+      gap: 6,
+    },
+    heroActionSecondaryText: {
+      color: '#FFF',
+      fontSize: 13,
       fontWeight: '700',
-    },
-
-    // ─── Practice Hero ───────────────────────────
-    practiceLabel: {
-      fontSize: 18,
-      fontWeight: '900',
-      letterSpacing: 1,
-      marginBottom: 4,
-    },
-    practiceCountdown: {
-      fontSize: 28,
-      fontWeight: '800',
-      marginBottom: 4,
-    },
-    practiceTitle: {
-      fontSize: 16,
-      fontWeight: '600',
-      marginBottom: 12,
     },
 
     // ─── Empty Hero ──────────────────────────────
-    emptyHero: {
-      padding: 40,
+    heroCardEmpty: {
+      height: 220,
+      borderRadius: radii.card,
+      overflow: 'hidden' as const,
+      marginHorizontal: 16,
+      marginTop: 12,
+      marginBottom: 8,
       alignItems: 'center',
       justifyContent: 'center',
+      ...shadows.card,
     },
     emptyHeroTitle: {
+      ...displayTextStyle,
+      color: '#FFF',
       fontSize: 18,
-      fontWeight: '700',
-      marginTop: 14,
+      marginTop: 12,
     },
-    emptyHeroSubtitle: {
-      fontSize: 14,
+    emptyHeroSub: {
+      color: 'rgba(255,255,255,0.6)',
+      fontSize: 13,
       textAlign: 'center',
-      marginTop: 6,
-      lineHeight: 20,
+      marginTop: 4,
+      paddingHorizontal: 40,
+      lineHeight: 18,
     },
 
-    // ─── This Week Cards ─────────────────────────
-    weekCard: {
-      overflow: 'hidden',
-      flexDirection: 'row',
-      marginBottom: 10,
-    },
-    weekColorBar: {
-      width: 4,
-    },
-    weekCardContent: {
-      flex: 1,
-      padding: 14,
-    },
-    weekCardTop: {
+    // ─── Event Cards (This Week) ─────────────────
+    eventCardRow: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 10,
     },
-    weekCardIcon: {
-      width: 32,
-      height: 32,
-      borderRadius: 8,
+    eventCardIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
       justifyContent: 'center',
       alignItems: 'center',
-      backgroundColor: colors.card,
     },
-    weekCardTitle: {
+    eventCardTitle: {
       fontSize: 15,
       fontWeight: '700',
     },
-    weekCardOpponent: {
+    eventCardOpponent: {
       fontSize: 13,
-      marginTop: 1,
+      marginTop: 2,
     },
-    weekLocBadge: {
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 5,
-    },
-    weekLocBadgeText: {
-      fontSize: 10,
-      fontWeight: '800',
-    },
-    weekCardBottom: {
-      flexDirection: 'row',
-      gap: 16,
-      marginTop: 8,
-    },
-    weekCardMeta: {
+    eventCardMeta: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 4,
+      marginTop: 8,
     },
-    weekCardMetaText: {
+    eventCardMetaText: {
       fontSize: 12,
     },
-    rsvpRow: {
+    eventCardRsvp: {
       flexDirection: 'row',
       gap: 12,
-      marginTop: 10,
-      paddingTop: 10,
+      marginTop: 8,
+      paddingTop: 8,
       borderTopWidth: 1,
-    },
-    quietWeek: {
-      padding: 28,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 12,
-    },
-    quietWeekText: {
-      fontSize: 15,
-    },
-
-    // ─── Season Overview ─────────────────────────
-    overviewRow: {
-      flexDirection: 'row',
-      gap: 12,
-    },
-    overviewCard: {
-      flex: 1,
-      paddingVertical: 22,
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 8,
-    },
-    overviewCardLabel: {
-      fontSize: 14,
-      fontWeight: '700',
+      borderTopColor: colors.glassBorder,
     },
 
     // ─── Season Progress ─────────────────────────
-    progressCard: {
-      padding: 20,
-    },
     progressBarContainer: {
-      marginBottom: 20,
+      marginBottom: 16,
     },
     progressBarBg: {
       height: 8,
       borderRadius: 4,
-      overflow: 'hidden',
-      marginBottom: 8,
+      overflow: 'hidden' as const,
+      backgroundColor: colors.glassBorder,
+      marginBottom: 6,
     },
     progressBarFill: {
       height: '100%',
       borderRadius: 4,
+      backgroundColor: '#14B8A6',
     },
     progressLabel: {
-      fontSize: 13,
+      fontSize: 12,
       fontWeight: '600',
     },
     statsRow: {
@@ -1271,11 +989,11 @@ const createStyles = (colors: any) =>
       flex: 1,
     },
     statValue: {
-      fontSize: 28,
-      fontWeight: '800',
+      ...displayTextStyle,
+      fontSize: 24,
     },
     statLabel: {
-      fontSize: 12,
+      fontSize: 10,
       fontWeight: '600',
       marginTop: 2,
       textTransform: 'uppercase',
@@ -1283,25 +1001,30 @@ const createStyles = (colors: any) =>
     },
     statDivider: {
       width: 1,
-      height: 36,
+      height: 32,
     },
 
-    // ─── Upcoming All ────────────────────────────
-    upcomingDateGroup: {
-      marginBottom: 16,
+    // ─── Season Overview ─────────────────────────
+    overviewRow: {
+      flexDirection: 'row',
+      gap: 10,
+      paddingHorizontal: 16,
     },
-    dateGroupHeader: {
-      fontSize: 14,
+    overviewCardInner: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 12,
+      gap: 8,
+    },
+    overviewCardLabel: {
+      fontSize: 13,
       fontWeight: '700',
-      marginBottom: 8,
     },
-    compactCard: {
+
+    // ─── Compact rows (upcoming + results) ───────
+    compactRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      padding: 12,
-      borderRadius: 14,
-      borderWidth: 1,
-      marginBottom: 6,
       gap: 10,
     },
     compactIcon: {
@@ -1319,6 +1042,18 @@ const createStyles = (colors: any) =>
       fontSize: 12,
       marginTop: 2,
     },
+    resultScore: {
+      fontSize: 16,
+      fontWeight: '800',
+    },
+
+    // ─── Upcoming date group ─────────────────────
+    dateGroupHeader: {
+      ...displayTextStyle,
+      fontSize: 13,
+      marginBottom: 8,
+    },
+
     viewAllBtn: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -1332,20 +1067,14 @@ const createStyles = (colors: any) =>
     },
 
     // ─── Coach Tools ─────────────────────────────
-    coachToolsScroll: {
-      gap: 12,
-    },
-    coachToolCard: {
-      width: 90,
-      paddingVertical: 16,
+    coachToolInner: {
       alignItems: 'center',
-      justifyContent: 'center',
       gap: 8,
     },
     coachToolIcon: {
       width: 44,
       height: 44,
-      borderRadius: 12,
+      borderRadius: radii.card,
       justifyContent: 'center',
       alignItems: 'center',
     },
@@ -1363,8 +1092,8 @@ const createStyles = (colors: any) =>
       paddingHorizontal: 40,
     },
     emptyTitle: {
+      ...displayTextStyle,
       fontSize: 18,
-      fontWeight: '700',
       marginTop: 16,
     },
     emptySubtitle: {
@@ -1372,5 +1101,6 @@ const createStyles = (colors: any) =>
       textAlign: 'center',
       marginTop: 8,
       lineHeight: 20,
+      color: colors.textMuted,
     },
   });

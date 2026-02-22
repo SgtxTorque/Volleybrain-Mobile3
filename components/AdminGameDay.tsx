@@ -1,16 +1,22 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Animated, Linking, Platform,
+  Animated, Linking, Platform,
   RefreshControl, ScrollView, StyleSheet, Text,
   TouchableOpacity, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { displayTextStyle, radii, shadows } from '@/lib/design-tokens';
 import { useSeason } from '@/lib/season';
 import { useTheme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
 import AdminContextBar from './AdminContextBar';
+import AppHeaderBar from './ui/AppHeaderBar';
+import Badge from './ui/Badge';
+import Card from './ui/Card';
+import SectionHeader from './ui/SectionHeader';
+import StatBox from './ui/StatBox';
 
 // ============================================
 // TYPES
@@ -277,13 +283,33 @@ export default function AdminGameDay() {
     );
   };
 
+  // ---- Derived stats for overview ----
+  const uniqueVenues = useMemo(() => {
+    const venues = new Set<string>();
+    todaysGames.forEach((g) => {
+      const v = g.venue_name || g.location;
+      if (v) venues.add(v);
+    });
+    return venues.size;
+  }, [todaysGames]);
+
+  const uniqueTeams = useMemo(() => {
+    const teamIds = new Set<string>();
+    todaysGames.forEach((g) => teamIds.add(g.team_id));
+    return teamIds.size;
+  }, [todaysGames]);
+
   // ---- Render ----
   if (loading) {
     return (
       <SafeAreaView style={s.container} edges={['top']}>
         <AdminContextBar />
-        <View style={s.centered}>
-          <ActivityIndicator size="large" color={colors.primary} />
+        <AppHeaderBar title="GAME DAY" showLogo={false} showNotificationBell={false} showAvatar={false} />
+        <View style={{ marginHorizontal: 16, marginTop: 16, gap: 12 }}>
+          <View style={{ height: 60, borderRadius: radii.card, backgroundColor: colors.bgSecondary }} />
+          {[1, 2].map(i => (
+            <View key={i} style={{ height: 90, borderRadius: radii.card, backgroundColor: colors.bgSecondary, opacity: 0.6 }} />
+          ))}
         </View>
       </SafeAreaView>
     );
@@ -294,220 +320,189 @@ export default function AdminGameDay() {
   return (
     <SafeAreaView style={s.container} edges={['top']}>
       <AdminContextBar />
+      <AppHeaderBar title="GAME DAY" showLogo={false} showNotificationBell={false} showAvatar={false} />
+
       <ScrollView
-        style={s.scroll}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
+        contentContainerStyle={{ paddingBottom: 120 }}
       >
-        {/* Header */}
-        <View style={s.header}>
-          <View>
-            <Text style={s.title}>Game Day Operations</Text>
-            <Text style={s.subtitle}>{formatDate(todayStr)}</Text>
-          </View>
+        {/* ================================================================ */}
+        {/* OVERVIEW STAT BOXES                                               */}
+        {/* ================================================================ */}
+        <View style={s.statRow}>
+          <StatBox value={todaysGames.length} label="Games Today" accentColor="#14B8A6" />
+          <StatBox value={uniqueTeams} label="Teams" accentColor="#2C5F7C" />
+          <StatBox value={uniqueVenues} label="Venues" accentColor="#E8913A" />
         </View>
 
-        {/* Today's Games */}
+        {/* ================================================================ */}
+        {/* TODAY'S GAMES                                                      */}
+        {/* ================================================================ */}
         {todaysGames.length > 0 ? (
-          <>
-            <Text style={s.sectionLabel}>
-              TODAY'S GAMES{' '}
-              <Text style={{ color: colors.primary }}>({todaysGames.length})</Text>
-            </Text>
+          <View style={s.sectionBlock}>
+            <SectionHeader title={`Today's Games (${todaysGames.length})`} />
             {todaysGames.map((game) => (
-              <TouchableOpacity
+              <Card
                 key={game.id}
-                style={s.gameCard}
-                activeOpacity={0.7}
+                accentColor={game.team_color || colors.primary}
                 onPress={() => router.push('/game-prep' as any)}
+                style={{ marginHorizontal: 16, marginBottom: 10 }}
               >
-                <View
-                  style={[
-                    s.colorBar,
-                    { backgroundColor: game.team_color || colors.primary },
-                  ]}
-                />
-                <View style={s.gameCardBody}>
-                  <View style={s.gameCardTop}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={s.teamName}>{game.team_name}</Text>
-                      <Text style={s.matchup}>
-                        vs{' '}
-                        <Text style={s.opponentName}>
-                          {game.opponent_name || 'TBD'}
-                        </Text>
-                      </Text>
-                    </View>
-                    {renderStatusBadge(game)}
+                <View style={s.gameCardRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[s.teamName, { color: colors.text }]}>{game.team_name}</Text>
+                    <Text style={[s.matchup, { color: colors.textSecondary }]}>
+                      vs <Text style={{ fontWeight: '600', color: colors.text }}>{game.opponent_name || 'TBD'}</Text>
+                    </Text>
                   </View>
-                  <View style={s.gameCardBottom}>
-                    {game.event_time ? (
-                      <Text style={s.gameTime}>{formatTime(game.event_time)}</Text>
-                    ) : null}
-                    {(game.venue_name || game.venue_address || game.location) ? (
-                      <TouchableOpacity
-                        style={s.venueRow}
-                        onPress={() => openDirections(game)}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                      >
-                        <Ionicons
-                          name="map-outline"
-                          size={13}
-                          color={colors.primary}
-                        />
-                        <Text style={s.venueName} numberOfLines={1}>
-                          {game.venue_name || game.venue_address || game.location}
-                        </Text>
-                      </TouchableOpacity>
-                    ) : null}
-                  </View>
+                  {renderStatusBadge(game)}
                 </View>
-              </TouchableOpacity>
+                <View style={s.gameCardMeta}>
+                  {game.event_time ? (
+                    <View style={s.metaRow}>
+                      <Ionicons name="time-outline" size={12} color={colors.textMuted} />
+                      <Text style={[s.metaText, { color: colors.textMuted }]}>{formatTime(game.event_time)}</Text>
+                    </View>
+                  ) : null}
+                  {(game.venue_name || game.venue_address || game.location) ? (
+                    <TouchableOpacity
+                      style={s.metaRow}
+                      onPress={() => openDirections(game)}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Ionicons name="map-outline" size={12} color={colors.primary} />
+                      <Text style={[s.metaText, { color: colors.primary }]} numberOfLines={1}>
+                        {game.venue_name || game.venue_address || game.location}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              </Card>
             ))}
-          </>
+          </View>
         ) : (
-          <>
-            <Text style={s.sectionLabel}>TODAY'S GAMES</Text>
-            <View style={s.emptyCard}>
-              <Ionicons name="calendar-outline" size={36} color={colors.textMuted} />
-              <Text style={s.emptyTitle}>No games today</Text>
-              {nextGame && (
-                <Text style={s.emptySubtitle}>
-                  Next game: {nextGame.team_name} vs{' '}
-                  {nextGame.opponent_name || 'TBD'} on{' '}
-                  {formatDate(nextGame.event_date)}
-                  {nextGame.event_time
-                    ? ` at ${formatTime(nextGame.event_time)}`
-                    : ''}
-                </Text>
-              )}
-            </View>
-          </>
+          <View style={s.sectionBlock}>
+            <SectionHeader title="Today's Games" />
+            <Card style={{ marginHorizontal: 16 }}>
+              <View style={s.emptyInner}>
+                <Ionicons name="calendar-outline" size={36} color={colors.textMuted} />
+                <Text style={[s.emptyTitle, { color: colors.text }]}>No games today</Text>
+                {nextGame && (
+                  <Text style={[s.emptySubtitle, { color: colors.textSecondary }]}>
+                    Next: {nextGame.team_name} vs {nextGame.opponent_name || 'TBD'} on {formatDate(nextGame.event_date)}
+                    {nextGame.event_time ? ` at ${formatTime(nextGame.event_time)}` : ''}
+                  </Text>
+                )}
+              </View>
+            </Card>
+          </View>
         )}
 
-        {/* This Week */}
+        {/* ================================================================ */}
+        {/* THIS WEEK                                                         */}
+        {/* ================================================================ */}
         {weekDates.length > 0 && (
-          <>
-            <Text style={s.sectionLabel}>THIS WEEK</Text>
+          <View style={s.sectionBlock}>
+            <SectionHeader title="This Week" />
             {weekDates.map((dateStr) => (
-              <View key={dateStr} style={{ marginBottom: 12 }}>
-                <Text style={s.dayHeader}>{formatDayHeader(dateStr)}</Text>
+              <View key={dateStr} style={{ marginBottom: 10, paddingHorizontal: 16 }}>
+                <Text style={[s.dayHeader, { color: colors.textSecondary }]}>{formatDayHeader(dateStr)}</Text>
                 {thisWeekGames[dateStr].map((game) => (
-                  <View key={game.id} style={s.compactCard}>
-                    <View
-                      style={[
-                        s.compactColorBar,
-                        { backgroundColor: game.team_color || colors.primary },
-                      ]}
-                    />
-                    <View style={s.compactBody}>
-                      <Text style={s.compactTeam} numberOfLines={1}>
-                        {game.team_name}
-                      </Text>
-                      <Text style={s.compactVs}>vs</Text>
-                      <Text style={s.compactOpponent} numberOfLines={1}>
-                        {game.opponent_name || 'TBD'}
-                      </Text>
+                  <Card
+                    key={game.id}
+                    accentColor={game.team_color || colors.primary}
+                    style={{ marginBottom: 6 }}
+                  >
+                    <View style={s.compactRow}>
+                      <Text style={[s.compactTeam, { color: colors.text }]} numberOfLines={1}>{game.team_name}</Text>
+                      <Text style={[s.compactVs, { color: colors.textMuted }]}>vs</Text>
+                      <Text style={[s.compactOpponent, { color: colors.textSecondary }]} numberOfLines={1}>{game.opponent_name || 'TBD'}</Text>
                       {game.event_time ? (
-                        <Text style={s.compactTime}>
-                          {formatTime(game.event_time)}
-                        </Text>
+                        <Text style={[s.compactTime, { color: colors.textMuted }]}>{formatTime(game.event_time)}</Text>
                       ) : null}
                     </View>
-                  </View>
+                  </Card>
                 ))}
               </View>
             ))}
-          </>
+          </View>
         )}
 
-        {/* Missing Stats */}
+        {/* ================================================================ */}
+        {/* MISSING STATS                                                     */}
+        {/* ================================================================ */}
         {missingStats.length > 0 && (
-          <>
-            <Text style={s.sectionLabel}>
-              <Ionicons name="warning-outline" size={12} color={colors.warning} />{' '}
-              MISSING STATS{' '}
-              <Text style={{ color: colors.warning }}>({missingStats.length})</Text>
-            </Text>
+          <View style={s.sectionBlock}>
+            <SectionHeader title={`Missing Stats (${missingStats.length})`} />
             {missingStats.map((game) => (
-              <TouchableOpacity
+              <Card
                 key={game.id}
-                style={s.warningCard}
-                activeOpacity={0.7}
+                accentColor={colors.warning}
                 onPress={() => router.push('/game-prep' as any)}
+                style={{ marginHorizontal: 16, marginBottom: 8 }}
               >
-                <View
-                  style={[s.colorBar, { backgroundColor: colors.warning }]}
-                />
-                <View style={s.warningCardBody}>
+                <View style={s.gameCardRow}>
                   <View style={{ flex: 1 }}>
-                    <Text style={s.warningTeamName}>
-                      {game.team_name}{' '}
-                      <Text style={s.warningVs}>
-                        vs {game.opponent_name || 'TBD'}
-                      </Text>
+                    <Text style={[s.teamName, { color: colors.text }]}>
+                      {game.team_name}
                     </Text>
-                    <Text style={s.warningDate}>
-                      {formatDate(game.event_date)}
+                    <Text style={[s.matchup, { color: colors.textSecondary }]}>
+                      vs {game.opponent_name || 'TBD'} {'\u00B7'} {formatDate(game.event_date)}
                     </Text>
                   </View>
-                  <Text style={s.warningLabel}>Stats not entered</Text>
+                  <Badge label="NEEDS STATS" color={colors.warning} />
                 </View>
-              </TouchableOpacity>
+              </Card>
             ))}
-          </>
+          </View>
         )}
 
-        {/* Season Scoreboard */}
+        {/* ================================================================ */}
+        {/* SEASON SCOREBOARD                                                 */}
+        {/* ================================================================ */}
         {teamRecords.length > 0 && (
-          <>
-            <Text style={s.sectionLabel}>SEASON SCOREBOARD</Text>
+          <View style={s.sectionBlock}>
+            <SectionHeader title="Season Scoreboard" />
             {teamRecords.map((rec) => {
               const total = rec.wins + rec.losses + rec.ties;
               const winPct = total > 0 ? (rec.wins / total) * 100 : 0;
               const barColor =
-                winPct >= 66 ? colors.success : winPct >= 33 ? colors.warning : colors.textMuted;
+                winPct >= 66 ? '#22C55E' : winPct >= 33 ? '#E8913A' : colors.textMuted;
 
               return (
-                <View key={rec.team_id} style={s.scoreboardCard}>
-                  <View
-                    style={[
-                      s.colorBar,
-                      { backgroundColor: rec.team_color || colors.primary },
-                    ]}
-                  />
-                  <View style={s.scoreboardBody}>
-                    <View style={s.scoreboardTop}>
-                      <Text style={s.scoreboardTeam}>{rec.team_name}</Text>
-                      <Text style={[s.scoreboardPct, { color: barColor }]}>
-                        {winPct.toFixed(0)}%
-                      </Text>
-                    </View>
-                    <Text style={s.scoreboardRecord}>
-                      {rec.wins}W - {rec.losses}L - {rec.ties}T
+                <Card
+                  key={rec.team_id}
+                  accentColor={rec.team_color || colors.primary}
+                  style={{ marginHorizontal: 16, marginBottom: 8 }}
+                >
+                  <View style={s.scoreboardTop}>
+                    <Text style={[s.scoreboardTeam, { color: colors.text }]}>{rec.team_name}</Text>
+                    <Text style={[s.scoreboardPct, { color: barColor }]}>
+                      {winPct.toFixed(0)}%
                     </Text>
-                    <View style={s.progressTrack}>
-                      <View
-                        style={[
-                          s.progressFill,
-                          {
-                            width: `${Math.max(winPct, 2)}%`,
-                            backgroundColor: barColor,
-                          },
-                        ]}
-                      />
-                    </View>
                   </View>
-                </View>
+                  <Text style={[s.scoreboardRecord, { color: colors.textSecondary }]}>
+                    {rec.wins}W - {rec.losses}L - {rec.ties}T
+                  </Text>
+                  <View style={s.progressTrack}>
+                    <View
+                      style={[
+                        s.progressFill,
+                        {
+                          width: `${Math.max(winPct, 2)}%`,
+                          backgroundColor: barColor,
+                        },
+                      ]}
+                    />
+                  </View>
+                </Card>
               );
             })}
-          </>
+          </View>
         )}
-
-        {/* Bottom spacing for tab bar */}
-        <View style={{ height: 120 }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -521,117 +516,51 @@ const createStyles = (colors: any) =>
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: 'transparent',
-    },
-    centered: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    scroll: {
-      flex: 1,
-      paddingHorizontal: 16,
+      backgroundColor: colors.background,
     },
 
-    // Header
-    header: {
-      paddingHorizontal: 0,
-      paddingVertical: 12,
-    },
-    title: {
-      fontSize: 28,
-      fontWeight: '900',
-      color: colors.text,
-      letterSpacing: -0.5,
-    },
-    subtitle: {
-      fontSize: 14,
-      color: colors.primary,
-      fontWeight: '600',
-      marginTop: 2,
+    // Sections
+    sectionBlock: {
+      marginBottom: 8,
     },
 
-    // Section label
-    sectionLabel: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: colors.textMuted,
-      textTransform: 'uppercase',
-      letterSpacing: 1,
-      marginTop: 24,
-      marginBottom: 12,
-      marginLeft: 4,
-    },
-
-    // Game card (today's games)
-    gameCard: {
-      backgroundColor: colors.glassCard,
-      borderWidth: 1,
-      borderColor: colors.glassBorder,
-      borderRadius: 16,
-      overflow: 'hidden',
+    // Stat row
+    statRow: {
       flexDirection: 'row',
-      marginBottom: 12,
-      ...Platform.select({
-        ios: {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.15,
-          shadowRadius: 12,
-        },
-        android: { elevation: 6 },
-      }),
+      gap: 8,
+      paddingHorizontal: 16,
+      marginTop: 12,
+      marginBottom: 8,
     },
-    colorBar: {
-      width: 4,
-      borderTopLeftRadius: 16,
-      borderBottomLeftRadius: 16,
-    },
-    gameCardBody: {
-      flex: 1,
-      padding: 14,
-    },
-    gameCardTop: {
+
+    // Game card content
+    gameCardRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'flex-start',
     },
     teamName: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: colors.text,
+      ...displayTextStyle,
+      fontSize: 15,
     },
     matchup: {
-      fontSize: 14,
-      color: colors.textSecondary,
+      fontSize: 13,
       marginTop: 2,
     },
-    opponentName: {
-      fontWeight: '600',
-      color: colors.text,
-    },
-    gameCardBottom: {
+    gameCardMeta: {
       flexDirection: 'row',
       alignItems: 'center',
       marginTop: 10,
-      gap: 12,
+      gap: 14,
     },
-    gameTime: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: colors.textSecondary,
-    },
-    venueRow: {
+    metaRow: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 4,
-      flex: 1,
     },
-    venueName: {
-      fontSize: 13,
-      color: colors.primary,
+    metaText: {
+      fontSize: 12,
       fontWeight: '500',
-      flex: 1,
     },
 
     // Status badges
@@ -639,9 +568,9 @@ const createStyles = (colors: any) =>
       flexDirection: 'row',
       alignItems: 'center',
       paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: 12,
-      gap: 6,
+      paddingVertical: 4,
+      borderRadius: radii.badge,
+      gap: 5,
     },
     liveDot: {
       width: 8,
@@ -649,9 +578,10 @@ const createStyles = (colors: any) =>
       borderRadius: 4,
     },
     statusText: {
-      fontSize: 11,
+      fontSize: 10,
       fontWeight: '800',
       letterSpacing: 0.5,
+      textTransform: 'uppercase',
     },
     statusScore: {
       fontSize: 12,
@@ -659,168 +589,68 @@ const createStyles = (colors: any) =>
     },
 
     // Empty state
-    emptyCard: {
-      backgroundColor: colors.glassCard,
-      borderWidth: 1,
-      borderColor: colors.glassBorder,
-      borderRadius: 16,
-      padding: 28,
+    emptyInner: {
       alignItems: 'center',
+      paddingVertical: 16,
       gap: 8,
-      ...Platform.select({
-        ios: {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.15,
-          shadowRadius: 12,
-        },
-        android: { elevation: 6 },
-      }),
     },
     emptyTitle: {
+      ...displayTextStyle,
       fontSize: 16,
-      fontWeight: '700',
-      color: colors.text,
     },
     emptySubtitle: {
       fontSize: 13,
-      color: colors.textSecondary,
       textAlign: 'center',
       lineHeight: 19,
     },
 
-    // Day header (this week)
+    // Day header
     dayHeader: {
-      fontSize: 14,
-      fontWeight: '700',
-      color: colors.textSecondary,
+      ...displayTextStyle,
+      fontSize: 13,
       marginBottom: 8,
-      marginLeft: 4,
     },
 
-    // Compact card (this week)
-    compactCard: {
-      backgroundColor: colors.glassCard,
-      borderWidth: 1,
-      borderColor: colors.glassBorder,
-      borderRadius: 12,
-      overflow: 'hidden',
-      flexDirection: 'row',
-      marginBottom: 8,
-    },
-    compactColorBar: {
-      width: 4,
-      borderTopLeftRadius: 12,
-      borderBottomLeftRadius: 12,
-    },
-    compactBody: {
-      flex: 1,
+    // Compact row (this week)
+    compactRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingVertical: 10,
-      paddingHorizontal: 12,
       gap: 6,
     },
     compactTeam: {
       fontSize: 14,
       fontWeight: '700',
-      color: colors.text,
       maxWidth: '30%',
     },
     compactVs: {
       fontSize: 12,
-      color: colors.textMuted,
     },
     compactOpponent: {
       fontSize: 14,
       fontWeight: '600',
-      color: colors.textSecondary,
       flex: 1,
     },
     compactTime: {
       fontSize: 12,
       fontWeight: '600',
-      color: colors.textMuted,
-    },
-
-    // Warning / missing stats cards
-    warningCard: {
-      backgroundColor: colors.warning + '15',
-      borderWidth: 1,
-      borderColor: colors.glassBorder,
-      borderRadius: 16,
-      overflow: 'hidden',
-      flexDirection: 'row',
-      marginBottom: 10,
-    },
-    warningCardBody: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      padding: 14,
-    },
-    warningTeamName: {
-      fontSize: 14,
-      fontWeight: '700',
-      color: colors.text,
-    },
-    warningVs: {
-      fontWeight: '500',
-      color: colors.textSecondary,
-    },
-    warningDate: {
-      fontSize: 12,
-      color: colors.textMuted,
-      marginTop: 2,
-    },
-    warningLabel: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: colors.warning,
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
     },
 
     // Scoreboard
-    scoreboardCard: {
-      backgroundColor: colors.glassCard,
-      borderWidth: 1,
-      borderColor: colors.glassBorder,
-      borderRadius: 16,
-      overflow: 'hidden',
-      flexDirection: 'row',
-      marginBottom: 10,
-      ...Platform.select({
-        ios: {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.15,
-          shadowRadius: 12,
-        },
-        android: { elevation: 6 },
-      }),
-    },
-    scoreboardBody: {
-      flex: 1,
-      padding: 14,
-    },
     scoreboardTop: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
     },
     scoreboardTeam: {
+      ...displayTextStyle,
       fontSize: 15,
-      fontWeight: '700',
-      color: colors.text,
     },
     scoreboardPct: {
+      ...displayTextStyle,
       fontSize: 16,
-      fontWeight: '800',
     },
     scoreboardRecord: {
       fontSize: 13,
-      color: colors.textSecondary,
       fontWeight: '500',
       marginTop: 4,
     },
@@ -829,7 +659,7 @@ const createStyles = (colors: any) =>
       backgroundColor: colors.glassBorder,
       borderRadius: 3,
       marginTop: 10,
-      overflow: 'hidden',
+      overflow: 'hidden' as const,
     },
     progressFill: {
       height: 6,
