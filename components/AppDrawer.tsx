@@ -127,7 +127,6 @@ export default function AppDrawer({ visible, onClose }: AppDrawerProps) {
       title: 'Personalize',
       items: [
         { id: 'notification-prefs', label: 'Notifications', icon: 'notifications-outline', route: '/notification-preferences' },
-        { id: 'background', label: 'Background', icon: 'color-palette', route: '/background-picker' },
       ],
     });
 

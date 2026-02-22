@@ -141,8 +141,7 @@ export default function MeScreen() {
   const personalItems: MenuItem[] = [
     { icon: 'person-circle', label: 'Profile', route: '/profile', iconColor: colors.info, iconBg: colors.info + '15' },
     { icon: 'notifications', label: 'Notification Preferences', route: '/notification-preferences', iconColor: colors.success, iconBg: colors.success + '15' },
-    { icon: 'color-palette', label: 'Wallpaper', route: '/background-picker', iconColor: colors.primary, iconBg: colors.primary + '15' },
-    { icon: 'shield-checkmark', label: 'Privacy Policy', route: '/privacy-policy', iconColor: colors.textSecondary, iconBg: colors.textMuted + '15' },
+{ icon: 'shield-checkmark', label: 'Privacy Policy', route: '/privacy-policy', iconColor: colors.textSecondary, iconBg: colors.textMuted + '15' },
     { icon: 'document', label: 'Terms of Service', route: '/terms-of-service', iconColor: colors.textSecondary, iconBg: colors.textMuted + '15' },
     { icon: 'help-circle', label: 'Help & Support', route: '/help', iconColor: colors.warning, iconBg: colors.warning + '15' },
   ];
