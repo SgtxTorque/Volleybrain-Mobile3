@@ -1,7 +1,8 @@
+import { displayTextStyle, radii, shadows } from '@/lib/design-tokens';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export type VolunteerSummary = {
   line_judge?: string | null;  // Primary line judge name
@@ -43,324 +44,337 @@ type EventCardProps = {
 };
 
 const eventTypeConfig: Record<string, { icon: string; color: string; label: string }> = {
-  game: { icon: 'trophy', color: '#FF6B6B', label: 'Game' },
-  practice: { icon: 'fitness', color: '#4ECDC4', label: 'Practice' },
-  event: { icon: 'calendar', color: '#96CEB4', label: 'Event' },
-  tournament: { icon: 'medal', color: '#FFB347', label: 'Tournament' },
-  team_event: { icon: 'people', color: '#AF52DE', label: 'Team Event' },
-  other: { icon: 'calendar', color: '#5AC8FA', label: 'Other' },
+  game: { icon: 'trophy', color: '#D94F4F', label: 'Match' },
+  practice: { icon: 'fitness', color: '#14B8A6', label: 'Practice' },
+  event: { icon: 'calendar', color: '#2C5F7C', label: 'Event' },
+  tournament: { icon: 'medal', color: '#E8913A', label: 'Tournament' },
+  team_event: { icon: 'people', color: '#2C5F7C', label: 'Team Event' },
+  other: { icon: 'calendar', color: '#2C5F7C', label: 'Other' },
 };
 
 const locationTypeConfig: Record<string, { icon: string; color: string; label: string }> = {
-  home: { icon: 'home', color: '#4ECDC4', label: 'HOME' },
-  away: { icon: 'airplane', color: '#FF6B6B', label: 'AWAY' },
-  neutral: { icon: 'location', color: '#96CEB4', label: 'NEUTRAL' },
+  home: { icon: 'home', color: '#14B8A6', label: 'HOME' },
+  away: { icon: 'airplane', color: '#E8913A', label: 'AWAY' },
+  neutral: { icon: 'location', color: '#0EA5E9', label: 'NEUTRAL' },
+};
+
+const formatTime = (time: string | null): string => {
+  if (!time) return '';
+  const [hours, minutes] = time.split(':');
+  const h = parseInt(hours);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const hour12 = h % 12 || 12;
+  return `${hour12}:${minutes} ${ampm}`;
 };
 
 export default function EventCard({ event, onPress, compact = false }: EventCardProps) {
   const { colors } = useTheme();
   const typeConfig = eventTypeConfig[event.event_type] || eventTypeConfig.other;
-  const locConfig = event.location_type ? locationTypeConfig[event.location_type] : locationTypeConfig.home;
-  
-  const eventDate = new Date(event.event_date + 'T00:00:00');
-  const dayName = eventDate.toLocaleDateString('en-US', { weekday: 'short' });
-  
-  const formatTime = (time: string | null) => {
-    if (!time) return '';
-    const [hours, minutes] = time.split(':');
-    const h = parseInt(hours);
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    const hour12 = h % 12 || 12;
-    return `${hour12}:${minutes} ${ampm}`;
-  };
+  const locConfig = event.location_type ? locationTypeConfig[event.location_type] : null;
 
-  const hasScore = event.our_score !== null && event.our_score !== undefined && 
-                   event.opponent_score !== null && event.opponent_score !== undefined;
+  const eventDate = new Date(event.event_date + 'T00:00:00');
+  const dayNum = eventDate.getDate();
+  const dayName = eventDate.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
+
+  const hasScore =
+    event.our_score !== null &&
+    event.our_score !== undefined &&
+    event.opponent_score !== null &&
+    event.opponent_score !== undefined;
   const isWin = hasScore && event.our_score! > event.opponent_score!;
-  const isLoss = hasScore && event.our_score! < event.opponent_score!;
   const opponentName = event.opponent_name || event.opponent;
 
-  // Check volunteer status for games
-  const hasLineJudge = event.volunteers?.line_judge;
-  const hasScorekeeper = event.volunteers?.scorekeeper;
-  const needsVolunteers = event.event_type === 'game' && (!hasLineJudge || !hasScorekeeper);
+  // RSVP status icon
+  const rsvpIcon = () => {
+    if (!event.rsvp_count) return null;
+    const { yes, pending } = event.rsvp_count;
+    const total = yes + pending + event.rsvp_count.no + event.rsvp_count.maybe;
+    if (total === 0) return null;
+    if (pending > 0) {
+      return (
+        <View style={[s.rsvpCircle, { backgroundColor: '#E8913A20' }]}>
+          <Ionicons name="time" size={14} color="#E8913A" />
+        </View>
+      );
+    }
+    return (
+      <View style={[s.rsvpCircle, { backgroundColor: '#22C55E20' }]}>
+        <Ionicons name="checkmark" size={14} color="#22C55E" />
+      </View>
+    );
+  };
 
+  // Volunteer status
+  const needsVolunteers =
+    event.event_type === 'game' &&
+    (!event.volunteers?.line_judge || !event.volunteers?.scorekeeper);
+
+  // ── Compact mode ──
   if (compact) {
     return (
-      <TouchableOpacity
-        onPress={onPress}
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          padding: 12,
-          backgroundColor: colors.glassCard,
-          borderRadius: 12,
-          borderLeftWidth: 4,
-          borderLeftColor: typeConfig.color,
-          marginBottom: 8,
-          borderWidth: 1,
-          borderColor: colors.glassBorder,
-        }}
-      >
-        <View style={{ marginRight: 12 }}>
-          <Ionicons name={typeConfig.icon as any} size={20} color={typeConfig.color} />
+      <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={[s.compact, { borderLeftColor: typeConfig.color }]}>
+        <View style={s.compactIconWrap}>
+          <Ionicons name={typeConfig.icon as any} size={16} color={typeConfig.color} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={{ color: colors.text, fontWeight: '600', fontSize: 14 }} numberOfLines={1}>
-            {event.title}
-          </Text>
-          <Text style={{ color: colors.textMuted, fontSize: 12 }}>
-            {formatTime(event.start_time)}
-          </Text>
+          <Text style={[s.compactTitle, { color: colors.text }]} numberOfLines={1}>{event.title}</Text>
+          <Text style={[s.compactMeta, { color: colors.textMuted }]}>{formatTime(event.start_time)}</Text>
         </View>
-        {event.event_type === 'game' && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            {needsVolunteers && (
-              <View style={{ 
-                backgroundColor: '#FFB34720',
-                paddingHorizontal: 6,
-                paddingVertical: 2,
-                borderRadius: 4,
-              }}>
-                <Text style={{ color: '#FFB347', fontSize: 9, fontWeight: 'bold' }}>NEED HELP</Text>
-              </View>
-            )}
-            {event.location_type && (
-              <View style={{ 
-                paddingHorizontal: 8, 
-                paddingVertical: 4, 
-                backgroundColor: locConfig.color + '20',
-                borderRadius: 4,
-              }}>
-                <Text style={{ color: locConfig.color, fontSize: 10, fontWeight: 'bold' }}>
-                  {locConfig.label}
-                </Text>
-              </View>
-            )}
+        {event.event_type === 'game' && locConfig && (
+          <View style={[s.locBadgeMini, { backgroundColor: locConfig.color + '20' }]}>
+            <Text style={[s.locBadgeMiniText, { color: locConfig.color }]}>{locConfig.label}</Text>
           </View>
         )}
       </TouchableOpacity>
     );
   }
 
+  // ── Full card — v0 Schedule Card ──
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      activeOpacity={0.7}
-      style={{
-        backgroundColor: colors.glassCard,
-        borderRadius: 16,
-        overflow: 'hidden',
-        borderWidth: 1,
-        borderColor: colors.glassBorder,
-        marginBottom: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 12,
-        elevation: 6,
-      }}
-    >
-      {/* Header with type and location */}
-      <View style={{ 
-        flexDirection: 'row', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 10,
-        backgroundColor: typeConfig.color + '15',
-        borderBottomWidth: 1,
-        borderBottomColor: colors.border,
-      }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <Ionicons name={typeConfig.icon as any} size={18} color={typeConfig.color} />
-          <Text style={{ color: typeConfig.color, fontWeight: '600', fontSize: 13 }}>
-            {typeConfig.label.toUpperCase()}
-          </Text>
-        </View>
-        {event.event_type === 'game' && event.location_type && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Ionicons name={locConfig.icon as any} size={14} color={locConfig.color} />
-            <Text style={{ color: locConfig.color, fontWeight: 'bold', fontSize: 11 }}>
-              {locConfig.label}
-            </Text>
-          </View>
-        )}
+    <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={[s.card, { borderLeftColor: typeConfig.color }]}>
+      {/* LEFT: Day number + Day name */}
+      <View style={s.dateBlock}>
+        <Text style={[s.dayNum, { color: colors.navy || '#1B2838' }]}>{dayNum}</Text>
+        <Text style={[s.dayName, { color: colors.textMuted }]}>{dayName}</Text>
       </View>
 
-      <View style={{ padding: 16 }}>
-        {/* Date/Time Row */}
-        <View style={{ flexDirection: 'row', marginBottom: 12 }}>
-          {/* Date Box */}
-          <View style={{ 
-            width: 60, 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            backgroundColor: colors.primary + '20',
-            borderRadius: 8,
-            paddingVertical: 8,
-            marginRight: 14,
-          }}>
-            <Text style={{ color: colors.primary, fontSize: 11, fontWeight: '600' }}>
-              {dayName.toUpperCase()}
-            </Text>
-            <Text style={{ color: colors.text, fontSize: 18, fontWeight: 'bold' }}>
-              {eventDate.getDate()}
-            </Text>
-            <Text style={{ color: colors.textMuted, fontSize: 10 }}>
-              {eventDate.toLocaleDateString('en-US', { month: 'short' })}
-            </Text>
+      {/* CENTER: Content */}
+      <View style={s.cardContent}>
+        {/* Type badge + Time */}
+        <View style={s.cardTopRow}>
+          <View style={[s.typeBadge, { backgroundColor: typeConfig.color }]}>
+            <Text style={s.typeBadgeText}>{typeConfig.label.toUpperCase()}</Text>
           </View>
-
-          {/* Title and Details */}
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: colors.text, fontSize: 16, fontWeight: 'bold', marginBottom: 4 }}>
-              {event.title}
-            </Text>
-            
-            {opponentName && (
-              <Text style={{ color: colors.textMuted, fontSize: 13, marginBottom: 4 }}>
-                vs {opponentName}
-              </Text>
-            )}
-
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Ionicons name="time-outline" size={14} color={colors.textMuted} />
-              <Text style={{ color: colors.textMuted, fontSize: 13 }}>
-                {formatTime(event.start_time)}
-                {event.end_time && ` - ${formatTime(event.end_time)}`}
-                {event.duration_minutes && !event.end_time && ` (${event.duration_minutes} min)`}
-              </Text>
-            </View>
-
-            {(event.venue_name || event.location) && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                <Ionicons name="location-outline" size={14} color={colors.textMuted} />
-                <Text style={{ color: colors.textMuted, fontSize: 13 }} numberOfLines={1}>
-                  {event.venue_name || event.location}
-                </Text>
-              </View>
-            )}
-          </View>
-
-          {/* Score (if game completed) */}
-          {hasScore && (
-            <View style={{ 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              paddingLeft: 12,
-              borderLeftWidth: 1,
-              borderLeftColor: colors.border,
-            }}>
-              <Text style={{ 
-                color: isWin ? '#4ECDC4' : isLoss ? '#FF6B6B' : colors.textMuted, 
-                fontSize: 11, 
-                fontWeight: '600',
-                marginBottom: 4,
-              }}>
-                {isWin ? 'WIN' : isLoss ? 'LOSS' : 'TIE'}
-              </Text>
-              <Text style={{ color: colors.text, fontSize: 18, fontWeight: 'bold' }}>
-                {event.our_score}-{event.opponent_score}
-              </Text>
-            </View>
-          )}
+          <Text style={[s.timeText, { color: colors.text }]}>
+            {formatTime(event.start_time)}
+            {event.end_time ? ` \u2014 ${formatTime(event.end_time)}` : ''}
+          </Text>
         </View>
 
-        {/* RSVP Summary */}
-        {event.rsvp_count && (event.event_type === 'game' || event.event_type === 'practice') && (
-          <View style={{ 
-            flexDirection: 'row', 
-            alignItems: 'center',
-            gap: 12, 
-            paddingTop: 12,
-            borderTopWidth: 1,
-            borderTopColor: colors.border,
-          }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Ionicons name="people" size={16} color={colors.textMuted} />
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Text style={{ color: '#4ECDC4', fontSize: 13, fontWeight: '600' }}>
-                {event.rsvp_count.yes} going
+        {/* Title / Opponent */}
+        {opponentName ? (
+          <Text style={[s.cardTitle, { color: colors.text }]} numberOfLines={1}>
+            vs {opponentName}
+          </Text>
+        ) : (
+          <Text style={[s.cardTitle, { color: colors.text }]} numberOfLines={1}>
+            {event.title}
+          </Text>
+        )}
+
+        {/* Venue */}
+        {(event.venue_name || event.location) && (
+          <Text style={[s.venueText, { color: colors.textMuted }]} numberOfLines={1}>
+            {event.venue_name || event.location}
+            {locConfig ? ` \u00B7 ${locConfig.label}` : ''}
+          </Text>
+        )}
+
+        {/* Score (if completed) */}
+        {hasScore && (
+          <View style={s.scoreRow}>
+            <Text style={[s.scoreResult, { color: isWin ? '#22C55E' : '#D94F4F' }]}>
+              {isWin ? 'WIN' : 'LOSS'}
+            </Text>
+            <Text style={[s.scoreValue, { color: colors.text }]}>
+              {event.our_score}-{event.opponent_score}
+            </Text>
+          </View>
+        )}
+
+        {/* RSVP summary */}
+        {event.rsvp_count && (
+          <View style={s.rsvpRow}>
+            <Text style={{ color: '#14B8A6', fontSize: 11, fontWeight: '600' }}>
+              {event.rsvp_count.yes} going
+            </Text>
+            {event.rsvp_count.pending > 0 && (
+              <Text style={{ color: colors.textMuted, fontSize: 11 }}>
+                {event.rsvp_count.pending} pending
               </Text>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <Text style={{ color: '#FF6B6B', fontSize: 13 }}>
-                {event.rsvp_count.no} can't
-              </Text>
-            </View>
-            {event.rsvp_count.maybe > 0 && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Text style={{ color: '#FFB347', fontSize: 13 }}>
-                  {event.rsvp_count.maybe} maybe
-                </Text>
-              </View>
             )}
           </View>
         )}
 
-        {/* Volunteer Summary (games only) */}
-        {event.event_type === 'game' && (
-          <View style={{ 
-            paddingTop: 12,
-            marginTop: event.rsvp_count ? 12 : 0,
-            borderTopWidth: event.rsvp_count ? 1 : 0,
-            borderTopColor: colors.border,
-          }}>
-            {/* Line Judge */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-              <Ionicons name="flag" size={14} color={hasLineJudge ? '#4ECDC4' : '#FFB347'} />
-              <Text style={{ color: colors.textMuted, fontSize: 12, marginLeft: 6, width: 80 }}>
-                Line Judge:
-              </Text>
-              <Text style={{ 
-                color: hasLineJudge ? colors.text : '#FFB347', 
-                fontSize: 13,
-                fontWeight: hasLineJudge ? '500' : '600',
-              }}>
-                {hasLineJudge ? event.volunteers!.line_judge : 'Need Volunteer'}
-              </Text>
-            </View>
-            
-            {/* Scorekeeper */}
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Ionicons name="clipboard" size={14} color={hasScorekeeper ? '#4ECDC4' : '#FFB347'} />
-              <Text style={{ color: colors.textMuted, fontSize: 12, marginLeft: 6, width: 80 }}>
-                Scorekeeper:
-              </Text>
-              <Text style={{ 
-                color: hasScorekeeper ? colors.text : '#FFB347', 
-                fontSize: 13,
-                fontWeight: hasScorekeeper ? '500' : '600',
-              }}>
-                {hasScorekeeper ? event.volunteers!.scorekeeper : 'Need Volunteer'}
-              </Text>
-            </View>
+        {/* Volunteer needs */}
+        {needsVolunteers && (
+          <View style={s.volunteerRow}>
+            <Ionicons name="hand-left" size={10} color="#E8913A" />
+            <Text style={s.volunteerText}>Volunteers needed</Text>
           </View>
         )}
 
-        {/* Team Badge */}
+        {/* Team badge */}
         {event.team_name && (
-          <View style={{ 
-            position: 'absolute',
-            top: 16,
-            right: 16,
-            paddingHorizontal: 8,
-            paddingVertical: 4,
-            backgroundColor: (event.team_color || colors.primary) + '30',
-            borderRadius: 4,
-          }}>
-            <Text style={{ 
-              color: event.team_color || colors.primary, 
-              fontSize: 10, 
-              fontWeight: 'bold' 
-            }}>
+          <View style={[s.teamBadge, { backgroundColor: (event.team_color || '#2C5F7C') + '20' }]}>
+            <Text style={[s.teamBadgeText, { color: event.team_color || '#2C5F7C' }]}>
               {event.team_name}
             </Text>
           </View>
         )}
       </View>
+
+      {/* RIGHT: RSVP status icon */}
+      {rsvpIcon()}
     </TouchableOpacity>
   );
 }
+
+const s = StyleSheet.create({
+  // ── Full Card ──
+  card: {
+    flexDirection: 'row',
+    backgroundColor: '#FFF',
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
+    borderLeftWidth: 4,
+    marginBottom: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    ...shadows.card,
+  },
+  dateBlock: {
+    width: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  dayNum: {
+    ...displayTextStyle,
+    fontSize: 22,
+    lineHeight: 26,
+  },
+  dayName: {
+    fontSize: 9,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  cardContent: {
+    flex: 1,
+  },
+  cardTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  typeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  typeBadgeText: {
+    color: '#FFF',
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  timeText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  cardTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  venueText: {
+    fontSize: 11,
+    marginBottom: 4,
+  },
+  scoreRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 4,
+  },
+  scoreResult: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  scoreValue: {
+    ...displayTextStyle,
+    fontSize: 16,
+  },
+  rsvpRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 4,
+  },
+  volunteerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  volunteerText: {
+    color: '#E8913A',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  teamBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginTop: 6,
+  },
+  teamBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+  },
+
+  // ── RSVP circle ──
+  rsvpCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+    alignSelf: 'center',
+  },
+
+  // ── Compact mode ──
+  compact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    backgroundColor: '#FFF',
+    borderRadius: radii.card,
+    borderLeftWidth: 4,
+    marginBottom: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
+    ...shadows.card,
+  },
+  compactIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 7,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  compactTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  compactMeta: {
+    fontSize: 11,
+    marginTop: 1,
+  },
+  locBadgeMini: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  locBadgeMiniText: {
+    fontSize: 9,
+    fontWeight: '800',
+  },
+});
