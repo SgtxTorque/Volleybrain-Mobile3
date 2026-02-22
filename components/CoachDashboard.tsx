@@ -1,6 +1,8 @@
 import { useAuth } from '@/lib/auth';
+import { getDefaultHeroImage } from '@/lib/default-images';
 import { displayTextStyle, radii, shadows } from '@/lib/design-tokens';
 import { useSeason } from '@/lib/season';
+import { useSport } from '@/lib/sport';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,6 +10,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
+  Image,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -66,6 +69,7 @@ export default function CoachDashboard() {
   const { colors } = useTheme();
   const { user, profile } = useAuth();
   const { workingSeason } = useSeason();
+  const { activeSport } = useSport();
   const router = useRouter();
 
   const [refreshing, setRefreshing] = useState(false);
@@ -603,12 +607,11 @@ export default function CoachDashboard() {
       {/* ================================================================ */}
       {activeTeam && nextEvent ? (
         <View style={s.heroCard}>
-          {/* Background gradient (fallback — no team photos yet) */}
-          <LinearGradient
-            colors={['#2C5F7C', '#1B2838']}
+          {/* Background — default sport image */}
+          <Image
+            source={getDefaultHeroImage(activeSport?.name, nextEvent?.type)}
             style={StyleSheet.absoluteFillObject}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0.3, y: 1 }}
+            resizeMode="cover"
           />
           {/* Dark gradient overlay for text readability */}
           <LinearGradient

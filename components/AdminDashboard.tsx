@@ -1,4 +1,5 @@
 import { useAuth } from '@/lib/auth';
+import { getDefaultHeroImage } from '@/lib/default-images';
 import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
@@ -17,6 +18,7 @@ import {
   Modal,
   Platform,
   RefreshControl,
+  Image,
   ScrollView,
   Share,
   StyleSheet,
@@ -869,7 +871,9 @@ export default function AdminDashboard() {
       <AppHeaderBar initials={userInitials} />
 
       {/* HERO — Gradient Club Overview */}
-      <LinearGradient colors={['#2C5F7C', '#1B2838']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.heroGradient}>
+      <View style={s.heroGradient}>
+        <Image source={getDefaultHeroImage(activeSport?.name)} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
+        <LinearGradient colors={['rgba(44,95,124,0.85)', 'rgba(27,40,56,0.9)']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFillObject} />
         <View style={s.heroTopRow}>
           <View style={{ flex: 1 }}>
             <Text style={s.heroOrgName}>{organization?.name || 'Organization'}</Text>
@@ -901,7 +905,7 @@ export default function AdminDashboard() {
             <Text style={s.heroStatLabel}>Coaches</Text>
           </TouchableOpacity>
         </View>
-      </LinearGradient>
+      </View>
 
       {/* NEEDS ATTENTION */}
       {alerts.length > 0 && alerts[0].type !== 'success' && (

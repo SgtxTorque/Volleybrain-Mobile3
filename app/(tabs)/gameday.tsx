@@ -6,9 +6,11 @@ import Badge from '@/components/ui/Badge';
 import Card from '@/components/ui/Card';
 import SectionHeader from '@/components/ui/SectionHeader';
 import { useAuth } from '@/lib/auth';
+import { getDefaultHeroImage } from '@/lib/default-images';
 import { displayTextStyle, radii, shadows } from '@/lib/design-tokens';
 import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
+import { useSport } from '@/lib/sport';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +24,7 @@ import {
   RefreshControl,
   ScrollView,
   StyleSheet,
+  Image,
   Text,
   TouchableOpacity,
   View,
@@ -111,6 +114,7 @@ const locationTypeConfig: Record<string, { label: string; color: string; icon: s
 export default function GameDayScreen() {
   const { colors } = useTheme();
   const { workingSeason } = useSeason();
+  const { activeSport } = useSport();
   const { user, profile } = useAuth();
   const { isAdmin, isCoach } = usePermissions();
   const router = useRouter();
@@ -371,9 +375,10 @@ export default function GameDayScreen() {
             onPress={() => handleEventPress(nextEvent)}
             style={s.heroCard}
           >
-            <LinearGradient
-              colors={['#2C5F7C', '#1B2838']}
+            <Image
+              source={getDefaultHeroImage(activeSport?.name, nextEvent?.event_type)}
               style={StyleSheet.absoluteFillObject}
+              resizeMode="cover"
             />
             <LinearGradient
               colors={['transparent', 'rgba(27,40,56,0.5)', 'rgba(27,40,56,0.95)']}

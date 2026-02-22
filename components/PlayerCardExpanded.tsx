@@ -1,3 +1,4 @@
+import { getPlayerPlaceholder } from '@/lib/default-images';
 import { getSportDisplay, getPositionInfo } from '@/constants/sport-display';
 import { useAuth } from '@/lib/auth';
 import { usePermissions } from '@/lib/permissions-context';
@@ -276,7 +277,7 @@ export default function PlayerCardExpanded({ player, visible, onClose, onUpdate 
                   <Image source={{ uri: player.photo_url! }} style={s.photo} />
                 ) : (
                   <View style={s.silhouette}>
-                    <Ionicons name="body" size={100} color="#4a4a6a" />
+                    <Image source={getPlayerPlaceholder()} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
                   </View>
                 )}
                 {(isAdmin || isCoach) && (

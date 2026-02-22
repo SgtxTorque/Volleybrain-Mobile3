@@ -1,6 +1,7 @@
 import ParentOnboardingModal from '@/components/ParentOnboardingModal';
 import ShareRegistrationModal from '@/components/ShareRegistrationModal';
 import { useAuth } from '@/lib/auth';
+import { getDefaultHeroImage } from '@/lib/default-images';
 import { displayTextStyle, radii, shadows } from '@/lib/design-tokens';
 import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
@@ -1009,17 +1010,14 @@ export default function ParentDashboard() {
           onPress={() => openEventDetail(nextEvent)}
           activeOpacity={0.9}
         >
-          {/* Background — player photo or gradient */}
-          {activeChild?.photo_url ? (
-            <Image source={{ uri: activeChild.photo_url }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
-          ) : (
-            <LinearGradient
-              colors={['#2C5F7C', '#1B2838']}
-              style={StyleSheet.absoluteFillObject}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 0.3, y: 1 }}
-            />
-          )}
+          {/* Background — player photo or default sport image */}
+          <Image
+            source={activeChild?.photo_url
+              ? { uri: activeChild.photo_url }
+              : getDefaultHeroImage('volleyball', nextEvent?.type)}
+            style={StyleSheet.absoluteFillObject}
+            resizeMode="cover"
+          />
           {/* Dark gradient overlay */}
           <LinearGradient
             colors={['transparent', 'rgba(27,40,56,0.5)', '#1B2838']}
@@ -1076,11 +1074,14 @@ export default function ParentDashboard() {
       ) : (
         /* Fallback — no upcoming events */
         <View style={s.heroCardEmpty}>
-          <LinearGradient
-            colors={['#2C5F7C', '#1B2838']}
+          <Image
+            source={getDefaultHeroImage('volleyball')}
             style={StyleSheet.absoluteFillObject}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0.3, y: 1 }}
+            resizeMode="cover"
+          />
+          <LinearGradient
+            colors={['transparent', 'rgba(27,40,56,0.7)', '#1B2838']}
+            style={StyleSheet.absoluteFillObject}
           />
           <View style={s.heroContent}>
             <Text style={s.heroTitle}>NO UPCOMING EVENTS</Text>
