@@ -186,8 +186,11 @@ export default function RegistrationHubScreen() {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState<{ current: number; total: number; action: string; failures: string[] } | null>(null);
   const [showDenyModal, setShowDenyModal] = useState(false);
   const [denyReason, setDenyReason] = useState('');
+  const [pendingTeamAssignIds, setPendingTeamAssignIds] = useState<string[]>([]);
+  const [showBulkTeamPicker, setShowBulkTeamPicker] = useState(false);
 
   // =====================================================
   // DATA FETCHING - Now queries ALL open seasons
@@ -688,41 +691,116 @@ export default function RegistrationHubScreen() {
         text: 'Approve All',
         onPress: async () => {
           setBulkSubmitting(true);
-          let success = 0;
+          const progress = { current: 0, total: count, action: 'Approving', failures: [] as string[] };
+          setBulkProgress(progress);
+          const approvedIds: string[] = [];
           for (const id of selectedIds) {
             try {
               const reg = registrations.find(r => r.id === id);
               if (!reg) continue;
               await updateRegistrationStatus(id, 'approved');
-              success++;
-            } catch { /* continue */ }
+              approvedIds.push(id);
+            } catch {
+              const reg = registrations.find(r => r.id === id);
+              progress.failures.push(reg ? (reg.player.first_name + ' ' + reg.player.last_name) : id);
+            }
+            progress.current++;
+            setBulkProgress({ ...progress });
           }
           await fetchData();
           setSelectionMode(false);
           setSelectedIds(new Set());
           setBulkSubmitting(false);
-          Alert.alert('Done', `${success} registration${success > 1 ? 's' : ''} approved.`);
+          setBulkProgress(null);
+
+          const failCount = progress.failures.length;
+          if (failCount > 0) {
+            Alert.alert('Partial Success', `${approvedIds.length} approved, ${failCount} failed:\n${progress.failures.join(', ')}`);
+          } else if (approvedIds.length > 0 && teams.length > 0) {
+            Alert.alert(
+              'Approved!',
+              `${approvedIds.length} registration${approvedIds.length > 1 ? 's' : ''} approved. Assign to a team?`,
+              [
+                { text: 'Skip' },
+                {
+                  text: 'Assign to Team',
+                  onPress: () => {
+                    setPendingTeamAssignIds(approvedIds);
+                    setShowBulkTeamPicker(true);
+                  },
+                },
+              ]
+            );
+          } else {
+            Alert.alert('Done', `${approvedIds.length} registration${approvedIds.length > 1 ? 's' : ''} approved.`);
+          }
         },
       },
     ]);
   };
 
+  const handleBulkTeamAssign = async (teamId: string) => {
+    setShowBulkTeamPicker(false);
+    setBulkSubmitting(true);
+    const progress = { current: 0, total: pendingTeamAssignIds.length, action: 'Assigning', failures: [] as string[] };
+    setBulkProgress(progress);
+
+    for (const regId of pendingTeamAssignIds) {
+      try {
+        const reg = registrations.find(r => r.id === regId);
+        if (!reg) continue;
+        await assignToTeam(regId, reg.player_id, teamId);
+      } catch {
+        const reg = registrations.find(r => r.id === regId);
+        progress.failures.push(reg ? (reg.player.first_name + ' ' + reg.player.last_name) : regId);
+      }
+      progress.current++;
+      setBulkProgress({ ...progress });
+    }
+
+    await fetchData();
+    setBulkSubmitting(false);
+    setBulkProgress(null);
+    setPendingTeamAssignIds([]);
+
+    const failCount = progress.failures.length;
+    const successCount = progress.total - failCount;
+    if (failCount > 0) {
+      Alert.alert('Partial Success', `${successCount} assigned, ${failCount} failed:\n${progress.failures.join(', ')}`);
+    } else {
+      Alert.alert('Done', `${successCount} player${successCount > 1 ? 's' : ''} assigned to team.`);
+    }
+  };
+
   const executeBulkDeny = async (reason: string) => {
     setBulkSubmitting(true);
-    let success = 0;
+    const count = selectedIds.size;
+    const progress = { current: 0, total: count, action: 'Denying', failures: [] as string[] };
+    setBulkProgress(progress);
     for (const id of selectedIds) {
       try {
         await updateRegistrationStatus(id, 'denied', { denial_reason: reason });
-        success++;
-      } catch { /* continue */ }
+      } catch {
+        const reg = registrations.find(r => r.id === id);
+        progress.failures.push(reg ? (reg.player.first_name + ' ' + reg.player.last_name) : id);
+      }
+      progress.current++;
+      setBulkProgress({ ...progress });
     }
     await fetchData();
     setSelectionMode(false);
     setSelectedIds(new Set());
     setBulkSubmitting(false);
+    setBulkProgress(null);
     setShowDenyModal(false);
     setDenyReason('');
-    Alert.alert('Done', `${success} registration${success > 1 ? 's' : ''} denied.`);
+    const failCount = progress.failures.length;
+    const successCount = count - failCount;
+    if (failCount > 0) {
+      Alert.alert('Partial Success', `${successCount} denied, ${failCount} failed:\n${progress.failures.join(', ')}`);
+    } else {
+      Alert.alert('Done', `${successCount} registration${successCount > 1 ? 's' : ''} denied.`);
+    }
   };
 
   const handleBulkDeny = () => {
@@ -746,20 +824,32 @@ export default function RegistrationHubScreen() {
         onPress: async () => {
           setBulkSubmitting(true);
           const maxPos = Math.max(0, ...registrations.filter(r => r.status === 'waitlisted').map(r => r.waitlist_position || 0));
-          let success = 0;
+          const progress = { current: 0, total: count, action: 'Waitlisting', failures: [] as string[] };
+          setBulkProgress(progress);
           let idx = 0;
           for (const id of selectedIds) {
             try {
               await updateRegistrationStatus(id, 'waitlisted', { waitlist_position: maxPos + idx + 1 });
-              success++;
               idx++;
-            } catch { /* continue */ }
+            } catch {
+              const reg = registrations.find(r => r.id === id);
+              progress.failures.push(reg ? (reg.player.first_name + ' ' + reg.player.last_name) : id);
+            }
+            progress.current++;
+            setBulkProgress({ ...progress });
           }
           await fetchData();
           setSelectionMode(false);
           setSelectedIds(new Set());
           setBulkSubmitting(false);
-          Alert.alert('Done', `${success} registration${success > 1 ? 's' : ''} waitlisted.`);
+          setBulkProgress(null);
+          const failCount = progress.failures.length;
+          const successCount = count - failCount;
+          if (failCount > 0) {
+            Alert.alert('Partial Success', `${successCount} waitlisted, ${failCount} failed:\n${progress.failures.join(', ')}`);
+          } else {
+            Alert.alert('Done', `${successCount} registration${successCount > 1 ? 's' : ''} waitlisted.`);
+          }
         },
       },
     ]);
@@ -1489,6 +1579,34 @@ export default function RegistrationHubScreen() {
           </ScrollView>
         )}
 
+        {/* Analytics Mini-Cards */}
+        {stats && stats.total_count > 0 && (
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+            <View style={{ flex: 1, backgroundColor: colors.glassCard, borderRadius: 12, padding: 10, alignItems: 'center', borderWidth: 1, borderColor: colors.glassBorder }}>
+              <Ionicons name="document-text" size={16} color="#2C5F7C" />
+              <Text style={{ fontSize: 18, fontWeight: '800', color: colors.text, marginTop: 2 }}>{stats.total_count}</Text>
+              <Text style={{ fontSize: 10, color: colors.textMuted }}>Total</Text>
+            </View>
+            <View style={{ flex: 1, backgroundColor: colors.glassCard, borderRadius: 12, padding: 10, alignItems: 'center', borderWidth: 1, borderColor: colors.glassBorder }}>
+              <Ionicons name="checkmark-circle" size={16} color="#22C55E" />
+              <Text style={{ fontSize: 18, fontWeight: '800', color: '#22C55E', marginTop: 2 }}>
+                {Math.round(((stats.approved_count + stats.active_count + stats.rostered_count) / stats.total_count) * 100)}%
+              </Text>
+              <Text style={{ fontSize: 10, color: colors.textMuted }}>Approved</Text>
+            </View>
+            <View style={{ flex: 1, backgroundColor: colors.glassCard, borderRadius: 12, padding: 10, alignItems: 'center', borderWidth: 1, borderColor: colors.glassBorder }}>
+              <Ionicons name="people" size={16} color="#2C5F7C" />
+              <Text style={{ fontSize: 18, fontWeight: '800', color: colors.text, marginTop: 2 }}>{stats.rostered_count}</Text>
+              <Text style={{ fontSize: 10, color: colors.textMuted }}>Rostered</Text>
+            </View>
+            <View style={{ flex: 1, backgroundColor: colors.glassCard, borderRadius: 12, padding: 10, alignItems: 'center', borderWidth: 1, borderColor: colors.glassBorder }}>
+              <Ionicons name="wallet" size={16} color="#E8913A" />
+              <Text style={{ fontSize: 18, fontWeight: '800', color: '#E8913A', marginTop: 2 }}>{formatCurrency(stats.total_expected_revenue)}</Text>
+              <Text style={{ fontSize: 10, color: colors.textMuted }}>Expected</Text>
+            </View>
+          </View>
+        )}
+
         {/* Stats Cards */}
         {stats && (
           <>
@@ -1612,7 +1730,24 @@ export default function RegistrationHubScreen() {
           padding: 16, paddingBottom: 32,
           shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.1, shadowRadius: 12, elevation: 10,
         }}>
-          {bulkSubmitting ? (
+          {bulkSubmitting && bulkProgress ? (
+            <View style={{ alignItems: 'center', gap: 8 }}>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text }}>
+                {bulkProgress.action} {bulkProgress.current} of {bulkProgress.total}...
+              </Text>
+              <View style={{ width: '100%', height: 8, backgroundColor: 'rgba(0,0,0,0.06)', borderRadius: 4, overflow: 'hidden' }}>
+                <View style={{
+                  height: '100%',
+                  width: `${Math.round((bulkProgress.current / bulkProgress.total) * 100)}%`,
+                  backgroundColor: bulkProgress.action === 'Denying' ? '#D94F4F' : bulkProgress.action === 'Waitlisting' ? '#E8913A' : '#22C55E',
+                  borderRadius: 4,
+                }} />
+              </View>
+              {bulkProgress.failures.length > 0 && (
+                <Text style={{ fontSize: 12, color: '#D94F4F' }}>{bulkProgress.failures.length} failed</Text>
+              )}
+            </View>
+          ) : bulkSubmitting ? (
             <ActivityIndicator size="small" color={colors.primary} />
           ) : (
             <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -1638,6 +1773,40 @@ export default function RegistrationHubScreen() {
           )}
         </View>
       )}
+
+      {/* Bulk Team Assignment Modal */}
+      <Modal visible={showBulkTeamPicker} transparent animationType="fade" onRequestClose={() => setShowBulkTeamPicker(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 32 }}>
+          <View style={{ backgroundColor: colors.card, borderRadius: 16, padding: 24, maxHeight: '70%' }}>
+            <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text, marginBottom: 4 }}>Assign to Team</Text>
+            <Text style={{ fontSize: 14, color: colors.textSecondary, marginBottom: 16 }}>
+              Select a team for {pendingTeamAssignIds.length} player{pendingTeamAssignIds.length > 1 ? 's' : ''}
+            </Text>
+            <ScrollView>
+              {teams.map(t => (
+                <TouchableOpacity
+                  key={t.id}
+                  style={{
+                    paddingVertical: 14, paddingHorizontal: 16, borderRadius: 12,
+                    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+                    backgroundColor: colors.background, marginBottom: 8, borderWidth: 1, borderColor: colors.border,
+                  }}
+                  onPress={() => handleBulkTeamAssign(t.id)}
+                >
+                  <Text style={{ color: colors.text, fontWeight: '600' }}>{t.name}</Text>
+                  <Text style={{ color: colors.textMuted, fontSize: 12 }}>{t.player_count} players</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity
+              style={{ paddingVertical: 12, alignItems: 'center', marginTop: 8 }}
+              onPress={() => { setShowBulkTeamPicker(false); setPendingTeamAssignIds([]); }}
+            >
+              <Text style={{ color: colors.textMuted, fontWeight: '500' }}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* Android Deny Reason Modal */}
       <Modal visible={showDenyModal} transparent animationType="fade" onRequestClose={() => setShowDenyModal(false)}>

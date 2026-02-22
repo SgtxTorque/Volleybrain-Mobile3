@@ -901,11 +901,23 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
             <Text style={{ fontSize: 12, color: colors.textSecondary }}>
               Paid: ${family.totalPaid}
             </Text>
-            {family.outstanding > 0 && (
-              <Text style={{ fontSize: 12, color: '#D94F4F', fontWeight: '600' }}>
-                Outstanding: ${family.outstanding}
-              </Text>
-            )}
+            {family.outstanding > 0 && (() => {
+              const now = new Date();
+              const overdueCount = family.players.reduce((sum, p) =>
+                sum + p.payments.filter(f => f.status === 'unpaid' && f.due_date && new Date(f.due_date) < now).length, 0);
+              return (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={{ fontSize: 12, color: '#D94F4F', fontWeight: '600' }}>
+                    Outstanding: ${family.outstanding}
+                  </Text>
+                  {overdueCount > 0 && (
+                    <View style={{ backgroundColor: '#D94F4F20', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
+                      <Text style={{ color: '#D94F4F', fontSize: 9, fontWeight: '700' }}>{overdueCount} OVERDUE</Text>
+                    </View>
+                  )}
+                </View>
+              );
+            })()}
           </View>
 
           {/* Per-player breakdown */}
@@ -1309,9 +1321,16 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
 
                             {/* Fee Info */}
                             <View style={{ flex: 1 }}>
-                              <Text style={{ fontSize: 15, fontWeight: '500', color: colors.text }}>
-                                {payment.fee_name}
-                              </Text>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                <Text style={{ fontSize: 15, fontWeight: '500', color: colors.text }}>
+                                  {payment.fee_name}
+                                </Text>
+                                {payment.status === 'unpaid' && payment.due_date && new Date(payment.due_date) < new Date() && (
+                                  <View style={{ backgroundColor: '#D94F4F20', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
+                                    <Text style={{ color: '#D94F4F', fontSize: 9, fontWeight: '700' }}>OVERDUE</Text>
+                                  </View>
+                                )}
+                              </View>
 
                               {/* Payment Method Badge (for pending) */}
                               {payment.status === 'pending' && payment.payment_method && (

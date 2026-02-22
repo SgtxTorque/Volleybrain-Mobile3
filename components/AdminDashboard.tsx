@@ -132,6 +132,7 @@ export default function AdminDashboard() {
     teamId: string; teamName: string; collected: number; expected: number;
   }[]>([]);
   const [showTeamBreakdown, setShowTeamBreakdown] = useState(false);
+  const [blastCount, setBlastCount] = useState(0);
 
   // ============================================
   // DATA FETCHING
@@ -317,6 +318,13 @@ export default function AdminDashboard() {
       .eq('season_id', workingSeason.id)
       .not('game_result', 'is', null);
     setGamesPlayedCount(gamesCount || 0);
+
+    // Fetch blast count
+    const { count: sentBlasts } = await supabase
+      .from('messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('season_id', workingSeason.id);
+    setBlastCount(sentBlasts || 0);
 
     // Fetch recent activity
     await fetchRecentActivity(orgId);
@@ -1121,6 +1129,19 @@ export default function AdminDashboard() {
             </View>
             <Text style={s.actionLabel}>Send Blast</Text>
             <Text style={s.actionSubtitle}>Org-wide announcement</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={s.actionCard} onPress={() => router.push('/blast-history' as any)}>
+            <View style={[s.actionIconCircle, { backgroundColor: '#0EA5E920' }]}>
+              <Ionicons name="chatbubbles" size={28} color="#0EA5E9" />
+            </View>
+            <Text style={s.actionLabel}>Sent Blasts</Text>
+            <Text style={s.actionSubtitle}>{blastCount > 0 ? blastCount + ' sent' : 'No blasts yet'}</Text>
+            {blastCount > 0 && (
+              <View style={s.actionBadge}>
+                <Text style={s.actionBadgeText}>{blastCount > 99 ? '99+' : blastCount}</Text>
+              </View>
+            )}
           </TouchableOpacity>
 
           <TouchableOpacity style={s.actionCard} onPress={() => router.push('/(tabs)/reports-tab' as any)}>

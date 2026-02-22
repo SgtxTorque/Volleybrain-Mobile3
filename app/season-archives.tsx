@@ -1,3 +1,4 @@
+import AdminContextBar from '@/components/AdminContextBar';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,13 +24,22 @@ type ArchivedSeason = {
   organization_id: string | null;
   team_count: number;
   player_count: number;
+  game_count: number;
   revenue_collected: number;
   revenue_total: number;
+};
+
+type TeamStanding = {
+  teamId: string;
+  teamName: string;
+  wins: number;
+  losses: number;
 };
 
 type SeasonDetail = {
   teams: { id: string; name: string; player_count: number }[];
   games: { id: string; title: string; event_date: string; location: string | null }[];
+  standings: TeamStanding[];
 };
 
 export default function SeasonArchivesScreen() {
@@ -91,6 +101,17 @@ export default function SeasonArchivesScreen() {
         .select('season_id, amount, paid')
         .in('season_id', seasonIds);
 
+      // Batch: game counts per season
+      const { data: allGames } = await supabase
+        .from('schedule_events')
+        .select('season_id')
+        .in('season_id', seasonIds)
+        .eq('event_type', 'game');
+      const gameCountBySeason = new Map<string, number>();
+      (allGames || []).forEach(g => {
+        gameCountBySeason.set(g.season_id, (gameCountBySeason.get(g.season_id) || 0) + 1);
+      });
+
       const enriched: ArchivedSeason[] = data.map(season => {
         const teamIds = teamsBySeasonMap.get(season.id) || [];
         const playerCount = teamIds.reduce((sum, tid) => sum + (playerCountByTeam.get(tid) || 0), 0);
@@ -101,6 +122,7 @@ export default function SeasonArchivesScreen() {
           ...season,
           team_count: teamIds.length,
           player_count: playerCount,
+          game_count: gameCountBySeason.get(season.id) || 0,
           revenue_collected: collected,
           revenue_total: total,
         };
@@ -147,15 +169,35 @@ export default function SeasonArchivesScreen() {
 
       const { data: games } = await supabase
         .from('schedule_events')
-        .select('id, title, event_date, location')
+        .select('id, title, event_date, location, team_id, game_result')
         .eq('season_id', seasonId)
         .eq('event_type', 'game')
         .order('event_date', { ascending: false })
-        .limit(20);
+        .limit(50);
+
+      // Compute standings from game results
+      const standingsMap = new Map<string, { wins: number; losses: number }>();
+      const teamNameMap = new Map<string, string>();
+      (teams || []).forEach(t => teamNameMap.set(t.id, t.name));
+      (games || []).forEach(g => {
+        if (!g.team_id || !g.game_result) return;
+        if (!standingsMap.has(g.team_id)) standingsMap.set(g.team_id, { wins: 0, losses: 0 });
+        const record = standingsMap.get(g.team_id)!;
+        if (g.game_result === 'win') record.wins++;
+        else if (g.game_result === 'loss') record.losses++;
+      });
+      const standings: TeamStanding[] = Array.from(standingsMap.entries())
+        .map(([teamId, record]) => ({
+          teamId,
+          teamName: teamNameMap.get(teamId) || 'Unknown',
+          wins: record.wins,
+          losses: record.losses,
+        }))
+        .sort((a, b) => b.wins - a.wins || a.losses - b.losses);
 
       setDetails(prev => ({
         ...prev,
-        [seasonId]: { teams: teamsWithCounts, games: games || [] },
+        [seasonId]: { teams: teamsWithCounts, games: (games || []).slice(0, 20), standings },
       }));
     } catch (error) {
       if (__DEV__) console.error('Error fetching season details:', error);
@@ -186,11 +228,15 @@ export default function SeasonArchivesScreen() {
 
   return (
     <SafeAreaView style={s.container}>
+      <AdminContextBar />
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={s.headerTitle}>Season Archives</Text>
+        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Ionicons name="trophy" size={22} color="#F59E0B" />
+          <Text style={s.headerTitle}>Season Archives</Text>
+        </View>
         <View style={s.backBtn} />
       </View>
 
@@ -203,7 +249,7 @@ export default function SeasonArchivesScreen() {
         <View style={s.emptyContainer}>
           <Ionicons name="archive-outline" size={64} color={colors.textMuted} />
           <Text style={s.emptyTitle}>No Archived Seasons</Text>
-          <Text style={s.emptySubtitle}>Completed seasons will appear here</Text>
+          <Text style={s.emptySubtitle}>Completed seasons will appear here.{'\n'}This is your organization's history.</Text>
         </View>
       ) : (
         <ScrollView style={s.scroll} contentContainerStyle={s.scrollContent}>
@@ -239,16 +285,23 @@ export default function SeasonArchivesScreen() {
                     <Text style={s.statValue}>{season.player_count}</Text>
                     <Text style={s.statLabel}>Players</Text>
                   </View>
-                  {season.sport && (
-                    <View style={s.statItem}>
-                      <Ionicons name="football-outline" size={16} color={colors.primary} />
-                      <Text style={s.statLabel}>{season.sport}</Text>
-                    </View>
-                  )}
                   <View style={s.statItem}>
-                    <Ionicons name="wallet-outline" size={16} color={colors.primary} />
-                    <Text style={s.statValue}>${season.revenue_collected}</Text>
-                    <Text style={s.statLabel}>of ${season.revenue_total}</Text>
+                    <Ionicons name="trophy-outline" size={16} color="#F59E0B" />
+                    <Text style={s.statValue}>{season.game_count}</Text>
+                    <Text style={s.statLabel}>Games</Text>
+                  </View>
+                  <View style={s.statItem}>
+                    <Ionicons name="wallet-outline" size={16} color="#22C55E" />
+                    <Text style={s.statValue}>
+                      ${season.revenue_collected >= 1000
+                        ? (season.revenue_collected / 1000).toFixed(1) + 'K'
+                        : season.revenue_collected.toLocaleString()}
+                    </Text>
+                    <Text style={s.statLabel}>
+                      of ${season.revenue_total >= 1000
+                        ? (season.revenue_total / 1000).toFixed(1) + 'K'
+                        : season.revenue_total.toLocaleString()}
+                    </Text>
                   </View>
                 </View>
 
@@ -280,6 +333,26 @@ export default function SeasonArchivesScreen() {
                           ))
                         )}
                       </View>
+
+                      {details[season.id].standings.length > 0 && (
+                        <View style={s.detailSection}>
+                          <Text style={s.detailTitle}>Standings</Text>
+                          {details[season.id].standings.slice(0, 5).map((team, idx) => {
+                            const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : null;
+                            return (
+                              <View key={team.teamId} style={[s.detailRow, { gap: 8 }]}>
+                                {medal ? (
+                                  <Text style={{ fontSize: 16 }}>{medal}</Text>
+                                ) : (
+                                  <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textMuted, width: 24, textAlign: 'center' }}>{idx + 1}</Text>
+                                )}
+                                <Text style={[s.detailRowText, { fontWeight: idx < 3 ? '600' : '400' }]}>{team.teamName}</Text>
+                                <Text style={[s.detailRowMeta, { fontWeight: '600' }]}>{team.wins}-{team.losses}</Text>
+                              </View>
+                            );
+                          })}
+                        </View>
+                      )}
 
                       <View style={s.detailSection}>
                         <Text style={s.detailTitle}>Games</Text>
