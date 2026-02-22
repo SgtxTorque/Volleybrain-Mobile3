@@ -1,4 +1,5 @@
 import AdminContextBar from '@/components/AdminContextBar';
+import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { REPORTS, REPORT_CATEGORIES, ReportCategory, ReportDefinition, getReportsByCategory } from '@/lib/reports';
 import { useSeason } from '@/lib/season';
 import { useTheme } from '@/lib/theme';
@@ -200,18 +201,18 @@ function formatFilterName(filter: string): string {
 const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: colors.background,
   },
   header: {
-    padding: 16,
+    padding: spacing.screenPadding,
     paddingTop: 60,
     backgroundColor: colors.card,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
   title: {
+    ...displayTextStyle,
     fontSize: 28,
-    fontWeight: 'bold',
     color: colors.text,
   },
   subtitle: {
