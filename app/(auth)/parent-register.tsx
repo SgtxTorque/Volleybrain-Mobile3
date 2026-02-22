@@ -311,7 +311,7 @@ export default function ParentRegisterScreen() {
             season_id: selectedSeasonId,
             organization_id: orgId,
             registered_by: authData.user.id,
-            status: skipApproval ? 'approved' : 'pending',
+            status: skipApproval ? 'approved' : 'new',
             liability_waiver: liabilityWaiver,
             photo_waiver: photoWaiver,
             conduct_waiver: conductWaiver,
