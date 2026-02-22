@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '@/lib/theme';
 import { radii, shadows } from '@/lib/design-tokens';
 
@@ -18,7 +18,12 @@ export default function PillTabs({ tabs, activeKey, onChange }: PillTabsProps) {
   const { colors } = useTheme();
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.secondary }]}>
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={[styles.container, { backgroundColor: colors.secondary }]}
+      style={styles.scrollOuter}
+    >
       {tabs.map((tab) => {
         const isActive = tab.key === activeKey;
         return (
@@ -36,17 +41,22 @@ export default function PillTabs({ tabs, activeKey, onChange }: PillTabsProps) {
                 styles.tabText,
                 { color: isActive ? '#FFFFFF' : colors.textSecondary },
               ]}
+              numberOfLines={1}
             >
               {tab.label}
             </Text>
           </TouchableOpacity>
         );
       })}
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  scrollOuter: {
+    flexGrow: 0,
+    marginVertical: 8,
+  },
   container: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -55,8 +65,8 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
   },
   tab: {
-    flex: 1,
     paddingVertical: 8,
+    paddingHorizontal: 16,
     borderRadius: 20,
     alignItems: 'center',
   },
