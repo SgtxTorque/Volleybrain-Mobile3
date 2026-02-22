@@ -1,4 +1,5 @@
 import { useAuth } from '@/lib/auth';
+import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { usePermissions } from '@/lib/permissions-context';
 import { AccentColor, accentColors, useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -529,36 +530,26 @@ const createStyles = (colors: any, isDark: boolean) =>
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: 'transparent',
+      backgroundColor: colors.background,
     },
     scroll: {
       flex: 1,
     },
     scrollContent: {
-      paddingHorizontal: 16,
+      paddingHorizontal: spacing.screenPadding,
       paddingTop: 8,
     },
 
     // ===== PROFILE HERO =====
     heroCard: {
-      backgroundColor: colors.glassCard,
+      backgroundColor: '#FFF',
       borderWidth: 1,
-      borderColor: colors.glassBorder,
-      borderRadius: 24,
+      borderColor: 'rgba(0,0,0,0.06)',
+      borderRadius: radii.card,
       padding: 24,
       alignItems: 'center',
       marginBottom: 8,
-      ...Platform.select({
-        ios: {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.15,
-          shadowRadius: 12,
-        },
-        android: {
-          elevation: 6,
-        },
-      }),
+      ...shadows.card,
     },
     avatarContainer: {
       marginBottom: 16,
@@ -588,8 +579,8 @@ const createStyles = (colors: any, isDark: boolean) =>
       color: '#FFFFFF',
     },
     heroName: {
+      ...displayTextStyle,
       fontSize: 24,
-      fontWeight: '800',
       color: colors.text,
       marginBottom: 8,
     },
@@ -617,22 +608,12 @@ const createStyles = (colors: any, isDark: boolean) =>
 
     // ===== MENU CARD =====
     menuCard: {
-      backgroundColor: colors.glassCard,
+      backgroundColor: '#FFF',
       borderWidth: 1,
-      borderColor: colors.glassBorder,
-      borderRadius: 20,
+      borderColor: 'rgba(0,0,0,0.06)',
+      borderRadius: radii.card,
       overflow: 'hidden',
-      ...Platform.select({
-        ios: {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.08,
-          shadowRadius: 8,
-        },
-        android: {
-          elevation: 3,
-        },
-      }),
+      ...shadows.card,
     },
     menuItem: {
       flexDirection: 'row',
@@ -798,7 +779,7 @@ const createStyles = (colors: any, isDark: boolean) =>
       justifyContent: 'center',
       gap: 8,
       backgroundColor: colors.danger + '15',
-      borderRadius: 16,
+      borderRadius: radii.card,
       padding: 16,
       marginTop: 28,
     },
