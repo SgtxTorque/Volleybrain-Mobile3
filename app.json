@@ -40,7 +40,8 @@
         }
       ],
       "@react-native-community/datetimepicker",
-      "expo-audio"
+      "expo-audio",
+      "expo-calendar"
     ],
     "experiments": {
       "typedRoutes": true,
