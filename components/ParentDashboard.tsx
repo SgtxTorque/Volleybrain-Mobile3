@@ -1,9 +1,6 @@
-import ParentOnboardingModal from '@/components/ParentOnboardingModal';
-import ShareRegistrationModal from '@/components/ShareRegistrationModal';
 import { useAuth } from '@/lib/auth';
-import { getDefaultHeroImage, getPlayerPlaceholder } from '@/lib/default-images';
+import { getPlayerPlaceholder } from '@/lib/default-images';
 import { displayTextStyle, radii, shadows } from '@/lib/design-tokens';
-import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
@@ -13,10 +10,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Alert,
   Animated,
+  Dimensions,
+  FlatList,
   Image,
-  Linking,
+  Modal,
   Platform,
   RefreshControl,
   ScrollView,
@@ -28,14 +26,13 @@ import {
 import * as Haptics from 'expo-haptics';
 import AnnouncementBanner from './AnnouncementBanner';
 import EventDetailModal from './EventDetailModal';
-import RegistrationBanner from './RegistrationBanner';
 import AppHeaderBar from './ui/AppHeaderBar';
 import { ScheduleEvent } from './EventCard';
-import ReenrollmentBanner from './ReenrollmentBanner';
-import MatchCard from './ui/MatchCard';
 import SectionHeader from './ui/SectionHeader';
 
 const CHILD_INDEX_KEY = 'vb_parent_active_child_idx';
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const CARD_WIDTH = SCREEN_WIDTH - 32;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -64,7 +61,7 @@ type ChildPlayer = {
 type UpcomingEvent = {
   id: string;
   title: string;
-  type: 'game' | 'practice';
+  type: 'game' | 'practice' | 'tournament';
   date: string;
   time: string;
   location: string | null;
@@ -72,7 +69,6 @@ type UpcomingEvent = {
   team_name: string;
   child_name: string;
   team_id?: string | null;
-  // Extra fields for EventDetailModal
   season_id?: string | null;
   start_time?: string | null;
   end_time?: string | null;
@@ -101,16 +97,6 @@ type RecentGame = {
   team_name: string;
 };
 
-type TodayGame = {
-  id: string;
-  title: string;
-  event_date: string;
-  event_time: string | null;
-  venue_name: string | null;
-  opponent: string | null;
-  team_name: string;
-};
-
 type PlayerStats = {
   games_played: number;
   total_kills: number;
@@ -123,55 +109,68 @@ type PlayerStats = {
 
 type RsvpStatus = 'yes' | 'no' | 'maybe' | null;
 
-// ---------------------------------------------------------------------------
-// Status configuration
-// ---------------------------------------------------------------------------
+type ActionItem = {
+  id: string;
+  type: 'payment' | 'rsvp' | 'waiver' | 'dm' | 'emergency';
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  route: string;
+};
 
-const statusConfig: Record<string, { label: string; color: string; icon: string }> = {
-  new: { label: 'Pending Review', color: '#FF9500', icon: 'time' },
-  approved: { label: 'Approved', color: '#5AC8FA', icon: 'checkmark-circle' },
-  active: { label: 'Paid', color: '#34C759', icon: 'wallet' },
-  rostered: { label: 'On Team', color: '#AF52DE', icon: 'people' },
-  waitlisted: { label: 'Waitlisted', color: '#8E8E93', icon: 'hourglass' },
-  denied: { label: 'Not Approved', color: '#FF3B30', icon: 'close-circle' },
+type EnhancedPost = {
+  id: string;
+  content: string;
+  post_type: string;
+  author_name: string;
+  avatar_url: string | null;
+  media_urls: string[] | null;
+  created_at: string;
+};
+
+type LastChatPreview = {
+  channel_id: string;
+  channel_name: string;
+  last_message: string;
+  sender_name: string;
+  timestamp: string;
+  unread_count: number;
+};
+
+type SeasonRecord = {
+  wins: number;
+  losses: number;
+  games_played: number;
 };
 
 // ---------------------------------------------------------------------------
 // Event Parsing Helper
 // ---------------------------------------------------------------------------
 
-/**
- * Manual date parser compatible with React Native/Hermes.
- * Parses YYYY-MM-DD and HH:MM:SS without template literals.
- */
 function parseEventStart(e: any): Date | null {
   if (e?.start_time) {
     const d = new Date(e.start_time);
     return isNaN(d.getTime()) ? null : d;
   }
 
-  const dateStr = e?.event_date;   // "2026-02-28"
-  const timeStr = e?.event_time;   // "18:00:00"
+  const dateStr = e?.event_date ?? e?.date;
+  const timeStr = e?.event_time ?? e?.time;
 
   if (!dateStr) return null;
 
-  // Parse YYYY-MM-DD manually
-  const [yS, mS, dS] = String(dateStr).split("-");
+  const [yS, mS, dS] = String(dateStr).split('-');
   const y = Number(yS);
   const m = Number(mS);
   const d = Number(dS);
   if (!y || !m || !d) return null;
 
-  // If time missing, default to 00:00:00
   let hh = 0, mm = 0, ss = 0;
   if (timeStr) {
-    const parts = String(timeStr).split(":");
+    const parts = String(timeStr).split(':');
     hh = Number(parts[0] ?? 0);
     mm = Number(parts[1] ?? 0);
     ss = Number(parts[2] ?? 0);
   }
 
-  // Local time (month is 0-based)
   const dt = new Date(y, m - 1, d, hh, mm, ss);
   return isNaN(dt.getTime()) ? null : dt;
 }
@@ -183,59 +182,52 @@ function parseEventStart(e: any): Date | null {
 export default function ParentDashboard() {
   const { colors } = useTheme();
   const { user, profile } = useAuth();
-  const { isParent } = usePermissions();
-  const { workingSeason, allSeasons } = useSeason();
+  const { workingSeason } = useSeason();
   const router = useRouter();
 
+  // Core state (preserved)
   const [refreshing, setRefreshing] = useState(false);
   const [children, setChildren] = useState<ChildPlayer[]>([]);
   const [activeChildIndex, setActiveChildIndex] = useState(0);
   const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>({ total_owed: 0, total_paid: 0, total_pending: 0, balance: 0 });
   const [loading, setLoading] = useState(true);
-  const [showShare, setShowShare] = useState(false);
   const [recentGames, setRecentGames] = useState<RecentGame[]>([]);
-  const [latestPost, setLatestPost] = useState<{ id: string; content: string; post_type: string; author_name: string; created_at: string } | null>(null);
-  const [todayGame, setTodayGame] = useState<TodayGame | null>(null);
   const [childStats, setChildStats] = useState<PlayerStats | null>(null);
-  const [rsvpStatus, setRsvpStatus] = useState<RsvpStatus>(null);
   const [rsvpLoading, setRsvpLoading] = useState(false);
-  const [totalTeamEvents, setTotalTeamEvents] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [modalStage, setModalStage] = useState<'loading' | 'onboarding' | 'none'>('none');
-  const [onboardingMounted, setOnboardingMounted] = useState(false);
-  const [onboardingVisible, setOnboardingVisible] = useState(false);
-  const [shareMounted, setShareMounted] = useState(false);
-  const [shareVisible, setShareVisible] = useState(false);
   const [showEventDetailModal, setShowEventDetailModal] = useState(false);
   const [selectedModalEvent, setSelectedModalEvent] = useState<ScheduleEvent | null>(null);
-  const [openRegistrationCount, setOpenRegistrationCount] = useState(0);
   const [activeAlerts, setActiveAlerts] = useState<{ id: string; title: string; body: string; priority: string }[]>([]);
 
-  // Entrance animation
+  // New state for redesigned sections
+  const [rsvpMap, setRsvpMap] = useState<Record<string, RsvpStatus>>({});
+  const [countdownNow, setCountdownNow] = useState<number>(Date.now());
+  const [actionItems, setActionItems] = useState<ActionItem[]>([]);
+  const [showActionSheet, setShowActionSheet] = useState(false);
+  const [latestPost, setLatestPost] = useState<EnhancedPost | null>(null);
+  const [lastChat, setLastChat] = useState<LastChatPreview | null>(null);
+  const [seasonRecord, setSeasonRecord] = useState<SeasonRecord | null>(null);
+
+  // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
-  // Content cross-dissolve when active child changes
-  const contentOpacity = useRef(new Animated.Value(1)).current;
+  const actionPulse = useRef(new Animated.Value(1)).current;
+  const carouselRef = useRef<FlatList>(null);
+  const [activeCarouselIndex, setActiveCarouselIndex] = useState(0);
 
   const activeChild = children[activeChildIndex] ?? children[0] ?? null;
 
-  // Filter upcoming events by active child's team
-  const filteredUpcomingEvents = React.useMemo(() => {
-    if (!activeChild?.team_id) return upcomingEvents;
-    return upcomingEvents.filter(evt => String(evt.team_id) === String(activeChild.team_id));
-  }, [upcomingEvents, activeChild?.team_id]);
+  // -------------------------------------------------------------------------
+  // Effects
+  // -------------------------------------------------------------------------
 
-  const nextEvent = filteredUpcomingEvents[0];
-
-  // Reset activeChildIndex if it's out of bounds after children changes
   useEffect(() => {
     if (children.length > 0 && activeChildIndex >= children.length) {
       setActiveChildIndex(0);
     }
   }, [children.length]);
 
-  // Restore persisted child index on mount
   useEffect(() => {
     if (children.length > 0) {
       AsyncStorage.getItem(CHILD_INDEX_KEY).then(val => {
@@ -249,31 +241,16 @@ export default function ParentDashboard() {
     }
   }, [children.length]);
 
-  // Persist active child index
   useEffect(() => {
     if (children.length > 0) {
       AsyncStorage.setItem(CHILD_INDEX_KEY, String(activeChildIndex));
     }
   }, [activeChildIndex]);
 
-  // Cross-dissolve content when active child changes
-  useEffect(() => {
-    if (children.length > 1) {
-      Animated.sequence([
-        Animated.timing(contentOpacity, { toValue: 0.3, duration: 120, useNativeDriver: true }),
-        Animated.timing(contentOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
-      ]).start();
-    }
-  }, [activeChildIndex]);
-
-  // Onboarding modal disabled — users are already set up
-  // modalStage stays 'none' so the overlay never appears
-
   useEffect(() => {
     fetchParentData();
   }, [user?.id, profile?.email]);
 
-  // Entrance animation — fade+slide in after data loads
   useEffect(() => {
     if (!loading) {
       Animated.parallel([
@@ -283,22 +260,47 @@ export default function ParentDashboard() {
     }
   }, [loading]);
 
-  // Fetch stats for active child whenever it changes
   useEffect(() => {
     if (activeChild) {
       fetchChildStats(activeChild.id);
     }
   }, [activeChild?.id, workingSeason?.id]);
 
-  // Fetch RSVP for next event whenever active child or events change
+  // RSVP map for carousel events
   useEffect(() => {
-    if (activeChild && filteredUpcomingEvents.length > 0) {
-      fetchRsvpStatus(filteredUpcomingEvents[0].id, activeChild.id);
+    if (children.length > 0 && upcomingEvents.length > 0) {
+      const eventIds = upcomingEvents.slice(0, 3).map(e => e.id);
+      const childIds = children.map(c => c.id);
+      fetchRsvpMap(eventIds, childIds);
     }
-  }, [activeChild?.id, filteredUpcomingEvents]);
+  }, [children, upcomingEvents]);
+
+  // Countdown timer — update every 60s
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCountdownNow(Date.now());
+    }, 60000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Pulse animation for action items badge
+  useEffect(() => {
+    if (actionItems.length > 0) {
+      const anim = Animated.loop(
+        Animated.sequence([
+          Animated.timing(actionPulse, { toValue: 0.6, duration: 1000, useNativeDriver: true }),
+          Animated.timing(actionPulse, { toValue: 1, duration: 1000, useNativeDriver: true }),
+        ])
+      );
+      anim.start();
+      return () => anim.stop();
+    } else {
+      actionPulse.setValue(1);
+    }
+  }, [actionItems.length]);
 
   // -------------------------------------------------------------------------
-  // Data fetching (preserved from original)
+  // Data fetching (preserved from original with enhancements)
   // -------------------------------------------------------------------------
 
   const fetchParentData = async () => {
@@ -308,45 +310,30 @@ export default function ParentDashboard() {
     }
 
     try {
-      // Get the parent's email (from profile or user)
       const parentEmail = profile?.email || user?.email;
 
-      // Collect all player IDs from multiple sources
       let playerIds: string[] = [];
 
-      // 1. Check player_guardians table
       const { data: guardianLinks } = await supabase
         .from('player_guardians')
         .select('player_id')
         .eq('guardian_id', user.id);
+      if (guardianLinks) playerIds.push(...guardianLinks.map(g => g.player_id));
 
-      if (guardianLinks) {
-        playerIds.push(...guardianLinks.map(g => g.player_id));
-      }
-
-      // 2. Check players with parent_account_id
       const { data: directPlayers } = await supabase
         .from('players')
         .select('id')
         .eq('parent_account_id', user.id);
+      if (directPlayers) playerIds.push(...directPlayers.map(p => p.id));
 
-      if (directPlayers) {
-        playerIds.push(...directPlayers.map(p => p.id));
-      }
-
-      // 3. Check players by parent_email (most reliable for new registrations)
       if (parentEmail) {
         const { data: emailPlayers } = await supabase
           .from('players')
           .select('id')
           .ilike('parent_email', parentEmail);
-
-        if (emailPlayers) {
-          playerIds.push(...emailPlayers.map(p => p.id));
-        }
+        if (emailPlayers) playerIds.push(...emailPlayers.map(p => p.id));
       }
 
-      // Remove duplicates
       playerIds = [...new Set(playerIds)];
       if (__DEV__) console.log('[ParentDashboard] derived parent playerIds', playerIds);
 
@@ -356,53 +343,35 @@ export default function ParentDashboard() {
         return;
       }
 
-      // Fetch all sports for reference
       const { data: sports } = await supabase
         .from('sports')
         .select('id, name, icon, color_primary');
 
-      // Fetch all seasons for reference
       const { data: seasons } = await supabase
         .from('seasons')
         .select('id, name, sport_id');
 
-      // Get player details with their registrations
       const { data: players, error: playersError } = await supabase
         .from('players')
         .select(`
-          id,
-          first_name,
-          last_name,
-          photo_url,
-          sport_id,
-          season_id,
-          jersey_number,
-          position,
-          team_players (
-            team_id,
-            teams (id, name)
-          )
+          id, first_name, last_name, photo_url, sport_id, season_id, jersey_number, position,
+          team_players ( team_id, teams (id, name) )
         `)
         .in('id', playerIds)
         .order('created_at', { ascending: false });
 
-      if (playersError) {
-        if (__DEV__) console.error('Players error:', playersError);
-      }
+      if (playersError && __DEV__) console.error('Players error:', playersError);
 
-      // Get registration records for these players
       const { data: registrations } = await supabase
         .from('registrations')
         .select('id, player_id, season_id, status')
         .in('player_id', playerIds);
 
-      // Build a map of player_id + season_id -> registration
       const regMap = new Map<string, any>();
       (registrations || []).forEach(reg => {
         regMap.set(`${reg.player_id}-${reg.season_id}`, reg);
       });
 
-      // Format players — produce one card per child+team combo
       const formattedChildren: ChildPlayer[] = [];
       const teamIds: string[] = [];
 
@@ -432,13 +401,7 @@ export default function ParentDashboard() {
         };
 
         if (teamEntries.length === 0) {
-          // No team yet — still show one card
-          formattedChildren.push({
-            ...baseFields,
-            team_id: null,
-            team_name: null,
-            jersey_number: (player as any).jersey_number || null,
-          });
+          formattedChildren.push({ ...baseFields, team_id: null, team_name: null, jersey_number: (player as any).jersey_number || null });
         } else {
           teamEntries.forEach((tp: any) => {
             const team = tp.teams as any;
@@ -454,170 +417,104 @@ export default function ParentDashboard() {
       });
 
       setChildren(formattedChildren);
-      
-      // Fetch upcoming events for teams
+
+      // Fetch upcoming events
       if (teamIds.length > 0) {
         try {
-        const today = new Date().toISOString().split('T')[0];
+          const today = new Date().toISOString().split('T')[0];
+          const { data: events } = await supabase
+            .from('schedule_events')
+            .select('id, team_id, season_id, title, event_type, event_date, event_time, start_time, end_time, location, location_type, opponent, opponent_name, venue_name, venue_address, arrival_time, notes')
+            .in('team_id', teamIds)
+            .gte('event_date', today);
 
-        const { data: events, error: fetchErr } = await supabase
-          .from('schedule_events')
-          .select('id, team_id, season_id, title, event_type, event_date, event_time, start_time, end_time, location, location_type, opponent, opponent_name, venue_name, venue_address, arrival_time, notes')
-          .in('team_id', teamIds)
-          .gte('event_date', today);
+          const now = new Date();
+          const normalized = (events ?? []).map((e: any) => ({ ...e, effectiveStart: parseEventStart(e) }));
+          const upcoming = normalized
+            .filter(e => e.effectiveStart && e.effectiveStart.getTime() >= now.getTime())
+            .sort((a, b) => a.effectiveStart.getTime() - b.effectiveStart.getTime());
 
-        const raw = events ?? [];
-        const now = new Date();
-
-        const normalized = raw.map((e: any) => {
-          const effectiveStart = parseEventStart(e);
-          return { ...e, effectiveStart };
-        });
-
-        const upcoming = normalized
-          .filter(e => e.effectiveStart && e.effectiveStart.getTime() >= now.getTime())
-          .sort((a, b) => a.effectiveStart.getTime() - b.effectiveStart.getTime());
-
-        const formattedEvents: UpcomingEvent[] = upcoming.map((e: any) => {
-          const child = formattedChildren.find(c => c.team_id === e.team_id);
-          return {
-            id: e.id,
-            title: e.title,
-            type: e.event_type as 'game' | 'practice',
-            date: e.event_date,
-            time: e.event_time || '',
-            location: e.location,
-            opponent: e.opponent,
-            team_name: child?.team_name || '',
-            child_name: child ? child.first_name : '',
-            team_id: e.team_id,
-            season_id: e.season_id,
-            start_time: e.start_time,
-            end_time: e.end_time,
-            opponent_name: e.opponent_name,
-            venue_name: e.venue_name,
-            venue_address: e.venue_address,
-            arrival_time: e.arrival_time,
-            notes: e.notes,
-            location_type: e.location_type,
-          };
-        });
-
-        setUpcomingEvents(formattedEvents);
-        if (__DEV__) console.log('[ParentDashboard] fetched upcoming events', formattedEvents.length);
-
-        // Fetch recent completed games (last 3)
-        const { data: recentGameData } = await supabase
-          .from('schedule_events')
-          .select('id, event_date, opponent, game_result, our_score, opponent_score, team_id')
-          .in('team_id', teamIds)
-          .eq('event_type', 'game')
-          .not('game_result', 'is', null)
-          .order('event_date', { ascending: false })
-          .limit(3);
-
-        const formattedRecentGames: RecentGame[] = (recentGameData || []).map((g: any) => {
-          const recentChild = formattedChildren.find(c => c.team_id === g.team_id);
-          return {
-            id: g.id,
-            event_date: g.event_date,
-            opponent: g.opponent,
-            game_result: g.game_result,
-            our_score: g.our_score,
-            their_score: g.opponent_score,
-            team_name: recentChild?.team_name || '',
-          };
-        });
-        setRecentGames(formattedRecentGames);
-
-        // Check for today's game
-        const todayGameEvent = (events || []).find(
-          (e: any) => e.event_type === 'game' && e.event_date === today
-        );
-        if (todayGameEvent) {
-          const todayChild = formattedChildren.find(c => c.team_id === todayGameEvent.team_id);
-          setTodayGame({
-            id: todayGameEvent.id,
-            title: todayGameEvent.title,
-            event_date: todayGameEvent.event_date,
-            event_time: todayGameEvent.start_time || null,
-            venue_name: todayGameEvent.location || null,
-            opponent: todayGameEvent.opponent || null,
-            team_name: todayChild?.team_name || '',
+          const formattedEvents: UpcomingEvent[] = upcoming.map((e: any) => {
+            const child = formattedChildren.find(c => c.team_id === e.team_id);
+            return {
+              id: e.id, title: e.title,
+              type: e.event_type as UpcomingEvent['type'],
+              date: e.event_date, time: e.event_time || '',
+              location: e.location, opponent: e.opponent,
+              team_name: child?.team_name || '', child_name: child ? child.first_name : '',
+              team_id: e.team_id, season_id: e.season_id,
+              start_time: e.start_time, end_time: e.end_time,
+              opponent_name: e.opponent_name, venue_name: e.venue_name,
+              venue_address: e.venue_address, arrival_time: e.arrival_time,
+              notes: e.notes, location_type: e.location_type,
+            };
           });
-        } else {
-          setTodayGame(null);
-        }
+          setUpcomingEvents(formattedEvents);
 
-        // Count total events for the team (for attendance rate)
-        const { count: eventCount } = await supabase
-          .from('schedule_events')
-          .select('*', { count: 'exact', head: true })
-          .in('team_id', teamIds);
-        setTotalTeamEvents(eventCount || 0);
+          // Recent completed games
+          const { data: recentGameData } = await supabase
+            .from('schedule_events')
+            .select('id, event_date, opponent, game_result, our_score, opponent_score, team_id')
+            .in('team_id', teamIds)
+            .eq('event_type', 'game')
+            .not('game_result', 'is', null)
+            .order('event_date', { ascending: false })
+            .limit(3);
+
+          setRecentGames((recentGameData || []).map((g: any) => {
+            const rc = formattedChildren.find(c => c.team_id === g.team_id);
+            return {
+              id: g.id, event_date: g.event_date, opponent: g.opponent,
+              game_result: g.game_result, our_score: g.our_score,
+              their_score: g.opponent_score, team_name: rc?.team_name || '',
+            };
+          }));
         } catch (eventsErr) {
           if (__DEV__) console.error('Error fetching events:', eventsErr);
-          // Non-fatal: events section will just show empty
           setUpcomingEvents([]);
           setRecentGames([]);
-          setTodayGame(null);
         }
       } else {
         setUpcomingEvents([]);
         setRecentGames([]);
-        setTodayGame(null);
       }
 
-      // Calculate payment status across all children using actual season_fees
+      // Payment status
       if (formattedChildren.length > 0) {
         try {
           const childIds = formattedChildren.map(c => c.id);
           const childSeasonIds = [...new Set(formattedChildren.map(c => c.season_id).filter(Boolean))];
 
-          // Fetch season fees for all children's seasons
           const { data: seasonFees } = await supabase
             .from('season_fees')
             .select('season_id, fee_type, amount')
             .in('season_id', childSeasonIds);
 
-          // Calculate total owed = sum of all fees for all children
           let totalOwed = 0;
           formattedChildren.forEach(child => {
             const fees = (seasonFees || []).filter(f => f.season_id === child.season_id);
             totalOwed += fees.reduce((sum, f) => sum + (f.amount || 0), 0);
           });
 
-          // Get actual payment records with status
           const { data: payments } = await supabase
             .from('payments')
             .select('amount, status, player_id')
             .in('player_id', childIds);
 
-          const totalPaid = (payments || [])
-            .filter(p => p.status === 'verified')
-            .reduce((sum, p) => sum + (p.amount || 0), 0);
-
-          const totalPending = (payments || [])
-            .filter(p => p.status === 'pending')
-            .reduce((sum, p) => sum + (p.amount || 0), 0);
-
-          setPaymentStatus({
-            total_owed: totalOwed,
-            total_paid: totalPaid,
-            total_pending: totalPending,
-            balance: totalOwed - totalPaid,
-          });
+          const totalPaid = (payments || []).filter(p => p.status === 'verified').reduce((sum, p) => sum + (p.amount || 0), 0);
+          const totalPending = (payments || []).filter(p => p.status === 'pending').reduce((sum, p) => sum + (p.amount || 0), 0);
+          setPaymentStatus({ total_owed: totalOwed, total_paid: totalPaid, total_pending: totalPending, balance: totalOwed - totalPaid });
         } catch (payErr) {
           if (__DEV__) console.error('Error fetching payment status:', payErr);
         }
       }
 
-      // Fetch latest team wall post
+      // Enhanced latest team wall post (with avatar + media)
       if (teamIds.length > 0) {
         try {
           const { data: postData } = await supabase
             .from('team_posts')
-            .select('id, content, post_type, created_at, profiles:author_id(full_name)')
+            .select('id, content, post_type, created_at, media_urls, profiles:author_id(full_name, avatar_url)')
             .in('team_id', teamIds)
             .eq('is_published', true)
             .order('created_at', { ascending: false })
@@ -630,15 +527,19 @@ export default function ParentDashboard() {
               content: postData.content,
               post_type: postData.post_type,
               author_name: (postData.profiles as any)?.full_name || 'Coach',
+              avatar_url: (postData.profiles as any)?.avatar_url || null,
+              media_urls: postData.media_urls || null,
               created_at: postData.created_at,
             });
+          } else {
+            setLatestPost(null);
           }
         } catch (postErr) {
           if (__DEV__) console.error('Error fetching latest team post:', postErr);
         }
       }
 
-      // Fetch announcements for parent's org
+      // Announcements
       if (profile?.current_organization_id) {
         try {
           const { data: announcements } = await supabase
@@ -653,7 +554,6 @@ export default function ParentDashboard() {
 
           if (announcements && announcements.length > 0) {
             const announcementIds = announcements.map(a => a.id);
-
             const { data: reads } = await supabase
               .from('announcement_reads')
               .select('announcement_id')
@@ -661,15 +561,10 @@ export default function ParentDashboard() {
               .in('announcement_id', announcementIds);
 
             const readIds = new Set((reads || []).map(r => r.announcement_id));
-
             const unread = announcements
               .filter(a => !readIds.has(a.id))
-              .filter(a => {
-                if (!a.target_team_id) return true;
-                return teamIds.includes(String(a.target_team_id));
-              })
+              .filter(a => !a.target_team_id || teamIds.includes(String(a.target_team_id)))
               .map(a => ({ id: a.id, title: a.title, body: a.body || '', priority: a.priority || 'normal' }));
-
             setActiveAlerts(unread);
           } else {
             setActiveAlerts([]);
@@ -679,19 +574,14 @@ export default function ParentDashboard() {
         }
       }
 
-      // Count open registrations for banner
-      if (profile?.current_organization_id) {
-        try {
-          const { count } = await supabase
-            .from('seasons')
-            .select('*', { count: 'exact', head: true })
-            .eq('organization_id', profile.current_organization_id)
-            .eq('registration_open', true);
-
-          setOpenRegistrationCount(count || 0);
-        } catch (regErr) {
-          if (__DEV__) console.error('Error fetching open registration count:', regErr);
-        }
+      // --- NEW FETCHES ---
+      const childIds = formattedChildren.map(c => c.id);
+      if (formattedChildren.length > 0) {
+        fetchActionItemsData(childIds, teamIds, formattedChildren);
+      }
+      fetchLastChatData();
+      if (teamIds.length > 0) {
+        fetchSeasonRecordData(teamIds);
       }
 
     } catch (err) {
@@ -732,40 +622,41 @@ export default function ParentDashboard() {
     }
   };
 
-  const fetchRsvpStatus = async (eventId: string, playerId: string) => {
-    try {
-      const { data: existingRsvp } = await supabase
-        .from('event_rsvps')
-        .select('status')
-        .eq('event_id', eventId)
-        .eq('player_id', playerId)
-        .maybeSingle();
+  // -------------------------------------------------------------------------
+  // New fetch functions
+  // -------------------------------------------------------------------------
 
-      setRsvpStatus(existingRsvp?.status as RsvpStatus || null);
+  const fetchRsvpMap = async (eventIds: string[], playerIds: string[]) => {
+    if (!eventIds.length || !playerIds.length) return;
+    try {
+      const { data } = await supabase
+        .from('event_rsvps')
+        .select('event_id, player_id, status')
+        .in('event_id', eventIds)
+        .in('player_id', playerIds);
+
+      const map: Record<string, RsvpStatus> = {};
+      (data || []).forEach(r => {
+        if (!map[r.event_id]) map[r.event_id] = r.status as RsvpStatus;
+      });
+      setRsvpMap(map);
     } catch (err) {
-      if (__DEV__) console.error('Error fetching RSVP:', err);
+      if (__DEV__) console.error('Error fetching RSVP map:', err);
     }
   };
 
-  const handleRsvp = async (status: 'yes' | 'no' | 'maybe') => {
-    // use filtered list so RSVP applies to the selected team
-    if (!activeChild || filteredUpcomingEvents.length === 0 || !user?.id) return;
-    const nextEvent = filteredUpcomingEvents[0];
-    // ensure child belongs to the team
-    if (String(activeChild.team_id) !== String(nextEvent.team_id)) {
-      Alert.alert('Not on Team', `${activeChild.first_name} isn\'t on the roster for this event.`);
-      return;
-    }
+  const handleCarouselRsvp = async (eventId: string, childId: string, newStatus: 'yes' | 'no' | 'maybe') => {
+    if (!user?.id) return;
     setRsvpLoading(true);
     try {
       await supabase.from('event_rsvps').upsert({
-        event_id: nextEvent.id,
-        player_id: activeChild.id,
-        status,
+        event_id: eventId,
+        player_id: childId,
+        status: newStatus,
         responded_by: user.id,
         responded_at: new Date().toISOString(),
       }, { onConflict: 'event_id,player_id' });
-      setRsvpStatus(status);
+      setRsvpMap(prev => ({ ...prev, [eventId]: newStatus }));
     } catch (err) {
       if (__DEV__) console.error('Error saving RSVP:', err);
     } finally {
@@ -773,14 +664,200 @@ export default function ParentDashboard() {
     }
   };
 
-  const onRefresh = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setRefreshing(true);
-    setError(null);
+  const fetchActionItemsData = async (childIds: string[], teamIds: string[], formattedChildren: ChildPlayer[]) => {
+    const items: ActionItem[] = [];
+
+    const results = await Promise.allSettled([
+      // 1. Unpaid fees
+      supabase.from('payments').select('id').in('player_id', childIds).or('paid.eq.false,status.not.in.(paid,verified)'),
+
+      // 2. Un-RSVPed events (next 5 days)
+      (async () => {
+        const fiveDaysOut = new Date();
+        fiveDaysOut.setDate(fiveDaysOut.getDate() + 5);
+        const today = new Date().toISOString().split('T')[0];
+        const fiveDays = fiveDaysOut.toISOString().split('T')[0];
+        if (!teamIds.length) return [];
+
+        const { data: nextEvents } = await supabase
+          .from('schedule_events')
+          .select('id, title, event_date')
+          .in('team_id', teamIds)
+          .gte('event_date', today)
+          .lte('event_date', fiveDays);
+
+        if (!nextEvents?.length) return [];
+        const eventIds = nextEvents.map(e => e.id);
+        const { data: rsvps } = await supabase
+          .from('event_rsvps')
+          .select('event_id, player_id')
+          .in('event_id', eventIds)
+          .in('player_id', childIds);
+
+        const rsvpSet = new Set((rsvps || []).map(r => `${r.event_id}-${r.player_id}`));
+        return nextEvents.filter(evt => childIds.some(cid => !rsvpSet.has(`${evt.id}-${cid}`)));
+      })(),
+
+      // 3. Unsigned waivers
+      (async () => {
+        const seasonIds = [...new Set(formattedChildren.map(c => c.season_id).filter(Boolean))];
+        if (!seasonIds.length) return [];
+
+        const { data: templates } = await supabase
+          .from('waiver_templates')
+          .select('id, name, season_id')
+          .in('season_id', seasonIds)
+          .eq('is_required', true)
+          .eq('is_active', true);
+        if (!templates?.length) return [];
+
+        const templateIds = templates.map(t => t.id);
+        const { data: signatures } = await supabase
+          .from('waiver_signatures')
+          .select('waiver_template_id, player_id')
+          .in('waiver_template_id', templateIds)
+          .in('player_id', childIds);
+
+        const signedSet = new Set((signatures || []).map(s => `${s.waiver_template_id}-${s.player_id}`));
+        return templates.filter(t => childIds.some(cid => !signedSet.has(`${t.id}-${cid}`)));
+      })(),
+
+      // 4. Unread DMs
+      (async () => {
+        if (!user?.id) return 0;
+        const { data: memberships } = await supabase
+          .from('channel_members')
+          .select('channel_id, last_read_at, chat_channels!inner(channel_type)')
+          .eq('user_id', user.id)
+          .is('left_at', null);
+        if (!memberships?.length) return 0;
+
+        const dmMemberships = memberships.filter(m => (m.chat_channels as any)?.channel_type === 'dm');
+        let totalUnread = 0;
+        for (const dm of dmMemberships.slice(0, 10)) {
+          const { count } = await supabase
+            .from('chat_messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('channel_id', dm.channel_id)
+            .eq('is_deleted', false)
+            .gt('created_at', dm.last_read_at || '1970-01-01');
+          totalUnread += (count || 0);
+        }
+        return totalUnread;
+      })(),
+
+      // 5. Missing emergency contacts
+      supabase.from('players').select('id, first_name').in('id', childIds).or('emergency_contact_name.is.null,emergency_contact_phone.is.null'),
+    ]);
+
+    // 1. Unpaid
+    if (results[0].status === 'fulfilled') {
+      const data = (results[0].value as any)?.data;
+      if (data?.length) {
+        items.push({ id: 'payment', type: 'payment', icon: 'wallet-outline', label: `${data.length} unpaid fee${data.length > 1 ? 's' : ''}`, route: '/family-payments' });
+      }
+    }
+    // 2. Un-RSVPed
+    if (results[1].status === 'fulfilled') {
+      const evts = results[1].value as any[];
+      if (evts?.length) {
+        items.push({ id: 'rsvp', type: 'rsvp', icon: 'hand-right-outline', label: `${evts.length} event${evts.length > 1 ? 's' : ''} need RSVP`, route: '/(tabs)/parent-schedule' });
+      }
+    }
+    // 3. Unsigned waivers
+    if (results[2].status === 'fulfilled') {
+      const waivers = results[2].value as any[];
+      if (waivers?.length) {
+        items.push({ id: 'waiver', type: 'waiver', icon: 'document-text-outline', label: `${waivers.length} waiver${waivers.length > 1 ? 's' : ''} to sign`, route: '/child-detail?playerId=' + childIds[0] });
+      }
+    }
+    // 4. Unread DMs
+    if (results[3].status === 'fulfilled') {
+      const count = results[3].value as number;
+      if (count > 0) {
+        items.push({ id: 'dm', type: 'dm', icon: 'chatbubble-outline', label: `${count} unread message${count > 1 ? 's' : ''}`, route: '/(tabs)/parent-chat' });
+      }
+    }
+    // 5. Missing emergency contacts
+    if (results[4].status === 'fulfilled') {
+      const data = (results[4].value as any)?.data;
+      if (data?.length) {
+        const names = data.map((p: any) => p.first_name).join(', ');
+        items.push({ id: 'emergency', type: 'emergency', icon: 'medkit-outline', label: `Missing emergency info for ${names}`, route: '/child-detail?playerId=' + data[0].id });
+      }
+    }
+
+    setActionItems(items);
+  };
+
+  const fetchLastChatData = async () => {
+    if (!user?.id) return;
     try {
-      await fetchParentData();
-    } finally {
-      setRefreshing(false);
+      const { data: memberships } = await supabase
+        .from('channel_members')
+        .select('channel_id, last_read_at, chat_channels!inner(id, name, channel_type)')
+        .eq('user_id', user.id)
+        .is('left_at', null);
+      if (!memberships?.length) { setLastChat(null); return; }
+
+      let mostRecent: LastChatPreview | null = null;
+      let mostRecentTime = 0;
+
+      for (const m of memberships.slice(0, 10)) {
+        const channel = m.chat_channels as any;
+        const { data: lastMsg } = await supabase
+          .from('chat_messages')
+          .select('content, created_at, profiles:sender_id(full_name)')
+          .eq('channel_id', m.channel_id)
+          .eq('is_deleted', false)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (lastMsg) {
+          const msgTime = new Date(lastMsg.created_at).getTime();
+          if (msgTime > mostRecentTime) {
+            const { count } = await supabase
+              .from('chat_messages')
+              .select('*', { count: 'exact', head: true })
+              .eq('channel_id', m.channel_id)
+              .eq('is_deleted', false)
+              .gt('created_at', m.last_read_at || '1970-01-01');
+
+            mostRecentTime = msgTime;
+            mostRecent = {
+              channel_id: m.channel_id,
+              channel_name: channel?.name || 'Chat',
+              last_message: lastMsg.content || '(media)',
+              sender_name: (lastMsg.profiles as any)?.full_name || 'Unknown',
+              timestamp: lastMsg.created_at,
+              unread_count: count || 0,
+            };
+          }
+        }
+      }
+      setLastChat(mostRecent);
+    } catch (err) {
+      if (__DEV__) console.error('Error fetching last chat:', err);
+    }
+  };
+
+  const fetchSeasonRecordData = async (teamIds: string[]) => {
+    if (!teamIds.length) { setSeasonRecord(null); return; }
+    try {
+      const { data } = await supabase
+        .from('schedule_events')
+        .select('game_result')
+        .in('team_id', teamIds)
+        .eq('event_type', 'game')
+        .not('game_result', 'is', null);
+
+      if (!data?.length) { setSeasonRecord(null); return; }
+      const wins = data.filter(g => g.game_result === 'win').length;
+      const losses = data.filter(g => g.game_result === 'loss').length;
+      setSeasonRecord({ wins, losses, games_played: data.length });
+    } catch (err) {
+      if (__DEV__) console.error('Error fetching season record:', err);
     }
   };
 
@@ -793,10 +870,8 @@ export default function ParentDashboard() {
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
-
     if (date.toDateString() === today.toDateString()) return 'Today';
     if (date.toDateString() === tomorrow.toDateString()) return 'Tomorrow';
-
     return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   };
 
@@ -809,71 +884,46 @@ export default function ParentDashboard() {
     return `${hour}:${minutes} ${ampm}`;
   };
 
-  const getCountdownText = (dateStr: string) => {
-    const eventDate = new Date(dateStr + 'T00:00:00');
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const diffTime = eventDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 0) return 'TODAY';
-    if (diffDays === 1) return 'TOMORROW';
-    if (diffDays <= 7) return `IN ${diffDays} DAYS`;
-    return `IN ${diffDays} DAYS`;
+  const timeAgo = (dateStr: string) => {
+    const diffMs = Date.now() - new Date(dateStr).getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
-  const getShortDate = (dateStr: string) => {
-    const date = new Date(dateStr + 'T00:00:00');
-    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' });
-  };
-
-  const getPrideMoment = (): { icon: string; text: string } => {
-    if (!activeChild) return { icon: 'star', text: 'Ready for the next challenge!' };
-
-    // Check if recent game was a win
-    if (recentGames.length > 0) {
-      const lastGame = recentGames[0];
-      if (lastGame.game_result === 'win') {
-        return { icon: 'trophy', text: `${activeChild.first_name}'s team won! Great game!` };
-      }
-      if (childStats && childStats.total_kills > 0) {
-        return { icon: 'flash', text: `${activeChild.first_name} has ${childStats.total_kills} kills this season!` };
-      }
+  const getEventColor = (type: string) => {
+    switch (type) {
+      case 'practice': return '#10B981';
+      case 'game': return '#EF4444';
+      case 'tournament': return '#F97316';
+      default: return colors.primary;
     }
-
-    if (childStats && childStats.games_played > 0) {
-      return { icon: 'star', text: `${activeChild.first_name} has played ${childStats.games_played} games this season!` };
-    }
-
-    return { icon: 'star', text: `${activeChild.first_name} is ready for their next challenge!` };
   };
 
-  const getStatusConfig = (status: string) => {
-    return statusConfig[status] || statusConfig.new;
-  };
-
-  const getRegistrationComplete = (): boolean => {
-    if (!activeChild) return false;
-    return ['active', 'rostered'].includes(activeChild.registration_status);
+  const getLiveCountdown = (event: UpcomingEvent) => {
+    const start = parseEventStart(event);
+    if (!start) return null;
+    const diff = start.getTime() - countdownNow;
+    if (diff <= 0 || diff > 24 * 60 * 60 * 1000) return null;
+    const hours = Math.floor(diff / 3600000);
+    const mins = Math.floor((diff % 3600000) / 60000);
+    if (hours === 0 && mins === 0) return 'Starting now!';
+    return `Starts in ${hours}h ${mins}m`;
   };
 
   const toScheduleEvent = (evt: UpcomingEvent): ScheduleEvent => ({
-    id: evt.id,
-    team_id: evt.team_id || '',
-    season_id: evt.season_id || '',
-    event_type: evt.type,
-    title: evt.title,
-    event_date: evt.date,
-    start_time: evt.start_time || null,
-    end_time: evt.end_time || null,
-    location: evt.location,
-    location_type: evt.location_type as any,
-    opponent: evt.opponent,
-    opponent_name: evt.opponent_name || null,
-    venue_name: evt.venue_name || null,
-    venue_address: evt.venue_address || null,
-    arrival_time: evt.arrival_time || null,
-    notes: evt.notes || null,
+    id: evt.id, team_id: evt.team_id || '', season_id: evt.season_id || '',
+    event_type: evt.type, title: evt.title, event_date: evt.date,
+    start_time: evt.start_time || null, end_time: evt.end_time || null,
+    location: evt.location, location_type: evt.location_type as any,
+    opponent: evt.opponent, opponent_name: evt.opponent_name || null,
+    venue_name: evt.venue_name || null, venue_address: evt.venue_address || null,
+    arrival_time: evt.arrival_time || null, notes: evt.notes || null,
     team_name: evt.team_name,
   });
 
@@ -882,19 +932,29 @@ export default function ParentDashboard() {
     setShowEventDetailModal(true);
   };
 
-  const getNextEventShortDate = (): string => {
-    if (!nextEvent) return 'None';
-    return getShortDate(nextEvent.date);
+  const onRefresh = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setRefreshing(true);
+    setError(null);
+    try { await fetchParentData(); } finally { setRefreshing(false); }
   };
 
-  const handleOnboardingDone = async () => {
-    try {
-      await AsyncStorage.setItem('vb_parent_onboarded', 'true');
-    } catch (e) {
-      if (__DEV__) console.log('Error saving onboarding status:', e);
-    } finally {
-      setModalStage('none');
-    }
+  const cycleRsvp = (eventId: string) => {
+    const current = rsvpMap[eventId] || null;
+    const event = upcomingEvents.find(e => e.id === eventId);
+    const child = children.find(c => c.team_id === event?.team_id);
+    if (!child) return;
+    const next = current === 'yes' ? 'maybe' : current === 'maybe' ? 'no' : 'yes';
+    handleCarouselRsvp(eventId, child.id, next);
+  };
+
+  const getStatHighlight = (stats: PlayerStats | null) => {
+    if (!stats) return null;
+    if (stats.total_kills > 0) return `${stats.total_kills} kills`;
+    if (stats.total_aces > 0) return `${stats.total_aces} aces`;
+    if (stats.total_points > 0) return `${stats.total_points} points`;
+    if (stats.games_played > 0) return `${stats.games_played} games`;
+    return null;
   };
 
   const s = createStyles(colors);
@@ -913,7 +973,6 @@ export default function ParentDashboard() {
   if (loading) {
     return (
       <ScrollView style={s.container} contentContainerStyle={{ paddingTop: 0 }}>
-        {/* Skeleton header bar */}
         <View style={[s.headerBar, { justifyContent: 'space-between' }]}>
           <View style={{ width: 120, height: 14, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.15)' }} />
           <View style={{ flexDirection: 'row', gap: 12 }}>
@@ -921,20 +980,14 @@ export default function ParentDashboard() {
             <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.15)' }} />
           </View>
         </View>
-        {/* Skeleton hero card */}
-        <View style={{ marginHorizontal: 16, marginTop: 24, height: 220, borderRadius: radii.card, backgroundColor: colors.bgSecondary }} />
-        {/* Skeleton match cards */}
-        <View style={{ marginHorizontal: 16, marginTop: 20, gap: 12 }}>
-          {[1, 2].map(i => (
-            <View key={i} style={{ height: 80, borderRadius: radii.card, backgroundColor: colors.glassCard, borderWidth: 1, borderColor: colors.glassBorder }} />
-          ))}
-        </View>
-        {/* Skeleton player cards row */}
-        <View style={{ flexDirection: 'row', gap: 12, paddingHorizontal: 16, marginTop: 20 }}>
-          {[1, 2, 3].map(i => (
-            <View key={i} style={{ width: 150, height: 210, borderRadius: radii.card, backgroundColor: colors.bgSecondary }} />
-          ))}
-        </View>
+        {/* Carousel skeleton */}
+        <View style={{ marginHorizontal: 16, marginTop: 16, height: 180, borderRadius: radii.card, backgroundColor: colors.bgSecondary }} />
+        {/* Action card skeleton */}
+        <View style={{ marginHorizontal: 16, marginTop: 16, height: 52, borderRadius: radii.card, backgroundColor: colors.glassCard, borderWidth: 1, borderColor: colors.glassBorder }} />
+        {/* Team hub skeleton */}
+        <View style={{ marginHorizontal: 16, marginTop: 16, height: 100, borderRadius: radii.card, backgroundColor: colors.glassCard, borderWidth: 1, borderColor: colors.glassBorder }} />
+        {/* Player card skeleton */}
+        <View style={{ marginHorizontal: 16, marginTop: 16, height: 240, borderRadius: radii.card, backgroundColor: colors.bgSecondary }} />
       </ScrollView>
     );
   }
@@ -950,18 +1003,8 @@ export default function ParentDashboard() {
           {error}
         </Text>
         <TouchableOpacity
-          style={{
-            marginTop: 16,
-            backgroundColor: colors.primary,
-            paddingHorizontal: 24,
-            paddingVertical: 12,
-            borderRadius: 12,
-          }}
-          onPress={() => {
-            setError(null);
-            setLoading(true);
-            fetchParentData();
-          }}
+          style={{ marginTop: 16, backgroundColor: colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 }}
+          onPress={() => { setError(null); setLoading(true); fetchParentData(); }}
         >
           <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 15 }}>Try Again</Text>
         </TouchableOpacity>
@@ -969,11 +1012,15 @@ export default function ParentDashboard() {
     );
   }
 
-  const prideMoment = getPrideMoment();
+  // -------------------------------------------------------------------------
+  // Render — new section stack
+  // -------------------------------------------------------------------------
 
-  // -------------------------------------------------------------------------
-  // Render — v0 layout
-  // -------------------------------------------------------------------------
+  const carouselEvents = upcomingEvents.slice(0, 3);
+  const carouselData: { type: 'event' | 'cta'; event: UpcomingEvent | null }[] = [
+    ...carouselEvents.map(e => ({ type: 'event' as const, event: e })),
+    { type: 'cta' as const, event: null },
+  ];
 
   return (
     <Animated.View style={{ flex: 1, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
@@ -985,317 +1032,400 @@ export default function ParentDashboard() {
       >
 
       {/* ================================================================ */}
-      {/* 1. HEADER BAR — Steel blue                                        */}
+      {/* HEADER                                                           */}
       {/* ================================================================ */}
-      <AppHeaderBar
-        initials={userInitials}
-        hasNotifications={activeAlerts.length > 0}
-      />
+      <AppHeaderBar initials={userInitials} hasNotifications={activeAlerts.length > 0} />
 
       {/* ================================================================ */}
-      {/* 2. UPCOMING BADGE — Floating teal pill                            */}
+      {/* SECTION 1: EVENT CAROUSEL                                         */}
       {/* ================================================================ */}
-      <View style={s.upcomingBadgeWrap}>
-        <View style={s.upcomingBadge}>
-          <Text style={s.upcomingBadgeText}>UPCOMING</Text>
+      <View style={s.carouselWrap}>
+        <FlatList
+          ref={carouselRef}
+          data={carouselData}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          snapToInterval={CARD_WIDTH + 12}
+          decelerationRate="fast"
+          contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}
+          keyExtractor={(item, index) => item.event?.id || `cta-${index}`}
+          onMomentumScrollEnd={(e) => {
+            const idx = Math.round(e.nativeEvent.contentOffset.x / (CARD_WIDTH + 12));
+            setActiveCarouselIndex(idx);
+          }}
+          renderItem={({ item }) => {
+            if (item.type === 'cta') {
+              return (
+                <TouchableOpacity
+                  style={[s.carouselCard, s.carouselCtaCard]}
+                  onPress={() => router.push('/(tabs)/parent-schedule' as any)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="calendar-outline" size={40} color={colors.teal} />
+                  <Text style={s.ctaText}>View Full Schedule</Text>
+                  <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+                </TouchableOpacity>
+              );
+            }
+
+            const evt = item.event!;
+            const eventColor = getEventColor(evt.type);
+            const countdown = getLiveCountdown(evt);
+            const rsvp = rsvpMap[evt.id] || null;
+
+            return (
+              <TouchableOpacity
+                style={[s.carouselCard, { borderTopWidth: 4, borderTopColor: eventColor }]}
+                onPress={() => openEventDetail(evt)}
+                activeOpacity={0.9}
+              >
+                {/* Event type badge */}
+                <View style={[s.eventTypeBadge, { backgroundColor: eventColor + '20' }]}>
+                  <View style={[s.eventTypeDot, { backgroundColor: eventColor }]} />
+                  <Text style={[s.eventTypeText, { color: eventColor }]}>{evt.type.toUpperCase()}</Text>
+                </View>
+
+                {/* Date + time */}
+                <Text style={s.carouselDate}>{formatDate(evt.date)}</Text>
+                {evt.time ? <Text style={s.carouselTime}>{formatTime(evt.time)}</Text> : null}
+
+                {/* Countdown */}
+                {countdown && <Text style={s.carouselCountdown}>{countdown}</Text>}
+
+                {/* Opponent */}
+                {evt.opponent && <Text style={s.carouselOpponent}>vs {evt.opponent}</Text>}
+
+                {/* Location */}
+                {(evt.venue_name || evt.location) && (
+                  <View style={s.carouselLocationRow}>
+                    <Ionicons name="location-outline" size={12} color={colors.textMuted} />
+                    <Text style={s.carouselLocation} numberOfLines={1}>{evt.venue_name || evt.location}</Text>
+                  </View>
+                )}
+
+                {/* Child name for multi-child */}
+                {children.length > 1 && <Text style={s.carouselChild}>{evt.child_name}'s team</Text>}
+
+                {/* RSVP chip */}
+                <TouchableOpacity
+                  style={[s.rsvpChip, {
+                    backgroundColor: rsvp === 'yes' ? '#10B98120' : rsvp === 'no' ? '#EF444420' : rsvp === 'maybe' ? '#F9731620' : colors.glassCard,
+                    borderColor: rsvp === 'yes' ? '#10B981' : rsvp === 'no' ? '#EF4444' : rsvp === 'maybe' ? '#F97316' : colors.glassBorder,
+                  }]}
+                  onPress={() => cycleRsvp(evt.id)}
+                  disabled={rsvpLoading}
+                >
+                  <Ionicons
+                    name={rsvp === 'yes' ? 'checkmark-circle' : rsvp === 'no' ? 'close-circle' : rsvp === 'maybe' ? 'help-circle' : 'radio-button-off'}
+                    size={14}
+                    color={rsvp === 'yes' ? '#10B981' : rsvp === 'no' ? '#EF4444' : rsvp === 'maybe' ? '#F97316' : colors.textMuted}
+                  />
+                  <Text style={[s.rsvpChipText, {
+                    color: rsvp === 'yes' ? '#10B981' : rsvp === 'no' ? '#EF4444' : rsvp === 'maybe' ? '#F97316' : colors.textMuted,
+                  }]}>
+                    {rsvp === 'yes' ? 'Going' : rsvp === 'no' ? 'Not Going' : rsvp === 'maybe' ? 'Maybe' : 'RSVP'}
+                  </Text>
+                </TouchableOpacity>
+              </TouchableOpacity>
+            );
+          }}
+        />
+        {/* Dot indicators */}
+        <View style={s.dotRow}>
+          {carouselData.map((_, i) => (
+            <View key={i} style={[s.dot, i === activeCarouselIndex && s.dotActive]} />
+          ))}
         </View>
       </View>
 
       {/* ================================================================ */}
-      {/* 3. GAME DAY HERO CARD                                             */}
+      {/* SECTION 2: "YOU GOT STUFF TO DO" (conditional)                    */}
       {/* ================================================================ */}
-      {nextEvent ? (
+      {actionItems.length > 0 && (
         <TouchableOpacity
-          style={s.heroCard}
-          onPress={() => openEventDetail(nextEvent)}
-          activeOpacity={0.9}
+          style={s.stuffCard}
+          onPress={() => setShowActionSheet(true)}
+          activeOpacity={0.8}
         >
-          {/* Background — sport action image (game/practice) */}
-          <Image
-            source={getDefaultHeroImage('volleyball', nextEvent?.type)}
-            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' }}
-            resizeMode="cover"
-          />
-          {/* Dark gradient overlay */}
-          <LinearGradient
-            colors={['transparent', 'rgba(27,40,56,0.5)', '#1B2838']}
-            style={StyleSheet.absoluteFillObject}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 1 }}
-          />
-          {/* HOME / AWAY badge */}
-          {nextEvent.location_type && (
-            <View style={[
-              s.heroBadge,
-              { backgroundColor: nextEvent.location_type === 'home' ? '#14B8A6' : '#E8913A' },
-            ]}>
-              <Text style={s.heroBadgeText}>
-                {nextEvent.location_type === 'home' ? 'HOME' : 'AWAY'}
-              </Text>
-            </View>
-          )}
-          {/* Bottom content */}
-          <View style={s.heroContent}>
-            <Text style={s.heroCountdown}>{getCountdownText(nextEvent.date)}</Text>
-            <Text style={s.heroTitle}>
-              {nextEvent.type === 'game' ? 'GAME DAY' : 'PRACTICE'}
+          <View style={s.stuffLeft}>
+            <Animated.View style={[s.stuffBadge, { opacity: actionPulse }]}>
+              <Text style={s.stuffBadgeText}>{actionItems.length}</Text>
+            </Animated.View>
+            <Text style={s.stuffTitle}>
+              {actionItems.length} {actionItems.length === 1 ? 'thing needs' : 'things need'} attention
             </Text>
-            {nextEvent.opponent && (
-              <Text style={s.heroOpponent}>vs {nextEvent.opponent}</Text>
-            )}
-            <Text style={s.heroDate}>
-              {formatDate(nextEvent.date)}
-              {nextEvent.time ? ` \u2022 ${formatTime(nextEvent.time)}` : ''}
-            </Text>
-            {(nextEvent.venue_name || nextEvent.location) && (
-              <Text style={s.heroVenue}>{nextEvent.venue_name || nextEvent.location}</Text>
-            )}
-            {(nextEvent.venue_address || nextEvent.venue_name || nextEvent.location) && (
-              <TouchableOpacity
-                style={s.heroDirectionsBtn}
-                onPress={() => {
-                  const addr = nextEvent.venue_address || nextEvent.venue_name || nextEvent.location || '';
-                  const url = Platform.select({
-                    ios: `maps:0,0?q=${encodeURIComponent(addr)}`,
-                    android: `geo:0,0?q=${encodeURIComponent(addr)}`,
-                  });
-                  if (url) Linking.openURL(url);
-                }}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="navigate-outline" size={10} color="#FFF" />
-                <Text style={s.heroDirectionsBtnText}>Get Directions</Text>
-              </TouchableOpacity>
-            )}
           </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
         </TouchableOpacity>
-      ) : (
-        /* Fallback — no upcoming events */
-        <View style={s.heroCardEmpty}>
-          <Image
-            source={getDefaultHeroImage('volleyball')}
-            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' }}
-            resizeMode="cover"
-          />
-          <LinearGradient
-            colors={['transparent', 'rgba(27,40,56,0.6)', 'rgba(27,40,56,0.9)']}
-            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 1 }}
-          />
-          <View style={s.heroContent}>
-            <Text style={s.heroTitle}>NO UPCOMING EVENTS</Text>
-            <Text style={[s.heroOpponent, { marginTop: 4 }]}>Check back later for your schedule</Text>
-          </View>
-        </View>
       )}
 
       {/* ================================================================ */}
-      {/* 4. UPCOMING MATCHCARDS                                            */}
+      {/* SECTION 3: TEAM HUB PREVIEW                                       */}
       {/* ================================================================ */}
-      {filteredUpcomingEvents.length > 1 && (
-        <View style={s.sectionBlock}>
-          <View style={{ paddingHorizontal: 16 }}>
-            <SectionHeader title="Upcoming" action="See All" onAction={() => router.push('/schedule')} />
-          </View>
-          {filteredUpcomingEvents.slice(1, 4).map(evt => (
-            <MatchCard
-              key={evt.id}
-              homeTeam={activeChild?.team_name || evt.team_name || ''}
-              awayTeam={evt.opponent || evt.title}
-              time={formatTime(evt.time)}
-              date={formatDate(evt.date).toUpperCase()}
-              venue={evt.venue_name || evt.location || ''}
-              accentColor={colors.teal}
-              onPress={() => openEventDetail(evt)}
-              style={{ marginHorizontal: 16, marginBottom: 12 }}
-            />
-          ))}
+      <View style={s.sectionBlock}>
+        <View style={{ paddingHorizontal: 16 }}>
+          <SectionHeader title="Team Hub" action="View All" onAction={() => router.push('/(tabs)/parent-team-hub' as any)} />
         </View>
-      )}
+        {latestPost ? (
+          <TouchableOpacity
+            style={s.teamHubCard}
+            onPress={() => router.push('/(tabs)/parent-team-hub' as any)}
+            activeOpacity={0.8}
+          >
+            <View style={s.teamHubHeader}>
+              {latestPost.avatar_url ? (
+                <Image source={{ uri: latestPost.avatar_url }} style={s.teamHubAvatar} />
+              ) : (
+                <View style={[s.teamHubAvatar, s.teamHubAvatarPlaceholder]}>
+                  <Ionicons name="person" size={16} color={colors.textMuted} />
+                </View>
+              )}
+              <View style={{ flex: 1 }}>
+                <Text style={s.teamHubAuthor}>{latestPost.author_name}</Text>
+                <Text style={s.teamHubTime}>{timeAgo(latestPost.created_at)}</Text>
+              </View>
+            </View>
+            <Text style={s.teamHubContent} numberOfLines={2}>{latestPost.content}</Text>
+            {latestPost.media_urls && latestPost.media_urls.length > 0 && (
+              <Image source={{ uri: latestPost.media_urls[0] }} style={s.teamHubImage} resizeMode="cover" />
+            )}
+          </TouchableOpacity>
+        ) : (
+          <View style={[s.teamHubCard, { alignItems: 'center' as const, paddingVertical: 24 }]}>
+            <Ionicons name="newspaper-outline" size={24} color={colors.textMuted} />
+            <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 6 }}>No team posts yet</Text>
+          </View>
+        )}
+      </View>
 
       {/* ================================================================ */}
-      {/* 5. MY PLAYERS — Horizontal Scroll                                 */}
+      {/* SECTION 4: MY PLAYER TRADING CARD(S)                              */}
       {/* ================================================================ */}
       {children.length > 0 && (
         <View style={s.sectionBlock}>
           <View style={{ paddingHorizontal: 16 }}>
-            <SectionHeader
-              title="My Players"
-              action={children.length > 1 ? 'See All' : undefined}
-              onAction={children.length > 1 ? () => router.push('/schedule') : undefined}
-            />
+            <SectionHeader title="My Players" />
           </View>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}
-          >
-            {children.map(child => (
+          {children.length === 1 ? (
+            <View style={{ paddingHorizontal: 16 }}>
               <TouchableOpacity
-                key={`${child.id}-${child.team_id || child.season_id}`}
-                style={s.playerMiniCard}
-                onPress={() => router.push(('/child-detail?playerId=' + child.id) as any)}
+                style={s.playerCardFull}
+                onPress={() => router.push(('/child-detail?playerId=' + children[0].id) as any)}
                 activeOpacity={0.9}
               >
-                {/* Background — player photo or silhouette placeholder */}
                 <Image
-                  source={child.photo_url
-                    ? { uri: child.photo_url }
-                    : getPlayerPlaceholder()}
-                  style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' }}
+                  source={children[0].photo_url ? { uri: children[0].photo_url } : getPlayerPlaceholder()}
+                  style={StyleSheet.absoluteFillObject}
                   resizeMode="cover"
                 />
-                {/* Top-right volleyball icon */}
-                <View style={s.playerMiniBadge}>
-                  <Ionicons name="globe-outline" size={12} color={colors.primary} />
-                </View>
-                {/* Bottom gradient + text */}
                 <LinearGradient
                   colors={['transparent', 'rgba(27,40,56,0.8)', '#1B2838']}
-                  style={s.playerMiniGradient}
+                  style={s.playerCardGradient}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 0, y: 1 }}
                 >
-                  <Text style={s.playerMiniName} numberOfLines={1}>
-                    {child.first_name} {child.last_name?.charAt(0)}.
-                  </Text>
-                  {child.team_name && (
-                    <Text style={s.playerMiniTeam} numberOfLines={1}>{child.team_name}</Text>
-                  )}
+                  <Text style={s.playerCardName}>{children[0].first_name} {children[0].last_name}</Text>
+                  {children[0].team_name && <Text style={s.playerCardTeam}>{children[0].team_name}</Text>}
                   <View style={s.playerMiniPillRow}>
-                    {child.jersey_number && (
-                      <View style={s.playerMiniPillNum}>
-                        <Text style={s.playerMiniPillNumText}>#{child.jersey_number}</Text>
-                      </View>
+                    {children[0].jersey_number && (
+                      <View style={s.playerMiniPillNum}><Text style={s.playerMiniPillNumText}>#{children[0].jersey_number}</Text></View>
                     )}
-                    {child.position && (
-                      <View style={s.playerMiniPillPos}>
-                        <Text style={s.playerMiniPillPosText}>{child.position}</Text>
-                      </View>
+                    {children[0].position && (
+                      <View style={s.playerMiniPillPos}><Text style={s.playerMiniPillPosText}>{children[0].position}</Text></View>
                     )}
                   </View>
+                  {childStats && getStatHighlight(childStats) && (
+                    <Text style={s.playerCardStat}>{getStatHighlight(childStats)} this season</Text>
+                  )}
                 </LinearGradient>
               </TouchableOpacity>
-            ))}
-          </ScrollView>
+            </View>
+          ) : (
+            <FlatList
+              data={children}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              snapToInterval={CARD_WIDTH * 0.75 + 12}
+              decelerationRate="fast"
+              contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}
+              keyExtractor={child => `${child.id}-${child.team_id}`}
+              renderItem={({ item: child }) => (
+                <TouchableOpacity
+                  style={s.playerCardSnap}
+                  onPress={() => router.push(('/child-detail?playerId=' + child.id) as any)}
+                  activeOpacity={0.9}
+                >
+                  <Image
+                    source={child.photo_url ? { uri: child.photo_url } : getPlayerPlaceholder()}
+                    style={StyleSheet.absoluteFillObject}
+                    resizeMode="cover"
+                  />
+                  <LinearGradient
+                    colors={['transparent', 'rgba(27,40,56,0.8)', '#1B2838']}
+                    style={s.playerCardGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 0, y: 1 }}
+                  >
+                    <Text style={s.playerCardName}>{child.first_name} {child.last_name}</Text>
+                    {child.team_name && <Text style={s.playerCardTeam}>{child.team_name}</Text>}
+                    <View style={s.playerMiniPillRow}>
+                      {child.jersey_number && (
+                        <View style={s.playerMiniPillNum}><Text style={s.playerMiniPillNumText}>#{child.jersey_number}</Text></View>
+                      )}
+                      {child.position && (
+                        <View style={s.playerMiniPillPos}><Text style={s.playerMiniPillPosText}>{child.position}</Text></View>
+                      )}
+                    </View>
+                  </LinearGradient>
+                </TouchableOpacity>
+              )}
+            />
+          )}
         </View>
       )}
 
       {/* ================================================================ */}
-      {/* 6. ANNOUNCEMENTS — Teal left-accent cards                         */}
+      {/* SECTION 5: LAST CHAT PREVIEW (conditional)                        */}
       {/* ================================================================ */}
-      <View style={s.sectionBlock}>
-        <View style={{ paddingHorizontal: 16 }}>
-          <SectionHeader title="Announcements" />
-        </View>
-        {/* Pride moment as announcement */}
-        {activeChild && (
-          <View style={s.announcementCard}>
-            <Text style={s.announcementEmoji}>
-              {prideMoment.icon === 'trophy' ? '\u{1F3C6}' : prideMoment.icon === 'flash' ? '\u26A1' : '\u2B50'}
-            </Text>
-            <View style={{ flex: 1 }}>
-              <Text style={s.announcementText}>{prideMoment.text}</Text>
-            </View>
+      {lastChat && (
+        <View style={s.sectionBlock}>
+          <View style={{ paddingHorizontal: 16 }}>
+            <SectionHeader title="Chat" action="See All" onAction={() => router.push('/(tabs)/parent-chat' as any)} />
           </View>
-        )}
-        {/* Latest team wall post as announcement */}
-        {latestPost && (
           <TouchableOpacity
-            style={s.announcementCard}
-            onPress={() => router.push('/(tabs)/connect' as any)}
+            style={s.chatCard}
+            onPress={() => router.push((`/chat/${lastChat.channel_id}`) as any)}
             activeOpacity={0.8}
           >
-            <Text style={s.announcementEmoji}>{'\u{1F4E2}'}</Text>
+            <View style={s.chatIconWrap}>
+              <Ionicons name="chatbubble-ellipses" size={20} color={colors.teal} />
+            </View>
             <View style={{ flex: 1 }}>
-              <Text style={s.announcementText} numberOfLines={2}>{latestPost.content}</Text>
-              <Text style={s.announcementTime}>
-                {(() => {
-                  const diffMs = Date.now() - new Date(latestPost.created_at).getTime();
-                  const diffMins = Math.floor(diffMs / 60000);
-                  const diffHours = Math.floor(diffMs / 3600000);
-                  const diffDays = Math.floor(diffMs / 86400000);
-                  if (diffMins < 1) return 'Just now';
-                  if (diffMins < 60) return `${diffMins}m ago`;
-                  if (diffHours < 24) return `${diffHours}h ago`;
-                  if (diffDays < 7) return `${diffDays}d ago`;
-                  return new Date(latestPost.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                })()}
+              <View style={s.chatHeaderRow}>
+                <Text style={s.chatChannelName} numberOfLines={1}>{lastChat.channel_name}</Text>
+                <Text style={s.chatTime}>{timeAgo(lastChat.timestamp)}</Text>
+              </View>
+              <Text style={s.chatSnippet} numberOfLines={1}>
+                {lastChat.sender_name}: {lastChat.last_message}
               </Text>
             </View>
+            {lastChat.unread_count > 0 && (
+              <View style={s.chatUnreadBadge}>
+                <Text style={s.chatUnreadText}>{lastChat.unread_count}</Text>
+              </View>
+            )}
           </TouchableOpacity>
-        )}
-        {!activeChild && !latestPost && (
-          <View style={[s.announcementCard, { justifyContent: 'center' }]}>
-            <Text style={[s.announcementText, { color: colors.textMuted }]}>No announcements yet</Text>
+        </View>
+      )}
+
+      {/* ================================================================ */}
+      {/* SECTION 6: SEASON SNAPSHOT                                         */}
+      {/* ================================================================ */}
+      {(recentGames.length > 0 || seasonRecord) && (
+        <View style={s.sectionBlock}>
+          <View style={{ paddingHorizontal: 16 }}>
+            <SectionHeader title="Season Snapshot" />
           </View>
-        )}
-      </View>
+          <View style={{ paddingHorizontal: 16, gap: 12 }}>
+            {/* Game Recap */}
+            {recentGames[0] && (() => {
+              const lg = recentGames[0];
+              return (
+                <View style={s.recapCard}>
+                  <View style={s.recapHeader}>
+                    <Ionicons name="football-outline" size={16} color={colors.teal} />
+                    <Text style={s.recapTitle}>Last Game</Text>
+                  </View>
+                  <View style={s.recapScoreRow}>
+                    <Text style={[s.recapResult, {
+                      color: lg.game_result === 'win' ? '#10B981' : lg.game_result === 'loss' ? '#EF4444' : colors.textMuted,
+                    }]}>
+                      {lg.game_result?.toUpperCase() || 'PLAYED'}
+                    </Text>
+                    {lg.our_score != null && lg.their_score != null && (
+                      <Text style={s.recapScore}>{lg.our_score} - {lg.their_score}</Text>
+                    )}
+                  </View>
+                  {lg.opponent && <Text style={s.recapOpponent}>vs {lg.opponent}</Text>}
+                  <Text style={s.recapDate}>{formatDate(lg.event_date)}</Text>
+                </View>
+              );
+            })()}
+
+            {/* Season Progress */}
+            {seasonRecord && (
+              <View style={s.progressCard}>
+                <View style={s.progressHeader}>
+                  <Ionicons name="trophy-outline" size={16} color={colors.teal} />
+                  <Text style={s.progressTitle}>Season Record</Text>
+                </View>
+                <View style={s.progressStats}>
+                  <View style={s.progressStat}>
+                    <Text style={s.progressNumber}>{seasonRecord.games_played}</Text>
+                    <Text style={s.progressLabel}>Games</Text>
+                  </View>
+                  <View style={s.progressStat}>
+                    <Text style={[s.progressNumber, { color: '#10B981' }]}>{seasonRecord.wins}</Text>
+                    <Text style={s.progressLabel}>Wins</Text>
+                  </View>
+                  <View style={s.progressStat}>
+                    <Text style={[s.progressNumber, { color: '#EF4444' }]}>{seasonRecord.losses}</Text>
+                    <Text style={s.progressLabel}>Losses</Text>
+                  </View>
+                </View>
+                {seasonRecord.games_played > 0 && (
+                  <View style={s.progressBar}>
+                    <View style={[s.progressBarFill, {
+                      width: `${Math.round((seasonRecord.wins / seasonRecord.games_played) * 100)}%` as any,
+                    }]} />
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+        </View>
+      )}
 
       {/* ================================================================ */}
-      {/* 7. SECONDARY — Banners & Payment (subtle, bottom)                 */}
+      {/* PAYMENT CARD (kept)                                               */}
       {/* ================================================================ */}
-      <View style={{ paddingHorizontal: 16 }}>
-        {/* Re-enrollment Banner */}
-        <ReenrollmentBanner />
-
-        {/* Announcement Banner */}
-        {user && (
-          <AnnouncementBanner
-            alerts={activeAlerts}
-            userId={user.id}
-            onDismiss={(id) => setActiveAlerts(prev => prev.filter(a => a.id !== id))}
-          />
-        )}
-
-        {/* Registration Banner */}
-        <RegistrationBanner count={openRegistrationCount} />
-
-        {/* Payment Card */}
-        {(paymentStatus.balance > 0 || paymentStatus.total_pending > 0) && (
+      {(paymentStatus.balance > 0 || paymentStatus.total_pending > 0) && (
+        <View style={{ paddingHorizontal: 16 }}>
           <TouchableOpacity
             style={s.paymentCard}
             onPress={() => router.push('/family-payments' as any)}
             activeOpacity={0.8}
           >
             <View style={s.paymentLeft}>
-              <View style={[s.paymentIconWrap, {
-                backgroundColor: paymentStatus.balance > 0 ? colors.warning + '20' : '#FF950020',
-              }]}>
-                <Ionicons
-                  name={paymentStatus.balance > 0 ? 'wallet-outline' : 'time-outline'}
-                  size={22}
-                  color={paymentStatus.balance > 0 ? colors.warning : '#FF9500'}
-                />
+              <View style={[s.paymentIconWrap, { backgroundColor: paymentStatus.balance > 0 ? colors.warning + '20' : '#FF950020' }]}>
+                <Ionicons name={paymentStatus.balance > 0 ? 'wallet-outline' : 'time-outline'} size={22} color={paymentStatus.balance > 0 ? colors.warning : '#FF9500'} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={s.paymentTitle}>
-                  {paymentStatus.balance > 0 ? 'Outstanding Balance' : 'Pending Verification'}
-                </Text>
-                {paymentStatus.balance > 0 && (
-                  <Text style={s.paymentAmount}>${Number(paymentStatus.balance).toFixed(2)}</Text>
-                )}
+                <Text style={s.paymentTitle}>{paymentStatus.balance > 0 ? 'Outstanding Balance' : 'Pending Verification'}</Text>
+                {paymentStatus.balance > 0 && <Text style={s.paymentAmount}>${Number(paymentStatus.balance).toFixed(2)}</Text>}
                 {paymentStatus.total_pending > 0 && (
-                  <Text style={{ fontSize: 12, color: '#FF9500', marginTop: 2 }}>
-                    ${Number(paymentStatus.total_pending).toFixed(2)} pending verification
-                  </Text>
+                  <Text style={{ fontSize: 12, color: '#FF9500', marginTop: 2 }}>${Number(paymentStatus.total_pending).toFixed(2)} pending verification</Text>
                 )}
               </View>
             </View>
-            <TouchableOpacity
-              style={s.paymentBtn}
-              onPress={() => router.push('/family-payments' as any)}
-            >
-              <Text style={s.paymentBtnText}>
-                {paymentStatus.balance > 0 ? 'Pay Now' : 'View Details'}
-              </Text>
+            <TouchableOpacity style={s.paymentBtn} onPress={() => router.push('/family-payments' as any)}>
+              <Text style={s.paymentBtnText}>{paymentStatus.balance > 0 ? 'Pay Now' : 'View Details'}</Text>
             </TouchableOpacity>
           </TouchableOpacity>
-        )}
+        </View>
+      )}
 
-        {/* Empty state — no children */}
-        {children.length === 0 && (
+      {/* ANNOUNCEMENT BANNER (kept) */}
+      {user && activeAlerts.length > 0 && (
+        <View style={{ paddingHorizontal: 16 }}>
+          <AnnouncementBanner alerts={activeAlerts} userId={user.id} onDismiss={(id) => setActiveAlerts(prev => prev.filter(a => a.id !== id))} />
+        </View>
+      )}
+
+      {/* EMPTY STATE */}
+      {children.length === 0 && (
+        <View style={{ paddingHorizontal: 16 }}>
           <View style={s.emptyHeroCard}>
             <View style={s.emptyHeroIcon}>
               <Ionicons name="people-outline" size={40} color={colors.textMuted} />
@@ -1307,32 +1437,51 @@ export default function ParentDashboard() {
               <Text style={s.emptyHeroBtnText}>Register a Child</Text>
             </TouchableOpacity>
           </View>
-        )}
-      </View>
+        </View>
+      )}
 
-      {/* Modals (unchanged) */}
+      </ScrollView>
+
+      {/* EVENT DETAIL MODAL (kept) */}
       <EventDetailModal
         visible={showEventDetailModal}
         event={selectedModalEvent}
         onClose={() => setShowEventDetailModal(false)}
         onRefresh={() => fetchParentData()}
       />
-      <ShareRegistrationModal
-        visible={showShare}
-        onClose={() => setShowShare(false)}
-        onMount={() => setShareMounted(true)}
-        onUnmount={() => setShareMounted(false)}
-        onVisibleChange={(v) => setShareVisible(v)}
-      />
-      <ParentOnboardingModal
-        visible={modalStage === 'onboarding'}
-        onDone={handleOnboardingDone}
-        onMount={() => setOnboardingMounted(true)}
-        onUnmount={() => setOnboardingMounted(false)}
-        onVisibleChange={(v: boolean) => setOnboardingVisible(v)}
-      />
 
-    </ScrollView>
+      {/* ACTION ITEMS BOTTOM SHEET */}
+      <Modal
+        visible={showActionSheet}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowActionSheet(false)}
+      >
+        <TouchableOpacity
+          style={s.actionSheetOverlay}
+          activeOpacity={1}
+          onPress={() => setShowActionSheet(false)}
+        >
+          <View style={s.actionSheetContent} onStartShouldSetResponder={() => true}>
+            <View style={s.actionSheetHandle} />
+            <Text style={s.actionSheetTitle}>Things That Need Attention</Text>
+            {actionItems.map(item => (
+              <TouchableOpacity
+                key={item.id}
+                style={s.actionRow}
+                onPress={() => { setShowActionSheet(false); router.push(item.route as any); }}
+              >
+                <View style={s.actionIconWrap}>
+                  <Ionicons name={item.icon} size={20} color={colors.teal} />
+                </View>
+                <Text style={s.actionLabel}>{item.label}</Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
     </Animated.View>
   );
 }
@@ -1359,8 +1508,6 @@ const createStyles = (colors: any) => StyleSheet.create({
   sectionBlock: {
     marginBottom: 24,
   },
-
-  // ========== 1. HEADER BAR ==========
   headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1371,173 +1518,298 @@ const createStyles = (colors: any) => StyleSheet.create({
     minHeight: 48,
   },
 
-  // ========== 2. UPCOMING BADGE ==========
-  upcomingBadgeWrap: {
-    alignItems: 'center',
-    marginTop: -6,
-    marginBottom: -10,
-    zIndex: 10,
+  // ========== CAROUSEL (Section 1) ==========
+  carouselWrap: {
+    marginTop: 16,
+    marginBottom: 16,
   },
-  upcomingBadge: {
-    backgroundColor: '#14B8A6',
-    paddingVertical: 4,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    ...shadows.card,
-  },
-  upcomingBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#FFF',
-    letterSpacing: 2,
-  },
-
-  // ========== 3. GAME DAY HERO CARD ==========
-  heroCard: {
-    height: 220,
+  carouselCard: {
+    width: CARD_WIDTH,
+    backgroundColor: colors.glassCard,
     borderRadius: radii.card,
-    overflow: 'hidden' as const,
-    position: 'relative' as const,
-    marginHorizontal: 16,
-    marginTop: 20,
-    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    padding: 16,
+    minHeight: 180,
     ...shadows.cardHover,
   },
-  heroCardEmpty: {
-    height: 160,
-    borderRadius: radii.card,
-    overflow: 'hidden' as const,
-    position: 'relative' as const,
-    marginHorizontal: 16,
-    marginTop: 20,
-    marginBottom: 8,
-    justifyContent: 'flex-end',
+  carouselCtaCard: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
   },
-  heroBadge: {
-    position: 'absolute' as const,
-    top: 12,
-    right: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 20,
-    zIndex: 5,
-  },
-  heroBadgeText: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: '#FFF',
-    letterSpacing: 0.5,
-  },
-  heroContent: {
-    position: 'absolute' as const,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 16,
-  },
-  heroCountdown: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#14B8A6',
-    letterSpacing: 2,
-    marginBottom: 2,
-  },
-  heroTitle: {
+  ctaText: {
     ...displayTextStyle,
-    fontSize: 22,
-    color: '#FFF',
+    fontSize: 14,
+    color: colors.teal,
   },
-  heroOpponent: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: 'rgba(255,255,255,0.9)',
-    marginTop: 4,
-  },
-  heroDate: {
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.7)',
-    marginTop: 2,
-  },
-  heroVenue: {
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.6)',
-  },
-  heroDirectionsBtn: {
+  eventTypeBadge: {
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 20,
     gap: 6,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    marginBottom: 8,
+  },
+  eventTypeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  eventTypeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  carouselDate: {
+    ...displayTextStyle,
+    fontSize: 20,
+    color: colors.navy,
+  },
+  carouselTime: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.text,
+    marginTop: 2,
+  },
+  carouselCountdown: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: colors.teal,
+    marginTop: 4,
+  },
+  carouselOpponent: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.text,
+    marginTop: 6,
+  },
+  carouselLocationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  carouselLocation: {
+    fontSize: 11,
+    color: colors.textMuted,
+    flex: 1,
+  },
+  carouselChild: {
+    fontSize: 10,
+    color: colors.textMuted,
+    fontStyle: 'italic',
+    marginTop: 4,
+  },
+  rsvpChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-    alignSelf: 'flex-start',
-    marginTop: 8,
+    marginTop: 10,
   },
-  heroDirectionsBtnText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#FFF',
+  rsvpChipText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  dotRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 10,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.textMuted,
+    opacity: 0.3,
+  },
+  dotActive: {
+    backgroundColor: colors.teal,
+    opacity: 1,
   },
 
-  // ========== 5. PLAYER MINI CARDS ==========
-  playerMiniCard: {
-    width: 150,
-    height: 210,
+  // ========== ACTION ITEMS (Section 2) ==========
+  stuffCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.glassCard,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: colors.warning + '40',
+    padding: 14,
+    marginHorizontal: 16,
+    marginBottom: 16,
+    ...shadows.card,
+  },
+  stuffLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  stuffBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.warning,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  stuffBadgeText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#FFF',
+  },
+  stuffTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  actionSheetOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
+  },
+  actionSheetContent: {
+    backgroundColor: colors.card,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 40,
+  },
+  actionSheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.glassBorder,
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  actionSheetTitle: {
+    ...displayTextStyle,
+    fontSize: 16,
+    color: colors.navy,
+    marginBottom: 16,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.glassBorder,
+    gap: 12,
+  },
+  actionIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: colors.teal + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  actionLabel: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+  },
+
+  // ========== TEAM HUB PREVIEW (Section 3) ==========
+  teamHubCard: {
+    backgroundColor: colors.glassCard,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    padding: 14,
+    marginHorizontal: 16,
+    ...shadows.card,
+  },
+  teamHubHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 8,
+  },
+  teamHubAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+  },
+  teamHubAvatarPlaceholder: {
+    backgroundColor: colors.bgSecondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  teamHubAuthor: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  teamHubTime: {
+    fontSize: 10,
+    color: colors.textMuted,
+  },
+  teamHubContent: {
+    fontSize: 13,
+    color: colors.text,
+    lineHeight: 19,
+  },
+  teamHubImage: {
+    width: '100%' as any,
+    height: 120,
+    borderRadius: 8,
+    marginTop: 10,
+  },
+
+  // ========== PLAYER TRADING CARDS (Section 4) ==========
+  playerCardFull: {
+    width: '100%' as any,
+    height: 240,
     borderRadius: radii.card,
     overflow: 'hidden' as const,
     position: 'relative' as const,
     ...shadows.cardHover,
   },
-  playerMiniInitials: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  playerCardSnap: {
+    width: CARD_WIDTH * 0.75,
+    height: 240,
+    borderRadius: radii.card,
+    overflow: 'hidden' as const,
+    position: 'relative' as const,
+    ...shadows.cardHover,
   },
-  playerMiniInitialsText: {
-    fontSize: 40,
-    fontWeight: '900',
-    color: 'rgba(255,255,255,0.3)',
-    letterSpacing: 4,
-  },
-  playerMiniBadge: {
-    position: 'absolute' as const,
-    top: 8,
-    right: 8,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.8)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 5,
-  },
-  playerMiniGradient: {
+  playerCardGradient: {
     position: 'absolute' as const,
     bottom: 0,
     left: 0,
     right: 0,
-    paddingTop: 40,
-    paddingBottom: 10,
-    paddingHorizontal: 10,
+    paddingTop: 60,
+    paddingBottom: 14,
+    paddingHorizontal: 14,
   },
-  playerMiniName: {
-    fontSize: 14,
+  playerCardName: {
+    fontSize: 18,
     fontWeight: '700',
     color: '#FFF',
-    lineHeight: 18,
   },
-  playerMiniTeam: {
-    fontSize: 10,
+  playerCardTeam: {
+    fontSize: 11,
     fontWeight: '500',
     color: 'rgba(255,255,255,0.7)',
-    marginTop: 1,
+    marginTop: 2,
   },
   playerMiniPillRow: {
     flexDirection: 'row',
     gap: 4,
-    marginTop: 4,
+    marginTop: 6,
   },
   playerMiniPillNum: {
     backgroundColor: 'rgba(255,255,255,0.2)',
@@ -1561,35 +1833,164 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontWeight: '700',
     color: '#14B8A6',
   },
+  playerCardStat: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#14B8A6',
+    marginTop: 6,
+  },
 
-  // ========== 6. ANNOUNCEMENTS ==========
-  announcementCard: {
+  // ========== CHAT PREVIEW (Section 5) ==========
+  chatCard: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     backgroundColor: colors.glassCard,
     borderRadius: radii.card,
-    borderLeftWidth: 4,
-    borderLeftColor: '#14B8A6',
-    padding: 12,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    padding: 14,
     marginHorizontal: 16,
-    marginBottom: 8,
-    gap: 8,
+    gap: 12,
     ...shadows.card,
   },
-  announcementEmoji: {
-    fontSize: 16,
-    marginTop: 1,
+  chatIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.teal + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  announcementText: {
-    fontSize: 12,
-    fontWeight: '600',
+  chatHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  chatChannelName: {
+    fontSize: 13,
+    fontWeight: '700',
     color: colors.text,
-    lineHeight: 18,
+    flex: 1,
   },
-  announcementTime: {
+  chatTime: {
+    fontSize: 10,
+    color: colors.textMuted,
+  },
+  chatSnippet: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  chatUnreadBadge: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: colors.teal,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+  },
+  chatUnreadText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#FFF',
+  },
+
+  // ========== SEASON SNAPSHOT (Section 6) ==========
+  recapCard: {
+    backgroundColor: colors.glassCard,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    padding: 14,
+    ...shadows.card,
+  },
+  recapHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 8,
+  },
+  recapTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  recapScoreRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  recapResult: {
+    ...displayTextStyle,
+    fontSize: 18,
+  },
+  recapScore: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  recapOpponent: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 4,
+  },
+  recapDate: {
     fontSize: 10,
     color: colors.textMuted,
     marginTop: 2,
+  },
+  progressCard: {
+    backgroundColor: colors.glassCard,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    padding: 14,
+    ...shadows.card,
+  },
+  progressHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 12,
+  },
+  progressTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  progressStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 12,
+  },
+  progressStat: {
+    alignItems: 'center',
+  },
+  progressNumber: {
+    ...displayTextStyle,
+    fontSize: 24,
+    color: colors.navy,
+  },
+  progressLabel: {
+    fontSize: 10,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  progressBar: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.glassBorder,
+    overflow: 'hidden' as const,
+  },
+  progressBarFill: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#10B981',
   },
 
   // ========== EMPTY STATE ==========
