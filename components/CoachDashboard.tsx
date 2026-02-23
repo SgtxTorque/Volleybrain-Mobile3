@@ -8,8 +8,10 @@ import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
+  Dimensions,
+  FlatList,
   Image,
   RefreshControl,
   ScrollView,
@@ -19,12 +21,12 @@ import {
   View,
 } from 'react-native';
 import AppHeaderBar from './ui/AppHeaderBar';
-import Avatar from './ui/Avatar';
-import Badge from './ui/Badge';
 import Card from './ui/Card';
-import MatchCard from './ui/MatchCard';
 import PillTabs from './ui/PillTabs';
 import SectionHeader from './ui/SectionHeader';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const CARD_WIDTH = SCREEN_WIDTH - 32;
 
 // ============================================
 // TYPES
@@ -53,12 +55,64 @@ type UpcomingEvent = {
   team_id: string;
 };
 
-type TopPerformer = {
-  player_id: string;
-  player_name: string;
-  initials: string;
-  stat_label: string;
-  stat_value: number;
+type ChatPreview = {
+  channelId: string;
+  channelName: string;
+  senderName: string;
+  senderInitials: string;
+  content: string;
+  createdAt: string;
+};
+
+type TeamPost = {
+  authorName: string;
+  content: string;
+  createdAt: string;
+};
+
+// ============================================
+// HELPERS
+// ============================================
+
+const formatTime = (timeStr: string) => {
+  if (!timeStr) return '';
+  const [hours, minutes] = timeStr.split(':');
+  const h = parseInt(hours);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const hour = h % 12 || 12;
+  return `${hour}:${minutes} ${ampm}`;
+};
+
+const formatFullDate = (dateStr: string) => {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+};
+
+const getCountdownText = (dateStr: string) => {
+  const eventDate = new Date(dateStr + 'T00:00:00');
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diffDays = Math.round((eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return 'TODAY';
+  if (diffDays === 1) return 'TOMORROW';
+  return `IN ${diffDays} DAYS`;
+};
+
+const timeAgo = (dateStr: string) => {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'now';
+  if (mins < 60) return `${mins}m`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d`;
+};
+
+const getAttendanceColor = (rate: number, colors: any) => {
+  if (rate > 80) return colors.success;
+  if (rate > 60) return colors.warning;
+  return colors.danger;
 };
 
 // ============================================
@@ -75,23 +129,23 @@ export default function CoachDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [teams, setTeams] = useState<CoachTeam[]>([]);
   const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
-  const [totalPlayers, setTotalPlayers] = useState(0);
   const [loading, setLoading] = useState(true);
   const [activeTeamIndex, setActiveTeamIndex] = useState(0);
-  const [topPerformers, setTopPerformers] = useState<TopPerformer[]>([]);
   const [attendanceRate, setAttendanceRate] = useState<number | null>(null);
   const [availableCount, setAvailableCount] = useState<{ available: number; total: number } | null>(null);
   const [gamesPlayed, setGamesPlayed] = useState(0);
   const [totalGames, setTotalGames] = useState(0);
   const [pendingStatsCount, setPendingStatsCount] = useState(0);
-  const [badgesEarnedCount, setBadgesEarnedCount] = useState(0);
   const [nextEventId, setNextEventId] = useState<string | null>(null);
+  const [chatPreviews, setChatPreviews] = useState<ChatPreview[]>([]);
+  const [teamWallPreviews, setTeamWallPreviews] = useState<TeamPost[]>([]);
+  const [activeCarouselIndex, setActiveCarouselIndex] = useState(0);
+  const carouselRef = useRef<FlatList>(null);
 
   useEffect(() => {
     fetchCoachData();
   }, [user?.id, workingSeason?.id]);
 
-  // Re-fetch team-specific data when active team changes
   useEffect(() => {
     if (teams.length > 0) {
       const activeTeam = teams[activeTeamIndex];
@@ -100,6 +154,16 @@ export default function CoachDashboard() {
       }
     }
   }, [activeTeamIndex, teams, workingSeason?.id]);
+
+  // Reset carousel when team changes
+  useEffect(() => {
+    setActiveCarouselIndex(0);
+    carouselRef.current?.scrollToOffset({ offset: 0, animated: false });
+  }, [activeTeamIndex]);
+
+  // ============================================
+  // DATA FETCHING
+  // ============================================
 
   const fetchCoachData = async () => {
     if (!user?.id || !workingSeason?.id) return;
@@ -181,7 +245,6 @@ export default function CoachDashboard() {
       let lossesMap = new Map<string, number>();
 
       if (staffTeamIds.length > 0) {
-        // Batch player counts
         const { data: allTeamPlayers } = await supabase
           .from('team_players')
           .select('team_id')
@@ -191,7 +254,6 @@ export default function CoachDashboard() {
           playerCountMap.set(tp.team_id, (playerCountMap.get(tp.team_id) || 0) + 1);
         }
 
-        // Batch game results
         const { data: allGameResults } = await supabase
           .from('schedule_events')
           .select('team_id, game_result')
@@ -222,7 +284,6 @@ export default function CoachDashboard() {
         };
       });
 
-      // Sort: head_coach first, then assistant_coach
       teamsWithCounts.sort((a, b) => {
         if (a.role === 'head_coach' && b.role !== 'head_coach') return -1;
         if (a.role !== 'head_coach' && b.role === 'head_coach') return 1;
@@ -230,14 +291,12 @@ export default function CoachDashboard() {
       });
 
       setTeams(teamsWithCounts);
-      setTotalPlayers(total);
 
-      // Reset active team index if out of bounds
       if (activeTeamIndex >= teamsWithCounts.length) {
         setActiveTeamIndex(0);
       }
 
-      // Fetch upcoming events for these teams
+      // Fetch upcoming events
       const teamIds = teamsWithCounts.map(t => t.id);
       if (teamIds.length > 0) {
         const now = new Date();
@@ -246,15 +305,8 @@ export default function CoachDashboard() {
         const { data: events } = await supabase
           .from('schedule_events')
           .select(`
-            id,
-            title,
-            event_type,
-            event_date,
-            start_time,
-            location,
-            opponent,
-            team_id,
-            teams (name)
+            id, title, event_type, event_date, start_time,
+            location, opponent, team_id, teams (name)
           `)
           .in('team_id', teamIds)
           .gte('event_date', today)
@@ -262,7 +314,7 @@ export default function CoachDashboard() {
           .order('start_time', { ascending: true })
           .limit(20);
 
-        const formattedEvents: UpcomingEvent[] = (events || []).map(e => ({
+        setUpcomingEvents((events || []).map(e => ({
           id: e.id,
           title: e.title,
           type: e.event_type as 'game' | 'practice',
@@ -272,12 +324,11 @@ export default function CoachDashboard() {
           opponent: e.opponent,
           team_name: (e.teams as any)?.name || '',
           team_id: e.team_id,
-        }));
-
-        setUpcomingEvents(formattedEvents);
-
-        // Season progress will be updated per active team in fetchTeamSpecificData
+        })));
       }
+
+      // Fetch chat previews
+      await fetchChatPreviews();
 
     } catch (error) {
       if (__DEV__) console.error('Error fetching coach data:', error);
@@ -286,10 +337,66 @@ export default function CoachDashboard() {
     }
   };
 
+  const fetchChatPreviews = async () => {
+    if (!user?.id) return;
+    try {
+      const { data: memberships } = await supabase
+        .from('channel_members')
+        .select('channel_id, channels(id, name)')
+        .eq('user_id', user.id)
+        .is('left_at', null)
+        .limit(5);
+
+      if (!memberships || memberships.length === 0) {
+        setChatPreviews([]);
+        return;
+      }
+
+      const channelIds = memberships.map(m => m.channel_id);
+      const previews: ChatPreview[] = [];
+
+      // Fetch latest message per channel (batch would be ideal, but limit 3 channels)
+      for (const m of memberships.slice(0, 3)) {
+        const channel = m.channels as any;
+        const { data: msgs } = await supabase
+          .from('chat_messages')
+          .select('content, created_at, sender_id, profiles:sender_id(full_name)')
+          .eq('channel_id', m.channel_id)
+          .eq('is_deleted', false)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (msgs && msgs.length > 0) {
+          const msg = msgs[0];
+          const senderName = (msg.profiles as any)?.full_name || 'Unknown';
+          const nameParts = senderName.split(' ').filter(Boolean);
+          const initials = nameParts.length >= 2
+            ? (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase()
+            : nameParts.length === 1 ? nameParts[0][0].toUpperCase() : '?';
+
+          previews.push({
+            channelId: m.channel_id,
+            channelName: channel?.name || 'Chat',
+            senderName,
+            senderInitials: initials,
+            content: msg.content || '',
+            createdAt: msg.created_at,
+          });
+        }
+      }
+
+      // Sort by most recent
+      previews.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setChatPreviews(previews);
+    } catch (error) {
+      if (__DEV__) console.error('Error fetching chat previews:', error);
+    }
+  };
+
   const fetchTeamSpecificData = async (teamId: string) => {
     if (!workingSeason?.id) return;
     try {
-      // Fetch attendance rate for recent events
+      // Attendance rate for recent events
       const { data: recentEvents } = await supabase
         .from('schedule_events')
         .select('id')
@@ -315,7 +422,7 @@ export default function CoachDashboard() {
         setAttendanceRate(null);
       }
 
-      // Fetch availability for next event
+      // Availability for next event
       const nowLocal = new Date();
       const today = `${nowLocal.getFullYear()}-${String(nowLocal.getMonth() + 1).padStart(2, '0')}-${String(nowLocal.getDate()).padStart(2, '0')}`;
       const { data: nextEvents } = await supabase
@@ -345,7 +452,7 @@ export default function CoachDashboard() {
         setAvailableCount(null);
       }
 
-      // Fetch season progress for this team
+      // Season progress
       const { count: totalGameCount } = await supabase
         .from('schedule_events')
         .select('*', { count: 'exact', head: true })
@@ -362,7 +469,7 @@ export default function CoachDashboard() {
       setTotalGames(totalGameCount || 0);
       setGamesPlayed(playedGameCount || 0);
 
-      // Pending stats count (completed games without stats entered)
+      // Pending stats count
       const { count: pendingCount } = await supabase
         .from('schedule_events')
         .select('*', { count: 'exact', head: true })
@@ -372,96 +479,21 @@ export default function CoachDashboard() {
         .or('stats_entered.is.null,stats_entered.eq.false');
       setPendingStatsCount(pendingCount || 0);
 
-      // Fetch top performers from recent game stats
-      const { data: recentGameStats } = await supabase
-        .from('game_player_stats')
-        .select(`
-          player_id,
-          kills,
-          aces,
-          blocks,
-          digs,
-          assists,
-          players (first_name, last_name)
-        `)
+      // Team wall previews
+      const { data: posts } = await supabase
+        .from('team_posts')
+        .select('content, created_at, profiles:author_id(full_name)')
         .eq('team_id', teamId)
+        .eq('is_published', true)
         .order('created_at', { ascending: false })
-        .limit(20);
+        .limit(3);
 
-      if (recentGameStats && recentGameStats.length > 0) {
-        // Aggregate stats by player and find top 3
-        const playerMap = new Map<string, { name: string; kills: number; aces: number; blocks: number; digs: number; assists: number }>();
+      setTeamWallPreviews((posts || []).map(p => ({
+        authorName: (p.profiles as any)?.full_name || 'Unknown',
+        content: p.content || '',
+        createdAt: p.created_at,
+      })));
 
-        for (const stat of recentGameStats) {
-          const player = stat.players as any;
-          if (!player) continue;
-          const name = `${player.first_name || ''} ${player.last_name || ''}`.trim();
-          const existing = playerMap.get(stat.player_id) || { name, kills: 0, aces: 0, blocks: 0, digs: 0, assists: 0 };
-          existing.kills += stat.kills || 0;
-          existing.aces += stat.aces || 0;
-          existing.blocks += stat.blocks || 0;
-          existing.digs += stat.digs || 0;
-          existing.assists += stat.assists || 0;
-          playerMap.set(stat.player_id, existing);
-        }
-
-        const performers: TopPerformer[] = [];
-        for (const [playerId, data] of playerMap.entries()) {
-          const bestStat = Math.max(data.kills, data.aces, data.blocks, data.digs, data.assists);
-          let statLabel = '';
-          let statValue = 0;
-
-          if (data.kills >= data.aces && data.kills >= data.blocks && data.kills >= data.digs && data.kills >= data.assists) {
-            statLabel = 'kills';
-            statValue = data.kills;
-          } else if (data.aces >= data.blocks && data.aces >= data.digs && data.aces >= data.assists) {
-            statLabel = 'aces';
-            statValue = data.aces;
-          } else if (data.blocks >= data.digs && data.blocks >= data.assists) {
-            statLabel = 'blocks';
-            statValue = data.blocks;
-          } else if (data.digs >= data.assists) {
-            statLabel = 'digs';
-            statValue = data.digs;
-          } else {
-            statLabel = 'assists';
-            statValue = data.assists;
-          }
-
-          const nameParts = data.name.split(' ');
-          const initials = nameParts.map(n => n[0] || '').join('').toUpperCase().slice(0, 2);
-
-          performers.push({
-            player_id: playerId,
-            player_name: data.name,
-            initials,
-            stat_label: statLabel,
-            stat_value: statValue,
-          });
-        }
-
-        performers.sort((a, b) => b.stat_value - a.stat_value);
-        setTopPerformers(performers.slice(0, 3));
-      } else {
-        setTopPerformers([]);
-      }
-
-      // Fetch badges earned by team players this season
-      const { data: teamPlayerIds } = await supabase
-        .from('team_players')
-        .select('player_id')
-        .eq('team_id', teamId);
-
-      if (teamPlayerIds && teamPlayerIds.length > 0) {
-        const pIds = teamPlayerIds.map(tp => tp.player_id);
-        const { count: badgeCount } = await supabase
-          .from('player_achievements')
-          .select('*', { count: 'exact', head: true })
-          .in('player_id', pIds);
-        setBadgesEarnedCount(badgeCount || 0);
-      } else {
-        setBadgesEarnedCount(0);
-      }
     } catch (error) {
       if (__DEV__) console.error('Error fetching team-specific data:', error);
     }
@@ -474,62 +506,17 @@ export default function CoachDashboard() {
   };
 
   // ============================================
-  // HELPERS
+  // DERIVED STATE
   // ============================================
-
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr + 'T00:00:00');
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    if (date.toDateString() === today.toDateString()) return 'Today';
-    if (date.toDateString() === tomorrow.toDateString()) return 'Tomorrow';
-
-    return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-  };
-
-  const formatTime = (timeStr: string) => {
-    if (!timeStr) return '';
-    const [hours, minutes] = timeStr.split(':');
-    const h = parseInt(hours);
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    const hour = h % 12 || 12;
-    return `${hour}:${minutes} ${ampm}`;
-  };
-
-  const getCountdownText = (dateStr: string) => {
-    const eventDate = new Date(dateStr + 'T00:00:00');
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const diffTime = eventDate.getTime() - today.getTime();
-    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 0) return 'TODAY';
-    if (diffDays === 1) return 'TOMORROW';
-    if (diffDays < 7) return `IN ${diffDays} DAYS`;
-    return `IN ${diffDays} DAYS`;
-  };
-
-  const getAttendanceColor = (rate: number) => {
-    if (rate > 80) return colors.success;
-    if (rate > 60) return colors.warning;
-    return colors.danger;
-  };
 
   const activeTeam = teams[activeTeamIndex] || null;
 
-  // Filter upcoming events to active team
   const activeTeamEvents = activeTeam
     ? upcomingEvents.filter(e => e.team_id === activeTeam.id)
     : upcomingEvents;
 
-  const nextEvent = activeTeamEvents.length > 0 ? activeTeamEvents[0] : null;
-
-  // Season progress (scoped to active team)
   const totalWins = activeTeam ? activeTeam.wins : teams.reduce((sum, t) => sum + t.wins, 0);
   const totalLosses = activeTeam ? activeTeam.losses : teams.reduce((sum, t) => sum + t.losses, 0);
-  const winRate = gamesPlayed > 0 ? Math.round((totalWins / gamesPlayed) * 100) : 0;
 
   const userInitials = (() => {
     const name = profile?.full_name || '';
@@ -539,12 +526,11 @@ export default function CoachDashboard() {
     return '?';
   })();
 
-  // Find secondary event: next game if hero is practice, or next practice if hero is game
-  const secondaryEvent = React.useMemo(() => {
-    if (!nextEvent || activeTeamEvents.length < 2) return null;
-    const heroType = nextEvent.type;
-    return activeTeamEvents.slice(1).find(e => e.type !== heroType) || null;
-  }, [nextEvent, activeTeamEvents]);
+  // Carousel data: up to 5 events + CTA card
+  const carouselData: { type: 'event' | 'cta'; event?: UpcomingEvent }[] = [
+    ...activeTeamEvents.slice(0, 5).map(e => ({ type: 'event' as const, event: e })),
+    { type: 'cta' as const },
+  ];
 
   const s = createStyles(colors);
 
@@ -573,7 +559,7 @@ export default function CoachDashboard() {
   }
 
   // ============================================
-  // RENDER — v0 layout
+  // RENDER
   // ============================================
 
   return (
@@ -585,12 +571,12 @@ export default function CoachDashboard() {
     >
 
       {/* ================================================================ */}
-      {/* 1. HEADER BAR — Steel blue                                        */}
+      {/* 1. HEADER BAR                                                     */}
       {/* ================================================================ */}
       <AppHeaderBar initials={userInitials} />
 
       {/* ================================================================ */}
-      {/* 2. TEAM SELECTOR — PillTabs                                       */}
+      {/* 2. TEAM SELECTOR                                                  */}
       {/* ================================================================ */}
       {teams.length > 1 && (
         <View style={{ marginBottom: 4, paddingHorizontal: 16 }}>
@@ -603,104 +589,176 @@ export default function CoachDashboard() {
       )}
 
       {/* ================================================================ */}
-      {/* 3. HERO CARD — Next Event with photo + gradient                    */}
+      {/* 3. HERO EVENT CAROUSEL                                            */}
       {/* ================================================================ */}
-      {activeTeam && nextEvent ? (
-        <View style={s.heroCard}>
-          {/* Background — default sport image */}
-          <Image
-            source={getDefaultHeroImage(activeSport?.name, nextEvent?.type)}
-            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' }}
-            resizeMode="cover"
-          />
-          {/* Dark gradient overlay for text readability */}
-          <LinearGradient
-            colors={['transparent', 'rgba(27,40,56,0.6)', 'rgba(27,40,56,0.9)']}
-            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 1 }}
-          />
+      {activeTeam && activeTeamEvents.length > 0 ? (
+        <>
+          <View style={s.carouselWrap}>
+            <FlatList
+              ref={carouselRef}
+              data={carouselData}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              snapToInterval={CARD_WIDTH + 12}
+              decelerationRate="fast"
+              contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}
+              keyExtractor={(item, index) => item.event?.id || `cta-${index}`}
+              onMomentumScrollEnd={(e) => {
+                const idx = Math.round(e.nativeEvent.contentOffset.x / (CARD_WIDTH + 12));
+                setActiveCarouselIndex(idx);
+              }}
+              renderItem={({ item }) => {
+                if (item.type === 'cta') {
+                  return (
+                    <TouchableOpacity
+                      style={s.heroCtaCard}
+                      onPress={() => router.push('/(tabs)/coach-schedule' as any)}
+                      activeOpacity={0.8}
+                    >
+                      <Ionicons name="calendar-outline" size={40} color={colors.teal} />
+                      <Text style={s.ctaText}>View Full Schedule</Text>
+                      <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+                    </TouchableOpacity>
+                  );
+                }
 
-          {/* Top-right event type badge */}
-          <View style={[
-            s.heroBadge,
-            { backgroundColor: nextEvent.type === 'game' ? '#D94F4F' : '#14B8A6' },
-          ]}>
-            <Text style={s.heroBadgeText}>
-              {nextEvent.type === 'game' ? 'GAME DAY' : 'PRACTICE'}
-            </Text>
-          </View>
+                const evt = item.event!;
+                const eventColor = evt.type === 'game' ? '#D94F4F' : '#14B8A6';
+                const countdown = getCountdownText(evt.date);
 
-          {/* Bottom content */}
-          <View style={s.heroContent}>
-            <View style={s.heroContentRow}>
-              {/* Left: event info */}
-              <View style={{ flex: 1 }}>
-                <Text style={s.heroCountdown}>{getCountdownText(nextEvent.date)}</Text>
-                <Text style={s.heroTitle}>
-                  {nextEvent.type === 'game' ? 'GAME DAY' : 'PRACTICE'}
-                </Text>
-                <Text style={s.heroTeamName}>{activeTeam.name}</Text>
-                <View style={s.heroMetaRow}>
-                  {nextEvent.time ? (
-                    <>
-                      <Ionicons name="time-outline" size={11} color="rgba(255,255,255,0.7)" />
-                      <Text style={s.heroMetaText}>{formatTime(nextEvent.time)}</Text>
-                    </>
-                  ) : null}
-                  {nextEvent.location ? (
-                    <>
-                      <Ionicons name="location-outline" size={11} color="rgba(255,255,255,0.7)" style={{ marginLeft: 8 }} />
-                      <Text style={s.heroMetaText}>{nextEvent.location}</Text>
-                    </>
-                  ) : null}
-                </View>
-                {nextEvent.type === 'game' && nextEvent.opponent && (
-                  <Text style={s.heroOpponent}>vs {nextEvent.opponent}</Text>
-                )}
-              </View>
+                return (
+                  <View style={s.heroCard}>
+                    {/* Background image */}
+                    <Image
+                      source={getDefaultHeroImage(activeSport?.name, evt.type)}
+                      style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' }}
+                      resizeMode="cover"
+                    />
+                    <LinearGradient
+                      colors={['transparent', 'rgba(27,40,56,0.6)', 'rgba(27,40,56,0.9)']}
+                      style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 0, y: 1 }}
+                    />
 
-              {/* Right: RSVP pill */}
-              {availableCount && (
-                <LinearGradient
-                  colors={['#2C5F7C', '#14B8A6']}
-                  style={s.heroRsvpPill}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                >
-                  <Text style={s.heroRsvpLabel}>RSVP</Text>
-                  <Text style={s.heroRsvpCount}>
-                    {availableCount.available}/{availableCount.total}
-                  </Text>
-                  <Text style={s.heroRsvpSub}>Confirmed</Text>
-                </LinearGradient>
-              )}
-            </View>
+                    {/* Event type badge */}
+                    <View style={[s.heroBadge, { backgroundColor: eventColor }]}>
+                      <Text style={s.heroBadgeText}>
+                        {evt.type === 'game' ? 'GAME DAY' : 'PRACTICE'}
+                      </Text>
+                    </View>
 
-            {/* Attendance dots */}
-            {availableCount && availableCount.total > 0 && (
-              <View style={s.heroDotsRow}>
-                {Array.from({ length: Math.min(availableCount.total, 20) }).map((_, i) => (
-                  <View
-                    key={i}
-                    style={[
-                      s.heroDot,
-                      i < availableCount.available
-                        ? { backgroundColor: '#22C55E' }
-                        : { backgroundColor: '#D9E2E9' },
-                    ]}
-                  >
-                    <Text style={s.heroDotIcon}>
-                      {i < availableCount.available ? '\u2713' : '\u2022'}
-                    </Text>
+                    {/* Bottom content */}
+                    <View style={s.heroContent}>
+                      <View style={s.heroContentRow}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={s.heroCountdown}>{countdown}</Text>
+                          <Text style={s.heroTitle}>
+                            {evt.type === 'game' ? 'GAME DAY' : 'PRACTICE'}
+                          </Text>
+                          <Text style={s.heroTeamName}>{activeTeam.name}</Text>
+
+                          {/* Date */}
+                          <View style={s.heroMetaRow}>
+                            <Ionicons name="calendar-outline" size={12} color="rgba(255,255,255,0.7)" />
+                            <Text style={s.heroMetaText}>{formatFullDate(evt.date)}</Text>
+                          </View>
+
+                          {/* Time */}
+                          {evt.time ? (
+                            <View style={s.heroMetaRow}>
+                              <Ionicons name="time-outline" size={12} color="rgba(255,255,255,0.7)" />
+                              <Text style={s.heroMetaText}>{formatTime(evt.time)}</Text>
+                            </View>
+                          ) : null}
+
+                          {/* Location */}
+                          {evt.location ? (
+                            <View style={s.heroMetaRow}>
+                              <Ionicons name="location-outline" size={12} color="rgba(255,255,255,0.7)" />
+                              <Text style={s.heroMetaText} numberOfLines={1}>{evt.location}</Text>
+                            </View>
+                          ) : null}
+
+                          {/* Opponent */}
+                          {evt.type === 'game' && evt.opponent && (
+                            <Text style={s.heroOpponent}>vs {evt.opponent}</Text>
+                          )}
+                        </View>
+
+                        {/* RSVP count pill */}
+                        {availableCount && (
+                          <LinearGradient
+                            colors={['#2C5F7C', '#14B8A6']}
+                            style={s.heroRsvpPill}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                          >
+                            <Text style={s.heroRsvpLabel}>RSVP</Text>
+                            <Text style={s.heroRsvpCount}>
+                              {availableCount.available}/{availableCount.total}
+                            </Text>
+                            <Text style={s.heroRsvpSub}>Confirmed</Text>
+                          </LinearGradient>
+                        )}
+                      </View>
+
+                      {/* Prep Lineup button for games */}
+                      {evt.type === 'game' && (
+                        <TouchableOpacity
+                          style={s.heroPrepBtn}
+                          onPress={() => router.push(`/game-prep?eventId=${evt.id}` as any)}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons name="people" size={14} color="#FFF" />
+                          <Text style={s.heroPrepBtnText}>Prep Lineup</Text>
+                        </TouchableOpacity>
+                      )}
+
+                      {/* Attendance dots */}
+                      {availableCount && availableCount.total > 0 && (
+                        <View style={s.heroDotsRow}>
+                          {Array.from({ length: Math.min(availableCount.total, 20) }).map((_, i) => (
+                            <View
+                              key={i}
+                              style={[
+                                s.heroDot,
+                                i < availableCount.available
+                                  ? { backgroundColor: '#22C55E' }
+                                  : { backgroundColor: '#D9E2E9' },
+                              ]}
+                            >
+                              <Text style={s.heroDotIcon}>
+                                {i < availableCount.available ? '\u2713' : '\u2022'}
+                              </Text>
+                            </View>
+                          ))}
+                        </View>
+                      )}
+                    </View>
                   </View>
-                ))}
-              </View>
-            )}
+                );
+              }}
+            />
           </View>
-        </View>
+
+          {/* Pagination dots */}
+          {carouselData.length > 1 && (
+            <View style={s.dotsRow}>
+              {carouselData.map((_, i) => (
+                <View
+                  key={i}
+                  style={[
+                    s.dot,
+                    i === activeCarouselIndex ? s.dotActive : s.dotInactive,
+                  ]}
+                />
+              ))}
+            </View>
+          )}
+        </>
       ) : activeTeam ? (
-        /* No upcoming events — All Clear card */
         <View style={s.heroCardEmpty}>
           <LinearGradient
             colors={['#2C5F7C', '#1B2838']}
@@ -724,47 +782,47 @@ export default function CoachDashboard() {
       )}
 
       {/* ================================================================ */}
-      {/* 4. MISSION BRIEFING — Secondary event (different type from hero)   */}
+      {/* 4. QUICK ACTIONS — 2x2 Grid                                       */}
       {/* ================================================================ */}
-      {secondaryEvent && (
-        <View style={s.sectionBlock}>
-          <View style={{ paddingHorizontal: 16 }}>
-            <SectionHeader title="Mission Briefing" />
-          </View>
-          <Card
-            accentColor={secondaryEvent.type === 'game' ? colors.danger : colors.info}
-            style={{ marginHorizontal: 16 }}
-          >
-            <View style={s.missionTop}>
-              <Badge
-                label={secondaryEvent.type === 'game' ? 'GAME' : 'PRACTICE'}
-                color={secondaryEvent.type === 'game' ? colors.danger : colors.info}
-              />
-              <Text style={s.countdownText}>{getCountdownText(secondaryEvent.date)}</Text>
-            </View>
-            {secondaryEvent.type === 'game' && secondaryEvent.opponent ? (
-              <Text style={s.missionOpponent}>vs {secondaryEvent.opponent}</Text>
-            ) : (
-              <Text style={s.missionTitle}>{secondaryEvent.title}</Text>
-            )}
-            <View style={s.missionDetails}>
-              <View style={s.missionDetailRow}>
-                <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
-                <Text style={s.missionDetailText}>
-                  {formatDate(secondaryEvent.date)}
-                  {secondaryEvent.time ? ` \u2022 ${formatTime(secondaryEvent.time)}` : ''}
-                </Text>
-              </View>
-              {secondaryEvent.location ? (
-                <View style={s.missionDetailRow}>
-                  <Ionicons name="location-outline" size={14} color={colors.textMuted} />
-                  <Text style={s.missionDetailText}>{secondaryEvent.location}</Text>
-                </View>
-              ) : null}
-            </View>
-          </Card>
+      <View style={s.sectionBlock}>
+        <View style={{ paddingHorizontal: 16 }}>
+          <SectionHeader title="Quick Actions" />
         </View>
-      )}
+        <View style={[s.actionsGrid, { paddingHorizontal: 16 }]}>
+          <TouchableOpacity style={s.actionCard} onPress={() => router.push('/attendance' as any)}>
+            <View style={[s.actionIconCircle, { backgroundColor: colors.success + '26' }]}>
+              <Ionicons name="checkmark-circle" size={32} color={colors.success} />
+            </View>
+            <Text style={s.actionLabel}>Take Attendance</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={s.actionCard} onPress={() => router.push('/game-prep' as any)}>
+            <View style={[s.actionIconCircle, { backgroundColor: colors.info + '26' }]}>
+              <Ionicons name="stats-chart" size={32} color={colors.info} />
+              {pendingStatsCount > 0 && (
+                <View style={s.pendingBadge}>
+                  <Text style={s.pendingBadgeText}>{pendingStatsCount}</Text>
+                </View>
+              )}
+            </View>
+            <Text style={s.actionLabel}>Enter Stats</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={s.actionCard} onPress={() => router.push('/blast-composer' as any)}>
+            <View style={[s.actionIconCircle, { backgroundColor: colors.warning + '26' }]}>
+              <Ionicons name="megaphone" size={32} color={colors.warning} />
+            </View>
+            <Text style={s.actionLabel}>Send Blast</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={s.actionCard} onPress={() => router.push('/lineup-builder' as any)}>
+            <View style={[s.actionIconCircle, { backgroundColor: colors.primary + '26' }]}>
+              <Ionicons name="people" size={32} color={colors.primary} />
+            </View>
+            <Text style={s.actionLabel}>Build Lineup</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
       {/* ================================================================ */}
       {/* 5. TEAM HEALTH — 3 stat cards                                     */}
@@ -778,11 +836,11 @@ export default function CoachDashboard() {
             <Ionicons
               name="checkmark-circle"
               size={24}
-              color={attendanceRate !== null ? getAttendanceColor(attendanceRate) : colors.textMuted}
+              color={attendanceRate !== null ? getAttendanceColor(attendanceRate, colors) : colors.textMuted}
             />
             <Text style={[
               s.healthNum,
-              attendanceRate !== null && { color: getAttendanceColor(attendanceRate) },
+              attendanceRate !== null && { color: getAttendanceColor(attendanceRate, colors) },
             ]}>
               {attendanceRate !== null ? `${attendanceRate}%` : '--'}
             </Text>
@@ -800,9 +858,9 @@ export default function CoachDashboard() {
           <TouchableOpacity style={s.healthCard} activeOpacity={0.7} onPress={() => router.push('/achievements' as any)}>
             <Ionicons name="ribbon" size={24} color={colors.warning} />
             <Text style={[s.healthNum, { color: colors.warning }]}>
-              {badgesEarnedCount}
+              {activeTeam?.player_count || 0}
             </Text>
-            <Text style={s.healthLabel}>Badges</Text>
+            <Text style={s.healthLabel}>Players</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -839,138 +897,77 @@ export default function CoachDashboard() {
       )}
 
       {/* ================================================================ */}
-      {/* 7. TOP PERFORMERS                                                 */}
+      {/* 7. CHAT PREVIEW                                                   */}
       {/* ================================================================ */}
       <View style={s.sectionBlock}>
         <View style={{ paddingHorizontal: 16 }}>
-          <SectionHeader title="Top Performers" />
+          <SectionHeader title="Messages" action="View All" onAction={() => router.push('/(tabs)/coach-chat' as any)} />
         </View>
-        {topPerformers.length > 0 ? (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 16, gap: 10 }}
-          >
-            {topPerformers.map((performer, idx) => {
-              const accentColors = [colors.warning, '#C0C0C0', '#CD7F32'];
-              const accent = accentColors[idx] || colors.textMuted;
-              return (
-                <View key={performer.player_id} style={s.performerCard}>
-                  <Avatar name={performer.player_name} size={44} color={accent} />
-                  <Text style={s.performerName} numberOfLines={1}>{performer.player_name}</Text>
-                  <Text style={[s.performerStat, { color: accent }]}>
-                    {performer.stat_value} {performer.stat_label}
+        {chatPreviews.length > 0 ? (
+          <View style={[s.previewCard, { marginHorizontal: 16 }]}>
+            {chatPreviews.map((chat, i) => (
+              <TouchableOpacity
+                key={chat.channelId}
+                style={[s.previewRow, i < chatPreviews.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.glassBorder }]}
+                onPress={() => router.push({ pathname: '/chat/[id]', params: { id: chat.channelId } } as any)}
+                activeOpacity={0.7}
+              >
+                <View style={s.previewAvatar}>
+                  <Text style={s.previewAvatarText}>{chat.senderInitials}</Text>
+                </View>
+                <View style={s.previewContent}>
+                  <View style={s.previewTopRow}>
+                    <Text style={s.previewName} numberOfLines={1}>{chat.channelName}</Text>
+                    <Text style={s.previewTime}>{timeAgo(chat.createdAt)}</Text>
+                  </View>
+                  <Text style={s.previewMessage} numberOfLines={1}>
+                    <Text style={{ fontWeight: '600' }}>{chat.senderName}: </Text>
+                    {chat.content}
                   </Text>
                 </View>
-              );
-            })}
-          </ScrollView>
+              </TouchableOpacity>
+            ))}
+          </View>
         ) : (
           <Card style={{ marginHorizontal: 16, padding: 28, alignItems: 'center' }}>
-            <Ionicons name="trophy-outline" size={32} color={colors.textMuted} />
-            <Text style={s.emptySubtext}>Play a game to see top performers</Text>
+            <Ionicons name="chatbubble-ellipses-outline" size={32} color={colors.textMuted} />
+            <Text style={s.emptySubtext}>No messages yet</Text>
           </Card>
         )}
       </View>
 
       {/* ================================================================ */}
-      {/* 8. UPCOMING MATCHES — MatchCards                                   */}
-      {/* ================================================================ */}
-      {activeTeamEvents.length > 1 && (
-        <View style={s.sectionBlock}>
-          <View style={{ paddingHorizontal: 16 }}>
-            <SectionHeader title="Upcoming Matches" action="Full Schedule" onAction={() => router.push('/(tabs)/schedule' as any)} />
-          </View>
-          {activeTeamEvents.slice(1, 4).map(evt => (
-            <MatchCard
-              key={evt.id}
-              homeTeam={activeTeam?.name || ''}
-              awayTeam={evt.opponent || evt.title}
-              time={formatTime(evt.time)}
-              date={formatDate(evt.date).toUpperCase()}
-              venue={evt.location || ''}
-              accentColor={colors.primary}
-              style={{ marginHorizontal: 16, marginBottom: 12 }}
-            />
-          ))}
-        </View>
-      )}
-
-      {/* ================================================================ */}
-      {/* 9. QUICK ACTIONS — 2x2 Grid                                       */}
+      {/* 8. TEAM HUB PREVIEW                                               */}
       {/* ================================================================ */}
       <View style={s.sectionBlock}>
         <View style={{ paddingHorizontal: 16 }}>
-          <SectionHeader title="Quick Actions" />
+          <SectionHeader title="Team Feed" action="View All" onAction={() => router.push('/(tabs)/coach-team-hub' as any)} />
         </View>
-        <View style={[s.actionsGrid, { paddingHorizontal: 16 }]}>
-          <TouchableOpacity style={s.actionCard} onPress={() => router.push('/attendance' as any)}>
-            <View style={[s.actionIconCircle, { backgroundColor: colors.success + '26' }]}>
-              <Ionicons name="checkmark-circle" size={32} color={colors.success} />
-            </View>
-            <Text style={s.actionLabel}>Take Attendance</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={s.actionCard} onPress={() => router.push('/game-prep' as any)}>
-            <View style={[s.actionIconCircle, { backgroundColor: colors.info + '26' }]}>
-              <Ionicons name="stats-chart" size={32} color={colors.info} />
-              {pendingStatsCount > 0 && (
-                <View style={s.pendingBadge}>
-                  <Text style={s.pendingBadgeText}>{pendingStatsCount}</Text>
+        {teamWallPreviews.length > 0 ? (
+          <View style={[s.previewCard, { marginHorizontal: 16 }]}>
+            {teamWallPreviews.map((post, i) => (
+              <TouchableOpacity
+                key={`post-${i}`}
+                style={[s.previewRow, i < teamWallPreviews.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.glassBorder }]}
+                onPress={() => router.push('/(tabs)/coach-team-hub' as any)}
+                activeOpacity={0.7}
+              >
+                <View style={s.previewContent}>
+                  <View style={s.previewTopRow}>
+                    <Text style={s.previewName} numberOfLines={1}>{post.authorName}</Text>
+                    <Text style={s.previewTime}>{timeAgo(post.createdAt)}</Text>
+                  </View>
+                  <Text style={s.previewMessage} numberOfLines={2}>{post.content}</Text>
                 </View>
-              )}
-            </View>
-            <Text style={s.actionLabel}>Enter Stats</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={s.actionCard} onPress={() => router.push('/blast-composer' as any)}>
-            <View style={[s.actionIconCircle, { backgroundColor: colors.warning + '26' }]}>
-              <Ionicons name="megaphone" size={32} color={colors.warning} />
-            </View>
-            <Text style={s.actionLabel}>Send Message</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={s.actionCard} onPress={() => router.push('/game-prep' as any)}>
-            <View style={[s.actionIconCircle, { backgroundColor: colors.primary + '26' }]}>
-              <Ionicons name="analytics" size={32} color={colors.primary} />
-            </View>
-            <Text style={s.actionLabel}>Game Prep</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* ================================================================ */}
-      {/* 10. SEASON PROGRESS — Progress bar + stats                        */}
-      {/* ================================================================ */}
-      <View style={s.sectionBlock}>
-        <View style={{ paddingHorizontal: 16 }}>
-          <SectionHeader title="Season Progress" />
-        </View>
-        <Card style={{ marginHorizontal: 16 }}>
-          <Text style={s.progressTitle}>
-            Game {gamesPlayed} of {totalGames} completed
-          </Text>
-          <View style={s.progressBarBg}>
-            <View style={[
-              s.progressBarFill,
-              { width: totalGames > 0 ? `${Math.round((gamesPlayed / totalGames) * 100)}%` : '0%' },
-            ]} />
+              </TouchableOpacity>
+            ))}
           </View>
-          <View style={s.progressStatsRow}>
-            <View style={s.progressStat}>
-              <Text style={s.progressStatNum}>{totalWins}</Text>
-              <Text style={s.progressStatLabel}>Won</Text>
-            </View>
-            <View style={s.progressStat}>
-              <Text style={s.progressStatNum}>{winRate}%</Text>
-              <Text style={s.progressStatLabel}>Win %</Text>
-            </View>
-            <View style={s.progressStat}>
-              <Text style={s.progressStatNum}>{totalGames - gamesPlayed}</Text>
-              <Text style={s.progressStatLabel}>Remaining</Text>
-            </View>
-          </View>
-        </Card>
+        ) : (
+          <Card style={{ marginHorizontal: 16, padding: 28, alignItems: 'center' }}>
+            <Ionicons name="newspaper-outline" size={32} color={colors.textMuted} />
+            <Text style={s.emptySubtext}>No posts yet — share an update with your team!</Text>
+          </Card>
+        )}
       </View>
 
     </ScrollView>
@@ -990,7 +987,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     marginBottom: 24,
   },
 
-  // ========== 1. HEADER BAR ==========
+  // ========== HEADER BAR ==========
   headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1001,16 +998,35 @@ const createStyles = (colors: any) => StyleSheet.create({
     minHeight: 48,
   },
 
-  // ========== 3. HERO CARD ==========
+  // ========== HERO CAROUSEL ==========
+  carouselWrap: {
+    marginTop: 12,
+    marginBottom: 4,
+  },
   heroCard: {
-    height: 260,
+    width: CARD_WIDTH,
+    height: 300,
     borderRadius: radii.card,
     overflow: 'hidden' as const,
     position: 'relative' as const,
-    marginHorizontal: 16,
-    marginTop: 12,
-    marginBottom: 16,
     ...shadows.cardHover,
+  },
+  heroCtaCard: {
+    width: CARD_WIDTH,
+    height: 300,
+    borderRadius: radii.card,
+    backgroundColor: colors.glassCard,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+    ...shadows.card,
+  },
+  ctaText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text,
   },
   heroCardEmpty: {
     height: 180,
@@ -1058,7 +1074,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   heroTitle: {
     ...displayTextStyle,
-    fontSize: 22,
+    fontSize: 28,
     color: '#FFF',
   },
   heroTeamName: {
@@ -1070,12 +1086,12 @@ const createStyles = (colors: any) => StyleSheet.create({
   heroMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: 3,
   },
   heroMetaText: {
     fontSize: 11,
     color: 'rgba(255,255,255,0.7)',
-    marginLeft: 3,
+    marginLeft: 4,
   },
   heroOpponent: {
     fontSize: 12,
@@ -1083,8 +1099,6 @@ const createStyles = (colors: any) => StyleSheet.create({
     color: 'rgba(255,255,255,0.9)',
     marginTop: 4,
   },
-
-  // RSVP pill
   heroRsvpPill: {
     borderRadius: 10,
     paddingVertical: 8,
@@ -1108,13 +1122,29 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontSize: 9,
     color: 'rgba(255,255,255,0.7)',
   },
-
-  // Attendance dots
+  heroPrepBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  heroPrepBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFF',
+  },
   heroDotsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 3,
-    marginTop: 10,
+    marginTop: 8,
   },
   heroDot: {
     width: 18,
@@ -1129,44 +1159,27 @@ const createStyles = (colors: any) => StyleSheet.create({
     color: '#FFF',
   },
 
-  // ========== 4. MISSION BRIEFING ==========
-  missionTop: {
+  // Pagination dots
+  dotsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  countdownText: {
-    ...displayTextStyle,
-    fontSize: 20,
-    color: colors.primary,
-  },
-  missionOpponent: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: 8,
-  },
-  missionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 8,
-  },
-  missionDetails: {
-    gap: 4,
-  },
-  missionDetailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
+    marginTop: 8,
+    marginBottom: 8,
   },
-  missionDetailText: {
-    fontSize: 13,
-    color: colors.textMuted,
+  dot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+  },
+  dotActive: {
+    backgroundColor: colors.primary,
+  },
+  dotInactive: {
+    backgroundColor: colors.glassBorder,
   },
 
-  // ========== 5. TEAM HEALTH ==========
+  // ========== TEAM HEALTH ==========
   healthRow: {
     flexDirection: 'row',
     gap: 10,
@@ -1200,7 +1213,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  // ========== 6. SEASON OVERVIEW ==========
+  // ========== SEASON OVERVIEW ==========
   seasonStatsRow: {
     flexDirection: 'row',
     gap: 8,
@@ -1228,31 +1241,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  // ========== 7. TOP PERFORMERS ==========
-  performerCard: {
-    width: 90,
-    backgroundColor: colors.glassCard,
-    borderRadius: radii.card,
-    padding: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
-    ...shadows.card,
-  },
-  performerName: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.text,
-    textAlign: 'center',
-    marginTop: 6,
-    marginBottom: 2,
-  },
-  performerStat: {
-    fontSize: 10,
-    fontWeight: '700',
-  },
-
-  // ========== 9. QUICK ACTIONS ==========
+  // ========== QUICK ACTIONS ==========
   actionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -1300,42 +1289,59 @@ const createStyles = (colors: any) => StyleSheet.create({
     color: '#fff',
   },
 
-  // ========== 10. SEASON PROGRESS ==========
-  progressTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: colors.text,
-    marginBottom: 12,
-    lineHeight: 22,
-  },
-  progressBarBg: {
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.glassBorder,
+  // ========== PREVIEW CARDS (Chat + Team Feed) ==========
+  previewCard: {
+    backgroundColor: colors.glassCard,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
     overflow: 'hidden',
-    marginBottom: 16,
+    ...shadows.card,
   },
-  progressBarFill: {
-    height: '100%',
-    borderRadius: 4,
-    backgroundColor: '#14B8A6',
-  },
-  progressStatsRow: {
+  previewRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  progressStat: {
     alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
   },
-  progressStatNum: {
-    ...displayTextStyle,
-    fontSize: 22,
+  previewAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  previewAvatarText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFF',
+  },
+  previewContent: {
+    flex: 1,
+  },
+  previewTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  previewName: {
+    fontSize: 13,
+    fontWeight: '700',
     color: colors.text,
+    flex: 1,
+    marginRight: 8,
   },
-  progressStatLabel: {
+  previewTime: {
     fontSize: 11,
     color: colors.textMuted,
-    marginTop: 2,
+  },
+  previewMessage: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    lineHeight: 17,
   },
 
   // ========== EMPTY STATES ==========
