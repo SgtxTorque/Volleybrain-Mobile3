@@ -7,7 +7,7 @@ const IMAGE_QUALITY = 0.7;
 
 export type MediaResult = {
   uri: string;
-  type: 'image' | 'video';
+  type: 'image' | 'video' | 'audio';
   width?: number;
   height?: number;
   fileName: string;
@@ -128,7 +128,7 @@ export const uploadMedia = async (
   bucket: string = 'chat-media'
 ): Promise<string | null> => {
   try {
-    const fileExt = media.type === 'image' ? 'jpg' : 'mp4';
+    const fileExt = media.type === 'image' ? 'jpg' : media.type === 'audio' ? 'm4a' : 'mp4';
     const filePath = `${folderPath}/${Date.now()}.${fileExt}`;
 
     // Fetch the file as a blob
@@ -141,7 +141,7 @@ export const uploadMedia = async (
     const { error } = await supabase.storage
       .from(bucket)
       .upload(filePath, arrayBuffer, {
-        contentType: media.type === 'image' ? 'image/jpeg' : 'video/mp4',
+        contentType: media.type === 'image' ? 'image/jpeg' : media.type === 'audio' ? 'audio/m4a' : 'video/mp4',
         upsert: false,
       });
 

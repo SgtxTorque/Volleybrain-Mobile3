@@ -5,8 +5,9 @@ import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Image, Modal, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, Modal, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type Channel = {
@@ -55,6 +56,8 @@ export default function ChatsScreen() {
   const [memberSearchQuery, setMemberSearchQuery] = useState('');
   const [memberSearchResults, setMemberSearchResults] = useState<User[]>([]);
   const [searchingMembers, setSearchingMembers] = useState(false);
+
+  const [pinnedIds, setPinnedIds] = useState<Set<string>>(new Set());
 
   // Typing indicators: channelId -> array of display names
   const [typingMap, setTypingMap] = useState<Record<string, string[]>>({});
@@ -131,8 +134,30 @@ export default function ChatsScreen() {
     setChannels(channelsWithMessages);
   };
 
+  const loadPinnedChats = async () => {
+    if (!profile) return;
+    const stored = await AsyncStorage.getItem(`pinned_chats_${profile.id}`);
+    if (stored) setPinnedIds(new Set(JSON.parse(stored)));
+  };
+
+  const togglePin = async (channelId: string) => {
+    if (!profile) return;
+    setPinnedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(channelId)) {
+        next.delete(channelId);
+      } else {
+        if (next.size >= 5) { Alert.alert('Limit', 'You can pin up to 5 chats.'); return prev; }
+        next.add(channelId);
+      }
+      AsyncStorage.setItem(`pinned_chats_${profile.id}`, JSON.stringify([...next]));
+      return next;
+    });
+  };
+
   useEffect(() => {
     fetchChannels();
+    loadPinnedChats();
   }, [profile, workingSeason]);
 
   // Real-time subscription for new messages
@@ -389,9 +414,13 @@ export default function ChatsScreen() {
     }
   };
 
-  const filteredChannels = channels.filter(c => 
-    c.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredChannels = channels
+    .filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    .sort((a, b) => {
+      const aPinned = pinnedIds.has(a.id) ? 0 : 1;
+      const bPinned = pinnedIds.has(b.id) ? 0 : 1;
+      return aPinned - bPinned;
+    });
 
   const s = createStyles(colors);
 
@@ -446,10 +475,15 @@ export default function ChatsScreen() {
           </View>
         ) : (
           filteredChannels.map(channel => (
-            <TouchableOpacity 
-              key={channel.id} 
+            <TouchableOpacity
+              key={channel.id}
               style={s.channelCard}
               onPress={() => router.push({ pathname: '/chat/[id]', params: { id: channel.id } })}
+              onLongPress={() => Alert.alert(
+                pinnedIds.has(channel.id) ? 'Unpin Chat' : 'Pin Chat',
+                pinnedIds.has(channel.id) ? 'Remove this chat from pinned?' : 'Pin this chat to the top?',
+                [{ text: 'Cancel', style: 'cancel' }, { text: pinnedIds.has(channel.id) ? 'Unpin' : 'Pin', onPress: () => togglePin(channel.id) }]
+              )}
             >
               <View style={[s.channelAvatar, { backgroundColor: getChannelColor(channel.channel_type) + '20' }]}>
                 {channel.avatar_url ? (
@@ -465,7 +499,10 @@ export default function ChatsScreen() {
               
               <View style={s.channelInfo}>
                 <View style={s.channelHeader}>
-                  <Text style={s.channelName} numberOfLines={1}>{channel.name}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
+                    {pinnedIds.has(channel.id) && <Text style={{ fontSize: 14, marginRight: 4 }}>📌</Text>}
+                    <Text style={s.channelName} numberOfLines={1}>{channel.name}</Text>
+                  </View>
                   {channel.last_message && (
                     <Text style={s.messageTime}>{formatTime(channel.last_message.created_at)}</Text>
                   )}
@@ -682,7 +719,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   avatarImage: { width: 52, height: 52, borderRadius: 26 },
   channelInfo: { flex: 1 },
   channelHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  channelName: { fontSize: 16, fontWeight: '600', color: colors.text, flex: 1, marginRight: 8 },
+  channelName: { fontSize: 16, fontWeight: '600', color: colors.text, flexShrink: 1 },
   messageTime: { fontSize: 12, color: colors.textMuted },
   lastMessage: { fontSize: 14, color: colors.textMuted },
   senderName: { fontWeight: '500' },
