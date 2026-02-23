@@ -1446,7 +1446,7 @@ export default function ParentDashboard() {
               return (
                 <TouchableOpacity
                   style={s.recapCard}
-                  onPress={() => router.push('/game-results' as any)}
+                  onPress={() => router.push((`/game-results?eventId=${lg.id}`) as any)}
                   activeOpacity={0.8}
                 >
                   <View style={s.recapHeader}>

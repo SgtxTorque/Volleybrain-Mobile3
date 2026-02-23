@@ -62,7 +62,7 @@ type ChildInfo = {
 
 export default function GameResultsScreen() {
   const { colors } = useTheme();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { eventId } = useLocalSearchParams();
   const router = useRouter();
 
@@ -74,7 +74,11 @@ export default function GameResultsScreen() {
   const s = createStyles(colors);
 
   useEffect(() => {
-    if (eventId && user?.id) fetchGameData();
+    if (eventId && user?.id) {
+      fetchGameData();
+    } else if (!eventId) {
+      setLoading(false);
+    }
   }, [eventId, user?.id]);
 
   const fetchGameData = async () => {
@@ -107,34 +111,39 @@ export default function GameResultsScreen() {
         setSportName((seasonData as any)?.sport || null);
       }
 
-      // Fetch children linked to parent
-      const { data: children } = await supabase
+      // 3-source parent-child resolution
+      const parentEmail = profile?.email || user?.email;
+      let playerIds: string[] = [];
+
+      const { data: guardianLinks } = await supabase
+        .from('player_guardians')
+        .select('player_id')
+        .eq('guardian_id', user.id);
+      if (guardianLinks) playerIds.push(...guardianLinks.map(g => g.player_id));
+
+      const { data: directPlayers } = await supabase
         .from('players')
-        .select('id, first_name, last_name')
+        .select('id')
         .eq('parent_account_id', user.id);
+      if (directPlayers) playerIds.push(...directPlayers.map(p => p.id));
 
-      let playerIds = (children || []).map(c => c.id);
-      let playerInfos = children || [];
+      if (parentEmail) {
+        const { data: emailPlayers } = await supabase
+          .from('players')
+          .select('id')
+          .ilike('parent_email', parentEmail);
+        if (emailPlayers) playerIds.push(...emailPlayers.map(p => p.id));
+      }
 
-      // Player self-access: if no children found, also check player_guardians
-      if (playerIds.length === 0) {
-        const { data: guardianLinks } = await supabase
-          .from('player_guardians')
-          .select('player_id')
-          .eq('guardian_id', user.id);
+      playerIds = [...new Set(playerIds)];
 
-        if (guardianLinks && guardianLinks.length > 0) {
-          const gPlayerIds = guardianLinks.map(g => g.player_id);
-          const { data: guardianPlayers } = await supabase
-            .from('players')
-            .select('id, first_name, last_name')
-            .in('id', gPlayerIds);
-
-          if (guardianPlayers && guardianPlayers.length > 0) {
-            playerIds = guardianPlayers.map(p => p.id);
-            playerInfos = guardianPlayers;
-          }
-        }
+      let playerInfos: ChildInfo[] = [];
+      if (playerIds.length > 0) {
+        const { data: childData } = await supabase
+          .from('players')
+          .select('id, first_name, last_name')
+          .in('id', playerIds);
+        playerInfos = childData || [];
       }
 
       if (playerIds.length > 0) {

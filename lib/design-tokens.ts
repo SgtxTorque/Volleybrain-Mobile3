@@ -66,23 +66,23 @@ export const shadows = {
   card: Platform.select<ViewStyle>({
     ios: {
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.08,
-      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 2.2 },
+      shadowOpacity: 0.088,
+      shadowRadius: 13.2,
     },
     android: {
-      elevation: 3,
+      elevation: 3.3,
     },
   })!,
   cardHover: Platform.select<ViewStyle>({
     ios: {
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.12,
-      shadowRadius: 16,
+      shadowOffset: { width: 0, height: 4.4 },
+      shadowOpacity: 0.132,
+      shadowRadius: 17.6,
     },
     android: {
-      elevation: 5,
+      elevation: 5.5,
     },
   })!,
   nav: Platform.select<ViewStyle>({

@@ -79,7 +79,7 @@ const darkColorsBase: ThemeColors = {
 
 // Light colors — v0 design system
 const lightColorsBase: ThemeColors = {
-  background: '#C8D3DC',
+  background: '#FFFFFF',
   bgSecondary: '#E8F0F5',
   bgTertiary: '#D9E2E9',
   card: '#FFFFFF',
