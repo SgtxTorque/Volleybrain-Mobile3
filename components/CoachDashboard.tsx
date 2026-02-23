@@ -74,16 +74,6 @@ type TeamPost = {
   createdAt: string;
 };
 
-type RecentGame = {
-  id: string;
-  event_date: string;
-  opponent: string | null;
-  game_result: string | null;
-  our_score: number | null;
-  opponent_score: number | null;
-  team_name: string;
-};
-
 // ============================================
 // HELPERS
 // ============================================
@@ -100,11 +90,6 @@ const formatTime = (timeStr: string) => {
 const formatFullDate = (dateStr: string) => {
   const d = new Date(dateStr + 'T00:00:00');
   return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-};
-
-const formatShortDate = (dateStr: string) => {
-  const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 };
 
 function getHeroCountdown(dateStr: string): { text: string; urgent: boolean } {
@@ -157,7 +142,6 @@ export default function CoachDashboard() {
   const [pendingStatsCount, setPendingStatsCount] = useState(0);
   const [chatPreviews, setChatPreviews] = useState<ChatPreview[]>([]);
   const [latestPost, setLatestPost] = useState<TeamPost | null>(null);
-  const [recentGame, setRecentGame] = useState<RecentGame | null>(null);
   const [activeCarouselIndex, setActiveCarouselIndex] = useState(0);
   const carouselRef = useRef<FlatList>(null);
   const [prepProgress, setPrepProgress] = useState<Record<string, { rsvps: boolean; attendance: boolean; lineup: boolean }>>({});
@@ -494,32 +478,6 @@ export default function CoachDashboard() {
         setLatestPost(null);
       }
 
-      // Recent game result
-      const { data: recentGameData } = await supabase
-        .from('schedule_events')
-        .select('id, event_date, opponent, game_result, our_score, opponent_score, team_id')
-        .eq('team_id', teamId)
-        .eq('event_type', 'game')
-        .not('game_result', 'is', null)
-        .order('event_date', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (recentGameData) {
-        const team = teams.find(t => t.id === recentGameData.team_id);
-        setRecentGame({
-          id: recentGameData.id,
-          event_date: recentGameData.event_date,
-          opponent: recentGameData.opponent,
-          game_result: recentGameData.game_result,
-          our_score: recentGameData.our_score,
-          opponent_score: recentGameData.opponent_score,
-          team_name: team?.name || '',
-        });
-      } else {
-        setRecentGame(null);
-      }
-
       // Game prep progress
       const gameEvents = upcomingEvents.filter(e => e.type === 'game' && e.team_id === teamId);
       if (gameEvents.length > 0) {
@@ -571,9 +529,11 @@ export default function CoachDashboard() {
     return '?';
   })();
 
-  // Carousel: up to 5 events + CTA card
-  const carouselData: { type: 'event' | 'cta'; event?: UpcomingEvent }[] = [
-    ...activeTeamEvents.slice(0, 5).map(e => ({ type: 'event' as const, event: e })),
+  // Carousel: up to 5 events + CTA card (or empty card when no events)
+  const carouselData: { type: 'event' | 'cta' | 'empty'; event?: UpcomingEvent }[] = [
+    ...(activeTeamEvents.length === 0
+      ? [{ type: 'empty' as const }]
+      : activeTeamEvents.slice(0, 5).map(e => ({ type: 'event' as const, event: e }))),
     { type: 'cta' as const },
   ];
 
@@ -645,9 +605,77 @@ export default function CoachDashboard() {
       )}
 
       {/* ================================================================ */}
-      {/* 3. HERO EVENT CAROUSEL (Fix 3 — tappable, HOME/AWAY badge)       */}
+      {/* 3. SEASON RECORD                                                  */}
       {/* ================================================================ */}
-      {activeTeam && activeTeamEvents.length > 0 ? (
+      {activeTeam && (
+        <View style={s.sectionBlock}>
+          <View style={{ paddingHorizontal: 16 }}>
+            <SectionHeader title="Season Record" action="Details" onAction={() => router.push('/standings' as any)} />
+          </View>
+          <View style={[s.progressCard, { marginHorizontal: 16 }]}>
+            <View style={s.progressHeader}>
+              <Ionicons name="trophy-outline" size={16} color={colors.teal} />
+              <Text style={s.progressTitle}>SEASON RECORD</Text>
+            </View>
+
+            {/* Big numbers: Games / Wins / Losses */}
+            <View style={s.progressStats}>
+              <View style={s.progressStat}>
+                <Text style={s.progressNumber}>{totalGamesPlayed}</Text>
+                <Text style={s.progressLabel}>Games</Text>
+              </View>
+              <View style={s.progressStat}>
+                <Text style={[s.progressNumber, { color: '#10B981' }]}>{totalWins}</Text>
+                <Text style={s.progressLabel}>Wins</Text>
+              </View>
+              <View style={s.progressStat}>
+                <Text style={[s.progressNumber, { color: '#EF4444' }]}>{totalLosses}</Text>
+                <Text style={s.progressLabel}>Losses</Text>
+              </View>
+            </View>
+
+            {/* Win percentage bar */}
+            {totalGamesPlayed > 0 && (
+              <View style={s.progressBar}>
+                <View style={[s.progressBarFill, {
+                  width: `${Math.round((totalWins / totalGamesPlayed) * 100)}%` as any,
+                }]} />
+              </View>
+            )}
+
+            {/* Meta stats row */}
+            <View style={s.seasonMetaRow}>
+              <View style={s.seasonMetaItem}>
+                <Ionicons name="people-outline" size={12} color={colors.textMuted} />
+                <Text style={s.seasonMetaText}>{activeTeam.player_count} Players</Text>
+              </View>
+              {attendanceRate !== null && (
+                <View style={s.seasonMetaItem}>
+                  <Ionicons name="checkmark-circle-outline" size={12} color={colors.textMuted} />
+                  <Text style={s.seasonMetaText}>{attendanceRate}% Attend</Text>
+                </View>
+              )}
+              {nextGameCountdown && (
+                <View style={s.seasonMetaItem}>
+                  <Ionicons name="time-outline" size={12} color={colors.textMuted} />
+                  <Text style={s.seasonMetaText}>{nextGameCountdown}</Text>
+                </View>
+              )}
+              {pendingStatsCount > 0 && (
+                <View style={s.seasonMetaItem}>
+                  <Ionicons name="alert-circle-outline" size={12} color={colors.warning} />
+                  <Text style={[s.seasonMetaText, { color: colors.warning }]}>{pendingStatsCount} need stats</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* ================================================================ */}
+      {/* 4. HERO EVENT CAROUSEL                                            */}
+      {/* ================================================================ */}
+      {activeTeam && (
         <>
           <View style={s.carouselWrap}>
             <FlatList
@@ -659,7 +687,7 @@ export default function CoachDashboard() {
               snapToInterval={CARD_WIDTH + 12}
               decelerationRate="fast"
               contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}
-              keyExtractor={(item, index) => item.event?.id || `cta-${index}`}
+              keyExtractor={(item, index) => item.event?.id || `${item.type}-${index}`}
               onMomentumScrollEnd={(e) => {
                 const idx = Math.round(e.nativeEvent.contentOffset.x / (CARD_WIDTH + 12));
                 setActiveCarouselIndex(idx);
@@ -676,6 +704,28 @@ export default function CoachDashboard() {
                       <Text style={s.ctaText}>View Full Schedule</Text>
                       <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
                     </TouchableOpacity>
+                  );
+                }
+
+                if (item.type === 'empty') {
+                  return (
+                    <View style={s.heroCard}>
+                      <LinearGradient
+                        colors={['#2C5F7C', '#1B2838']}
+                        style={StyleSheet.absoluteFillObject}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 0.3, y: 1 }}
+                      />
+                      <View style={[s.heroContent, { justifyContent: 'center', alignItems: 'center' }]}>
+                        <Ionicons name="calendar-outline" size={40} color="rgba(255,255,255,0.5)" />
+                        <Text style={[s.heroTitle, { marginTop: 12, textAlign: 'center', fontSize: 22 }]}>
+                          No Upcoming Events
+                        </Text>
+                        <Text style={[s.heroMetaText, { marginTop: 6, textAlign: 'center' }]}>
+                          Check back later or add events from the schedule tab.
+                        </Text>
+                      </View>
+                    </View>
                   );
                 }
 
@@ -826,128 +876,10 @@ export default function CoachDashboard() {
             </View>
           )}
         </>
-      ) : activeTeam ? (
-        <View style={s.heroCardEmpty}>
-          <LinearGradient
-            colors={['#2C5F7C', '#1B2838']}
-            style={StyleSheet.absoluteFillObject}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0.3, y: 1 }}
-          />
-          <View style={s.heroContent}>
-            <Ionicons name="calendar-outline" size={32} color="rgba(255,255,255,0.6)" />
-            <Text style={[s.heroTitle, { marginTop: 8 }]}>ALL CLEAR</Text>
-            <Text style={s.heroTeamLabel}>{activeTeam.name}</Text>
-            <Text style={[s.heroMetaText, { marginTop: 4 }]}>No upcoming events scheduled</Text>
-          </View>
-        </View>
-      ) : null}
-
-      {/* ================================================================ */}
-      {/* 4. SEASON RECORD (Fix 2 — single cohesive card)                  */}
-      {/* ================================================================ */}
-      {activeTeam && (
-        <View style={s.sectionBlock}>
-          <View style={{ paddingHorizontal: 16 }}>
-            <SectionHeader title="Season Record" action="Details" onAction={() => router.push('/standings' as any)} />
-          </View>
-          <View style={[s.progressCard, { marginHorizontal: 16 }]}>
-            <View style={s.progressHeader}>
-              <Ionicons name="trophy-outline" size={16} color={colors.teal} />
-              <Text style={s.progressTitle}>SEASON RECORD</Text>
-            </View>
-
-            {/* Big numbers: Games / Wins / Losses */}
-            <View style={s.progressStats}>
-              <View style={s.progressStat}>
-                <Text style={s.progressNumber}>{totalGamesPlayed}</Text>
-                <Text style={s.progressLabel}>Games</Text>
-              </View>
-              <View style={s.progressStat}>
-                <Text style={[s.progressNumber, { color: '#10B981' }]}>{totalWins}</Text>
-                <Text style={s.progressLabel}>Wins</Text>
-              </View>
-              <View style={s.progressStat}>
-                <Text style={[s.progressNumber, { color: '#EF4444' }]}>{totalLosses}</Text>
-                <Text style={s.progressLabel}>Losses</Text>
-              </View>
-            </View>
-
-            {/* Win percentage bar */}
-            {totalGamesPlayed > 0 && (
-              <View style={s.progressBar}>
-                <View style={[s.progressBarFill, {
-                  width: `${Math.round((totalWins / totalGamesPlayed) * 100)}%` as any,
-                }]} />
-              </View>
-            )}
-
-            {/* Meta stats row */}
-            <View style={s.seasonMetaRow}>
-              <View style={s.seasonMetaItem}>
-                <Ionicons name="people-outline" size={12} color={colors.textMuted} />
-                <Text style={s.seasonMetaText}>{activeTeam.player_count} Players</Text>
-              </View>
-              {attendanceRate !== null && (
-                <View style={s.seasonMetaItem}>
-                  <Ionicons name="checkmark-circle-outline" size={12} color={colors.textMuted} />
-                  <Text style={s.seasonMetaText}>{attendanceRate}% Attend</Text>
-                </View>
-              )}
-              {nextGameCountdown && (
-                <View style={s.seasonMetaItem}>
-                  <Ionicons name="time-outline" size={12} color={colors.textMuted} />
-                  <Text style={s.seasonMetaText}>{nextGameCountdown}</Text>
-                </View>
-              )}
-              {pendingStatsCount > 0 && (
-                <View style={s.seasonMetaItem}>
-                  <Ionicons name="alert-circle-outline" size={12} color={colors.warning} />
-                  <Text style={[s.seasonMetaText, { color: colors.warning }]}>{pendingStatsCount} need stats</Text>
-                </View>
-              )}
-            </View>
-          </View>
-        </View>
       )}
 
       {/* ================================================================ */}
-      {/* 5. LATEST GAME RECAP (Fix 10 — conditional)                      */}
-      {/* ================================================================ */}
-      {recentGame && (
-        <View style={s.sectionBlock}>
-          <View style={{ paddingHorizontal: 16 }}>
-            <TouchableOpacity
-              style={s.recapCard}
-              onPress={() => router.push(`/game-results?eventId=${recentGame.id}` as any)}
-              activeOpacity={0.8}
-            >
-              <View style={s.recapHeader}>
-                <Ionicons name="football-outline" size={16} color={colors.teal} />
-                <Text style={s.recapTitle}>Latest Game</Text>
-              </View>
-              <View style={s.recapScoreRow}>
-                <Text style={[s.recapResult, {
-                  color: recentGame.game_result === 'win' ? '#10B981' : recentGame.game_result === 'loss' ? '#EF4444' : colors.textMuted,
-                }]}>
-                  {recentGame.game_result?.toUpperCase() || 'PLAYED'}
-                </Text>
-                {recentGame.our_score != null && recentGame.opponent_score != null && (
-                  <Text style={s.recapScore}>{recentGame.our_score} - {recentGame.opponent_score}</Text>
-                )}
-              </View>
-              {recentGame.opponent && <Text style={s.recapOpponent}>vs {recentGame.opponent}</Text>}
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
-                <Text style={s.recapDate}>{formatShortDate(recentGame.event_date)}</Text>
-                <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
-              </View>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
-
-      {/* ================================================================ */}
-      {/* 6. QUICK ACTIONS (Fix 4 — 1 row × 4 compact buttons)            */}
+      {/* 5. QUICK ACTIONS                                                  */}
       {/* ================================================================ */}
       <View style={s.sectionBlock}>
         <View style={{ paddingHorizontal: 16 }}>
@@ -1000,28 +932,7 @@ export default function CoachDashboard() {
       </View>
 
       {/* ================================================================ */}
-      {/* 7. NEEDS ATTENTION (Fix 11 — conditional)                        */}
-      {/* ================================================================ */}
-      {pendingStatsCount > 0 && (
-        <TouchableOpacity
-          style={s.stuffCard}
-          onPress={() => router.push('/game-prep' as any)}
-          activeOpacity={0.8}
-        >
-          <View style={s.stuffLeft}>
-            <View style={s.stuffBadge}>
-              <Text style={s.stuffBadgeText}>{pendingStatsCount}</Text>
-            </View>
-            <Text style={s.stuffTitle}>
-              {pendingStatsCount} game{pendingStatsCount > 1 ? 's' : ''} need{pendingStatsCount === 1 ? 's' : ''} stats
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-        </TouchableOpacity>
-      )}
-
-      {/* ================================================================ */}
-      {/* 8. TEAM HUB PREVIEW (Fix 7 — single latest post)                 */}
+      {/* 6. TEAM HUB PREVIEW                                               */}
       {/* ================================================================ */}
       <View style={s.sectionBlock}>
         <View style={{ paddingHorizontal: 16 }}>
@@ -1060,7 +971,7 @@ export default function CoachDashboard() {
       </View>
 
       {/* ================================================================ */}
-      {/* 9. CHAT PREVIEW (Fix 6 — single conversation card)               */}
+      {/* 7. CHAT PREVIEW                                                   */}
       {/* ================================================================ */}
       {chatPreviews.length > 0 && (
         <View style={s.sectionBlock}>
@@ -1150,16 +1061,6 @@ const createStyles = (colors: any) => StyleSheet.create({
     ...displayTextStyle,
     fontSize: 14,
     color: colors.teal,
-  },
-  heroCardEmpty: {
-    height: 180,
-    borderRadius: radii.card,
-    overflow: 'hidden' as const,
-    position: 'relative' as const,
-    marginHorizontal: 16,
-    marginTop: 12,
-    marginBottom: 16,
-    justifyContent: 'flex-end',
   },
   heroBadge: {
     position: 'absolute' as const,
@@ -1396,53 +1297,6 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontWeight: '500',
   },
 
-  // ========== LATEST GAME RECAP (Fix 10) ==========
-  recapCard: {
-    backgroundColor: colors.glassCard,
-    borderRadius: radii.card,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
-    padding: 14,
-    ...shadows.card,
-  },
-  recapHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 8,
-  },
-  recapTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  recapScoreRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  recapResult: {
-    ...displayTextStyle,
-    fontSize: 18,
-  },
-  recapScore: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.text,
-  },
-  recapOpponent: {
-    fontSize: 12,
-    color: colors.textMuted,
-    marginTop: 4,
-  },
-  recapDate: {
-    fontSize: 10,
-    color: colors.textMuted,
-    marginTop: 2,
-  },
-
   // ========== QUICK ACTIONS (Fix 4 — 1 row × 4) ==========
   quickRow: {
     flexDirection: 'row',
@@ -1484,44 +1338,6 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontSize: 9,
     fontWeight: '800' as const,
     color: '#fff',
-  },
-
-  // ========== NEEDS ATTENTION (Fix 11) ==========
-  stuffCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: colors.glassCard,
-    borderRadius: radii.card,
-    borderWidth: 1,
-    borderColor: colors.warning + '40',
-    padding: 14,
-    marginHorizontal: 16,
-    marginBottom: 14,
-    ...shadows.card,
-  },
-  stuffLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  stuffBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: colors.warning,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  stuffBadgeText: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#FFF',
-  },
-  stuffTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.text,
   },
 
   // ========== TEAM HUB PREVIEW (Fix 7) ==========

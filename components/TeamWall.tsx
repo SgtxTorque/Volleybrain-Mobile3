@@ -88,16 +88,24 @@ type PostType = 'text' | 'announcement' | 'game_recap' | 'shoutout' | 'milestone
 
 type ReactionType = 'like' | 'heart' | 'fire' | 'clap' | 'muscle' | 'volleyball' | (string & {});
 
-type TabKey = 'feed' | 'roster' | 'schedule';
+type TabKey = 'feed' | 'roster' | 'schedule' | (string & {});
 
 // =============================================================================
 // PROPS
 // =============================================================================
 
+type AdditionalTab = {
+  key: string;
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  render: () => React.ReactNode;
+};
+
 type TeamWallProps = {
   teamId?: string | null;
   embedded?: boolean;
   feedOnly?: boolean;
+  additionalTabs?: AdditionalTab[];
 };
 
 // =============================================================================
@@ -275,7 +283,7 @@ const SkeletonPostCard = ({ colors }: { colors: any }) => (
 // MAIN COMPONENT
 // =============================================================================
 
-export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnly = false }: TeamWallProps) {
+export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnly = false, additionalTabs = [] }: TeamWallProps) {
   const { colors } = useTheme();
   const { user, profile, isAdmin } = useAuth();
   const { workingSeason } = useSeason();
@@ -1283,38 +1291,33 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
 
       {/* Tab Navigation — hidden in feedOnly mode */}
       {!feedOnly && (
-      <View style={s.tabBar}>
-        {(['feed', 'roster', 'schedule'] as TabKey[]).map((tab) => {
-          const isActive = activeTab === tab;
-          const tabIcons: Record<TabKey, keyof typeof Ionicons.glyphMap> = {
-            feed: 'newspaper',
-            roster: 'people',
-            schedule: 'calendar',
-          };
-          const tabLabels: Record<TabKey, string> = {
-            feed: 'Feed',
-            roster: 'Roster',
-            schedule: 'Schedule',
-          };
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.tabBarScroll} contentContainerStyle={s.tabBar}>
+        {([
+          { key: 'feed', label: 'Feed', icon: 'newspaper' as keyof typeof Ionicons.glyphMap },
+          { key: 'roster', label: 'Roster', icon: 'people' as keyof typeof Ionicons.glyphMap },
+          { key: 'schedule', label: 'Schedule', icon: 'calendar' as keyof typeof Ionicons.glyphMap },
+          ...additionalTabs.map(t => ({ key: t.key, label: t.label, icon: t.icon })),
+        ]).map((tab) => {
+          const isActive = activeTab === tab.key;
           return (
             <TouchableOpacity
-              key={tab}
+              key={tab.key}
               style={[s.tab, isActive && [s.tabActive, { borderBottomColor: teamColor }]]}
-              onPress={() => setActiveTab(tab)}
+              onPress={() => setActiveTab(tab.key)}
               activeOpacity={0.7}
             >
               <Ionicons
-                name={tabIcons[tab]}
+                name={tab.icon}
                 size={18}
                 color={isActive ? teamColor : colors.textMuted}
               />
               <Text style={[s.tabLabel, isActive && { color: teamColor, fontWeight: '600' }]}>
-                {tabLabels[tab]}
+                {tab.label}
               </Text>
             </TouchableOpacity>
           );
         })}
-      </View>
+      </ScrollView>
       )}
 
       {/* Tab Content */}
@@ -1451,6 +1454,15 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
           )}
         </View>
       )}
+
+      {/* Additional tabs (e.g., Achievements, Stats for coaches) */}
+      {!feedOnly && additionalTabs.map(tab => (
+        activeTab === tab.key ? (
+          <View key={tab.key} style={s.tabContent}>
+            {tab.render()}
+          </View>
+        ) : null
+      ))}
 
       {/* New Post Modal */}
       <Modal visible={showNewPostModal} animationType="slide" transparent>
@@ -1769,15 +1781,18 @@ const createStyles = (colors: any) =>
     },
 
     // Tab Bar
+    tabBarScroll: {
+      flexGrow: 0,
+      marginTop: 12,
+    },
     tabBar: {
       flexDirection: 'row',
-      marginHorizontal: 16,
-      marginTop: 12,
+      paddingHorizontal: 16,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
     tab: {
-      flex: 1,
+      minWidth: 80,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',

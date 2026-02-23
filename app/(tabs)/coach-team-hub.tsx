@@ -1,15 +1,14 @@
 import AppHeaderBar from '@/components/ui/AppHeaderBar';
 import PillTabs from '@/components/ui/PillTabs';
-import SectionHeader from '@/components/ui/SectionHeader';
 import TeamWall from '@/components/TeamWall';
 import { useAuth } from '@/lib/auth';
-import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
+import { radii, shadows, spacing } from '@/lib/design-tokens';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   StyleSheet,
@@ -30,30 +29,6 @@ type CoachTeam = {
   staffRole: string;
 };
 
-type TeamRecord = {
-  wins: number;
-  losses: number;
-  record: string;
-  streak: string | null;
-};
-
-// ---------------------------------------------------------------------------
-// Quick Access Config
-// ---------------------------------------------------------------------------
-
-const QUICK_LINKS: {
-  key: string;
-  label: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  route: string;
-  needsTeamId?: boolean;
-}[] = [
-  { key: 'schedule', label: 'Schedule', icon: 'calendar-outline', route: '/(tabs)/coach-schedule' },
-  { key: 'roster', label: 'Roster', icon: 'people-outline', route: '/team-roster', needsTeamId: true },
-  { key: 'achievements', label: 'Achievements', icon: 'trophy-outline', route: '/achievements' },
-  { key: 'stats', label: 'Player Stats', icon: 'stats-chart-outline', route: '/standings' },
-];
-
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -68,12 +43,7 @@ export default function CoachTeamHubScreen() {
   // State
   const [coachTeams, setCoachTeams] = useState<CoachTeam[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
-  const [teamRecord, setTeamRecord] = useState<TeamRecord | null>(null);
   const [loading, setLoading] = useState(true);
-
-  // Derived
-  const selectedTeam = coachTeams.find((t) => t.teamId === selectedTeamId);
-  const teamColor = selectedTeam?.teamColor || colors.primary;
 
   // ---------------------------------------------------------------------------
   // Data: resolve coach → teams via team_staff + team_coaches + coaches fallback
@@ -155,34 +125,6 @@ export default function CoachTeamHubScreen() {
   }, [user?.id, workingSeason?.id]);
 
   // ---------------------------------------------------------------------------
-  // Data: W-L record from standings view
-  // ---------------------------------------------------------------------------
-
-  const fetchTeamRecord = useCallback(async (teamId: string) => {
-    try {
-      const { data } = await supabase
-        .from('v_season_standings')
-        .select('wins, losses, record, current_streak')
-        .eq('team_id', teamId)
-        .maybeSingle();
-
-      if (data) {
-        setTeamRecord({
-          wins: data.wins ?? 0,
-          losses: data.losses ?? 0,
-          record: data.record || `${data.wins ?? 0}-${data.losses ?? 0}`,
-          streak: data.current_streak || null,
-        });
-      } else {
-        setTeamRecord({ wins: 0, losses: 0, record: '0-0', streak: null });
-      }
-    } catch (err) {
-      if (__DEV__) console.error('[CoachTeamHub] fetchTeamRecord error:', err);
-      setTeamRecord({ wins: 0, losses: 0, record: '0-0', streak: null });
-    }
-  }, []);
-
-  // ---------------------------------------------------------------------------
   // Effects
   // ---------------------------------------------------------------------------
 
@@ -190,28 +132,60 @@ export default function CoachTeamHubScreen() {
     fetchCoachTeams();
   }, [fetchCoachTeams]);
 
-  useEffect(() => {
-    if (selectedTeamId) {
-      fetchTeamRecord(selectedTeamId);
-    }
-  }, [selectedTeamId, fetchTeamRecord]);
-
   // ---------------------------------------------------------------------------
-  // Handlers
+  // Additional tabs for TeamWall (Achievements + Stats)
   // ---------------------------------------------------------------------------
 
-  const handleTeamChange = (key: string) => {
-    setSelectedTeamId(key);
-    setTeamRecord(null);
-  };
-
-  const handleQuickLink = (item: typeof QUICK_LINKS[number]) => {
-    if (item.needsTeamId && selectedTeamId) {
-      router.push({ pathname: item.route as any, params: { teamId: selectedTeamId } });
-    } else {
-      router.push(item.route as any);
-    }
-  };
+  const coachExtraTabs = useMemo(() => [
+    {
+      key: 'achievements',
+      label: 'Achievements',
+      icon: 'trophy-outline' as keyof typeof Ionicons.glyphMap,
+      render: () => (
+        <View style={s.extraTabContent}>
+          <TouchableOpacity
+            style={s.extraTabCard}
+            onPress={() => router.push('/achievements' as any)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="trophy" size={36} color={colors.primary} />
+            <Text style={[s.extraTabTitle, { color: colors.text }]}>Team Achievements</Text>
+            <Text style={[s.extraTabSubtitle, { color: colors.textMuted }]}>
+              View badges, milestones, and awards
+            </Text>
+            <View style={s.extraTabAction}>
+              <Text style={[s.extraTabActionText, { color: colors.primary }]}>View All</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+            </View>
+          </TouchableOpacity>
+        </View>
+      ),
+    },
+    {
+      key: 'stats',
+      label: 'Stats',
+      icon: 'stats-chart-outline' as keyof typeof Ionicons.glyphMap,
+      render: () => (
+        <View style={s.extraTabContent}>
+          <TouchableOpacity
+            style={s.extraTabCard}
+            onPress={() => router.push('/standings' as any)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="stats-chart" size={36} color={colors.primary} />
+            <Text style={[s.extraTabTitle, { color: colors.text }]}>Player Stats</Text>
+            <Text style={[s.extraTabSubtitle, { color: colors.textMuted }]}>
+              View season standings and player statistics
+            </Text>
+            <View style={s.extraTabAction}>
+              <Text style={[s.extraTabActionText, { color: colors.primary }]}>View All</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+            </View>
+          </TouchableOpacity>
+        </View>
+      ),
+    },
+  ], [colors, router, s]);
 
   // ---------------------------------------------------------------------------
   // Loading
@@ -259,56 +233,12 @@ export default function CoachTeamHubScreen() {
 
       {/* Team selector pills — only if multiple teams */}
       {coachTeams.length > 1 && (
-        <PillTabs tabs={teamTabs} activeKey={selectedTeamId} onChange={handleTeamChange} />
+        <PillTabs tabs={teamTabs} activeKey={selectedTeamId} onChange={setSelectedTeamId} />
       )}
 
-      {/* Hero Header Card */}
-      <View style={[s.heroCard, { borderLeftColor: teamColor, borderLeftWidth: 4 }]}>
-        <View style={s.heroContent}>
-          <View style={s.heroLeft}>
-            <Text style={[s.heroTeamName, { color: colors.text }]} numberOfLines={1}>
-              {selectedTeam?.teamName || 'Team'}
-            </Text>
-            {selectedTeam?.staffRole && (
-              <Text style={[s.heroRole, { color: colors.textSecondary }]}>
-                {selectedTeam.staffRole === 'head_coach' ? 'Head Coach' : 'Assistant Coach'}
-              </Text>
-            )}
-          </View>
-          <View style={s.heroRight}>
-            <View style={[s.recordBadge, { backgroundColor: teamColor }]}>
-              <Text style={s.recordText}>{teamRecord?.record || '0-0'}</Text>
-            </View>
-            {teamRecord?.streak ? (
-              <Text style={[s.streakText, { color: colors.textMuted }]}>{teamRecord.streak}</Text>
-            ) : null}
-          </View>
-        </View>
-      </View>
-
-      {/* Quick Access Row — 4 icon+label cards */}
-      <View style={s.quickAccessRow}>
-        {QUICK_LINKS.map((item) => (
-          <TouchableOpacity
-            key={item.key}
-            style={s.quickAccessCard}
-            onPress={() => handleQuickLink(item)}
-            activeOpacity={0.7}
-          >
-            <Ionicons name={item.icon as any} size={22} color={teamColor} />
-            <Text style={[s.quickAccessLabel, { color: colors.text }]} numberOfLines={1}>
-              {item.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Section header */}
-      <SectionHeader title="Team Wall" />
-
-      {/* TeamWall in embedded mode (full tabs: Feed, Roster, Schedule) */}
+      {/* TeamWall with coach extra tabs: Feed | Roster | Schedule | Achievements | Stats */}
       <View style={s.feedContainer}>
-        <TeamWall teamId={selectedTeamId} embedded />
+        <TeamWall teamId={selectedTeamId} embedded additionalTabs={coachExtraTabs} />
       </View>
     </SafeAreaView>
   );
@@ -340,84 +270,43 @@ const createStyles = (colors: any) =>
       textAlign: 'center',
       lineHeight: 20,
     },
-
-    // Hero card
-    heroCard: {
-      backgroundColor: colors.glassCard,
-      borderWidth: 1,
-      borderColor: colors.glassBorder,
-      borderRadius: radii.card,
-      marginHorizontal: spacing.screenPadding,
-      marginTop: 8,
-      marginBottom: 4,
-      paddingHorizontal: spacing.cardPaddingH,
-      paddingVertical: spacing.cardPaddingV + 4,
-      ...shadows.card,
-    },
-    heroContent: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    heroLeft: {
-      flex: 1,
-      marginRight: 12,
-    },
-    heroTeamName: {
-      ...displayTextStyle,
-      fontSize: 22,
-    },
-    heroRole: {
-      fontSize: 12,
-      marginTop: 2,
-    },
-    heroRight: {
-      alignItems: 'center',
-      gap: 4,
-    },
-    recordBadge: {
-      paddingHorizontal: 14,
-      paddingVertical: 6,
-      borderRadius: radii.badge,
-    },
-    recordText: {
-      color: '#FFFFFF',
-      fontSize: 16,
-      fontWeight: '800',
-      letterSpacing: 0.5,
-    },
-    streakText: {
-      fontSize: 11,
-      fontWeight: '500',
-    },
-
-    // Quick access row
-    quickAccessRow: {
-      flexDirection: 'row',
-      paddingHorizontal: spacing.screenPadding,
-      marginTop: 8,
-      marginBottom: 4,
-      gap: 8,
-    },
-    quickAccessCard: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: 12,
-      gap: 4,
-      backgroundColor: colors.glassCard,
-      borderWidth: 1,
-      borderColor: colors.glassBorder,
-      borderRadius: radii.card,
-    },
-    quickAccessLabel: {
-      fontSize: 11,
-      fontWeight: '600',
-      textAlign: 'center',
-    },
-
-    // Feed container
     feedContainer: {
       flex: 1,
+    },
+
+    // Extra tab content (Achievements, Stats)
+    extraTabContent: {
+      flex: 1,
+      padding: spacing.screenPadding,
+    },
+    extraTabCard: {
+      backgroundColor: colors.glassCard,
+      borderRadius: radii.card,
+      borderWidth: 1,
+      borderColor: colors.glassBorder,
+      padding: 24,
+      alignItems: 'center',
+      gap: 8,
+      ...shadows.card,
+    },
+    extraTabTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      marginTop: 4,
+    },
+    extraTabSubtitle: {
+      fontSize: 13,
+      textAlign: 'center',
+      lineHeight: 18,
+    },
+    extraTabAction: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      marginTop: 8,
+    },
+    extraTabActionText: {
+      fontSize: 14,
+      fontWeight: '600',
     },
   });
