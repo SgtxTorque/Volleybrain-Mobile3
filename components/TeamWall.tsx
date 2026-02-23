@@ -1,3 +1,4 @@
+import EmojiPicker from '@/components/EmojiPicker';
 import { getPositionInfo } from '@/constants/sport-display';
 import { useAuth } from '@/lib/auth';
 import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
@@ -85,7 +86,7 @@ type ScheduleEvent = {
 
 type PostType = 'text' | 'announcement' | 'game_recap' | 'shoutout' | 'milestone' | 'photo';
 
-type ReactionType = 'like' | 'heart' | 'fire' | 'clap' | 'muscle' | 'volleyball';
+type ReactionType = 'like' | 'heart' | 'fire' | 'clap' | 'muscle' | 'volleyball' | (string & {});
 
 type TabKey = 'feed' | 'roster' | 'schedule';
 
@@ -301,6 +302,8 @@ export default function TeamWall({ teamId: propTeamId, embedded = false }: TeamW
   const [loadingPosts, setLoadingPosts] = useState(false);
   const [refreshingFeed, setRefreshingFeed] = useState(false);
   const [userReactions, setUserReactions] = useState<Record<string, string>>({});
+  const [showReactionPicker, setShowReactionPicker] = useState(false);
+  const [reactionPickerPostId, setReactionPickerPostId] = useState<string | null>(null);
 
   // New post modal
   const [showNewPostModal, setShowNewPostModal] = useState(false);
@@ -1052,6 +1055,13 @@ export default function TeamWall({ teamId: propTeamId, embedded = false }: TeamW
                 onPress={() => handleReaction(post.id, reaction.type)}
               />
             ))}
+            <ReactionButton
+              emoji="➕"
+              isActive={false}
+              activeBg={teamColor}
+              borderColor={colors.border}
+              onPress={() => { setReactionPickerPostId(post.id); setShowReactionPicker(true); }}
+            />
           </View>
 
           <View style={s.postStats}>
@@ -1576,6 +1586,18 @@ export default function TeamWall({ teamId: propTeamId, embedded = false }: TeamW
           )}
         </View>
       </Modal>
+      {/* Emoji Picker for custom reactions */}
+      <EmojiPicker
+        visible={showReactionPicker}
+        onClose={() => { setShowReactionPicker(false); setReactionPickerPostId(null); }}
+        onSelect={(emoji) => {
+          if (reactionPickerPostId) {
+            handleReaction(reactionPickerPostId, emoji);
+            setShowReactionPicker(false);
+            setReactionPickerPostId(null);
+          }
+        }}
+      />
     </Wrapper>
   );
 }

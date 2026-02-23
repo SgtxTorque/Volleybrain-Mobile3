@@ -31,7 +31,7 @@ type Message = {
 type Channel = { id: string; name: string; channel_type: string; avatar_url: string };
 type Member = { user_id: string; display_name: string; member_role: string; can_post: boolean; can_moderate: boolean };
 
-const REACTION_TYPES = ['❤️', '👍', '😂', '😮', '😢', '🔥'];
+const REACTION_TYPES = ['👍', '❤️', '😂', '🔥', '👏', '😮', '😢'];
 
 export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -54,6 +54,8 @@ export default function ChatScreen() {
   const [showReactions, setShowReactions] = useState<string | null>(null);
   const [showInfo, setShowInfo] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showReactionPicker, setShowReactionPicker] = useState(false);
+  const [reactionPickerMessageId, setReactionPickerMessageId] = useState<string | null>(null);
   const [showGifPicker, setShowGifPicker] = useState(false);
   const [showMediaOptions, setShowMediaOptions] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -474,6 +476,9 @@ export default function ChatScreen() {
                 <Text style={s.reactionOptionEmoji}>{emoji}</Text>
               </TouchableOpacity>
             ))}
+            <TouchableOpacity style={s.reactionOption} onPress={() => { setReactionPickerMessageId(message.id); setShowReactions(null); setShowReactionPicker(true); }}>
+              <Text style={s.reactionOptionEmoji}>➕</Text>
+            </TouchableOpacity>
             <TouchableOpacity style={s.reactionOption} onPress={() => { setReplyingTo(message); setShowReactions(null); }}>
               <Ionicons name="arrow-undo" size={20} color={colors.text} />
             </TouchableOpacity>
@@ -616,11 +621,24 @@ export default function ChatScreen() {
         </View>
       </KeyboardAvoidingView>
 
-      {/* Emoji Picker */}
+      {/* Emoji Picker (chat input) */}
       <EmojiPicker
         visible={showEmojiPicker}
         onClose={() => setShowEmojiPicker(false)}
         onSelect={(emoji) => setInputText(prev => prev + emoji)}
+      />
+
+      {/* Emoji Picker (reactions) */}
+      <EmojiPicker
+        visible={showReactionPicker}
+        onClose={() => { setShowReactionPicker(false); setReactionPickerMessageId(null); }}
+        onSelect={(emoji) => {
+          if (reactionPickerMessageId) {
+            toggleReaction(reactionPickerMessageId, emoji);
+            setShowReactionPicker(false);
+            setReactionPickerMessageId(null);
+          }
+        }}
       />
 
       {/* GIF Picker */}
