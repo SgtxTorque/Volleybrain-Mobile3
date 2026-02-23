@@ -42,17 +42,15 @@ type TeamRecord = {
 // Quick Access Config
 // ---------------------------------------------------------------------------
 
-const QUICK_ACCESS: {
+const QUICK_LINKS: {
   key: string;
   label: string;
-  icon: keyof typeof Ionicons.glyphMap;
   route: string;
   needsTeamId?: boolean;
 }[] = [
-  { key: 'schedule', label: 'Schedule', icon: 'calendar-outline', route: '/(tabs)/parent-schedule' },
-  { key: 'roster', label: 'Roster', icon: 'people-outline', route: '/team-wall', needsTeamId: true },
-  { key: 'achievements', label: 'Awards', icon: 'trophy-outline', route: '/achievements' },
-  { key: 'standings', label: 'Standings', icon: 'podium-outline', route: '/standings' },
+  { key: 'schedule', label: 'Schedule', route: '/(tabs)/parent-schedule' },
+  { key: 'roster', label: 'Roster', route: '/team-roster', needsTeamId: true },
+  { key: 'standings', label: 'Standings', route: '/standings' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -213,7 +211,7 @@ export default function ParentTeamHubScreen() {
     setTeamRecord(null);
   };
 
-  const handleQuickAccess = (item: typeof QUICK_ACCESS[number]) => {
+  const handleQuickLink = (item: typeof QUICK_LINKS[number]) => {
     if (item.needsTeamId && selectedTeamId) {
       router.push({ pathname: item.route as any, params: { teamId: selectedTeamId } });
     } else {
@@ -294,22 +292,15 @@ export default function ParentTeamHubScreen() {
         </View>
       </View>
 
-      {/* Quick Access Row */}
-      <View style={s.quickRow}>
-        {QUICK_ACCESS.map((item) => (
-          <TouchableOpacity
-            key={item.key}
-            style={[s.quickCard, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}
-            onPress={() => handleQuickAccess(item)}
-            activeOpacity={0.7}
-          >
-            <View style={[s.quickIconCircle, { backgroundColor: teamColor + '18' }]}>
-              <Ionicons name={item.icon} size={22} color={teamColor} />
-            </View>
-            <Text style={[s.quickLabel, { color: colors.textSecondary }]} numberOfLines={1}>
-              {item.label}
-            </Text>
-          </TouchableOpacity>
+      {/* Quick Links Row */}
+      <View style={s.quickLinksRow}>
+        {QUICK_LINKS.map((item, i) => (
+          <React.Fragment key={item.key}>
+            {i > 0 && <Text style={[s.quickLinkSep, { color: colors.glassBorder }]}>·</Text>}
+            <TouchableOpacity onPress={() => handleQuickLink(item)} activeOpacity={0.7}>
+              <Text style={[s.quickLinkText, { color: teamColor }]}>{item.label}</Text>
+            </TouchableOpacity>
+          </React.Fragment>
         ))}
       </View>
 
@@ -401,35 +392,23 @@ const createStyles = (colors: any) =>
       fontWeight: '500',
     },
 
-    // Quick access row
-    quickRow: {
+    // Quick links row
+    quickLinksRow: {
       flexDirection: 'row',
-      justifyContent: 'space-between',
-      paddingHorizontal: spacing.screenPadding,
-      marginTop: 10,
-      marginBottom: 2,
-      gap: 8,
-    },
-    quickCard: {
-      flex: 1,
-      alignItems: 'center',
-      paddingVertical: 12,
-      borderRadius: radii.card,
-      borderWidth: 1,
-    },
-    quickIconCircle: {
-      width: 42,
-      height: 42,
-      borderRadius: 21,
       alignItems: 'center',
       justifyContent: 'center',
-      marginBottom: 6,
+      paddingHorizontal: spacing.screenPadding,
+      marginTop: 8,
+      marginBottom: 4,
+      gap: 12,
     },
-    quickLabel: {
-      fontSize: 10,
-      fontWeight: '600',
-      textTransform: 'uppercase',
-      letterSpacing: 0.3,
+    quickLinkText: {
+      fontSize: 13,
+      fontWeight: '700',
+    },
+    quickLinkSep: {
+      fontSize: 16,
+      fontWeight: '300',
     },
 
     // Feed container

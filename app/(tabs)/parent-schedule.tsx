@@ -123,6 +123,7 @@ export default function ParentScheduleScreen() {
   const [currentWeekStart, setCurrentWeekStart] = useState(() => getMonday(new Date()));
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [calendarExpanded, setCalendarExpanded] = useState(false);
+  const [hasUserSelectedDate, setHasUserSelectedDate] = useState(false);
 
   // --- Events & RSVPs ---
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
@@ -410,6 +411,7 @@ export default function ParentScheduleScreen() {
     const today = new Date();
     setSelectedDate(today);
     setCurrentWeekStart(getMonday(today));
+    setHasUserSelectedDate(false);
   };
 
   // =========================================================================
@@ -455,20 +457,30 @@ export default function ParentScheduleScreen() {
     children.forEach(c => {
       if (!seen.has(c.team_id)) {
         seen.add(c.team_id);
-        tabs.push({ key: c.team_id, label: `${c.first_name} (${c.team_name})` });
+        tabs.push({ key: c.team_id, label: c.first_name });
       }
     });
     return tabs;
   }, [children]);
 
   const filteredEvents = useMemo(() => {
-    const dateStr = toDateStr(selectedDate);
-    let filtered = events.filter(e => e.event_date === dateStr);
+    let filtered: ScheduleEvent[];
+    if (hasUserSelectedDate) {
+      // User tapped a specific date — show that day only
+      const dateStr = toDateStr(selectedDate);
+      filtered = events.filter(e => e.event_date === dateStr);
+    } else {
+      // Default: show the whole week's events
+      const weekDates = getWeekDates(currentWeekStart);
+      const weekStart = toDateStr(weekDates[0]);
+      const weekEnd = toDateStr(weekDates[6]);
+      filtered = events.filter(e => e.event_date >= weekStart && e.event_date <= weekEnd);
+    }
     if (activeChildFilter !== 'all') {
       filtered = filtered.filter(e => e.team_id === activeChildFilter);
     }
     return filtered;
-  }, [events, selectedDate, activeChildFilter]);
+  }, [events, selectedDate, activeChildFilter, hasUserSelectedDate, currentWeekStart]);
 
   /** Get events for a specific date (for dots on calendar). */
   const getEventsForDate = useCallback(
@@ -531,7 +543,7 @@ export default function ParentScheduleScreen() {
           return (
             <TouchableOpacity
               key={ds}
-              onPress={() => setSelectedDate(date)}
+              onPress={() => { setSelectedDate(date); setHasUserSelectedDate(true); }}
               style={s.dayCell}
               activeOpacity={0.7}
             >
@@ -595,7 +607,7 @@ export default function ParentScheduleScreen() {
       cells.push(
         <TouchableOpacity
           key={day}
-          onPress={() => setSelectedDate(date)}
+          onPress={() => { setSelectedDate(date); setHasUserSelectedDate(true); }}
           style={s.monthDayCell}
           activeOpacity={0.7}
         >
@@ -717,8 +729,10 @@ export default function ParentScheduleScreen() {
   const EmptyState = () => (
     <View style={s.emptyState}>
       <Text style={s.emptyEmoji}>🏖️</Text>
-      <Text style={[s.emptyTitle, { color: colors.text }]}>No events today</Text>
-      <Text style={[s.emptySubtitle, { color: colors.textMuted }]}>Enjoy the day off!</Text>
+      <Text style={[s.emptyTitle, { color: colors.text }]}>
+        {hasUserSelectedDate ? 'No events today' : 'No events this week'}
+      </Text>
+      <Text style={[s.emptySubtitle, { color: colors.textMuted }]}>Enjoy the time off!</Text>
     </View>
   );
 

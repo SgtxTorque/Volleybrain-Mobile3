@@ -1,19 +1,21 @@
 import { useAuth } from '@/lib/auth';
-import { getPlayerPlaceholder } from '@/lib/default-images';
+import { getDefaultHeroImage, getPlayerPlaceholder } from '@/lib/default-images';
 import { displayTextStyle, radii, shadows } from '@/lib/design-tokens';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Dimensions,
   FlatList,
   Image,
+  Linking,
   Modal,
   Platform,
   RefreshControl,
@@ -175,6 +177,34 @@ function parseEventStart(e: any): Date | null {
   return isNaN(dt.getTime()) ? null : dt;
 }
 
+/** Countdown label matching Coach Game Day hero style */
+function getHeroCountdown(dateStr: string): { text: string; urgent: boolean } {
+  const eventDate = new Date(dateStr + 'T00:00:00');
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const diffDays = Math.ceil((eventDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays <= 0) return { text: 'TODAY', urgent: true };
+  if (diffDays === 1) return { text: 'TOMORROW', urgent: true };
+  if (diffDays <= 7) return { text: `IN ${diffDays} DAYS`, urgent: diffDays <= 3 };
+  return { text: eventDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), urgent: false };
+}
+
+const formatFullDate = (dateStr: string): string => {
+  const date = new Date(dateStr + 'T00:00:00');
+  return date.toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  });
+};
+
+const locationTypeConfig: Record<string, { label: string; color: string }> = {
+  home: { label: 'HOME', color: '#14B8A6' },
+  away: { label: 'AWAY', color: '#E8913A' },
+  neutral: { label: 'NEUTRAL', color: '#0EA5E9' },
+};
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -298,6 +328,16 @@ export default function ParentDashboard() {
       actionPulse.setValue(1);
     }
   }, [actionItems.length]);
+
+  // FIX 11: Reset carousel to first card when Home tab gains focus
+  useFocusEffect(
+    useCallback(() => {
+      if (carouselRef.current) {
+        try { carouselRef.current.scrollToOffset({ offset: 0, animated: false }); } catch {}
+      }
+      setActiveCarouselIndex(0);
+    }, [])
+  );
 
   // -------------------------------------------------------------------------
   // Data fetching (preserved from original with enhancements)
@@ -948,6 +988,17 @@ export default function ParentDashboard() {
     handleCarouselRsvp(eventId, child.id, next);
   };
 
+  const openDirections = (evt: UpcomingEvent) => {
+    const address = encodeURIComponent(
+      evt.venue_address || evt.venue_name || evt.location || ''
+    );
+    const url =
+      Platform.OS === 'ios' ? `maps:?q=${address}` : `geo:0,0?q=${address}`;
+    Linking.openURL(url).catch(() => {
+      Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${address}`);
+    });
+  };
+
   const getStatHighlight = (stats: PlayerStats | null) => {
     if (!stats) return null;
     if (stats.total_kills > 0) return `${stats.total_kills} kills`;
@@ -1037,7 +1088,7 @@ export default function ParentDashboard() {
       <AppHeaderBar initials={userInitials} hasNotifications={activeAlerts.length > 0} />
 
       {/* ================================================================ */}
-      {/* SECTION 1: EVENT CAROUSEL                                         */}
+      {/* SECTION 1: HERO EVENT CAROUSEL                                    */}
       {/* ================================================================ */}
       <View style={s.carouselWrap}>
         <FlatList
@@ -1058,7 +1109,7 @@ export default function ParentDashboard() {
             if (item.type === 'cta') {
               return (
                 <TouchableOpacity
-                  style={[s.carouselCard, s.carouselCtaCard]}
+                  style={s.heroCtaCard}
                   onPress={() => router.push('/(tabs)/parent-schedule' as any)}
                   activeOpacity={0.8}
                 >
@@ -1071,62 +1122,118 @@ export default function ParentDashboard() {
 
             const evt = item.event!;
             const eventColor = getEventColor(evt.type);
-            const countdown = getLiveCountdown(evt);
+            const countdown = getHeroCountdown(evt.date);
             const rsvp = rsvpMap[evt.id] || null;
+            const heroImage = getDefaultHeroImage(null, evt.type);
+            const locConf = evt.location_type ? locationTypeConfig[evt.location_type] : null;
 
             return (
               <TouchableOpacity
-                style={[s.carouselCard, { borderTopWidth: 4, borderTopColor: eventColor }]}
+                style={s.heroCard}
                 onPress={() => openEventDetail(evt)}
                 activeOpacity={0.9}
               >
-                {/* Event type badge */}
-                <View style={[s.eventTypeBadge, { backgroundColor: eventColor + '20' }]}>
-                  <View style={[s.eventTypeDot, { backgroundColor: eventColor }]} />
-                  <Text style={[s.eventTypeText, { color: eventColor }]}>{evt.type.toUpperCase()}</Text>
+                {/* Background image */}
+                <Image source={heroImage} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
+                {/* Dark gradient overlay */}
+                <LinearGradient
+                  colors={['transparent', 'rgba(27,40,56,0.6)', 'rgba(27,40,56,0.92)']}
+                  style={StyleSheet.absoluteFillObject}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 0, y: 1 }}
+                />
+
+                {/* Event type badge - top left */}
+                <View style={[s.heroEventBadge, { backgroundColor: eventColor }]}>
+                  <Text style={s.heroEventBadgeText}>{evt.type.toUpperCase()}</Text>
                 </View>
 
-                {/* Date + time */}
-                <Text style={s.carouselDate}>{formatDate(evt.date)}</Text>
-                {evt.time ? <Text style={s.carouselTime}>{formatTime(evt.time)}</Text> : null}
-
-                {/* Countdown */}
-                {countdown && <Text style={s.carouselCountdown}>{countdown}</Text>}
-
-                {/* Opponent */}
-                {evt.opponent && <Text style={s.carouselOpponent}>vs {evt.opponent}</Text>}
-
-                {/* Location */}
-                {(evt.venue_name || evt.location) && (
-                  <View style={s.carouselLocationRow}>
-                    <Ionicons name="location-outline" size={12} color={colors.textMuted} />
-                    <Text style={s.carouselLocation} numberOfLines={1}>{evt.venue_name || evt.location}</Text>
+                {/* HOME/AWAY badge - top right */}
+                {locConf && (
+                  <View style={[s.heroLocBadge, { backgroundColor: locConf.color }]}>
+                    <Text style={s.heroLocBadgeText}>{locConf.label}</Text>
                   </View>
                 )}
 
-                {/* Child name for multi-child */}
-                {children.length > 1 && <Text style={s.carouselChild}>{evt.child_name}'s team</Text>}
-
-                {/* RSVP chip */}
-                <TouchableOpacity
-                  style={[s.rsvpChip, {
-                    backgroundColor: rsvp === 'yes' ? '#10B98120' : rsvp === 'no' ? '#EF444420' : rsvp === 'maybe' ? '#F9731620' : colors.glassCard,
-                    borderColor: rsvp === 'yes' ? '#10B981' : rsvp === 'no' ? '#EF4444' : rsvp === 'maybe' ? '#F97316' : colors.glassBorder,
-                  }]}
-                  onPress={() => cycleRsvp(evt.id)}
-                  disabled={rsvpLoading}
-                >
-                  <Ionicons
-                    name={rsvp === 'yes' ? 'checkmark-circle' : rsvp === 'no' ? 'close-circle' : rsvp === 'maybe' ? 'help-circle' : 'radio-button-off'}
-                    size={14}
-                    color={rsvp === 'yes' ? '#10B981' : rsvp === 'no' ? '#EF4444' : rsvp === 'maybe' ? '#F97316' : colors.textMuted}
-                  />
-                  <Text style={[s.rsvpChipText, {
-                    color: rsvp === 'yes' ? '#10B981' : rsvp === 'no' ? '#EF4444' : rsvp === 'maybe' ? '#F97316' : colors.textMuted,
-                  }]}>
-                    {rsvp === 'yes' ? 'Going' : rsvp === 'no' ? 'Not Going' : rsvp === 'maybe' ? 'Maybe' : 'RSVP'}
+                {/* Hero content at bottom */}
+                <View style={s.heroContent}>
+                  {/* Countdown */}
+                  <Text style={[s.heroCountdown, countdown.urgent && { color: '#F97316' }]}>
+                    {countdown.text}
                   </Text>
-                </TouchableOpacity>
+
+                  {/* Title */}
+                  <Text style={s.heroTitle}>
+                    {evt.type === 'game' ? 'GAME DAY' : evt.type === 'tournament' ? 'TOURNAMENT' : 'PRACTICE'}
+                  </Text>
+
+                  {/* Opponent */}
+                  {(evt.opponent_name || evt.opponent) && (
+                    <Text style={s.heroOpponent}>vs {evt.opponent_name || evt.opponent}</Text>
+                  )}
+
+                  {/* Date meta row */}
+                  <View style={s.heroMetaRow}>
+                    <Ionicons name="calendar-outline" size={12} color="rgba(255,255,255,0.7)" />
+                    <Text style={s.heroMetaText}>{formatFullDate(evt.date)}</Text>
+                  </View>
+
+                  {/* Time meta row */}
+                  {(evt.start_time || evt.time) && (
+                    <View style={s.heroMetaRow}>
+                      <Ionicons name="time-outline" size={12} color="rgba(255,255,255,0.7)" />
+                      <Text style={s.heroMetaText}>
+                        {formatTime(evt.start_time || evt.time)}
+                        {evt.end_time ? ` - ${formatTime(evt.end_time)}` : ''}
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* Venue */}
+                  {(evt.venue_name || evt.location) && (
+                    <View style={s.heroMetaRow}>
+                      <Ionicons name="location-outline" size={12} color="rgba(255,255,255,0.7)" />
+                      <Text style={s.heroMetaText} numberOfLines={1}>{evt.venue_name || evt.location}</Text>
+                    </View>
+                  )}
+
+                  {/* Child's team name for multi-child */}
+                  {children.length > 1 && evt.team_name && (
+                    <Text style={s.heroTeamLabel}>{evt.child_name} - {evt.team_name}</Text>
+                  )}
+
+                  {/* Action buttons */}
+                  <View style={s.heroActions}>
+                    {/* RSVP chip */}
+                    <TouchableOpacity
+                      style={[s.heroRsvpChip, {
+                        backgroundColor: rsvp === 'yes' ? 'rgba(16,185,129,0.25)' : rsvp === 'no' ? 'rgba(239,68,68,0.25)' : rsvp === 'maybe' ? 'rgba(249,115,22,0.25)' : 'rgba(255,255,255,0.15)',
+                        borderColor: rsvp === 'yes' ? '#10B981' : rsvp === 'no' ? '#EF4444' : rsvp === 'maybe' ? '#F97316' : 'rgba(255,255,255,0.3)',
+                      }]}
+                      onPress={() => cycleRsvp(evt.id)}
+                      disabled={rsvpLoading}
+                    >
+                      <Ionicons
+                        name={rsvp === 'yes' ? 'checkmark-circle' : rsvp === 'no' ? 'close-circle' : rsvp === 'maybe' ? 'help-circle' : 'radio-button-off'}
+                        size={14}
+                        color={rsvp === 'yes' ? '#10B981' : rsvp === 'no' ? '#EF4444' : rsvp === 'maybe' ? '#F97316' : 'rgba(255,255,255,0.7)'}
+                      />
+                      <Text style={[s.heroRsvpText, {
+                        color: rsvp === 'yes' ? '#10B981' : rsvp === 'no' ? '#EF4444' : rsvp === 'maybe' ? '#F97316' : 'rgba(255,255,255,0.7)',
+                      }]}>
+                        {rsvp === 'yes' ? 'Going' : rsvp === 'no' ? 'Not Going' : rsvp === 'maybe' ? 'Maybe' : 'RSVP'}
+                      </Text>
+                    </TouchableOpacity>
+
+                    {/* Get Directions */}
+                    {(evt.venue_address || evt.venue_name || evt.location) && (
+                      <TouchableOpacity style={s.heroActionSecondary} onPress={() => openDirections(evt)}>
+                        <Ionicons name="navigate-outline" size={14} color="#FFF" />
+                        <Text style={s.heroActionSecondaryText}>Get Directions</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
               </TouchableOpacity>
             );
           }}
@@ -1328,14 +1435,18 @@ export default function ParentDashboard() {
             <SectionHeader title="Season Snapshot" />
           </View>
           <View style={{ paddingHorizontal: 16, gap: 12 }}>
-            {/* Game Recap */}
+            {/* FIX 5: Game Recap — tappable, navigates to game-results */}
             {recentGames[0] && (() => {
               const lg = recentGames[0];
               return (
-                <View style={s.recapCard}>
+                <TouchableOpacity
+                  style={s.recapCard}
+                  onPress={() => router.push('/game-results' as any)}
+                  activeOpacity={0.8}
+                >
                   <View style={s.recapHeader}>
                     <Ionicons name="football-outline" size={16} color={colors.teal} />
-                    <Text style={s.recapTitle}>Last Game</Text>
+                    <Text style={s.recapTitle}>Latest Game</Text>
                   </View>
                   <View style={s.recapScoreRow}>
                     <Text style={[s.recapResult, {
@@ -1348,8 +1459,11 @@ export default function ParentDashboard() {
                     )}
                   </View>
                   {lg.opponent && <Text style={s.recapOpponent}>vs {lg.opponent}</Text>}
-                  <Text style={s.recapDate}>{formatDate(lg.event_date)}</Text>
-                </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+                    <Text style={s.recapDate}>{formatDate(lg.event_date)} · {lg.team_name}</Text>
+                    <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
+                  </View>
+                </TouchableOpacity>
               );
             })()}
 
@@ -1506,7 +1620,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     color: colors.textMuted,
   },
   sectionBlock: {
-    marginBottom: 24,
+    marginBottom: 14,
   },
   headerBar: {
     flexDirection: 'row',
@@ -1518,22 +1632,26 @@ const createStyles = (colors: any) => StyleSheet.create({
     minHeight: 48,
   },
 
-  // ========== CAROUSEL (Section 1) ==========
+  // ========== HERO CAROUSEL (Section 1) ==========
   carouselWrap: {
-    marginTop: 16,
-    marginBottom: 16,
+    marginTop: 12,
+    marginBottom: 12,
   },
-  carouselCard: {
+  heroCard: {
     width: CARD_WIDTH,
-    backgroundColor: colors.glassCard,
+    height: 300,
     borderRadius: radii.card,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
-    padding: 16,
-    minHeight: 180,
+    overflow: 'hidden' as const,
+    position: 'relative' as const,
     ...shadows.cardHover,
   },
-  carouselCtaCard: {
+  heroCtaCard: {
+    width: CARD_WIDTH,
+    height: 300,
+    borderRadius: radii.card,
+    backgroundColor: colors.glassCard,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
     justifyContent: 'center',
     alignItems: 'center',
     gap: 12,
@@ -1543,86 +1661,119 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontSize: 14,
     color: colors.teal,
   },
-  eventTypeBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
+  heroEventBadge: {
+    position: 'absolute' as const,
+    top: 12,
+    left: 12,
+    paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 20,
-    gap: 6,
-    marginBottom: 8,
   },
-  eventTypeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  eventTypeText: {
+  heroEventBadgeText: {
     fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 1,
+    fontWeight: '800',
+    color: '#FFF',
+    letterSpacing: 0.5,
   },
-  carouselDate: {
-    ...displayTextStyle,
-    fontSize: 20,
-    color: colors.navy,
+  heroLocBadge: {
+    position: 'absolute' as const,
+    top: 12,
+    right: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
   },
-  carouselTime: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: colors.text,
-    marginTop: 2,
+  heroLocBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#FFF',
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.5,
   },
-  carouselCountdown: {
+  heroContent: {
+    position: 'absolute' as const,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 16,
+  },
+  heroCountdown: {
+    color: '#14B8A6',
     fontSize: 12,
     fontWeight: '800',
-    color: colors.teal,
-    marginTop: 4,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 2,
+    marginBottom: 2,
   },
-  carouselOpponent: {
-    fontSize: 13,
+  heroTitle: {
+    ...displayTextStyle,
+    color: '#FFF',
+    fontSize: 28,
+    marginBottom: 4,
+  },
+  heroOpponent: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 16,
     fontWeight: '600',
-    color: colors.text,
-    marginTop: 6,
+    marginBottom: 8,
   },
-  carouselLocationRow: {
+  heroMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginTop: 4,
+    gap: 6,
+    marginBottom: 3,
   },
-  carouselLocation: {
+  heroMetaText: {
+    color: 'rgba(255,255,255,0.7)',
     fontSize: 11,
-    color: colors.textMuted,
-    flex: 1,
   },
-  carouselChild: {
+  heroTeamLabel: {
+    color: 'rgba(255,255,255,0.6)',
     fontSize: 10,
-    color: colors.textMuted,
-    fontStyle: 'italic',
-    marginTop: 4,
+    marginTop: 2,
   },
-  rsvpChip: {
+  heroActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 12,
+  },
+  heroRsvpChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
+    justifyContent: 'center',
+    flex: 1,
     gap: 4,
     paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 20,
+    paddingVertical: 10,
+    borderRadius: 24,
     borderWidth: 1,
-    marginTop: 10,
   },
-  rsvpChipText: {
-    fontSize: 11,
+  heroRsvpText: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  heroActionSecondary: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+    paddingVertical: 10,
+    borderRadius: 24,
+    gap: 6,
+  },
+  heroActionSecondaryText: {
+    color: '#FFF',
+    fontSize: 13,
     fontWeight: '700',
   },
   dotRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 6,
-    marginTop: 10,
+    marginTop: 8,
   },
   dot: {
     width: 6,
@@ -1647,7 +1798,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     borderColor: colors.warning + '40',
     padding: 14,
     marginHorizontal: 16,
-    marginBottom: 16,
+    marginBottom: 12,
     ...shadows.card,
   },
   stuffLeft: {
@@ -2001,7 +2152,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     borderColor: colors.glassBorder,
     padding: 40,
     alignItems: 'center',
-    marginBottom: 28,
+    marginBottom: 14,
     ...shadows.card,
   },
   emptyHeroIcon: {
@@ -2051,7 +2202,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.warning + '30',
     padding: 18,
-    marginBottom: 28,
+    marginBottom: 14,
     ...shadows.card,
   },
   paymentLeft: {
