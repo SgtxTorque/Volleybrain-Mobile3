@@ -8,7 +8,7 @@ import { useSport } from '@/lib/sport';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -90,7 +90,11 @@ type DetailedStatKey = 'kills' | 'aces' | 'digs' | 'blocks' | 'assists' | 'serve
 type UndoAction =
   | { type: 'stat'; playerId: string; statKey: StatKey; setIndex: number }
   | { type: 'opp_error'; setIndex: number }
-  | { type: 'sub'; inId: string; outId: string; courtPos: number };
+  | { type: 'sub'; inId: string; outId: string; courtPos: number }
+  | { type: 'rally_won'; wasServing: boolean; setIndex: number }
+  | { type: 'rally_lost'; wasServing: boolean; setIndex: number }
+  | { type: 'serve_error'; setIndex: number }
+  | { type: 'serve_ace'; playerId: string; setIndex: number };
 
 // ============================================================================
 // STAT CONFIG
@@ -125,6 +129,7 @@ export default function GamePrepScreen() {
   const { workingSeason } = useSeason();
   const { activeSport } = useSport();
   const router = useRouter();
+  const { startLive } = useLocalSearchParams<{ startLive?: string }>();
 
   // List mode state
   const [teams, setTeams] = useState<Team[]>([]);
@@ -153,6 +158,8 @@ export default function GamePrepScreen() {
   const [selectedCourtPosition, setSelectedCourtPosition] = useState<number | null>(null);
   const [benchPlayers, setBenchPlayers] = useState<RosterPlayer[]>([]);
   const [subHistory, setSubHistory] = useState<{ inId: string; outId: string; set: number }[]>([]);
+  const [weAreServing, setWeAreServing] = useState(true);
+  const [viewingSet, setViewingSet] = useState<number | null>(null);
 
   // Emergency contact modal state
   const [emergencyPlayer, setEmergencyPlayer] = useState<RosterPlayer | null>(null);
@@ -176,6 +183,14 @@ export default function GamePrepScreen() {
   useEffect(() => {
     if (selectedTeam) loadGames();
   }, [selectedTeam?.id]);
+
+  // Auto-start live mode when startLive param is provided (from CoachDashboard Game Day button)
+  useEffect(() => {
+    if (startLive && games.length > 0 && mode === 'list') {
+      const game = games.find(g => g.id === startLive);
+      if (game) startGameDay(game);
+    }
+  }, [startLive, games]);
 
   const loadTeams = async () => {
     if (!user?.id || !workingSeason?.id) return;
@@ -314,6 +329,8 @@ export default function GamePrepScreen() {
     setSelectedCourtPosition(null);
     setBenchPlayers([]);
     setSubHistory([]);
+    setWeAreServing(true);
+    setViewingSet(null);
     const loadedRoster = await loadRoster(game.team_id);
     await loadCourtLineup(game.id, loadedRoster);
   };
@@ -433,6 +450,58 @@ export default function GamePrepScreen() {
     handleOurPoint();
   };
 
+  // Derived: Position 1 is always the server
+  const currentServer = courtLineup.find(s => s.position === 1)?.player || null;
+
+  const reverseRotation = () => {
+    setCurrentRotation(prev => (prev - 1 + 6) % 6);
+    setCourtLineup(prev => {
+      if (prev.length === 0) return prev;
+      return prev.map(slot => ({
+        ...slot,
+        position: slot.position === 6 ? 1 : slot.position + 1,
+      }));
+    });
+  };
+
+  const handleWonRally = () => {
+    const wasServing = weAreServing;
+    setUndoStack(prev => [...prev, { type: 'rally_won', wasServing, setIndex: currentSet }]);
+    handleOurPoint();
+    if (!wasServing) {
+      // Side-out: we gain serve, rotate
+      advanceRotation();
+      setWeAreServing(true);
+    }
+  };
+
+  const handleLostRally = () => {
+    const wasServing = weAreServing;
+    setUndoStack(prev => [...prev, { type: 'rally_lost', wasServing, setIndex: currentSet }]);
+    handleTheirPoint();
+    if (wasServing) {
+      setWeAreServing(false);
+    }
+  };
+
+  const handleServeError = () => {
+    setUndoStack(prev => [...prev, { type: 'serve_error', setIndex: currentSet }]);
+    handleTheirPoint();
+    setWeAreServing(false);
+  };
+
+  const handleServeAce = () => {
+    const serverId = currentServer?.id;
+    setUndoStack(prev => [...prev, { type: 'serve_ace', playerId: serverId || '', setIndex: currentSet }]);
+    handleOurPoint();
+    if (serverId) {
+      setPlayerStats(prev => {
+        const existing = prev[serverId] || { kills: 0, aces: 0, blocks: 0, digs: 0, assists: 0, errors: 0 };
+        return { ...prev, [serverId]: { ...existing, aces: existing.aces + 1 } };
+      });
+    }
+  };
+
   const performSubstitution = (courtPos: number, benchPlayer: RosterPlayer) => {
     const courtSlot = courtLineup.find(s => s.position === courtPos);
     if (!courtSlot?.player) return;
@@ -487,6 +556,10 @@ export default function GamePrepScreen() {
     }
     if (action.type === 'opp_error') return 'OPP ERR';
     if (action.type === 'sub') return 'SUB';
+    if (action.type === 'rally_won') return 'WON RALLY';
+    if (action.type === 'rally_lost') return 'LOST RALLY';
+    if (action.type === 'serve_error') return 'SRV ERR';
+    if (action.type === 'serve_ace') return 'ACE';
     return '';
   };
 
@@ -537,6 +610,29 @@ export default function GamePrepScreen() {
         return inPlayer ? [...withoutOut, inPlayer] : withoutOut;
       });
       setSubHistory(prev => prev.slice(0, -1));
+    } else if (last.type === 'rally_won') {
+      undoOurPoint();
+      if (!last.wasServing) {
+        reverseRotation();
+        setWeAreServing(false);
+      }
+    } else if (last.type === 'rally_lost') {
+      undoTheirPoint();
+      if (last.wasServing) {
+        setWeAreServing(true);
+      }
+    } else if (last.type === 'serve_error') {
+      undoTheirPoint();
+      setWeAreServing(true);
+    } else if (last.type === 'serve_ace') {
+      undoOurPoint();
+      if (last.playerId) {
+        setPlayerStats(prev => {
+          const existing = prev[last.playerId];
+          if (!existing) return prev;
+          return { ...prev, [last.playerId]: { ...existing, aces: Math.max(0, existing.aces - 1) } };
+        });
+      }
     }
   };
 
@@ -598,6 +694,28 @@ export default function GamePrepScreen() {
     setDetailedStats(preloaded);
     setStatsEntryIndex(0);
     setMode('stats-entry');
+  };
+
+  const postGameRecapToWall = async (result: GameCompletionResult, game: Game) => {
+    try {
+      const won = result.ourScore > result.opponentScore;
+      const title = won ? 'Victory!' : 'Game Complete';
+      const setLine = result.setScores
+        .map((s, i) => `Set ${i + 1}: ${s.our}-${s.their}`)
+        .join(' | ');
+      const content = `${won ? 'W' : 'L'} vs ${game.opponent_name || 'TBD'}\nFinal: ${result.ourScore}-${result.opponentScore}\n${setLine}`;
+
+      await supabase.from('team_posts').insert({
+        team_id: game.team_id,
+        author_id: user?.id,
+        post_type: 'game_recap',
+        title,
+        content,
+        is_published: true,
+      });
+    } catch (err) {
+      if (__DEV__) console.error('Failed to post game recap:', err);
+    }
   };
 
   const handleGameComplete = async (result: GameCompletionResult) => {
@@ -676,43 +794,60 @@ export default function GamePrepScreen() {
       setShowWizard(false);
       loadGames();
 
-      // Prompt for detailed stats entry
-      const resultEmoji = result.gameResult === 'win' ? 'Victory!' : result.gameResult === 'loss' ? 'Tough loss.' : 'Tie game.';
-      Alert.alert(
-        `Game Saved! ${resultEmoji}`,
-        `Final: ${result.ourScore} - ${result.opponentScore} (${result.gameResult.toUpperCase()})\n\nWould you like to enter detailed player stats?`,
-        [
-          {
-            text: 'View Recap',
-            onPress: () => {
-              setMode('list');
-              router.push(`/game-results?eventId=${activeGame.id}&teamId=${activeGame.team_id}` as any);
+      const showStatsPrompt = () => {
+        const resultEmoji = result.gameResult === 'win' ? 'Victory!' : result.gameResult === 'loss' ? 'Tough loss.' : 'Tie game.';
+        Alert.alert(
+          `Game Saved! ${resultEmoji}`,
+          `Final: ${result.ourScore} - ${result.opponentScore} (${result.gameResult.toUpperCase()})\n\nWould you like to enter detailed player stats?`,
+          [
+            {
+              text: 'View Recap',
+              onPress: () => {
+                setMode('list');
+                router.push(`/game-results?eventId=${activeGame.id}&teamId=${activeGame.team_id}` as any);
+              },
             },
-          },
+            {
+              text: 'Skip',
+              style: 'cancel',
+              onPress: () => { setMode('list'); },
+            },
+            {
+              text: 'Enter Stats',
+              onPress: () => {
+                const initial: Record<string, DetailedPlayerStats> = {};
+                for (const p of roster) {
+                  const live = playerStats[p.id];
+                  initial[p.id] = {
+                    kills: live?.kills || 0,
+                    aces: live?.aces || 0,
+                    digs: live?.digs || 0,
+                    blocks: live?.blocks || 0,
+                    assists: live?.assists || 0,
+                    serves: 0,
+                    errors: live?.errors || 0,
+                  };
+                }
+                setDetailedStats(initial);
+                setStatsEntryIndex(0);
+                setMode('stats-entry');
+              },
+            },
+          ]
+        );
+      };
+
+      // Prompt to share game recap to team wall
+      Alert.alert(
+        'Share Game Recap?',
+        'Post the game result to the team wall for parents and players to see.',
+        [
+          { text: 'Skip', style: 'cancel', onPress: showStatsPrompt },
           {
-            text: 'Skip',
-            style: 'cancel',
-            onPress: () => { setMode('list'); },
-          },
-          {
-            text: 'Enter Stats',
+            text: 'Share',
             onPress: () => {
-              const initial: Record<string, DetailedPlayerStats> = {};
-              for (const p of roster) {
-                const live = playerStats[p.id];
-                initial[p.id] = {
-                  kills: live?.kills || 0,
-                  aces: live?.aces || 0,
-                  digs: live?.digs || 0,
-                  blocks: live?.blocks || 0,
-                  assists: live?.assists || 0,
-                  serves: 0,
-                  errors: live?.errors || 0,
-                };
-              }
-              setDetailedStats(initial);
-              setStatsEntryIndex(0);
-              setMode('stats-entry');
+              postGameRecapToWall(result, activeGame);
+              showStatsPrompt();
             },
           },
         ]
@@ -1238,6 +1373,38 @@ export default function GamePrepScreen() {
         </View>
       </View>
 
+      {/* Set Navigation Tabs */}
+      {setScores.length > 1 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={gs.setTabsRow} contentContainerStyle={{ paddingHorizontal: 12, gap: 6 }}>
+          {setScores.map((s, i) => {
+            const isCompleted = i < currentSet;
+            const isCurrent = i === currentSet;
+            const isViewing = viewingSet === i;
+            const weWon = s.our > s.their;
+            return (
+              <TouchableOpacity
+                key={i}
+                style={[
+                  gs.setTab,
+                  isCompleted && (weWon ? gs.setTabWon : gs.setTabLost),
+                  isCurrent && gs.setTabCurrent,
+                  isViewing && gs.setTabViewing,
+                ]}
+                onPress={() => setViewingSet(isCompleted ? (viewingSet === i ? null : i) : null)}
+              >
+                <Text style={[
+                  gs.setTabText,
+                  isCompleted && { color: '#fff' },
+                  isCurrent && { color: '#F97316' },
+                ]}>
+                  S{i + 1}{isCompleted ? `: ${s.our}-${s.their}` : isCurrent ? ' \u25CF' : ''}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
+
       {/* Scoreboard */}
       <View style={gs.scoreboard}>
         {/* Our Score */}
@@ -1327,6 +1494,52 @@ export default function GamePrepScreen() {
           </ScrollView>
         </View>
       )}
+
+      {/* Serving Indicator + Rally Buttons */}
+      <View style={[gs.servingCard, weAreServing ? gs.servingCardUs : gs.servingCardThem]}>
+        <View style={gs.servingHeader}>
+          <Ionicons name="football" size={16} color={weAreServing ? '#10B981' : '#EF4444'} />
+          <Text style={[gs.servingLabel, { color: weAreServing ? '#10B981' : '#EF4444' }]}>
+            {weAreServing ? 'SERVING' : 'RECEIVING'}
+          </Text>
+          {weAreServing && currentServer && (
+            <View style={gs.serverInfo}>
+              {currentServer.photo_url ? (
+                <Image source={{ uri: currentServer.photo_url }} style={gs.serverPhoto} />
+              ) : (
+                <View style={gs.serverJersey}>
+                  <Text style={gs.serverJerseyText}>{currentServer.jersey_number || '—'}</Text>
+                </View>
+              )}
+              <Text style={gs.serverName} numberOfLines={1}>
+                #{currentServer.jersey_number} {currentServer.last_name}
+              </Text>
+            </View>
+          )}
+        </View>
+        <View style={gs.rallyRow}>
+          {weAreServing && (
+            <>
+              <TouchableOpacity style={gs.serveErrBtn} onPress={handleServeError}>
+                <Ionicons name="close-circle" size={16} color="#EF4444" />
+                <Text style={gs.serveErrText}>SRV ERR</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={gs.aceBtn} onPress={handleServeAce}>
+                <Ionicons name="star" size={16} color="#A855F7" />
+                <Text style={gs.aceBtnText}>ACE</Text>
+              </TouchableOpacity>
+            </>
+          )}
+          <TouchableOpacity style={gs.wonRallyBtn} onPress={handleWonRally}>
+            <Ionicons name="trophy" size={16} color="#000" />
+            <Text style={gs.wonRallyText}>WON RALLY</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={gs.lostRallyBtn} onPress={handleLostRally}>
+            <Ionicons name="arrow-down" size={16} color="#fff" />
+            <Text style={gs.lostRallyText}>LOST RALLY</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
       {/* Stat Buttons */}
       <View style={gs.statButtonsRow}>
@@ -1590,6 +1803,36 @@ const gs = StyleSheet.create({
   qsMini: { fontSize: 12, fontWeight: '800' },
   quickStatsHot: { alignItems: 'flex-end' },
   quickStatsHotName: { fontSize: 13, fontWeight: '800', color: '#F97316' },
+
+  // Set Navigation Tabs
+  setTabsRow: { backgroundColor: '#0D1117', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#1E293B' },
+  setTab: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: '#1E293B' },
+  setTabWon: { backgroundColor: '#10B981' },
+  setTabLost: { backgroundColor: '#EF4444' },
+  setTabCurrent: { backgroundColor: 'transparent', borderWidth: 1, borderColor: '#F97316' },
+  setTabViewing: { borderWidth: 2, borderColor: '#fff' },
+  setTabText: { fontSize: 12, fontWeight: '800', color: '#94A3B8', letterSpacing: 0.5 },
+
+  // Serving Indicator + Rally Buttons
+  servingCard: { marginHorizontal: 8, marginVertical: 4, borderRadius: 12, padding: 10, backgroundColor: 'rgba(30, 41, 59, 0.7)', borderWidth: 1 },
+  servingCardUs: { borderColor: '#10B98160' },
+  servingCardThem: { borderColor: '#EF444460' },
+  servingHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  servingLabel: { fontSize: 12, fontWeight: '800', letterSpacing: 1 },
+  serverInfo: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 },
+  serverPhoto: { width: 24, height: 24, borderRadius: 12 },
+  serverJersey: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#1E293B', justifyContent: 'center', alignItems: 'center' },
+  serverJerseyText: { fontSize: 10, fontWeight: '900', color: '#F97316' },
+  serverName: { fontSize: 12, fontWeight: '700', color: '#CBD5E1' },
+  rallyRow: { flexDirection: 'row', gap: 6 },
+  serveErrBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, backgroundColor: '#EF444420', borderWidth: 1, borderColor: '#EF444440' },
+  serveErrText: { fontSize: 10, fontWeight: '800', color: '#EF4444' },
+  aceBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, backgroundColor: '#A855F720', borderWidth: 1, borderColor: '#A855F740' },
+  aceBtnText: { fontSize: 10, fontWeight: '800', color: '#A855F7' },
+  wonRallyBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 8, borderRadius: 10, backgroundColor: '#10B981' },
+  wonRallyText: { fontSize: 11, fontWeight: '800', color: '#000' },
+  lostRallyBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 8, borderRadius: 10, backgroundColor: '#EF4444' },
+  lostRallyText: { fontSize: 11, fontWeight: '800', color: '#fff' },
 
   // ====== STATS ENTRY MODE ======
   seProgressBar: { height: 4, backgroundColor: '#1E293B', marginHorizontal: 16, borderRadius: 2, marginTop: 8 },

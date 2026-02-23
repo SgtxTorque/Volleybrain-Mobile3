@@ -726,17 +726,28 @@ export default function CoachDashboard() {
                         )}
                       </View>
 
-                      {/* Game Prep Wizard button for games */}
+                      {/* Game Prep / Game Day button for games */}
                       {evt.type === 'game' && (
                         <View>
-                          <TouchableOpacity
-                            style={s.heroPrepBtn}
-                            onPress={() => router.push(`/game-prep-wizard?eventId=${evt.id}&teamId=${activeTeam.id}` as any)}
-                            activeOpacity={0.7}
-                          >
-                            <Ionicons name="clipboard" size={14} color="#FFF" />
-                            <Text style={s.heroPrepBtnText}>Game Prep</Text>
-                          </TouchableOpacity>
+                          {countdown === 'TODAY' ? (
+                            <TouchableOpacity
+                              style={s.heroGameDayBtn}
+                              onPress={() => router.push(`/game-prep?startLive=${evt.id}` as any)}
+                              activeOpacity={0.7}
+                            >
+                              <Ionicons name="play-circle" size={14} color="#000" />
+                              <Text style={s.heroGameDayBtnText}>Game Day</Text>
+                            </TouchableOpacity>
+                          ) : (
+                            <TouchableOpacity
+                              style={s.heroPrepBtn}
+                              onPress={() => router.push(`/game-prep-wizard?eventId=${evt.id}&teamId=${activeTeam.id}` as any)}
+                              activeOpacity={0.7}
+                            >
+                              <Ionicons name="clipboard" size={14} color="#FFF" />
+                              <Text style={s.heroPrepBtnText}>Game Prep</Text>
+                            </TouchableOpacity>
+                          )}
                           {prepProgress[evt.id] && (
                             <View style={s.prepProgressRow}>
                               <Text style={s.prepProgressLabel}>
@@ -1173,6 +1184,23 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: '#FFF',
+  },
+  heroGameDayBtn: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    alignSelf: 'flex-start' as const,
+    gap: 6,
+    marginTop: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#F97316',
+  },
+  heroGameDayBtnText: {
+    fontSize: 13,
+    fontWeight: '800' as const,
+    color: '#000',
+    letterSpacing: 0.5,
   },
   prepProgressRow: {
     flexDirection: 'row' as const,
