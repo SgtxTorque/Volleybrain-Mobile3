@@ -26,7 +26,11 @@
       "Bash(git -C \"C:/Users/fuent/Desktop/Volleybrain-Mobile3\" grep -rn \"console\\\\.log\" -- \":\\(glob\\)constants/*.ts\" \":\\(glob\\)constants/*.tsx\" \":\\(glob\\)constants/**/*.ts\" \":\\(glob\\)constants/**/*.tsx\")",
       "Bash(git -C \"C:/Users/fuent/Desktop/Volleybrain-Mobile3\" grep -rn \"console\\\\.log\" -- \":\\(glob\\)components/**/*.ts\" \":\\(glob\\)components/**/*.tsx\")",
       "Bash(git -C \"C:/Users/fuent/Desktop/Volleybrain-Mobile3\" grep -rn --invert-grep -e \"__DEV__\" \"console\\\\.log\" -- \":\\(glob\\)lib/**/*.ts\" \":\\(glob\\)lib/**/*.tsx\")",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(ls:*)",
+      "Bash(npx expo install:*)",
+      "Bash(echo:*)",
+      "Bash(RC=$?)"
     ]
   }
 }
