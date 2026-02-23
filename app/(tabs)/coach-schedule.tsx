@@ -702,7 +702,7 @@ export default function CoachScheduleScreen() {
             <Text style={[s.actionBtnText, { color: colors.primary }]}>Add to Cal</Text>
           </TouchableOpacity>
           {isGame && (
-            <TouchableOpacity onPress={() => router.push('/game-prep' as any)} style={s.actionBtn} activeOpacity={0.7}>
+            <TouchableOpacity onPress={() => router.push(`/game-prep-wizard?eventId=${event.id}&teamId=${event.team_id}` as any)} style={s.actionBtn} activeOpacity={0.7}>
               <Ionicons name="clipboard-outline" size={16} color="#D94F4F" />
               <Text style={[s.actionBtnText, { color: '#D94F4F' }]}>Game Prep</Text>
             </TouchableOpacity>
@@ -801,7 +801,7 @@ export default function CoachScheduleScreen() {
         visible={showDetailModal}
         event={selectedEvent}
         onClose={() => setShowDetailModal(false)}
-        onGamePrep={(ev) => router.push('/game-prep' as any)}
+        onGamePrep={(ev) => router.push(`/game-prep-wizard?eventId=${ev.id}&teamId=${ev.team_id}` as any)}
         onRefresh={refreshAfterModal}
         isCoachOrAdmin={true}
       />

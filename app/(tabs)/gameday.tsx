@@ -752,7 +752,7 @@ export default function GameDayScreen() {
                 { icon: 'add', color: '#2C5F7C', label: 'Add Event', route: '/(tabs)/schedule' },
                 { icon: 'checkmark-circle-outline', color: '#22C55E', label: 'Attendance', route: '/attendance' },
                 { icon: 'grid-outline', color: '#8B5CF6', label: 'Lineup', route: '/lineup-builder' },
-                { icon: 'analytics-outline', color: '#D94F4F', label: 'Game Prep', route: '/game-prep' },
+                { icon: 'analytics-outline', color: '#D94F4F', label: 'Game Prep', route: '/game-prep-wizard' },
               ].map((tool) => (
                 <Card
                   key={tool.label}
@@ -777,7 +777,7 @@ export default function GameDayScreen() {
         visible={showEventModal}
         event={selectedEvent}
         onClose={() => setShowEventModal(false)}
-        onGamePrep={(event: any) => router.push('/game-prep' as any)}
+        onGamePrep={(event: any) => router.push(`/game-prep-wizard?eventId=${event.id}&teamId=${event.team_id}` as any)}
         onRefresh={fetchData}
         isCoachOrAdmin={isCoachOrAdmin}
       />

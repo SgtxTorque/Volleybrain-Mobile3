@@ -141,6 +141,7 @@ export default function CoachDashboard() {
   const [teamWallPreviews, setTeamWallPreviews] = useState<TeamPost[]>([]);
   const [activeCarouselIndex, setActiveCarouselIndex] = useState(0);
   const carouselRef = useRef<FlatList>(null);
+  const [prepProgress, setPrepProgress] = useState<Record<string, { rsvps: boolean; attendance: boolean; lineup: boolean }>>({});
 
   useEffect(() => {
     fetchCoachData();
@@ -494,6 +495,27 @@ export default function CoachDashboard() {
         createdAt: p.created_at,
       })));
 
+      // Game prep progress for upcoming games
+      const gameEvents = upcomingEvents.filter(e => e.type === 'game' && e.team_id === teamId);
+      if (gameEvents.length > 0) {
+        const gameIds = gameEvents.map(e => e.id);
+        const [rsvpRes, attendRes, lineupRes] = await Promise.all([
+          supabase.from('event_rsvps').select('event_id').in('event_id', gameIds),
+          supabase.from('event_attendance').select('event_id').in('event_id', gameIds),
+          supabase.from('game_lineups').select('event_id').in('event_id', gameIds).eq('is_starter', true),
+        ]);
+
+        const progress: Record<string, { rsvps: boolean; attendance: boolean; lineup: boolean }> = {};
+        for (const id of gameIds) {
+          progress[id] = {
+            rsvps: (rsvpRes.data || []).some(r => r.event_id === id),
+            attendance: (attendRes.data || []).some(a => a.event_id === id),
+            lineup: (lineupRes.data || []).some(l => l.event_id === id),
+          };
+        }
+        setPrepProgress(prev => ({ ...prev, ...progress }));
+      }
+
     } catch (error) {
       if (__DEV__) console.error('Error fetching team-specific data:', error);
     }
@@ -704,16 +726,28 @@ export default function CoachDashboard() {
                         )}
                       </View>
 
-                      {/* Prep Lineup button for games */}
+                      {/* Game Prep Wizard button for games */}
                       {evt.type === 'game' && (
-                        <TouchableOpacity
-                          style={s.heroPrepBtn}
-                          onPress={() => router.push(`/game-prep?eventId=${evt.id}` as any)}
-                          activeOpacity={0.7}
-                        >
-                          <Ionicons name="people" size={14} color="#FFF" />
-                          <Text style={s.heroPrepBtnText}>Prep Lineup</Text>
-                        </TouchableOpacity>
+                        <View>
+                          <TouchableOpacity
+                            style={s.heroPrepBtn}
+                            onPress={() => router.push(`/game-prep-wizard?eventId=${evt.id}&teamId=${activeTeam.id}` as any)}
+                            activeOpacity={0.7}
+                          >
+                            <Ionicons name="clipboard" size={14} color="#FFF" />
+                            <Text style={s.heroPrepBtnText}>Game Prep</Text>
+                          </TouchableOpacity>
+                          {prepProgress[evt.id] && (
+                            <View style={s.prepProgressRow}>
+                              <Text style={s.prepProgressLabel}>
+                                Prep: {[prepProgress[evt.id].rsvps, prepProgress[evt.id].attendance, prepProgress[evt.id].lineup].filter(Boolean).length}/3
+                              </Text>
+                              {prepProgress[evt.id].rsvps && prepProgress[evt.id].attendance && prepProgress[evt.id].lineup && (
+                                <Ionicons name="checkmark-circle" size={14} color="#10B981" />
+                              )}
+                            </View>
+                          )}
+                        </View>
                       )}
 
                       {/* Attendance dots */}
@@ -815,11 +849,11 @@ export default function CoachDashboard() {
             <Text style={s.actionLabel}>Send Blast</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={s.actionCard} onPress={() => router.push('/lineup-builder' as any)}>
+          <TouchableOpacity style={s.actionCard} onPress={() => router.push('/game-prep-wizard' as any)}>
             <View style={[s.actionIconCircle, { backgroundColor: colors.primary + '26' }]}>
-              <Ionicons name="people" size={32} color={colors.primary} />
+              <Ionicons name="clipboard" size={32} color={colors.primary} />
             </View>
-            <Text style={s.actionLabel}>Build Lineup</Text>
+            <Text style={s.actionLabel}>Game Prep</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -1139,6 +1173,17 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: '#FFF',
+  },
+  prepProgressRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 6,
+    marginTop: 4,
+  },
+  prepProgressLabel: {
+    fontSize: 11,
+    fontWeight: '700' as const,
+    color: 'rgba(255,255,255,0.7)',
   },
   heroDotsRow: {
     flexDirection: 'row',
