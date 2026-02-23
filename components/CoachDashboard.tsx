@@ -356,22 +356,30 @@ export default function CoachDashboard() {
   const fetchTeamSpecificData = async (teamId: string) => {
     if (!workingSeason?.id) return;
     try {
-      // Upcoming events for this team
-      const nowDate = new Date();
-      const todayDate = `${nowDate.getFullYear()}-${String(nowDate.getMonth() + 1).padStart(2, '0')}-${String(nowDate.getDate()).padStart(2, '0')}`;
-      const { data: events } = await supabase
+      // Upcoming events for this team — match parent query pattern (no join, no server sort)
+      const today = new Date().toISOString().split('T')[0];
+      const { data: events, error: eventsErr } = await supabase
         .from('schedule_events')
-        .select(`
-          id, title, event_type, event_date, event_time, start_time,
-          location, location_type, opponent, team_id, teams (name)
-        `)
+        .select('id, title, event_type, event_date, event_time, start_time, location, location_type, opponent, team_id')
         .eq('team_id', teamId)
-        .gte('event_date', todayDate)
-        .order('event_date', { ascending: true })
-        .order('start_time', { ascending: true })
-        .limit(10);
+        .gte('event_date', today);
 
-      const mappedEvents: UpcomingEvent[] = (events || []).map(e => ({
+      if (__DEV__ && eventsErr) console.error('[CoachDashboard] events query error:', eventsErr);
+
+      // Get team name from already-loaded teams state
+      const teamObj = teams.find(t => t.id === teamId);
+      const teamName = teamObj?.name || '';
+
+      // Sort client-side by date + time (same as parent)
+      const sorted = (events || []).slice().sort((a, b) => {
+        const dateComp = a.event_date.localeCompare(b.event_date);
+        if (dateComp !== 0) return dateComp;
+        const aTime = a.start_time || a.event_time || '';
+        const bTime = b.start_time || b.event_time || '';
+        return aTime.localeCompare(bTime);
+      });
+
+      const mappedEvents: UpcomingEvent[] = sorted.slice(0, 10).map(e => ({
         id: e.id,
         title: e.title,
         type: e.event_type as 'game' | 'practice',
@@ -379,7 +387,7 @@ export default function CoachDashboard() {
         time: e.start_time || e.event_time || '',
         location: e.location,
         opponent: e.opponent,
-        team_name: (e.teams as any)?.name || '',
+        team_name: teamName,
         team_id: e.team_id,
         location_type: e.location_type || null,
       }));
