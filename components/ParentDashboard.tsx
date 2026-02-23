@@ -1124,7 +1124,8 @@ export default function ParentDashboard() {
             const eventColor = getEventColor(evt.type);
             const countdown = getHeroCountdown(evt.date);
             const rsvp = rsvpMap[evt.id] || null;
-            const heroImage = getDefaultHeroImage(null, evt.type);
+            const child = children.find(c => c.team_id === evt.team_id);
+            const heroImage = getDefaultHeroImage(child?.sport_name ?? null, evt.type);
             const locConf = evt.location_type ? locationTypeConfig[evt.location_type] : null;
 
             return (
@@ -1134,11 +1135,15 @@ export default function ParentDashboard() {
                 activeOpacity={0.9}
               >
                 {/* Background image */}
-                <Image source={heroImage} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
+                <Image
+                  source={heroImage}
+                  style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' }}
+                  resizeMode="cover"
+                />
                 {/* Dark gradient overlay */}
                 <LinearGradient
-                  colors={['transparent', 'rgba(27,40,56,0.6)', 'rgba(27,40,56,0.92)']}
-                  style={StyleSheet.absoluteFillObject}
+                  colors={['transparent', 'rgba(27,40,56,0.6)', 'rgba(27,40,56,0.9)']}
+                  style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 0, y: 1 }}
                 />
