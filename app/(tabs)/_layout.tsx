@@ -12,9 +12,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 export default function TabLayout() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const { loading, isCoach, isParent } = usePermissions();
+  const { loading, isAdmin, isCoach, isParent } = usePermissions();
   const { profile } = useAuth();
   const primaryRole = isCoach ? 'coach' : isParent ? 'parent' : null;
+  // Pure parent (not also a coach/admin) gets the redesigned parent tab layout
+  const showParentTabs = isParent && !isCoach && !isAdmin;
   useFirstTimeWelcome(primaryRole);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [unreadAlertCount, setUnreadAlertCount] = useState(0);
@@ -160,10 +162,11 @@ export default function TabLayout() {
         }}
       />
 
-      {/* GAME DAY */}
+      {/* GAME DAY — hidden for parent role */}
       <Tabs.Screen
         name="gameday"
         options={{
+          href: showParentTabs ? null : undefined,
           title: 'Game Day',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
@@ -175,10 +178,11 @@ export default function TabLayout() {
         }}
       />
 
-      {/* TEAM */}
+      {/* TEAM (Connect) — hidden for parent role */}
       <Tabs.Screen
         name="connect"
         options={{
+          href: showParentTabs ? null : undefined,
           title: 'Team',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
@@ -192,10 +196,11 @@ export default function TabLayout() {
         }}
       />
 
-      {/* MANAGE */}
+      {/* MANAGE — hidden for parent role */}
       <Tabs.Screen
         name="manage"
         options={{
+          href: showParentTabs ? null : undefined,
           title: 'Manage',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
@@ -207,11 +212,78 @@ export default function TabLayout() {
         }}
       />
 
-      {/* ME */}
+      {/* ME — hidden for parent role */}
       <Tabs.Screen
         name="me"
         options={{
+          href: showParentTabs ? null : undefined,
           title: 'Me',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'person' : 'person-outline'}
+              size={24}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      {/* ====== PARENT-ONLY TABS ====== */}
+
+      {/* SCHEDULE (Parent) */}
+      <Tabs.Screen
+        name="parent-schedule"
+        options={{
+          href: showParentTabs ? undefined : null,
+          title: 'Schedule',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'calendar' : 'calendar-outline'}
+              size={24}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      {/* CHAT (Parent) */}
+      <Tabs.Screen
+        name="parent-chat"
+        options={{
+          href: showParentTabs ? undefined : null,
+          title: 'Chat',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline'}
+              size={24}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      {/* TEAM HUB (Parent) */}
+      <Tabs.Screen
+        name="parent-team-hub"
+        options={{
+          href: showParentTabs ? undefined : null,
+          title: 'Team',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'people' : 'people-outline'}
+              size={24}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      {/* MY STUFF (Parent) */}
+      <Tabs.Screen
+        name="parent-my-stuff"
+        options={{
+          href: showParentTabs ? undefined : null,
+          title: 'My Stuff',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? 'person' : 'person-outline'}
