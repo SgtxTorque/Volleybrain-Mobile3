@@ -885,14 +885,6 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
             <View style={s.backBtn} />
           </View>
         )}
-        {embedded && (
-          <View style={s.embeddedHeader}>
-            <Text style={s.headerTitle}>Team</Text>
-            <TouchableOpacity onPress={() => router.push('/(tabs)/chats' as any)} style={s.chatIconBtn}>
-              <Ionicons name="chatbubbles-outline" size={22} color={colors.text} />
-            </TouchableOpacity>
-          </View>
-        )}
 
         {loadingTeams ? (
           <View style={s.centered}>
@@ -960,9 +952,13 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
 
         {/* Post header: avatar + name + COACH badge + time ago + type badge */}
         <View style={s.postHeader}>
-          <View style={[s.postAvatar, { backgroundColor: avatarColor }]}>
-            <Text style={s.postAvatarText}>{initials}</Text>
-          </View>
+          {post.profiles?.avatar_url ? (
+            <Image source={{ uri: post.profiles.avatar_url }} style={s.postAvatar} />
+          ) : (
+            <View style={[s.postAvatar, { backgroundColor: avatarColor }]}>
+              <Text style={s.postAvatarText}>{initials}</Text>
+            </View>
+          )}
           <View style={s.postHeaderInfo}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               <Text style={s.postAuthor}>{authorName}</Text>
@@ -1241,30 +1237,6 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
           </TouchableOpacity>
           <Text style={s.headerTitle}>Team Wall</Text>
           <View style={s.backBtn} />
-        </View>
-      ) : !feedOnly && embedded ? (
-        <View style={s.embeddedHeader}>
-          <Text style={s.headerTitle}>Team</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            {/* Team switcher (if multiple teams) */}
-            {userTeams.length > 1 && (
-              <TouchableOpacity
-                onPress={() => {
-                  setTeamId(null);
-                  setTeam(null);
-                  setPosts([]);
-                  setRoster([]);
-                  setEvents([]);
-                }}
-                style={s.chatIconBtn}
-              >
-                <Ionicons name="swap-horizontal" size={22} color={colors.text} />
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity onPress={() => router.push('/(tabs)/chats' as any)} style={s.chatIconBtn}>
-              <Ionicons name="chatbubbles-outline" size={22} color={colors.text} />
-            </TouchableOpacity>
-          </View>
         </View>
       ) : null}
 
@@ -1672,24 +1644,6 @@ const createStyles = (colors: any) =>
       ...displayTextStyle,
       fontSize: 28,
       color: colors.text,
-    },
-
-    // Header (embedded/tab mode)
-    embeddedHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: 20,
-      paddingTop: 16,
-      paddingBottom: 12,
-    },
-    chatIconBtn: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: colors.bgSecondary,
-      justifyContent: 'center',
-      alignItems: 'center',
     },
 
     // Team Picker

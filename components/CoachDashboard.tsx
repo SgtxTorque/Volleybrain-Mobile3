@@ -276,41 +276,6 @@ export default function CoachDashboard() {
 
       setTeams(teamsWithCounts);
       if (activeTeamIndex >= teamsWithCounts.length) setActiveTeamIndex(0);
-
-      // Fetch upcoming events
-      const teamIds = teamsWithCounts.map(t => t.id);
-      if (teamIds.length > 0) {
-        const now = new Date();
-        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-
-        const { data: events } = await supabase
-          .from('schedule_events')
-          .select(`
-            id, title, event_type, event_date, event_time, start_time,
-            location, location_type, opponent, team_id, teams (name)
-          `)
-          .in('team_id', teamIds)
-          .gte('event_date', today)
-          .order('event_date', { ascending: true })
-          .order('start_time', { ascending: true })
-          .limit(20);
-
-        setUpcomingEvents((events || []).map(e => ({
-          id: e.id,
-          title: e.title,
-          type: e.event_type as 'game' | 'practice',
-          date: e.event_date,
-          time: e.start_time || e.event_time || '',
-          location: e.location,
-          opponent: e.opponent,
-          team_name: (e.teams as any)?.name || '',
-          team_id: e.team_id,
-          location_type: e.location_type || null,
-        })));
-      }
-
-      // Chat previews
-      await fetchChatPreviews();
     } catch (error) {
       if (__DEV__) console.error('Error fetching coach data:', error);
     } finally {
@@ -318,14 +283,20 @@ export default function CoachDashboard() {
     }
   };
 
-  const fetchChatPreviews = async () => {
+  const fetchChatPreviews = async (teamId?: string) => {
     if (!user?.id) return;
     try {
-      const { data: memberships } = await supabase
+      let query = supabase
         .from('channel_members')
-        .select('channel_id, last_read_at, chat_channels!inner(id, name, channel_type)')
+        .select('channel_id, last_read_at, chat_channels!inner(id, name, channel_type, team_id)')
         .eq('user_id', user.id)
         .is('left_at', null);
+
+      if (teamId) {
+        query = query.eq('chat_channels.team_id', teamId);
+      }
+
+      const { data: memberships } = await query;
 
       if (!memberships || memberships.length === 0) {
         setChatPreviews([]);
@@ -385,6 +356,38 @@ export default function CoachDashboard() {
   const fetchTeamSpecificData = async (teamId: string) => {
     if (!workingSeason?.id) return;
     try {
+      // Upcoming events for this team
+      const nowDate = new Date();
+      const todayDate = `${nowDate.getFullYear()}-${String(nowDate.getMonth() + 1).padStart(2, '0')}-${String(nowDate.getDate()).padStart(2, '0')}`;
+      const { data: events } = await supabase
+        .from('schedule_events')
+        .select(`
+          id, title, event_type, event_date, event_time, start_time,
+          location, location_type, opponent, team_id, teams (name)
+        `)
+        .eq('team_id', teamId)
+        .gte('event_date', todayDate)
+        .order('event_date', { ascending: true })
+        .order('start_time', { ascending: true })
+        .limit(10);
+
+      const mappedEvents: UpcomingEvent[] = (events || []).map(e => ({
+        id: e.id,
+        title: e.title,
+        type: e.event_type as 'game' | 'practice',
+        date: e.event_date,
+        time: e.start_time || e.event_time || '',
+        location: e.location,
+        opponent: e.opponent,
+        team_name: (e.teams as any)?.name || '',
+        team_id: e.team_id,
+        location_type: e.location_type || null,
+      }));
+      setUpcomingEvents(mappedEvents);
+
+      // Chat preview for this team
+      await fetchChatPreviews(teamId);
+
       // Attendance rate (last 5 events)
       const { data: recentEvents } = await supabase
         .from('schedule_events')
@@ -479,7 +482,7 @@ export default function CoachDashboard() {
       }
 
       // Game prep progress
-      const gameEvents = upcomingEvents.filter(e => e.type === 'game' && e.team_id === teamId);
+      const gameEvents = mappedEvents.filter(e => e.type === 'game');
       if (gameEvents.length > 0) {
         const gameIds = gameEvents.map(e => e.id);
         const [rsvpRes, attendRes, lineupRes] = await Promise.all([
@@ -513,9 +516,7 @@ export default function CoachDashboard() {
   // ============================================
 
   const activeTeam = teams[activeTeamIndex] || null;
-  const activeTeamEvents = activeTeam
-    ? upcomingEvents.filter(e => e.team_id === activeTeam.id)
-    : upcomingEvents;
+  const activeTeamEvents = upcomingEvents;
 
   const totalWins = activeTeam ? activeTeam.wins : teams.reduce((sum, t) => sum + t.wins, 0);
   const totalLosses = activeTeam ? activeTeam.losses : teams.reduce((sum, t) => sum + t.losses, 0);
@@ -609,10 +610,11 @@ export default function CoachDashboard() {
       {/* ================================================================ */}
       {activeTeam && (
         <View style={s.sectionBlock}>
-          <View style={{ paddingHorizontal: 16 }}>
-            <SectionHeader title="Season Record" action="Details" onAction={() => router.push('/standings' as any)} />
-          </View>
-          <View style={[s.progressCard, { marginHorizontal: 16 }]}>
+          <TouchableOpacity
+            style={[s.progressCard, { marginHorizontal: 16 }]}
+            onPress={() => router.push('/standings' as any)}
+            activeOpacity={0.8}
+          >
             <View style={s.progressHeader}>
               <Ionicons name="trophy-outline" size={16} color={colors.teal} />
               <Text style={s.progressTitle}>SEASON RECORD</Text>
@@ -668,7 +670,7 @@ export default function CoachDashboard() {
                 </View>
               )}
             </View>
-          </View>
+          </TouchableOpacity>
         </View>
       )}
 
