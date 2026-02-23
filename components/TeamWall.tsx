@@ -97,6 +97,7 @@ type TabKey = 'feed' | 'roster' | 'schedule';
 type TeamWallProps = {
   teamId?: string | null;
   embedded?: boolean;
+  feedOnly?: boolean;
 };
 
 // =============================================================================
@@ -274,7 +275,7 @@ const SkeletonPostCard = ({ colors }: { colors: any }) => (
 // MAIN COMPONENT
 // =============================================================================
 
-export default function TeamWall({ teamId: propTeamId, embedded = false }: TeamWallProps) {
+export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnly = false }: TeamWallProps) {
   const { colors } = useTheme();
   const { user, profile, isAdmin } = useAuth();
   const { workingSeason } = useSeason();
@@ -330,6 +331,11 @@ export default function TeamWall({ teamId: propTeamId, embedded = false }: TeamW
   // New posts pill
   const [newPostsCount, setNewPostsCount] = useState(0);
   const feedListRef = useRef<FlatList>(null);
+
+  // Force feed tab when feedOnly mode
+  useEffect(() => {
+    if (feedOnly) setActiveTab('feed');
+  }, [feedOnly]);
 
   // Sync resolved team ID when context changes (embedded mode)
   useEffect(() => {
@@ -1202,12 +1208,12 @@ export default function TeamWall({ teamId: propTeamId, embedded = false }: TeamW
   // MAIN RENDER
   // =============================================================================
 
-  const Wrapper = embedded ? View : SafeAreaView;
+  const Wrapper = (embedded || feedOnly) ? View : SafeAreaView;
 
   return (
     <Wrapper style={s.container}>
-      {/* Header */}
-      {!embedded ? (
+      {/* Header — hidden in feedOnly mode */}
+      {!feedOnly && !embedded ? (
         <View style={s.header}>
           <TouchableOpacity
             onPress={() => {
@@ -1228,7 +1234,7 @@ export default function TeamWall({ teamId: propTeamId, embedded = false }: TeamW
           <Text style={s.headerTitle}>Team Wall</Text>
           <View style={s.backBtn} />
         </View>
-      ) : (
+      ) : !feedOnly && embedded ? (
         <View style={s.embeddedHeader}>
           <Text style={s.headerTitle}>Team</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -1252,9 +1258,10 @@ export default function TeamWall({ teamId: propTeamId, embedded = false }: TeamW
             </TouchableOpacity>
           </View>
         </View>
-      )}
+      ) : null}
 
-      {/* Team Banner with team color stripe */}
+      {/* Team Banner — hidden in feedOnly mode */}
+      {!feedOnly && (
       <View style={[s.teamBanner, { borderLeftColor: teamColor }]}>
         <View style={[s.teamBannerStripe, { backgroundColor: teamColor }]} />
         <View style={s.teamBannerContent}>
@@ -1272,8 +1279,10 @@ export default function TeamWall({ teamId: propTeamId, embedded = false }: TeamW
           </View>
         </View>
       </View>
+      )}
 
-      {/* Tab Navigation with team color active indicator */}
+      {/* Tab Navigation — hidden in feedOnly mode */}
+      {!feedOnly && (
       <View style={s.tabBar}>
         {(['feed', 'roster', 'schedule'] as TabKey[]).map((tab) => {
           const isActive = activeTab === tab;
@@ -1306,9 +1315,10 @@ export default function TeamWall({ teamId: propTeamId, embedded = false }: TeamW
           );
         })}
       </View>
+      )}
 
       {/* Tab Content */}
-      {activeTab === 'feed' && (
+      {(feedOnly || activeTab === 'feed') && (
         <View style={s.tabContent}>
           {loadingPosts && posts.length === 0 ? (
             <ScrollView style={s.tabContent} contentContainerStyle={s.listContent}>
@@ -1394,7 +1404,7 @@ export default function TeamWall({ teamId: propTeamId, embedded = false }: TeamW
         </View>
       )}
 
-      {activeTab === 'roster' && (
+      {!feedOnly && activeTab === 'roster' && (
         <View style={s.tabContent}>
           {loadingRoster ? (
             <View style={s.centered}>
@@ -1418,7 +1428,7 @@ export default function TeamWall({ teamId: propTeamId, embedded = false }: TeamW
         </View>
       )}
 
-      {activeTab === 'schedule' && (
+      {!feedOnly && activeTab === 'schedule' && (
         <View style={s.tabContent}>
           {loadingSchedule ? (
             <View style={s.centered}>
