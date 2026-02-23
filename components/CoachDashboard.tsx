@@ -422,8 +422,6 @@ export default function CoachDashboard() {
       }
 
       // RSVP count for next event
-      const nowLocal = new Date();
-      const today = `${nowLocal.getFullYear()}-${String(nowLocal.getMonth() + 1).padStart(2, '0')}-${String(nowLocal.getDate()).padStart(2, '0')}`;
       const { data: nextEvents } = await supabase
         .from('schedule_events')
         .select('id')
