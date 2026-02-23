@@ -69,6 +69,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 20,
     alignItems: 'center',
+    maxWidth: 140,
   },
   tabText: {
     fontSize: 11,

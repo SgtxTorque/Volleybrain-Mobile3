@@ -615,37 +615,37 @@ export default function CoachChatScreen() {
         <TouchableOpacity style={s.fabScrim} activeOpacity={1} onPress={() => setFabExpanded(false)} />
       )}
 
-      {/* FAB menu */}
+      {/* FAB menu — label LEFT, icon RIGHT, dark pill labels */}
       {fabExpanded && (
         <View style={s.fabMenu}>
           <TouchableOpacity
             style={s.fabMenuItem}
             onPress={() => { setFabExpanded(false); router.push('/blast-composer' as any); }}
           >
+            <Text style={s.fabMenuLabel}>Blast</Text>
             <View style={[s.fabMenuIcon, { backgroundColor: '#FFB347' }]}>
               <Ionicons name="megaphone" size={20} color="#FFF" />
             </View>
-            <Text style={[s.fabMenuLabel, { color: colors.text }]}>Blast</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={s.fabMenuItem}
             onPress={() => { setFabExpanded(false); setShowNewChannel(true); }}
           >
+            <Text style={s.fabMenuLabel}>New Channel</Text>
             <View style={[s.fabMenuIcon, { backgroundColor: colors.info || colors.primary }]}>
               <Ionicons name="people" size={20} color="#FFF" />
             </View>
-            <Text style={[s.fabMenuLabel, { color: colors.text }]}>New Channel</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={s.fabMenuItem}
             onPress={() => { setFabExpanded(false); setShowDmModal(true); }}
           >
+            <Text style={s.fabMenuLabel}>New Message</Text>
             <View style={[s.fabMenuIcon, { backgroundColor: colors.primary }]}>
               <Ionicons name="chatbubble" size={20} color="#FFF" />
             </View>
-            <Text style={[s.fabMenuLabel, { color: colors.text }]}>New Message</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -886,14 +886,19 @@ function createStyles(colors: any) {
       gap: 12, zIndex: 15,
     },
     fabMenuItem: {
-      flexDirection: 'row', alignItems: 'center', gap: 10,
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 10,
     },
     fabMenuIcon: {
       width: 44, height: 44, borderRadius: 22,
       justifyContent: 'center', alignItems: 'center',
       ...shadows.card,
     },
-    fabMenuLabel: { fontSize: 14, fontWeight: '600' },
+    fabMenuLabel: {
+      fontSize: 14, fontWeight: '600', color: '#FFFFFF',
+      backgroundColor: 'rgba(0,0,0,0.75)',
+      paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16,
+      overflow: 'hidden',
+    },
 
     // Modal
     overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },

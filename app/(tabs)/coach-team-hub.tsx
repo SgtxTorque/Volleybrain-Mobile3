@@ -4,6 +4,7 @@ import SectionHeader from '@/components/ui/SectionHeader';
 import TeamWall from '@/components/TeamWall';
 import { useAuth } from '@/lib/auth';
 import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
+import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -60,6 +61,7 @@ const QUICK_LINKS: {
 export default function CoachTeamHubScreen() {
   const { colors } = useTheme();
   const { user } = useAuth();
+  const { workingSeason } = useSeason();
   const router = useRouter();
   const s = createStyles(colors);
 
@@ -74,26 +76,64 @@ export default function CoachTeamHubScreen() {
   const teamColor = selectedTeam?.teamColor || colors.primary;
 
   // ---------------------------------------------------------------------------
-  // Data: resolve coach → teams via team_staff
+  // Data: resolve coach → teams via team_staff + team_coaches + coaches fallback
   // ---------------------------------------------------------------------------
 
   const fetchCoachTeams = useCallback(async () => {
-    if (!user?.id) {
+    if (!user?.id || !workingSeason?.id) {
       setLoading(false);
       return;
     }
 
     try {
+      // Source 1: team_staff
       const { data: staffLinks } = await supabase
         .from('team_staff')
-        .select('team_id, staff_role, teams(id, name, color)')
+        .select('team_id, staff_role, teams(id, name, color, season_id)')
         .eq('user_id', user.id)
         .eq('is_active', true);
 
-      const teams: CoachTeam[] = (staffLinks || [])
+      // Source 2: team_coaches
+      const { data: coachLinks } = await supabase
+        .from('team_coaches')
+        .select('team_id, role, teams(id, name, color, season_id)')
+        .eq('coach_id', user.id);
+
+      // Merge + deduplicate by team_id
+      const merged: any[] = [...(staffLinks || [])];
+      const existingIds = new Set(merged.map(s => (s.teams as any)?.id).filter(Boolean));
+      for (const cl of (coachLinks || [])) {
+        const tid = (cl.teams as any)?.id;
+        if (tid && !existingIds.has(tid)) {
+          merged.push({ ...cl, staff_role: cl.role });
+          existingIds.add(tid);
+        }
+      }
+
+      // Source 3: coaches → all season teams (last resort)
+      if (merged.length === 0) {
+        const { data: coachRecord } = await supabase
+          .from('coaches')
+          .select('id')
+          .eq('profile_id', user.id)
+          .limit(1);
+        if (coachRecord && coachRecord.length > 0) {
+          const { data: allTeams } = await supabase
+            .from('teams')
+            .select('id, name, color, season_id')
+            .eq('season_id', workingSeason.id)
+            .order('name');
+          for (const t of (allTeams || [])) {
+            merged.push({ teams: t, staff_role: 'head_coach' });
+          }
+        }
+      }
+
+      // Filter to working season
+      const teams: CoachTeam[] = merged
         .map((sl: any) => {
           const t = sl.teams as any;
-          if (!t?.id) return null;
+          if (!t?.id || t.season_id !== workingSeason.id) return null;
           return {
             teamId: t.id,
             teamName: t.name || 'Team',
@@ -112,7 +152,7 @@ export default function CoachTeamHubScreen() {
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [user?.id, workingSeason?.id]);
 
   // ---------------------------------------------------------------------------
   // Data: W-L record from standings view
