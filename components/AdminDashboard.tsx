@@ -1,5 +1,4 @@
 import { useAuth } from '@/lib/auth';
-import { getDefaultHeroImage } from '@/lib/default-images';
 import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
@@ -8,7 +7,6 @@ import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -18,7 +16,6 @@ import {
   Modal,
   Platform,
   RefreshControl,
-  Image,
   ScrollView,
   Share,
   StyleSheet,
@@ -28,12 +25,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import AdminContextBar from './AdminContextBar';
-import Badge from './ui/Badge';
-import Card from './ui/Card';
 import AppHeaderBar from './ui/AppHeaderBar';
 import SectionHeader from './ui/SectionHeader';
-import StatBox from './ui/StatBox';
+
+const SNAPSHOT_CARD_WIDTH = 200;
 
 // ============================================
 // TYPES
@@ -62,23 +57,21 @@ type Team = {
   name: string;
 };
 
+type TeamSnapshot = {
+  id: string;
+  name: string;
+  color: string | null;
+  playerCount: number;
+  wins: number;
+  losses: number;
+  nextEventDate: string | null;
+};
+
 type RecentActivity = {
   id: string;
   text: string;
   timestamp: string;
   color: string;
-};
-
-type TodaysGame = {
-  id: string;
-  team_name: string;
-  team_color: string | null;
-  opponent: string | null;
-  event_time: string | null;
-  venue_name: string | null;
-  venue_address: string | null;
-  location: string | null;
-  game_status: string | null;
 };
 
 // ============================================
@@ -107,8 +100,6 @@ export default function AdminDashboard() {
 
   // Registration stats
   const [newRegistrationCount, setNewRegistrationCount] = useState(0);
-  const [todaysGames, setTodaysGames] = useState<TodaysGame[]>([]);
-  const [tomorrowGames, setTomorrowGames] = useState<TodaysGame[]>([]);
   const [approvalCount, setApprovalCount] = useState(0);
   const [unrosteredCount, setUnrosteredCount] = useState(0);
 
@@ -128,10 +119,7 @@ export default function AdminDashboard() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
   const [teamCodeDescription, setTeamCodeDescription] = useState('');
-  const [teamRevenueBreakdown, setTeamRevenueBreakdown] = useState<{
-    teamId: string; teamName: string; collected: number; expected: number;
-  }[]>([]);
-  const [showTeamBreakdown, setShowTeamBreakdown] = useState(false);
+  const [teamSnapshots, setTeamSnapshots] = useState<TeamSnapshot[]>([]);
   const [blastCount, setBlastCount] = useState(0);
 
   // ============================================
@@ -162,7 +150,6 @@ export default function AdminDashboard() {
     const paidTotal = (payments || []).filter(p => p.paid).reduce((sum, p) => sum + p.amount, 0);
     const outstanding = expectedTotal - paidTotal;
 
-    // Calculate families paid/pending
     const paidFamilies = new Set((payments || []).filter(p => p.paid).map(p => p.player_id)).size;
     const allFamilies = players?.length || 0;
 
@@ -178,7 +165,6 @@ export default function AdminDashboard() {
       outstanding: outstanding,
     });
 
-    // Fetch new registration count from registrations table
     const { count: newRegCount } = await supabase
       .from('registrations')
       .select('*', { count: 'exact', head: true })
@@ -187,7 +173,6 @@ export default function AdminDashboard() {
 
     setNewRegistrationCount(newRegCount || 0);
 
-    // Add registration alert if there are new registrations
     if (newRegCount && newRegCount > 0) {
       alertList.push({
         text: newRegCount + ' new registration' + (newRegCount > 1 ? 's' : '') + ' awaiting review',
@@ -198,7 +183,6 @@ export default function AdminDashboard() {
       });
     }
 
-    // Check for players needing team assignment (active status in registrations)
     const { count: needsTeamCount } = await supabase
       .from('registrations')
       .select('*', { count: 'exact', head: true })
@@ -216,7 +200,6 @@ export default function AdminDashboard() {
       });
     }
 
-    // Check for pending payments (approved but not paid)
     const { count: pendingPaymentCount } = await supabase
       .from('registrations')
       .select('*', { count: 'exact', head: true })
@@ -246,7 +229,6 @@ export default function AdminDashboard() {
     setApprovalCount(approvalCt || 0);
     if (approvalCt && approvalCt > 0) alertList.push({ text: approvalCt + ' account' + (approvalCt > 1 ? 's' : '') + ' awaiting approval', route: '/users', type: 'warning', borderColor: colors.info });
 
-    // Waiver compliance alert
     const { data: requiredWaivers } = await supabase
       .from('waiver_templates')
       .select('id')
@@ -282,7 +264,6 @@ export default function AdminDashboard() {
       }
     }
 
-    // Games needing stats entry alert
     const { count: needsStatsCount } = await supabase
       .from('schedule_events')
       .select('*', { count: 'exact', head: true })
@@ -301,7 +282,6 @@ export default function AdminDashboard() {
       });
     }
 
-    // Sort alerts by urgency (errors first, then by count desc)
     alertList.sort((a, b) => {
       const pri: Record<string, number> = { error: 0, warning: 1, success: 2 };
       return (pri[a.type] ?? 1) - (pri[b.type] ?? 1) || ((b.count || 0) - (a.count || 0));
@@ -310,7 +290,6 @@ export default function AdminDashboard() {
     if (alertList.length === 0) alertList.push({ text: 'All clear! Everything is running smoothly.', route: null, type: 'success' });
     setAlerts(alertList);
 
-    // Fetch games played and avg attendance
     const { count: gamesCount } = await supabase
       .from('schedule_events')
       .select('*', { count: 'exact', head: true })
@@ -319,16 +298,13 @@ export default function AdminDashboard() {
       .not('game_result', 'is', null);
     setGamesPlayedCount(gamesCount || 0);
 
-    // Fetch blast count
     const { count: sentBlasts } = await supabase
       .from('messages')
       .select('*', { count: 'exact', head: true })
       .eq('season_id', workingSeason.id);
     setBlastCount(sentBlasts || 0);
 
-    // Fetch recent activity
     await fetchRecentActivity(orgId);
-
     setLoading(false);
   };
 
@@ -337,7 +313,6 @@ export default function AdminDashboard() {
 
     const activities: RecentActivity[] = [];
 
-    // Recent registrations
     const { data: recentRegs } = await supabase
       .from('registrations')
       .select('id, created_at, players (first_name, last_name)')
@@ -355,7 +330,6 @@ export default function AdminDashboard() {
       });
     });
 
-    // Recent payments
     const { data: recentPayments } = await supabase
       .from('payments')
       .select('id, amount, created_at, players (first_name, last_name)')
@@ -374,7 +348,6 @@ export default function AdminDashboard() {
       });
     });
 
-    // Recent profile approvals pending
     const { data: recentProfiles } = await supabase
       .from('profiles')
       .select('id, full_name, created_at')
@@ -392,7 +365,6 @@ export default function AdminDashboard() {
       });
     });
 
-    // Sort by timestamp desc and limit to 5
     activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     setRecentActivity(activities.slice(0, 5));
   };
@@ -422,143 +394,83 @@ export default function AdminDashboard() {
     setTeams(data || []);
   };
 
-  const fetchTeamRevenueBreakdown = async () => {
-    if (!workingSeason) return;
-    try {
-      // 1. Get teams
-      const { data: seasonTeams } = await supabase
-        .from('teams')
-        .select('id, name')
-        .eq('season_id', workingSeason.id)
-        .order('name');
-      if (!seasonTeams || seasonTeams.length === 0) { setTeamRevenueBreakdown([]); return; }
+  const fetchTeamSnapshots = async () => {
+    if (!workingSeason) { setTeamSnapshots([]); return; }
 
-      // 2. Get team_players
-      const teamIds = seasonTeams.map(t => t.id);
-      const { data: teamPlayers } = await supabase
-        .from('team_players')
-        .select('team_id, player_id')
-        .in('team_id', teamIds);
-
-      // Build team->player map
-      const teamPlayerMap = new Map<string, string[]>();
-      (teamPlayers || []).forEach(tp => {
-        const pids = teamPlayerMap.get(tp.team_id) || [];
-        pids.push(tp.player_id);
-        teamPlayerMap.set(tp.team_id, pids);
-      });
-
-      // 3. Get season fees for expected calc
-      const { data: seasonFees } = await supabase
-        .from('season_fees')
-        .select('amount')
-        .eq('season_id', workingSeason.id);
-      const feePerPlayer = (seasonFees || []).reduce((sum, f) => sum + (f.amount || 0), 0) || (workingSeason.fee_registration || 335);
-
-      // 4. Get payments (already have them from fetchStats, but fetch again for clarity)
-      const allPlayerIds = [...new Set((teamPlayers || []).map(tp => tp.player_id))];
-      let paymentsMap = new Map<string, number>();
-      if (allPlayerIds.length > 0) {
-        const { data: payments } = await supabase
-          .from('payments')
-          .select('player_id, amount, paid')
-          .in('player_id', allPlayerIds)
-          .eq('season_id', workingSeason.id)
-          .eq('paid', true);
-        (payments || []).forEach(p => {
-          paymentsMap.set(p.player_id, (paymentsMap.get(p.player_id) || 0) + (p.amount || 0));
-        });
-      }
-
-      // 5. Build breakdown
-      const breakdown = seasonTeams.map(team => {
-        const playerIds = teamPlayerMap.get(team.id) || [];
-        const expected = playerIds.length * feePerPlayer;
-        const collected = playerIds.reduce((sum, pid) => sum + (paymentsMap.get(pid) || 0), 0);
-        return { teamId: team.id, teamName: team.name, collected, expected };
-      });
-
-      setTeamRevenueBreakdown(breakdown);
-    } catch (err) {
-      if (__DEV__) console.error('Team revenue breakdown error:', err);
-    }
-  };
-
-  const fetchTodaysGames = async () => {
-    if (!workingSeason) { setTodaysGames([]); setTomorrowGames([]); return; }
-    const now = new Date();
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
-
-    const { data: todayData } = await supabase
-      .from('schedule_events')
-      .select('id, opponent, opponent_name, event_time, venue_name, venue_address, location, game_status, team_id, teams(name, color)')
+    const { data: teamsData } = await supabase
+      .from('teams')
+      .select('id, name, color')
       .eq('season_id', workingSeason.id)
+      .order('name');
+
+    if (!teamsData || teamsData.length === 0) { setTeamSnapshots([]); return; }
+
+    const teamIds = teamsData.map(t => t.id);
+
+    // Batch: player counts
+    const { data: teamPlayers } = await supabase
+      .from('team_players')
+      .select('team_id')
+      .in('team_id', teamIds);
+
+    const playerCountMap = new Map<string, number>();
+    (teamPlayers || []).forEach(tp => {
+      playerCountMap.set(tp.team_id, (playerCountMap.get(tp.team_id) || 0) + 1);
+    });
+
+    // Batch: W-L records
+    const { data: gameResults } = await supabase
+      .from('schedule_events')
+      .select('team_id, game_result')
+      .in('team_id', teamIds)
       .eq('event_type', 'game')
-      .eq('event_date', todayStr)
-      .order('event_time', { ascending: true });
+      .not('game_result', 'is', null);
 
-    const mapGame = (g: any): TodaysGame => ({
-      id: g.id,
-      team_name: g.teams?.name || 'Unknown',
-      team_color: g.teams?.color || null,
-      opponent: g.opponent_name || g.opponent || null,
-      event_time: g.event_time,
-      venue_name: g.venue_name,
-      venue_address: g.venue_address,
-      location: g.location,
-      game_status: g.game_status,
+    const winsMap = new Map<string, number>();
+    const lossesMap = new Map<string, number>();
+    (gameResults || []).forEach((g: any) => {
+      if (g.game_result === 'win') winsMap.set(g.team_id, (winsMap.get(g.team_id) || 0) + 1);
+      else if (g.game_result === 'loss') lossesMap.set(g.team_id, (lossesMap.get(g.team_id) || 0) + 1);
     });
 
-    const todayMapped = (todayData || []).map(mapGame);
-    setTodaysGames(todayMapped);
+    // Batch: next events
+    const today = new Date().toISOString().split('T')[0];
+    const { data: nextEvents } = await supabase
+      .from('schedule_events')
+      .select('team_id, event_date')
+      .in('team_id', teamIds)
+      .gte('event_date', today)
+      .order('event_date', { ascending: true });
 
-    if (todayMapped.length === 0) {
-      const { data: tomorrowData } = await supabase
-        .from('schedule_events')
-        .select('id, opponent, opponent_name, event_time, venue_name, venue_address, location, game_status, team_id, teams(name, color)')
-        .eq('season_id', workingSeason.id)
-        .eq('event_type', 'game')
-        .eq('event_date', tomorrowStr)
-        .order('event_time', { ascending: true });
-
-      setTomorrowGames((tomorrowData || []).map(mapGame));
-    } else {
-      setTomorrowGames([]);
-    }
-  };
-
-  const formatGameTime = (time: string | null): string => {
-    if (!time) return 'TBD';
-    const [h, m] = time.split(':').map(Number);
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-    return hour12 + ':' + String(m).padStart(2, '0') + ' ' + ampm;
-  };
-
-  const openGameMaps = (address: string) => {
-    const url = Platform.select({
-      ios: 'http://maps.apple.com/?daddr=' + encodeURIComponent(address),
-      android: 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(address),
-      default: 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(address),
+    const nextEventMap = new Map<string, string>();
+    (nextEvents || []).forEach((e: any) => {
+      if (!nextEventMap.has(e.team_id)) nextEventMap.set(e.team_id, e.event_date);
     });
-    if (url) Linking.openURL(url);
+
+    const snapshots = teamsData.map(team => ({
+      id: team.id,
+      name: team.name,
+      color: team.color || null,
+      playerCount: playerCountMap.get(team.id) || 0,
+      wins: winsMap.get(team.id) || 0,
+      losses: lossesMap.get(team.id) || 0,
+      nextEventDate: nextEventMap.get(team.id) || null,
+    }));
+
+    setTeamSnapshots(snapshots);
   };
 
   useEffect(() => {
     if (workingSeason) {
       fetchStats();
       fetchTeams();
-      fetchTodaysGames();
-      fetchTeamRevenueBreakdown();
+      fetchTeamSnapshots();
     }
     fetchPendingInvites();
   }, [workingSeason]);
 
   // ============================================
-  // INVITE FUNCTIONS (preserved from original)
+  // INVITE FUNCTIONS
   // ============================================
 
   const generateInviteCode = (): string => {
@@ -712,7 +624,7 @@ export default function AdminDashboard() {
   };
 
   // ============================================
-  // SEASON FUNCTIONS (preserved from original)
+  // SEASON FUNCTIONS
   // ============================================
 
   const createSeason = async () => {
@@ -770,7 +682,7 @@ export default function AdminDashboard() {
   };
 
   // ============================================
-  // HANDLERS
+  // HANDLERS & HELPERS
   // ============================================
 
   const handleAlertPress = (alert: AlertItem) => {
@@ -785,6 +697,22 @@ export default function AdminDashboard() {
 
   const getAlertColor = (type: AlertItem['type']) => {
     switch (type) { case 'success': return colors.success; case 'warning': return colors.warning; case 'error': return colors.danger; }
+  };
+
+  const getAlertIcon = (text: string): string => {
+    if (text.includes('waiver')) return 'shield-checkmark';
+    if (text.includes('stats')) return 'stats-chart';
+    if (text.includes('registration') || text.includes('Registration')) return 'document-text';
+    if (text.includes('payment') || text.includes('outstanding')) return 'card';
+    if (text.includes('approval')) return 'person-circle';
+    if (text.includes('invite')) return 'person-circle';
+    if (text.includes('team assignment') || text.includes('No teams')) return 'people';
+    if (text.includes('ready for team')) return 'person-add';
+    if (text.includes('player') && !text.includes('waiver')) return 'people';
+    if (text.includes('coach')) return 'clipboard';
+    if (text.includes('No season')) return 'calendar';
+    if (text.includes('All clear')) return 'checkmark-circle';
+    return 'alert-circle';
   };
 
   const getStatusColor = (status: string) => {
@@ -818,21 +746,21 @@ export default function AdminDashboard() {
     return then.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
+  const formatShortDate = (dateStr: string): string => {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
     await refreshSeasons();
-    await Promise.all([fetchStats(), fetchPendingInvites(), fetchTodaysGames()]);
+    await Promise.all([fetchStats(), fetchPendingInvites(), fetchTeamSnapshots()]);
     setRefreshing(false);
   };
 
-  // Season switcher already in hero section — no need for separate banner
   const revenuePercent = totalExpected > 0 ? Math.round((totalCollected / totalExpected) * 100) : 0;
 
   const s = createStyles(colors, sportColors);
-
-  // ============================================
-  // LOADING STATE
-  // ============================================
 
   const userInitials = (profile?.full_name || 'A')
     .split(' ')
@@ -841,31 +769,31 @@ export default function AdminDashboard() {
     .toUpperCase()
     .slice(0, 2);
 
+  // ============================================
+  // LOADING STATE
+  // ============================================
+
   if (loading && !workingSeason) {
     return (
       <View style={s.scroll}>
-        <AdminContextBar />
         <AppHeaderBar initials={userInitials} />
-        {/* Skeleton hero */}
-        <View style={[s.heroGradient, { backgroundColor: '#2C5F7C', opacity: 0.6 }]}>
-          <View style={{ height: 20, width: 180, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 4, marginBottom: 8 }} />
-          <View style={{ height: 14, width: 120, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 4, marginBottom: 20 }} />
-          <View style={{ flexDirection: 'row', gap: 16 }}>
-            <View style={{ height: 28, width: 40, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 4 }} />
-            <View style={{ height: 28, width: 40, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 4 }} />
-            <View style={{ height: 28, width: 40, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 4 }} />
-          </View>
+        <View style={{ padding: spacing.screenPadding, gap: 12 }}>
+          {[1, 2, 3].map(i => (
+            <View key={i} style={{
+              backgroundColor: colors.glassCard,
+              borderRadius: radii.card,
+              height: 72,
+              borderWidth: 1,
+              borderColor: colors.glassBorder,
+            }} />
+          ))}
         </View>
-        {/* Skeleton cards */}
-        {[1, 2, 3].map(i => (
-          <View key={i} style={{ backgroundColor: '#FFF', borderRadius: radii.card, height: 72, marginHorizontal: spacing.screenPadding, marginBottom: 10, ...shadows.card }} />
-        ))}
       </View>
     );
   }
 
   // ============================================
-  // RENDER
+  // RENDER — Command Center
   // ============================================
 
   return (
@@ -874,345 +802,268 @@ export default function AdminDashboard() {
       showsVerticalScrollIndicator={false}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
     >
-      {/* Context bar + header */}
-      <AdminContextBar />
       <AppHeaderBar initials={userInitials} />
 
-      {/* HERO — Gradient Club Overview */}
-      <View style={s.heroGradient}>
-        <Image
-          source={getDefaultHeroImage(activeSport?.name)}
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' }}
-          resizeMode="cover"
-        />
-        <LinearGradient
-          colors={['rgba(44,95,124,0.55)', 'rgba(27,40,56,0.7)']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
-        />
-        <View style={s.heroTopRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={s.heroOrgName}>{organization?.name || 'Organization'}</Text>
-            <TouchableOpacity style={s.heroSeasonRow} onPress={() => setShowSeasonPicker(true)}>
-              <Text style={s.heroSeasonName}>{workingSeason?.name || 'No Season'}</Text>
-              {workingSeason && (
-                <Badge label={getStatusLabel(workingSeason.status)} color={getStatusColor(workingSeason.status)} />
-              )}
-              <Ionicons name="chevron-down" size={14} color="rgba(255,255,255,0.5)" style={{ marginLeft: 4 }} />
-            </TouchableOpacity>
-          </View>
-          <View style={s.heroSportBadge}>
-            <Text style={s.heroSportIcon}>{activeSport?.icon || '\uD83C\uDFD0'}</Text>
-          </View>
-        </View>
-        <View style={s.heroStatsRow}>
-          <TouchableOpacity style={s.heroStatItem} onPress={() => router.push('/players' as any)}>
-            <Text style={s.heroStatNum}>{stats.players}</Text>
-            <Text style={s.heroStatLabel}>Players</Text>
-          </TouchableOpacity>
-          <View style={s.heroStatDivider} />
-          <TouchableOpacity style={s.heroStatItem} onPress={() => router.push('/team-management' as any)}>
-            <Text style={s.heroStatNum}>{stats.teams}</Text>
-            <Text style={s.heroStatLabel}>Teams</Text>
-          </TouchableOpacity>
-          <View style={s.heroStatDivider} />
-          <TouchableOpacity style={s.heroStatItem} onPress={() => router.push('/coach-directory' as any)}>
-            <Text style={s.heroStatNum}>{stats.coaches}</Text>
-            <Text style={s.heroStatLabel}>Coaches</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* NEEDS ATTENTION */}
-      {alerts.length > 0 && alerts[0].type !== 'success' && (
-        <View style={{ paddingHorizontal: spacing.screenPadding }}>
-          <SectionHeader title="Needs Attention" />
-          <View style={s.attentionContainer}>
-            {alerts.map((alert, i) => (
-              <Card
-                key={i}
-                accentColor={alert.borderColor || getAlertColor(alert.type)}
-                onPress={() => handleAlertPress(alert)}
-                style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 0 }}
+      {/* ====== 1. ORG HEALTH BANNER ====== */}
+      <View style={s.sectionBlock}>
+        <TouchableOpacity
+          style={[s.orgBanner, { marginHorizontal: spacing.screenPadding }]}
+          onPress={() => router.push('/season-settings' as any)}
+          activeOpacity={0.8}
+        >
+          <View style={s.orgBannerHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.orgBannerName}>{organization?.name || 'Organization'}</Text>
+              <TouchableOpacity
+                style={s.orgBannerSeasonRow}
+                onPress={() => setShowSeasonPicker(true)}
+                activeOpacity={0.7}
               >
-                <View style={[s.attentionIconCircle, { backgroundColor: (alert.borderColor || getAlertColor(alert.type)) + '20' }]}>
-                  <Ionicons
-                    name={
-                      alert.text.includes('waiver') ? 'document-attach' :
-                      alert.text.includes('stats') ? 'stats-chart' :
-                      alert.text.includes('registration') ? 'document-text' :
-                      alert.text.includes('payment') || alert.text.includes('outstanding') ? 'cash' :
-                      alert.text.includes('approval') || alert.text.includes('invite') ? 'person' :
-                      alert.text.includes('team') ? 'shirt' :
-                      alert.text.includes('player') ? 'people' :
-                      alert.text.includes('coach') ? 'clipboard' :
-                      'alert-circle'
-                    }
-                    size={20}
-                    color={alert.borderColor || getAlertColor(alert.type)}
-                  />
-                </View>
-                <View style={s.attentionContent}>
-                  <Text style={s.attentionText}>{alert.text}</Text>
-                </View>
-                {(alert.route || alert.text.includes('No season') || alert.text.includes('pending invite')) && (
-                  <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                <Text style={s.orgBannerSeasonName}>{workingSeason?.name || 'No Season'}</Text>
+                {workingSeason && (
+                  <View style={[s.statusPill, { backgroundColor: getStatusColor(workingSeason.status) + '25' }]}>
+                    <Text style={[s.statusPillText, { color: getStatusColor(workingSeason.status) }]}>
+                      {getStatusLabel(workingSeason.status)}
+                    </Text>
+                  </View>
                 )}
-              </Card>
-            ))}
+                <Ionicons name="chevron-down" size={14} color={colors.textMuted} style={{ marginLeft: 4 }} />
+              </TouchableOpacity>
+            </View>
+            <View style={s.orgSportBadge}>
+              <Text style={{ fontSize: 22 }}>{activeSport?.icon || '\uD83C\uDFD0'}</Text>
+            </View>
           </View>
-        </View>
-      )}
 
-      {alerts.length === 1 && alerts[0].type === 'success' && (
+          <View style={s.orgBannerStatsRow}>
+            <View style={s.orgBannerStat}>
+              <Text style={s.orgBannerStatNum}>{stats.players}</Text>
+              <Text style={s.orgBannerStatLabel}>Players</Text>
+            </View>
+            <View style={s.orgBannerDivider} />
+            <View style={s.orgBannerStat}>
+              <Text style={s.orgBannerStatNum}>{stats.teams}</Text>
+              <Text style={s.orgBannerStatLabel}>Teams</Text>
+            </View>
+            <View style={s.orgBannerDivider} />
+            <View style={s.orgBannerStat}>
+              <Text style={s.orgBannerStatNum}>{stats.coaches}</Text>
+              <Text style={s.orgBannerStatLabel}>Coaches</Text>
+            </View>
+          </View>
+
+          <View style={s.regStatusRow}>
+            <View style={[s.regStatusDot, { backgroundColor: workingSeason?.registration_open ? colors.success : colors.textMuted }]} />
+            <Text style={[s.regStatusText, { color: workingSeason?.registration_open ? colors.success : colors.textMuted }]}>
+              Registration {workingSeason?.registration_open ? 'Open' : 'Closed'}
+            </Text>
+          </View>
+        </TouchableOpacity>
+      </View>
+
+      {/* ====== 2. NEEDS ATTENTION (always visible) ====== */}
+      <View style={s.sectionBlock}>
         <View style={{ paddingHorizontal: spacing.screenPadding }}>
           <SectionHeader title="Needs Attention" />
-          <Card accentColor={colors.success} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <Ionicons name="checkmark-circle" size={28} color={colors.success} />
-            <Text style={s.successText}>All clear! Everything is running smoothly.</Text>
-          </Card>
+        </View>
+        <View style={{ paddingHorizontal: spacing.screenPadding, gap: 8 }}>
+          {alerts.map((alert, i) => (
+            <TouchableOpacity
+              key={i}
+              style={s.alertCard}
+              onPress={() => handleAlertPress(alert)}
+              activeOpacity={0.7}
+            >
+              <View style={[s.alertIconCircle, { backgroundColor: (alert.borderColor || getAlertColor(alert.type)) + '20' }]}>
+                <Ionicons
+                  name={getAlertIcon(alert.text) as any}
+                  size={20}
+                  color={alert.type === 'success' ? colors.success : (alert.borderColor || getAlertColor(alert.type))}
+                />
+              </View>
+              <View style={s.alertContent}>
+                <Text style={[s.alertText, alert.type === 'success' && { color: colors.success, fontWeight: '600' }]}>
+                  {alert.text}
+                </Text>
+              </View>
+              {alert.count && alert.count > 0 && (
+                <View style={[s.alertBadge, { backgroundColor: alert.borderColor || getAlertColor(alert.type) }]}>
+                  <Text style={s.alertBadgeText}>{alert.count}</Text>
+                </View>
+              )}
+              {(alert.route || alert.text.includes('No season') || alert.text.includes('pending invite')) && (
+                <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      {/* ====== 3. QUICK ACTIONS ====== */}
+      <View style={s.sectionBlock}>
+        <View style={{ paddingHorizontal: spacing.screenPadding }}>
+          <SectionHeader title="Quick Actions" />
+        </View>
+        <View style={[s.quickRow, { paddingHorizontal: spacing.screenPadding }]}>
+          <TouchableOpacity
+            style={s.quickBtn}
+            onPress={() => router.push('/registration-hub' as any)}
+            activeOpacity={0.7}
+          >
+            <View>
+              <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+              {newRegistrationCount > 0 && (
+                <View style={s.quickBadge}>
+                  <Text style={s.quickBadgeText}>{newRegistrationCount}</Text>
+                </View>
+              )}
+            </View>
+            <Text style={s.quickLabel}>Approve</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={s.quickBtn}
+            onPress={() => router.push('/(tabs)/payments' as any)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="card" size={20} color={colors.primary} />
+            <Text style={s.quickLabel}>Payments</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={s.quickBtn}
+            onPress={() => setShowInviteModal(true)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="person-add" size={20} color={colors.primary} />
+            <Text style={s.quickLabel}>Invite</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={s.quickBtn}
+            onPress={() => router.push('/blast-composer' as any)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="megaphone" size={20} color={colors.primary} />
+            <Text style={s.quickLabel}>Blast</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* ====== 4. SEASON OVERVIEW ====== */}
+      <View style={s.sectionBlock}>
+        <TouchableOpacity
+          style={[s.overviewCard, { marginHorizontal: spacing.screenPadding }]}
+          onPress={() => router.push('/season-settings' as any)}
+          activeOpacity={0.8}
+        >
+          <View style={s.overviewHeader}>
+            <Ionicons name="trophy-outline" size={16} color="#14B8A6" />
+            <Text style={s.overviewTitle}>SEASON OVERVIEW</Text>
+          </View>
+
+          <View style={s.overviewStats}>
+            <View style={s.overviewStat}>
+              <Text style={s.overviewNumber}>{gamesPlayedCount}</Text>
+              <Text style={s.overviewLabel}>Games</Text>
+            </View>
+            <View style={s.overviewStat}>
+              <Text style={s.overviewNumber}>{stats.players}</Text>
+              <Text style={s.overviewLabel}>Players</Text>
+            </View>
+            <View style={s.overviewStat}>
+              <Text style={s.overviewNumber}>{stats.teams}</Text>
+              <Text style={s.overviewLabel}>Teams</Text>
+            </View>
+          </View>
+
+          {/* Revenue progress bar */}
+          <View style={s.overviewBar}>
+            <View style={[s.overviewBarFill, {
+              width: `${Math.min(revenuePercent, 100)}%`,
+            }, revenuePercent >= 100 && { backgroundColor: '#22C55E' }]} />
+          </View>
+          <Text style={s.overviewRevenue}>
+            ${totalCollected.toLocaleString('en-US', { maximumFractionDigits: 0 })} collected / ${totalExpected.toLocaleString('en-US', { maximumFractionDigits: 0 })} expected
+          </Text>
+
+          <View style={s.overviewMetaRow}>
+            <View style={s.overviewMetaItem}>
+              <Ionicons name="flag-outline" size={12} color={colors.textMuted} />
+              <Text style={s.overviewMetaText}>{getStatusLabel(workingSeason?.status || '')}</Text>
+            </View>
+            <View style={s.overviewMetaItem}>
+              <Ionicons name={workingSeason?.registration_open ? 'lock-open-outline' : 'lock-closed-outline'} size={12} color={colors.textMuted} />
+              <Text style={s.overviewMetaText}>Reg {workingSeason?.registration_open ? 'Open' : 'Closed'}</Text>
+            </View>
+            <View style={s.overviewMetaItem}>
+              <Ionicons name="cash-outline" size={12} color={colors.textMuted} />
+              <Text style={s.overviewMetaText}>{revenuePercent}% Collected</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </View>
+
+      {/* ====== 5. TEAM SNAPSHOT ====== */}
+      <View style={s.sectionBlock}>
+        <View style={{ paddingHorizontal: spacing.screenPadding }}>
+          <SectionHeader title="Team Snapshot" action="Manage" onAction={() => router.push('/team-management' as any)} />
+        </View>
+        {teamSnapshots.length > 0 ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: spacing.screenPadding, gap: 10 }}
+          >
+            {teamSnapshots.map(team => (
+              <TouchableOpacity
+                key={team.id}
+                style={[s.snapshotCard, { borderLeftColor: team.color || colors.primary }]}
+                onPress={() => router.push({ pathname: '/team-roster', params: { teamId: team.id } } as any)}
+                activeOpacity={0.8}
+              >
+                <Text style={s.snapshotName} numberOfLines={1}>{team.name}</Text>
+                <Text style={s.snapshotStat}>{team.playerCount} Players</Text>
+                <Text style={s.snapshotRecord}>{team.wins}W - {team.losses}L</Text>
+                {team.nextEventDate && (
+                  <View style={s.snapshotNextRow}>
+                    <Ionicons name="calendar-outline" size={11} color={colors.textMuted} />
+                    <Text style={s.snapshotNextText}>Next: {formatShortDate(team.nextEventDate)}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        ) : (
+          <View style={[s.emptySnapshotCard, { marginHorizontal: spacing.screenPadding }]}>
+            <Ionicons name="people-outline" size={24} color={colors.textMuted} />
+            <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 6 }}>No teams yet</Text>
+          </View>
+        )}
+      </View>
+
+      {/* ====== 6. RECENT ACTIVITY ====== */}
+      {recentActivity.length > 0 && (
+        <View style={s.sectionBlock}>
+          <View style={{ paddingHorizontal: spacing.screenPadding }}>
+            <SectionHeader title="Recent Activity" />
+          </View>
+          <View style={[s.activityCard, { marginHorizontal: spacing.screenPadding }]}>
+            {recentActivity.map((activity, i) => (
+              <View key={activity.id} style={[s.activityRow, i < recentActivity.length - 1 && s.activityRowBorder]}>
+                <View style={[s.activityDot, { backgroundColor: activity.color }]} />
+                <View style={s.activityContent}>
+                  <Text style={s.activityText}>{activity.text}</Text>
+                  <Text style={s.activityTime}>{formatTimeAgo(activity.timestamp)}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
         </View>
       )}
-
-      {/* REVENUE */}
-      <View style={{ paddingHorizontal: spacing.screenPadding }}>
-        <SectionHeader title={'Revenue \u2014 ' + (workingSeason?.name || '')} action="Reports" onAction={() => router.push('/(tabs)/reports-tab' as any)} />
-        <View style={s.statRow}>
-          <StatBox value={'$' + (totalCollected / 1000).toFixed(1) + 'K'} label="Collected" accentColor="#22C55E" />
-          <StatBox value={'$' + (Math.max(totalExpected - totalCollected, 0) / 1000).toFixed(1) + 'K'} label="Outstanding" accentColor="#E8913A" />
-          <StatBox value={'$' + (totalExpected / 1000).toFixed(1) + 'K'} label="Total" accentColor="#2C5F7C" />
-        </View>
-
-        <Card onPress={() => router.push('/(tabs)/payments' as any)} style={{ marginTop: 4 }}>
-          <View style={s.revenueHeader}>
-            <Text style={[s.revenuePercent, revenuePercent >= 100 && { color: '#22C55E' }]}>{revenuePercent}%</Text>
-            <Text style={s.revenueLabel}>collected</Text>
-            <View style={{ flex: 1 }} />
-            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-          </View>
-          <View style={s.revenueBarBg}>
-            <View style={[s.revenueBarFill, { width: `${Math.min(revenuePercent, 100)}%` }, revenuePercent >= 100 && { backgroundColor: '#22C55E' }]} />
-          </View>
-          {revenuePercent >= 100 ? (
-            <Text style={[s.revenueDetail, { color: '#22C55E', fontWeight: '600' }]}>All payments collected!</Text>
-          ) : (
-            <Text style={s.revenueDetail}>
-              {familiesPaid} of {familiesPaid + familiesPending} families paid{familiesPending > 0 ? ` \u00B7 ${familiesPending} pending` : ''}
-            </Text>
-          )}
-        </Card>
-
-        {/* Team Revenue Breakdown */}
-        {teamRevenueBreakdown.length > 0 && (
-          <TouchableOpacity
-            onPress={() => setShowTeamBreakdown(!showTeamBreakdown)}
-            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 8, gap: 6 }}
-          >
-            <Text style={{ fontSize: 12, fontWeight: '600', color: colors.textMuted }}>
-              {showTeamBreakdown ? 'Hide' : 'Show'} Team Breakdown
-            </Text>
-            <Ionicons name={showTeamBreakdown ? 'chevron-up' : 'chevron-down'} size={14} color={colors.textMuted} />
-          </TouchableOpacity>
-        )}
-
-        {showTeamBreakdown && teamRevenueBreakdown.length > 0 && (
-          <Card style={{ padding: 0, overflow: 'hidden' }}>
-            {teamRevenueBreakdown.map((team, idx) => {
-              const pct = team.expected > 0 ? Math.round((team.collected / team.expected) * 100) : 0;
-              const barColor = pct >= 80 ? '#22C55E' : pct >= 50 ? '#E8913A' : '#D94F4F';
-              return (
-                <View key={team.teamId} style={{
-                  paddingHorizontal: 16, paddingVertical: 12,
-                  borderBottomWidth: idx < teamRevenueBreakdown.length - 1 ? 1 : 0,
-                  borderBottomColor: 'rgba(0,0,0,0.06)',
-                }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Text style={{ fontSize: 14, fontWeight: '500', color: colors.text, flex: 1 }}>{team.teamName}</Text>
-                    <Text style={{ fontSize: 14, fontWeight: '700', color: barColor }}>{pct}%</Text>
-                  </View>
-                  <View style={{ height: 4, backgroundColor: 'rgba(0,0,0,0.06)', borderRadius: 2, marginTop: 6, overflow: 'hidden' }}>
-                    <View style={{ height: '100%', width: `${Math.min(pct, 100)}%`, backgroundColor: barColor, borderRadius: 2 }} />
-                  </View>
-                  <Text style={{ fontSize: 11, color: colors.textMuted, marginTop: 4 }}>
-                    ${team.collected.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} of ${team.expected.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </Text>
-                </View>
-              );
-            })}
-          </Card>
-        )}
-      </View>
-
-      {/* TODAY'S GAMES */}
-      <View style={{ paddingHorizontal: spacing.screenPadding }}>
-        {todaysGames.length > 0 && (
-          <>
-            <SectionHeader title="Today's Games" />
-            {todaysGames.map(game => (
-              <Card key={game.id} accentColor={game.team_color || '#D94F4F'} style={{ marginBottom: 10 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Text style={s.gameCardTeam}>{game.team_name}</Text>
-                  <Badge
-                    label={game.game_status === 'completed' ? 'FINAL' : game.game_status === 'live' ? 'LIVE' : 'SCHEDULED'}
-                    color={game.game_status === 'live' ? '#D94F4F' : game.game_status === 'completed' ? '#22C55E' : '#0EA5E9'}
-                  />
-                </View>
-                <Text style={s.gameCardOpponent}>vs {game.opponent || 'TBD'}</Text>
-                <View style={s.gameCardDetails}>
-                  <Ionicons name="time-outline" size={14} color={colors.textMuted} />
-                  <Text style={{ fontSize: 13, color: colors.textMuted, marginLeft: 4 }}>{formatGameTime(game.event_time)}</Text>
-                  {(game.venue_name || game.venue_address || game.location) && (
-                    <TouchableOpacity
-                      style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 12 }}
-                      onPress={() => openGameMaps(game.venue_address || game.location || game.venue_name || '')}
-                    >
-                      <Ionicons name="location-outline" size={14} color="#0EA5E9" />
-                      <Text style={{ fontSize: 13, color: '#0EA5E9', marginLeft: 4 }} numberOfLines={1}>
-                        {game.venue_name || game.location || 'View Map'}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </Card>
-            ))}
-          </>
-        )}
-
-        {todaysGames.length === 0 && tomorrowGames.length > 0 && (
-          <>
-            <SectionHeader title="Tomorrow's Games" />
-            {tomorrowGames.map(game => (
-              <Card key={game.id} accentColor={game.team_color || '#D94F4F'} style={{ marginBottom: 10, opacity: 0.8 }}>
-                <Text style={s.gameCardTeam}>{game.team_name}</Text>
-                <Text style={s.gameCardOpponent}>vs {game.opponent || 'TBD'}</Text>
-                <View style={s.gameCardDetails}>
-                  <Ionicons name="time-outline" size={14} color={colors.textMuted} />
-                  <Text style={{ fontSize: 13, color: colors.textMuted, marginLeft: 4 }}>{formatGameTime(game.event_time)}</Text>
-                </View>
-              </Card>
-            ))}
-          </>
-        )}
-
-        {todaysGames.length === 0 && tomorrowGames.length === 0 && (
-          <>
-            <SectionHeader title="Today's Games" />
-            <Card style={{ alignItems: 'center', padding: 24 }}>
-              <Text style={{ fontSize: 32, marginBottom: 8 }}>{'\u2600\uFE0F'}</Text>
-              <Text style={{ fontSize: 15, color: colors.textMuted, fontWeight: '500' }}>No games today — enjoy the day off!</Text>
-            </Card>
-          </>
-        )}
-      </View>
-
-      {/* QUICK ACTIONS */}
-      <View style={{ paddingHorizontal: spacing.screenPadding }}>
-        <SectionHeader title="Quick Actions" />
-        <View style={s.actionsGrid}>
-          <TouchableOpacity style={s.actionCard} onPress={() => router.push('/registration-hub' as any)}>
-            <View style={[s.actionIconCircle, { backgroundColor: '#0EA5E920' }]}>
-              <Ionicons name="person-add" size={28} color="#0EA5E9" />
-            </View>
-            <Text style={s.actionLabel}>Registrations</Text>
-            <Text style={s.actionSubtitle}>{newRegistrationCount > 0 ? newRegistrationCount + ' pending' : 'All caught up'}</Text>
-            {newRegistrationCount > 0 && (
-              <View style={s.actionBadge}>
-                <Text style={s.actionBadgeText}>{newRegistrationCount > 99 ? '99+' : newRegistrationCount}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity style={s.actionCard} onPress={() => router.push('/blast-composer' as any)}>
-            <View style={[s.actionIconCircle, { backgroundColor: '#E8913A20' }]}>
-              <Ionicons name="megaphone" size={28} color="#E8913A" />
-            </View>
-            <Text style={s.actionLabel}>Send Blast</Text>
-            <Text style={s.actionSubtitle}>Org-wide announcement</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={s.actionCard} onPress={() => router.push('/blast-history' as any)}>
-            <View style={[s.actionIconCircle, { backgroundColor: '#0EA5E920' }]}>
-              <Ionicons name="chatbubbles" size={28} color="#0EA5E9" />
-            </View>
-            <Text style={s.actionLabel}>Sent Blasts</Text>
-            <Text style={s.actionSubtitle}>{blastCount > 0 ? blastCount + ' sent' : 'No blasts yet'}</Text>
-            {blastCount > 0 && (
-              <View style={s.actionBadge}>
-                <Text style={s.actionBadgeText}>{blastCount > 99 ? '99+' : blastCount}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity style={s.actionCard} onPress={() => router.push('/(tabs)/reports-tab' as any)}>
-            <View style={[s.actionIconCircle, { backgroundColor: '#14B8A620' }]}>
-              <Ionicons name="bar-chart" size={28} color="#14B8A6" />
-            </View>
-            <Text style={s.actionLabel}>Reports</Text>
-            <Text style={s.actionSubtitle}>Analytics & exports</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={s.actionCard} onPress={() => router.push('/users' as any)}>
-            <View style={[s.actionIconCircle, { backgroundColor: '#2C5F7C20' }]}>
-              <Ionicons name="people-circle" size={28} color="#2C5F7C" />
-            </View>
-            <Text style={s.actionLabel}>Users</Text>
-            <Text style={s.actionSubtitle}>{approvalCount > 0 ? approvalCount + ' awaiting approval' : 'All approved'}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={s.actionCard} onPress={() => router.push('/team-management' as any)}>
-            <View style={[s.actionIconCircle, { backgroundColor: '#D94F4F20' }]}>
-              <Ionicons name="shirt" size={28} color="#D94F4F" />
-            </View>
-            <Text style={s.actionLabel}>Teams</Text>
-            <Text style={s.actionSubtitle}>{stats.teams} team{stats.teams !== 1 ? 's' : ''}{unrosteredCount > 0 ? ` \u00B7 ${unrosteredCount} unrostered` : ''}</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={s.actionCard} onPress={() => router.push('/(tabs)/payments' as any)}>
-            <View style={[s.actionIconCircle, { backgroundColor: '#E8913A20' }]}>
-              <Ionicons name="card" size={28} color="#E8913A" />
-            </View>
-            <Text style={s.actionLabel}>Payments</Text>
-            <Text style={s.actionSubtitle}>{stats.outstanding > 0 ? '$' + stats.outstanding.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' outstanding' : 'Fully collected'}</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* RECENT ACTIVITY */}
-      <View style={{ paddingHorizontal: spacing.screenPadding }}>
-        {recentActivity.length > 0 && (
-          <>
-            <SectionHeader title="Recent Activity" action="See All" onAction={() => {}} />
-            <Card>
-              {recentActivity.map((activity, i) => (
-                <View key={activity.id} style={[s.activityRow, i < recentActivity.length - 1 && s.activityRowBorder]}>
-                  <View style={[s.activityDot, { backgroundColor: activity.color }]} />
-                  <View style={s.activityContent}>
-                    <Text style={s.activityText}>{activity.text}</Text>
-                    <Text style={s.activityTime}>{formatTimeAgo(activity.timestamp)}</Text>
-                  </View>
-                </View>
-              ))}
-            </Card>
-          </>
-        )}
-
-        {/* ORGANIZATION STATS */}
-        <SectionHeader title="Organization" />
-        <View style={s.statRow}>
-          <StatBox value={stats.teams} label="Teams" accentColor="#0EA5E9" />
-          <StatBox value={stats.players} label="Players" accentColor="#14B8A6" />
-          <StatBox value={stats.coaches} label="Coaches" accentColor="#2C5F7C" />
-        </View>
-        <View style={[s.statRow, { marginTop: 10 }]}>
-          <StatBox value={gamesPlayedCount} label="Games" accentColor="#E8913A" />
-          <StatBox value={revenuePercent + '%'} label="Collected" accentColor="#22C55E" />
-          <StatBox value={stats.players > 0 ? Math.round((stats.teams / Math.max(stats.players, 1)) * 100) + '%' : '0%'} label="Roster Fill" accentColor="#D94F4F" />
-        </View>
-      </View>
 
       {/* ============================================ */}
-      {/* MODALS (preserved from original) */}
+      {/* MODALS */}
       {/* ============================================ */}
 
       {/* Invite Modal */}
@@ -1639,7 +1490,7 @@ export default function AdminDashboard() {
         </View>
       </Modal>
 
-      {/* Bottom padding for tab bar */}
+      {/* Bottom padding */}
       <View style={{ height: 120 }} />
     </ScrollView>
   );
@@ -1655,84 +1506,109 @@ const createStyles = (colors: any, sportColors: any) => StyleSheet.create({
     backgroundColor: colors.background,
   },
 
-  // Hero — Gradient
-  heroGradient: {
-    paddingHorizontal: spacing.screenPadding,
-    paddingVertical: 20,
-    paddingBottom: 24,
-    overflow: 'hidden' as const,
+  sectionBlock: {
+    marginBottom: 14,
   },
-  heroTopRow: {
+
+  // Org Health Banner
+  orgBanner: {
+    backgroundColor: colors.glassCard,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    padding: 14,
+    ...shadows.card,
+  },
+  orgBannerHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 20,
+    marginBottom: 14,
   },
-  heroOrgName: {
+  orgBannerName: {
     ...displayTextStyle,
-    fontSize: 24,
-    color: '#FFF',
+    fontSize: 20,
+    color: colors.text,
   },
-  heroSportBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.25)',
-  },
-  heroSportIcon: {
-    fontSize: 22,
-  },
-  heroSeasonRow: {
+  orgBannerSeasonRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 4,
+    gap: 6,
   },
-  heroSeasonName: {
+  orgBannerSeasonName: {
     fontSize: 13,
-    color: 'rgba(255,255,255,0.7)',
+    color: colors.textMuted,
     fontWeight: '500',
   },
-  heroStatsRow: {
-    flexDirection: 'row',
+  orgSportBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.glassBorder,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  heroStatItem: {
+  orgBannerStatsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  orgBannerStat: {
     flex: 1,
     alignItems: 'center',
   },
-  heroStatDivider: {
-    width: 1,
-    height: 32,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-  },
-  heroStatNum: {
+  orgBannerStatNum: {
     ...displayTextStyle,
-    fontSize: 28,
-    color: '#FFF',
+    fontSize: 22,
+    color: colors.text,
   },
-  heroStatLabel: {
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.6)',
+  orgBannerStatLabel: {
+    fontSize: 10,
+    color: colors.textMuted,
     marginTop: 2,
   },
-
-  // StatBox row
-  statRow: {
+  orgBannerDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: colors.glassBorder,
+  },
+  regStatusRow: {
     flexDirection: 'row',
-    gap: 10,
-    marginBottom: 8,
+    alignItems: 'center',
+    gap: 6,
+  },
+  regStatusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  regStatusText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  statusPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  statusPillText: {
+    fontSize: 11,
+    fontWeight: '600',
   },
 
-  // Needs Attention
-  attentionContainer: {
-    gap: 8,
-    marginBottom: 16,
+  // Alerts
+  alertCard: {
+    backgroundColor: colors.glassCard,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    ...shadows.card,
   },
-  attentionIconCircle: {
+  alertIconCircle: {
     width: 36,
     height: 36,
     borderRadius: 18,
@@ -1740,130 +1616,203 @@ const createStyles = (colors: any, sportColors: any) => StyleSheet.create({
     alignItems: 'center',
     marginRight: 12,
   },
-  attentionContent: {
+  alertContent: {
     flex: 1,
   },
-  attentionText: {
+  alertText: {
     fontSize: 14,
     color: colors.text,
     fontWeight: '500',
     lineHeight: 20,
   },
-  successText: {
-    fontSize: 15,
-    color: '#22C55E',
-    fontWeight: '600',
-    flex: 1,
+  alertBadge: {
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    paddingHorizontal: 5,
+    marginRight: 8,
   },
-
-  // Revenue
-  revenueHeader: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 8,
-    marginBottom: 12,
-  },
-  revenuePercent: {
-    ...displayTextStyle,
-    fontSize: 36,
-    color: '#2C5F7C',
-  },
-  revenueLabel: {
-    fontSize: 15,
-    color: colors.textMuted,
-    fontWeight: '500',
-  },
-  revenueBarBg: {
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: 'rgba(0,0,0,0.06)',
-    overflow: 'hidden',
-    marginBottom: 10,
-  },
-  revenueBarFill: {
-    height: '100%',
-    borderRadius: 4,
-    backgroundColor: '#2C5F7C',
-  },
-  revenueDetail: {
-    fontSize: 13,
-    color: colors.textMuted,
+  alertBadgeText: {
+    fontSize: 11,
+    fontWeight: '800' as const,
+    color: '#fff',
   },
 
   // Quick Actions
-  actionsGrid: {
+  quickRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 16,
+    gap: 8,
   },
-  actionCard: {
-    width: '47%',
-    backgroundColor: '#FFF',
+  quickBtn: {
+    flex: 1,
+    backgroundColor: colors.glassCard,
     borderRadius: radii.card,
-    padding: 20,
+    borderTopWidth: 3,
+    borderTopColor: colors.primary,
+    padding: 10,
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)',
-    position: 'relative' as const,
+    borderColor: colors.glassBorder,
     ...shadows.card,
   },
-  actionIconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  actionLabel: {
-    fontSize: 14,
+  quickLabel: {
+    fontSize: 10,
     fontWeight: '700',
     color: colors.text,
     textAlign: 'center' as const,
   },
-  actionSubtitle: {
-    fontSize: 11,
-    color: colors.textMuted,
-    textAlign: 'center' as const,
-    marginTop: 2,
-  },
-  actionBadge: {
+  quickBadge: {
     position: 'absolute' as const,
-    top: 10,
-    right: 10,
-    backgroundColor: '#D94F4F',
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
+    top: -6,
+    right: -8,
+    backgroundColor: colors.danger,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
     justifyContent: 'center' as const,
     alignItems: 'center' as const,
-    paddingHorizontal: 6,
+    paddingHorizontal: 3,
   },
-  actionBadgeText: {
+  quickBadgeText: {
+    fontSize: 9,
+    fontWeight: '800' as const,
     color: '#fff',
-    fontSize: 11,
-    fontWeight: 'bold' as const,
   },
 
-  // Today's Games
-  gameCardTeam: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.text,
+  // Season Overview Card
+  overviewCard: {
+    backgroundColor: colors.glassCard,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    padding: 14,
+    ...shadows.card,
   },
-  gameCardOpponent: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginTop: 2,
-    marginBottom: 8,
-  },
-  gameCardDetails: {
+  overviewHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
+    marginBottom: 12,
+  },
+  overviewTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textMuted,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.5,
+  },
+  overviewStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 12,
+  },
+  overviewStat: {
+    alignItems: 'center',
+  },
+  overviewNumber: {
+    ...displayTextStyle,
+    fontSize: 24,
+    color: colors.text,
+  },
+  overviewLabel: {
+    fontSize: 10,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  overviewBar: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.glassBorder,
+    overflow: 'hidden' as const,
+    marginBottom: 6,
+  },
+  overviewBarFill: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#2C5F7C',
+  },
+  overviewRevenue: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginBottom: 12,
+  },
+  overviewMetaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap' as const,
+    gap: 12,
+  },
+  overviewMetaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  overviewMetaText: {
+    fontSize: 11,
+    color: colors.textMuted,
+    fontWeight: '500',
+  },
+
+  // Team Snapshot
+  snapshotCard: {
+    width: SNAPSHOT_CARD_WIDTH,
+    backgroundColor: colors.glassCard,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    borderLeftWidth: 3,
+    padding: 12,
+    ...shadows.card,
+  },
+  snapshotName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 6,
+  },
+  snapshotStat: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginBottom: 2,
+  },
+  snapshotRecord: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  snapshotNextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  snapshotNextText: {
+    fontSize: 11,
+    color: colors.textMuted,
+  },
+  emptySnapshotCard: {
+    backgroundColor: colors.glassCard,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    alignItems: 'center' as const,
+    paddingVertical: 24,
+    ...shadows.card,
   },
 
   // Recent Activity
+  activityCard: {
+    backgroundColor: colors.glassCard,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    padding: 12,
+    ...shadows.card,
+  },
   activityRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -1871,7 +1820,7 @@ const createStyles = (colors: any, sportColors: any) => StyleSheet.create({
   },
   activityRowBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.06)',
+    borderBottomColor: colors.glassBorder,
   },
   activityDot: {
     width: 10,

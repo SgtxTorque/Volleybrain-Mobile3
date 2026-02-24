@@ -19,6 +19,8 @@ export default function TabLayout() {
   const showParentTabs = isParent && !isCoach && !isAdmin;
   // Coach (including coach-parents, but not admins) gets the redesigned coach tab layout
   const showCoachTabs = isCoach && !isAdmin;
+  // Admin gets the redesigned admin tab layout
+  const showAdminTabs = isAdmin;
   useFirstTimeWelcome(primaryRole);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [unreadAlertCount, setUnreadAlertCount] = useState(0);
@@ -168,7 +170,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="gameday"
         options={{
-          href: (showParentTabs || showCoachTabs) ? null : undefined,
+          href: (showParentTabs || showCoachTabs || showAdminTabs) ? null : undefined,
           title: 'Game Day',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
@@ -184,7 +186,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="connect"
         options={{
-          href: (showParentTabs || showCoachTabs) ? null : undefined,
+          href: (showParentTabs || showCoachTabs || showAdminTabs) ? null : undefined,
           title: 'Team',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
@@ -202,7 +204,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="manage"
         options={{
-          href: (showParentTabs || showCoachTabs) ? null : undefined,
+          href: (showParentTabs || showCoachTabs || showAdminTabs) ? null : undefined,
           title: 'Manage',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
@@ -218,7 +220,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="me"
         options={{
-          href: (showParentTabs || showCoachTabs) ? null : undefined,
+          href: (showParentTabs || showCoachTabs || showAdminTabs) ? null : undefined,
           title: 'Me',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
@@ -353,6 +355,74 @@ export default function TabLayout() {
         name="coach-my-stuff"
         options={{
           href: showCoachTabs ? undefined : null,
+          title: 'My Stuff',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'person' : 'person-outline'}
+              size={24}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      {/* ====== ADMIN-ONLY TABS ====== */}
+
+      {/* SCHEDULE (Admin) */}
+      <Tabs.Screen
+        name="admin-schedule"
+        options={{
+          href: showAdminTabs ? undefined : null,
+          title: 'Schedule',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'calendar' : 'calendar-outline'}
+              size={24}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      {/* CHAT (Admin) */}
+      <Tabs.Screen
+        name="admin-chat"
+        options={{
+          href: showAdminTabs ? undefined : null,
+          title: 'Chat',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline'}
+              size={24}
+              color={color}
+            />
+          ),
+          tabBarBadge: showAdminTabs && totalUnread > 0 ? totalUnread : undefined,
+          tabBarBadgeStyle: { backgroundColor: colors.danger, fontSize: 10 },
+        }}
+      />
+
+      {/* TEAMS (Admin) */}
+      <Tabs.Screen
+        name="admin-teams"
+        options={{
+          href: showAdminTabs ? undefined : null,
+          title: 'Teams',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'people' : 'people-outline'}
+              size={24}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      {/* MY STUFF (Admin) */}
+      <Tabs.Screen
+        name="admin-my-stuff"
+        options={{
+          href: showAdminTabs ? undefined : null,
           title: 'My Stuff',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
