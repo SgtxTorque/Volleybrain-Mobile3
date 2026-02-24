@@ -552,7 +552,6 @@ export default function AdminDashboard() {
       const { error } = await supabase.from('team_invite_codes').insert({
         team_id: selectedTeamId,
         code: inviteCode,
-        description: teamCodeDescription.trim() || ('Join ' + selectedTeam?.name),
         created_by: profile?.id,
         is_active: true,
       });
@@ -1194,15 +1193,6 @@ export default function AdminDashboard() {
                 {teams.length === 0 && (
                   <Text style={s.noTeamsText}>No teams yet. Create teams first.</Text>
                 )}
-
-                <Text style={s.formLabel}>Description (Optional)</Text>
-                <TextInput
-                  style={s.formInput}
-                  placeholder="e.g., Spring 2026 registration"
-                  placeholderTextColor={colors.textMuted}
-                  value={teamCodeDescription}
-                  onChangeText={setTeamCodeDescription}
-                />
 
                 <TouchableOpacity
                   style={[s.sendInviteBtn, (!selectedTeamId || inviteLoading) && s.sendInviteBtnDisabled]}

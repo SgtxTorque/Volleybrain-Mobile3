@@ -792,11 +792,11 @@ export default function CoachChatScreen() {
                 <TouchableOpacity key={u.id} style={[s.userRow, { borderBottomColor: colors.border }]} onPress={() => startDM(u)}>
                   <View style={[s.userAvatar, { backgroundColor: colors.primary + '20' }]}>
                     <Text style={[s.userInitials, { color: colors.primary }]}>
-                      {u.full_name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                      {(u.full_name || '?').split(' ').map(n => n[0]).join('').slice(0, 2)}
                     </Text>
                   </View>
                   <View style={s.userInfo}>
-                    <Text style={[s.userName, { color: colors.text }]}>{u.full_name}</Text>
+                    <Text style={[s.userName, { color: colors.text }]}>{u.full_name || 'Unknown'}</Text>
                     <Text style={[s.userRole, { color: colors.textMuted }]}>{u.account_type}</Text>
                   </View>
                   <Ionicons name="chatbubble" size={20} color={colors.primary} />
