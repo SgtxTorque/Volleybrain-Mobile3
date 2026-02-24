@@ -206,6 +206,21 @@ const locationTypeConfig: Record<string, { label: string; color: string }> = {
 };
 
 // ---------------------------------------------------------------------------
+// FadeInImage — shows skeleton placeholder, fades in on load (FIX 19)
+// ---------------------------------------------------------------------------
+function FadeInImage({ style, placeholderColor = '#1B2838', ...props }: React.ComponentProps<typeof Image> & { placeholderColor?: string }) {
+  const opacity = useRef(new Animated.Value(0)).current;
+  const handleLoad = useCallback(() => {
+    Animated.timing(opacity, { toValue: 1, duration: 350, useNativeDriver: true }).start();
+  }, [opacity]);
+  return (
+    <View style={[style, { backgroundColor: placeholderColor, overflow: 'hidden' }]}>
+      <Animated.Image {...props} style={[StyleSheet.absoluteFillObject, { opacity }]} onLoad={handleLoad} />
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
@@ -1134,8 +1149,8 @@ export default function ParentDashboard() {
                 onPress={() => openEventDetail(evt)}
                 activeOpacity={0.9}
               >
-                {/* Background image */}
-                <Image
+                {/* Background image with fade-in (FIX 19) */}
+                <FadeInImage
                   source={heroImage}
                   style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' }}
                   resizeMode="cover"
@@ -1300,7 +1315,7 @@ export default function ParentDashboard() {
             </View>
             <Text style={s.teamHubContent} numberOfLines={2}>{latestPost.content}</Text>
             {latestPost.media_urls && latestPost.media_urls.length > 0 && (
-              <Image source={{ uri: latestPost.media_urls[0] }} style={s.teamHubImage} resizeMode="cover" />
+              <FadeInImage source={{ uri: latestPost.media_urls[0] }} style={s.teamHubImage} placeholderColor={colors.bgSecondary} resizeMode="cover" />
             )}
           </TouchableOpacity>
         ) : (
@@ -1326,7 +1341,7 @@ export default function ParentDashboard() {
                 onPress={() => router.push(('/child-detail?playerId=' + children[0].id) as any)}
                 activeOpacity={0.9}
               >
-                <Image
+                <FadeInImage
                   source={children[0].photo_url ? { uri: children[0].photo_url } : getPlayerPlaceholder()}
                   style={StyleSheet.absoluteFillObject}
                   resizeMode="cover"
@@ -1368,7 +1383,7 @@ export default function ParentDashboard() {
                   onPress={() => router.push(('/child-detail?playerId=' + child.id) as any)}
                   activeOpacity={0.9}
                 >
-                  <Image
+                  <FadeInImage
                     source={child.photo_url ? { uri: child.photo_url } : getPlayerPlaceholder()}
                     style={StyleSheet.absoluteFillObject}
                     resizeMode="cover"
