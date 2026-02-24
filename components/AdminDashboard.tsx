@@ -7,11 +7,13 @@ import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   Linking,
   Modal,
   Platform,
@@ -121,6 +123,26 @@ export default function AdminDashboard() {
   const [teamCodeDescription, setTeamCodeDescription] = useState('');
   const [teamSnapshots, setTeamSnapshots] = useState<TeamSnapshot[]>([]);
   const [blastCount, setBlastCount] = useState(0);
+
+  // Needs Attention — single animated button + bottom sheet
+  const [showAttentionSheet, setShowAttentionSheet] = useState(false);
+  const actionPulse = useRef(new Animated.Value(1)).current;
+
+  // Pulse animation for attention badge
+  useEffect(() => {
+    if (alerts.length > 0 && alerts[0].type !== 'success') {
+      const anim = Animated.loop(
+        Animated.sequence([
+          Animated.timing(actionPulse, { toValue: 0.6, duration: 1000, useNativeDriver: true }),
+          Animated.timing(actionPulse, { toValue: 1, duration: 1000, useNativeDriver: true }),
+        ])
+      );
+      anim.start();
+      return () => anim.stop();
+    } else {
+      actionPulse.setValue(1);
+    }
+  }, [alerts]);
 
   // ============================================
   // DATA FETCHING
@@ -805,98 +827,91 @@ export default function AdminDashboard() {
 
       {/* ====== 1. ORG HEALTH BANNER ====== */}
       <View style={s.sectionBlock}>
-        <TouchableOpacity
-          style={[s.orgBanner, { marginHorizontal: spacing.screenPadding }]}
-          onPress={() => router.push('/season-settings' as any)}
-          activeOpacity={0.8}
-        >
+        <View style={[s.orgBanner, { marginHorizontal: spacing.screenPadding, overflow: 'hidden' }]}>
+          <LinearGradient
+            colors={[sportColors.primary, sportColors.primary + 'B0']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
           <View style={s.orgBannerHeader}>
             <View style={{ flex: 1 }}>
-              <Text style={s.orgBannerName}>{organization?.name || 'Organization'}</Text>
-              <TouchableOpacity
-                style={s.orgBannerSeasonRow}
-                onPress={() => setShowSeasonPicker(true)}
-                activeOpacity={0.7}
-              >
-                <Text style={s.orgBannerSeasonName}>{workingSeason?.name || 'No Season'}</Text>
-                {workingSeason && (
-                  <View style={[s.statusPill, { backgroundColor: getStatusColor(workingSeason.status) + '25' }]}>
-                    <Text style={[s.statusPillText, { color: getStatusColor(workingSeason.status) }]}>
-                      {getStatusLabel(workingSeason.status)}
-                    </Text>
-                  </View>
-                )}
-                <Ionicons name="chevron-down" size={14} color={colors.textMuted} style={{ marginLeft: 4 }} />
-              </TouchableOpacity>
+              <Text style={[s.orgBannerName, { color: '#FFF' }]}>{organization?.name || 'Organization'}</Text>
             </View>
-            <View style={s.orgSportBadge}>
+            <View style={[s.orgSportBadge, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
               <Text style={{ fontSize: 22 }}>{activeSport?.icon || '\uD83C\uDFD0'}</Text>
             </View>
           </View>
 
           <View style={s.orgBannerStatsRow}>
             <View style={s.orgBannerStat}>
-              <Text style={s.orgBannerStatNum}>{stats.players}</Text>
-              <Text style={s.orgBannerStatLabel}>Players</Text>
+              <Text style={[s.orgBannerStatNum, { color: '#FFF' }]}>{stats.players}</Text>
+              <Text style={[s.orgBannerStatLabel, { color: 'rgba(255,255,255,0.7)' }]}>Players</Text>
             </View>
-            <View style={s.orgBannerDivider} />
+            <View style={[s.orgBannerDivider, { backgroundColor: 'rgba(255,255,255,0.25)' }]} />
             <View style={s.orgBannerStat}>
-              <Text style={s.orgBannerStatNum}>{stats.teams}</Text>
-              <Text style={s.orgBannerStatLabel}>Teams</Text>
+              <Text style={[s.orgBannerStatNum, { color: '#FFF' }]}>{stats.teams}</Text>
+              <Text style={[s.orgBannerStatLabel, { color: 'rgba(255,255,255,0.7)' }]}>Teams</Text>
             </View>
-            <View style={s.orgBannerDivider} />
+            <View style={[s.orgBannerDivider, { backgroundColor: 'rgba(255,255,255,0.25)' }]} />
             <View style={s.orgBannerStat}>
-              <Text style={s.orgBannerStatNum}>{stats.coaches}</Text>
-              <Text style={s.orgBannerStatLabel}>Coaches</Text>
+              <Text style={[s.orgBannerStatNum, { color: '#FFF' }]}>{stats.coaches}</Text>
+              <Text style={[s.orgBannerStatLabel, { color: 'rgba(255,255,255,0.7)' }]}>Coaches</Text>
             </View>
           </View>
 
           <View style={s.regStatusRow}>
-            <View style={[s.regStatusDot, { backgroundColor: workingSeason?.registration_open ? colors.success : colors.textMuted }]} />
-            <Text style={[s.regStatusText, { color: workingSeason?.registration_open ? colors.success : colors.textMuted }]}>
+            <View style={[s.regStatusDot, { backgroundColor: workingSeason?.registration_open ? '#4ADE80' : 'rgba(255,255,255,0.5)' }]} />
+            <Text style={[s.regStatusText, { color: workingSeason?.registration_open ? '#4ADE80' : 'rgba(255,255,255,0.5)' }]}>
               Registration {workingSeason?.registration_open ? 'Open' : 'Closed'}
             </Text>
           </View>
+        </View>
+      </View>
+
+      {/* ====== SEASON SELECTOR BAR ====== */}
+      <View style={{ paddingHorizontal: spacing.screenPadding, marginBottom: 4 }}>
+        <TouchableOpacity
+          style={s.seasonBar}
+          onPress={() => setShowSeasonPicker(true)}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="calendar" size={16} color={sportColors.primary} />
+          <Text style={s.seasonBarText} numberOfLines={1}>
+            {workingSeason?.name || 'No Season'}
+            {workingSeason && ' \u00B7 ' + getStatusLabel(workingSeason.status)}
+          </Text>
+          <Ionicons name="chevron-down" size={16} color={colors.textMuted} />
         </TouchableOpacity>
       </View>
 
-      {/* ====== 2. NEEDS ATTENTION (always visible) ====== */}
-      <View style={s.sectionBlock}>
-        <View style={{ paddingHorizontal: spacing.screenPadding }}>
-          <SectionHeader title="Needs Attention" />
-        </View>
-        <View style={{ paddingHorizontal: spacing.screenPadding, gap: 8 }}>
-          {alerts.map((alert, i) => (
+      {/* ====== 2. NEEDS ATTENTION (single button → bottom sheet) ====== */}
+      {alerts.length > 0 && (
+        <View style={{ paddingHorizontal: spacing.screenPadding, marginBottom: 8 }}>
+          {alerts[0].type === 'success' ? (
+            <View style={s.attentionBtn}>
+              <View style={[s.attentionBadge, { backgroundColor: colors.success }]}>
+                <Ionicons name="checkmark" size={14} color="#FFF" />
+              </View>
+              <Text style={[s.attentionText, { color: colors.success }]}>All clear!</Text>
+            </View>
+          ) : (
             <TouchableOpacity
-              key={i}
-              style={s.alertCard}
-              onPress={() => handleAlertPress(alert)}
-              activeOpacity={0.7}
+              style={s.attentionBtn}
+              onPress={() => setShowAttentionSheet(true)}
+              activeOpacity={0.8}
             >
-              <View style={[s.alertIconCircle, { backgroundColor: (alert.borderColor || getAlertColor(alert.type)) + '20' }]}>
-                <Ionicons
-                  name={getAlertIcon(alert.text) as any}
-                  size={20}
-                  color={alert.type === 'success' ? colors.success : (alert.borderColor || getAlertColor(alert.type))}
-                />
-              </View>
-              <View style={s.alertContent}>
-                <Text style={[s.alertText, alert.type === 'success' && { color: colors.success, fontWeight: '600' }]}>
-                  {alert.text}
-                </Text>
-              </View>
-              {alert.count && alert.count > 0 && (
-                <View style={[s.alertBadge, { backgroundColor: alert.borderColor || getAlertColor(alert.type) }]}>
-                  <Text style={s.alertBadgeText}>{alert.count}</Text>
-                </View>
-              )}
-              {(alert.route || alert.text.includes('No season') || alert.text.includes('pending invite')) && (
-                <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-              )}
+              <Animated.View style={[s.attentionBadge, { backgroundColor: colors.warning, opacity: actionPulse }]}>
+                <Text style={s.attentionBadgeText}>{alerts.filter(a => a.type !== 'success').length}</Text>
+              </Animated.View>
+              <Text style={s.attentionText}>
+                {alerts.filter(a => a.type !== 'success').length} {alerts.filter(a => a.type !== 'success').length === 1 ? 'thing needs' : 'things need'} attention
+              </Text>
+              <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
             </TouchableOpacity>
-          ))}
+          )}
         </View>
-      </View>
+      )}
 
       {/* ====== 3. QUICK ACTIONS ====== */}
       <View style={s.sectionBlock}>
@@ -917,7 +932,7 @@ export default function AdminDashboard() {
                 </View>
               )}
             </View>
-            <Text style={s.quickLabel}>Approve</Text>
+            <Text style={s.quickLabel}>Registrations</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -953,7 +968,7 @@ export default function AdminDashboard() {
       <View style={s.sectionBlock}>
         <TouchableOpacity
           style={[s.overviewCard, { marginHorizontal: spacing.screenPadding }]}
-          onPress={() => router.push('/season-settings' as any)}
+          onPress={() => router.push('/season-reports' as any)}
           activeOpacity={0.8}
         >
           <View style={s.overviewHeader}>
@@ -1018,7 +1033,7 @@ export default function AdminDashboard() {
               <TouchableOpacity
                 key={team.id}
                 style={[s.snapshotCard, { borderLeftColor: team.color || colors.primary }]}
-                onPress={() => router.push({ pathname: '/team-roster', params: { teamId: team.id } } as any)}
+                onPress={() => router.push({ pathname: '/team-wall', params: { teamId: team.id } } as any)}
                 activeOpacity={0.8}
               >
                 <Text style={s.snapshotName} numberOfLines={1}>{team.name}</Text>
@@ -1030,6 +1045,7 @@ export default function AdminDashboard() {
                     <Text style={s.snapshotNextText}>Next: {formatShortDate(team.nextEventDate)}</Text>
                   </View>
                 )}
+                <Text style={s.snapshotViewTeam}>View Team →</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -1064,6 +1080,41 @@ export default function AdminDashboard() {
       {/* ============================================ */}
       {/* MODALS */}
       {/* ============================================ */}
+
+      {/* Needs Attention Bottom Sheet */}
+      <Modal visible={showAttentionSheet} transparent animationType="slide" onRequestClose={() => setShowAttentionSheet(false)}>
+        <TouchableOpacity style={s.overlay} activeOpacity={1} onPress={() => setShowAttentionSheet(false)}>
+          <View style={s.attentionSheet} onStartShouldSetResponder={() => true}>
+            <View style={s.attentionHandle} />
+            <Text style={s.attentionSheetTitle}>Things That Need Attention</Text>
+            {alerts.filter(a => a.type !== 'success').map((alert, i) => (
+              <TouchableOpacity
+                key={i}
+                style={s.attentionRow}
+                onPress={() => { setShowAttentionSheet(false); handleAlertPress(alert); }}
+                activeOpacity={0.7}
+              >
+                <View style={[s.alertIconCircle, { backgroundColor: (alert.borderColor || getAlertColor(alert.type)) + '20' }]}>
+                  <Ionicons name={getAlertIcon(alert.text) as any} size={20} color={alert.borderColor || getAlertColor(alert.type)} />
+                </View>
+                <Text style={s.attentionRowText}>{alert.text}</Text>
+                {alert.count != null && alert.count > 0 && (
+                  <View style={[s.alertBadge, { backgroundColor: alert.borderColor || getAlertColor(alert.type) }]}>
+                    <Text style={s.alertBadgeText}>{alert.count}</Text>
+                  </View>
+                )}
+                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+              </TouchableOpacity>
+            ))}
+            {alerts.every(a => a.type === 'success') && (
+              <View style={{ alignItems: 'center', paddingVertical: 24 }}>
+                <Ionicons name="checkmark-circle" size={48} color={colors.success} />
+                <Text style={{ fontSize: 16, fontWeight: '700', color: colors.success, marginTop: 8 }}>All clear!</Text>
+              </View>
+            )}
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* Invite Modal */}
       <Modal visible={showInviteModal} animationType="slide" transparent>
@@ -1577,6 +1628,99 @@ const createStyles = (colors: any, sportColors: any) => StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
+
+  // Season selector bar (FIX 5)
+  seasonBar: {
+    backgroundColor: colors.glassCard,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 8,
+    ...shadows.card,
+  },
+  seasonBarText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+  },
+
+  // Needs Attention button (FIX 6)
+  attentionBtn: {
+    backgroundColor: colors.glassCard,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 14,
+    gap: 12,
+    ...shadows.card,
+  },
+  attentionBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+  },
+  attentionBadgeText: {
+    fontSize: 13,
+    fontWeight: '800' as const,
+    color: '#FFF',
+  },
+  attentionText: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text,
+  },
+
+  // Attention sheet (FIX 6)
+  attentionSheet: {
+    backgroundColor: colors.card,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 24,
+    paddingBottom: 40,
+    maxHeight: '80%',
+  },
+  attentionHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.textMuted,
+    opacity: 0.4,
+    alignSelf: 'center' as const,
+    marginBottom: 16,
+  },
+  attentionSheetTitle: {
+    ...displayTextStyle,
+    fontSize: 18,
+    color: colors.text,
+    textAlign: 'center' as const,
+    marginBottom: 20,
+  },
+  attentionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.glassBorder,
+    gap: 8,
+  },
+  attentionRowText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '500',
+    color: colors.text,
+    lineHeight: 20,
+  },
+
   statusPill: {
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -1783,6 +1927,12 @@ const createStyles = (colors: any, sportColors: any) => StyleSheet.create({
   snapshotNextText: {
     fontSize: 11,
     color: colors.textMuted,
+  },
+  snapshotViewTeam: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.primary,
+    marginTop: 6,
   },
   emptySnapshotCard: {
     backgroundColor: colors.glassCard,
