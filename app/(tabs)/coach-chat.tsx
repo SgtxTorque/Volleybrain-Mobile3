@@ -1003,7 +1003,7 @@ function createStyles(colors: any) {
 
     // Modal
     overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-    modal: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '80%' },
+    modal: { borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 24, paddingBottom: 24, paddingTop: 12, minHeight: '60%', maxHeight: '70%' },
     modalHandle: {
       width: 40, height: 4, borderRadius: 2, backgroundColor: colors.textMuted,
       alignSelf: 'center', marginBottom: 16, opacity: 0.4,

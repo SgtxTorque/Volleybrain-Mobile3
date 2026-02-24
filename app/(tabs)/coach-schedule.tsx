@@ -108,6 +108,11 @@ export default function CoachScheduleScreen() {
   // --- Teams ---
   const [teams, setTeams] = useState<CoachTeam[]>([]);
   const [activeTeamFilter, setActiveTeamFilter] = useState('all');
+  const [showTeamFilterSheet, setShowTeamFilterSheet] = useState(false);
+  const [teamFilterSearch, setTeamFilterSearch] = useState('');
+
+  // --- Expandable event cards ---
+  const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set());
 
   // --- Calendar ---
   const [currentWeekStart, setCurrentWeekStart] = useState(() => getMonday(new Date()));
@@ -664,67 +669,101 @@ export default function CoachScheduleScreen() {
   // =========================================================================
   // Render: event row with RSVP summary + actions
   // =========================================================================
+  const toggleExpand = useCallback((eventId: string) => {
+    setExpandedEvents(prev => {
+      const next = new Set(prev);
+      if (next.has(eventId)) next.delete(eventId); else next.add(eventId);
+      return next;
+    });
+  }, []);
+
   const renderEventRow = ({ item: event }: { item: ScheduleEvent }) => {
     const rsvp = event.rsvp_count;
     const isGame = event.event_type === 'game';
+    const isExpanded = expandedEvents.has(event.id);
+    const teamObj = teams.find(t => t.id === event.team_id);
+    const typeBadgeColor = isGame ? '#D94F4F' : event.event_type === 'practice' ? colors.primary : '#AF52DE';
+    const time = event.start_time ? new Date('2000-01-01T' + event.start_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : '';
 
     return (
       <View style={s.eventRowWrapper}>
-        <EventCard
-          event={event}
-          onPress={() => { setSelectedEvent(event); setShowDetailModal(true); }}
-        />
+        {/* Compact row — always visible */}
+        <TouchableOpacity style={s.compactRow} onPress={() => toggleExpand(event.id)} activeOpacity={0.7}>
+          {/* Date block */}
+          <View style={s.compactDate}>
+            <Text style={s.compactDay}>{new Date(event.event_date + 'T12:00:00').toLocaleDateString('en-US', { day: 'numeric' })}</Text>
+            <Text style={s.compactMonth}>{new Date(event.event_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short' })}</Text>
+          </View>
+          {/* Center info */}
+          <View style={s.compactCenter}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <View style={[s.compactBadge, { backgroundColor: typeBadgeColor + '20' }]}>
+                <Text style={[s.compactBadgeText, { color: typeBadgeColor }]}>{event.event_type.toUpperCase()}</Text>
+              </View>
+              {time ? <Text style={s.compactTime}>{time}</Text> : null}
+              {event.opponent_name ? <Text style={s.compactOpponent} numberOfLines={1}>vs {event.opponent_name}</Text> : null}
+            </View>
+            {teamObj && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: teamObj.color || colors.primary }} />
+                <Text style={s.compactTeam} numberOfLines={1}>{teamObj.name}</Text>
+              </View>
+            )}
+          </View>
+          {/* Expand chevron */}
+          <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textMuted} />
+        </TouchableOpacity>
 
-        {/* RSVP summary bar */}
-        {rsvp && (
-          <TouchableOpacity
-            style={s.rsvpSummaryBar}
-            onPress={() => { setSelectedEvent(event); setShowDetailModal(true); }}
-            activeOpacity={0.7}
-          >
-            <View style={s.rsvpCounts}>
-              <View style={s.rsvpCountItem}>
-                <Ionicons name="checkmark-circle" size={14} color="#22C55E" />
-                <Text style={[s.rsvpCountText, { color: colors.textMuted }]}>{rsvp.yes} going</Text>
-              </View>
-              <View style={s.rsvpCountItem}>
-                <Ionicons name="help-circle" size={14} color="#E8913A" />
-                <Text style={[s.rsvpCountText, { color: colors.textMuted }]}>{rsvp.maybe} maybe</Text>
-              </View>
-              <View style={s.rsvpCountItem}>
-                <Ionicons name="close-circle" size={14} color="#D94F4F" />
-                <Text style={[s.rsvpCountText, { color: colors.textMuted }]}>{rsvp.no} out</Text>
-              </View>
-              {rsvp.pending > 0 && (
-                <View style={s.rsvpCountItem}>
-                  <Ionicons name="time" size={14} color={colors.textMuted} />
-                  <Text style={[s.rsvpCountText, { color: colors.textMuted }]}>{rsvp.pending} pending</Text>
+        {/* Expanded detail */}
+        {isExpanded && (
+          <View style={s.expandedSection}>
+            {/* RSVP */}
+            {rsvp && (
+              <TouchableOpacity style={s.rsvpSummaryBar} onPress={() => { setSelectedEvent(event); setShowDetailModal(true); }} activeOpacity={0.7}>
+                <View style={s.rsvpCounts}>
+                  <View style={s.rsvpCountItem}>
+                    <Ionicons name="checkmark-circle" size={14} color="#22C55E" />
+                    <Text style={[s.rsvpCountText, { color: colors.textMuted }]}>{rsvp.yes} going</Text>
+                  </View>
+                  <View style={s.rsvpCountItem}>
+                    <Ionicons name="help-circle" size={14} color="#E8913A" />
+                    <Text style={[s.rsvpCountText, { color: colors.textMuted }]}>{rsvp.maybe} maybe</Text>
+                  </View>
+                  <View style={s.rsvpCountItem}>
+                    <Ionicons name="close-circle" size={14} color="#D94F4F" />
+                    <Text style={[s.rsvpCountText, { color: colors.textMuted }]}>{rsvp.no} out</Text>
+                  </View>
+                  {rsvp.pending > 0 && (
+                    <View style={s.rsvpCountItem}>
+                      <Ionicons name="time" size={14} color={colors.textMuted} />
+                      <Text style={[s.rsvpCountText, { color: colors.textMuted }]}>{rsvp.pending}</Text>
+                    </View>
+                  )}
                 </View>
+                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+              </TouchableOpacity>
+            )}
+            {/* Action buttons */}
+            <View style={s.actionRow}>
+              {(event.venue_address || event.venue_name || event.location) && (
+                <TouchableOpacity onPress={() => openDirections(event)} style={s.actionBtn} activeOpacity={0.7}>
+                  <Ionicons name="navigate-outline" size={16} color={colors.primary} />
+                  <Text style={[s.actionBtnText, { color: colors.primary }]}>Directions</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity onPress={() => addToCalendar(event)} style={s.actionBtn} activeOpacity={0.7}>
+                <Ionicons name="calendar-outline" size={16} color={colors.primary} />
+                <Text style={[s.actionBtnText, { color: colors.primary }]}>Add to Cal</Text>
+              </TouchableOpacity>
+              {isGame && (
+                <TouchableOpacity onPress={() => router.push(`/game-prep-wizard?eventId=${event.id}&teamId=${event.team_id}` as any)} style={s.actionBtn} activeOpacity={0.7}>
+                  <Ionicons name="clipboard-outline" size={16} color="#D94F4F" />
+                  <Text style={[s.actionBtnText, { color: '#D94F4F' }]}>Game Prep</Text>
+                </TouchableOpacity>
               )}
             </View>
-            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-          </TouchableOpacity>
+          </View>
         )}
-
-        {/* Action row */}
-        <View style={s.actionRow}>
-          {(event.venue_address || event.venue_name || event.location) && (
-            <TouchableOpacity onPress={() => openDirections(event)} style={s.actionBtn} activeOpacity={0.7}>
-              <Ionicons name="navigate-outline" size={16} color={colors.primary} />
-              <Text style={[s.actionBtnText, { color: colors.primary }]}>Directions</Text>
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity onPress={() => addToCalendar(event)} style={s.actionBtn} activeOpacity={0.7}>
-            <Ionicons name="calendar-outline" size={16} color={colors.primary} />
-            <Text style={[s.actionBtnText, { color: colors.primary }]}>Add to Cal</Text>
-          </TouchableOpacity>
-          {isGame && (
-            <TouchableOpacity onPress={() => router.push(`/game-prep-wizard?eventId=${event.id}&teamId=${event.team_id}` as any)} style={s.actionBtn} activeOpacity={0.7}>
-              <Ionicons name="clipboard-outline" size={16} color="#D94F4F" />
-              <Text style={[s.actionBtnText, { color: '#D94F4F' }]}>Game Prep</Text>
-            </TouchableOpacity>
-          )}
-        </View>
       </View>
     );
   };
@@ -786,9 +825,21 @@ export default function CoachScheduleScreen() {
         {calendarExpanded ? renderMonthGrid() : renderWeekStrip()}
       </View>
 
-      {/* Team filter pills */}
+      {/* Team filter dropdown */}
       {teamFilterTabs.length > 0 && (
-        <PillTabs tabs={teamFilterTabs} activeKey={activeTeamFilter} onChange={setActiveTeamFilter} />
+        <View style={{ paddingHorizontal: spacing.screenPadding, marginBottom: 8 }}>
+          <TouchableOpacity
+            style={s.teamFilterBtn}
+            onPress={() => { setTeamFilterSearch(''); setShowTeamFilterSheet(true); }}
+            activeOpacity={0.7}
+          >
+            <View style={[s.teamFilterDot, { backgroundColor: activeTeamFilter === 'all' ? colors.primary : (teams.find(t => t.id === activeTeamFilter)?.color || colors.primary) }]} />
+            <Text style={s.teamFilterBtnText} numberOfLines={1}>
+              {activeTeamFilter === 'all' ? 'All Teams' : (teams.find(t => t.id === activeTeamFilter)?.name || 'All Teams')}
+            </Text>
+            <Ionicons name="chevron-down" size={16} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
       )}
 
       {/* Event list */}
@@ -812,6 +863,37 @@ export default function CoachScheduleScreen() {
       >
         <Ionicons name="add" size={28} color="#FFFFFF" />
       </TouchableOpacity>
+
+      {/* Team Filter Bottom Sheet */}
+      <Modal visible={showTeamFilterSheet} transparent animationType="slide" onRequestClose={() => setShowTeamFilterSheet(false)}>
+        <TouchableOpacity style={s.sheetOverlay} activeOpacity={1} onPress={() => setShowTeamFilterSheet(false)}>
+          <View style={s.sheetContent} onStartShouldSetResponder={() => true}>
+            <View style={s.sheetHandle} />
+            <Text style={s.sheetTitle}>Select Team</Text>
+            <TextInput
+              style={s.sheetSearch}
+              placeholder="Search teams..."
+              placeholderTextColor={colors.textMuted}
+              value={teamFilterSearch}
+              onChangeText={setTeamFilterSearch}
+            />
+            <ScrollView style={{ maxHeight: 300 }}>
+              <TouchableOpacity style={s.sheetRow} onPress={() => { setActiveTeamFilter('all'); setShowTeamFilterSheet(false); }}>
+                <View style={[s.teamFilterDot, { backgroundColor: colors.primary }]} />
+                <Text style={[s.sheetRowText, activeTeamFilter === 'all' && { fontWeight: '700', color: colors.primary }]}>All Teams</Text>
+                {activeTeamFilter === 'all' && <Ionicons name="checkmark-circle" size={20} color={colors.primary} />}
+              </TouchableOpacity>
+              {teams.filter(t => !teamFilterSearch || t.name.toLowerCase().includes(teamFilterSearch.toLowerCase())).map(t => (
+                <TouchableOpacity key={t.id} style={s.sheetRow} onPress={() => { setActiveTeamFilter(t.id); setShowTeamFilterSheet(false); }}>
+                  <View style={[s.teamFilterDot, { backgroundColor: t.color || colors.primary }]} />
+                  <Text style={[s.sheetRowText, activeTeamFilter === t.id && { fontWeight: '700', color: colors.primary }]}>{t.name}</Text>
+                  {activeTeamFilter === t.id && <Ionicons name="checkmark-circle" size={20} color={colors.primary} />}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* Event Detail Modal */}
       <EventDetailModal
@@ -1086,5 +1168,37 @@ function createStyles(colors: any) {
     typeBtn: { flex: 1, padding: 14, backgroundColor: colors.card, borderRadius: 12, borderWidth: 2, borderColor: colors.border, alignItems: 'center' },
     teamChip: { paddingHorizontal: 16, paddingVertical: 10, backgroundColor: colors.card, borderRadius: 8, borderWidth: 2, borderColor: colors.border, marginRight: 10 },
     locBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 12, backgroundColor: colors.card, borderRadius: 8, borderWidth: 2, borderColor: colors.border, gap: 6 },
+
+    // Team filter dropdown (FIX 10)
+    teamFilterBtn: {
+      backgroundColor: colors.glassCard, borderRadius: radii.card, borderWidth: 1, borderColor: colors.glassBorder,
+      flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10, gap: 8,
+    },
+    teamFilterDot: { width: 10, height: 10, borderRadius: 5 },
+    teamFilterBtnText: { flex: 1, fontSize: 14, fontWeight: '600', color: colors.text },
+
+    // Team filter sheet
+    sheetOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+    sheetContent: { backgroundColor: colors.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, paddingBottom: 40 },
+    sheetHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: colors.textMuted, opacity: 0.4, alignSelf: 'center' as const, marginBottom: 16 },
+    sheetTitle: { ...displayTextStyle, fontSize: 18, color: colors.text, textAlign: 'center' as const, marginBottom: 16 },
+    sheetSearch: { backgroundColor: colors.background, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: colors.text, marginBottom: 12, borderWidth: 1, borderColor: colors.border },
+    sheetRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.glassBorder, gap: 10 },
+    sheetRowText: { flex: 1, fontSize: 15, fontWeight: '500', color: colors.text },
+
+    // Compact event card (FIX 11)
+    compactRow: {
+      flexDirection: 'row', alignItems: 'center', padding: 12, gap: 10,
+    },
+    compactDate: { width: 40, alignItems: 'center' },
+    compactDay: { ...displayTextStyle, fontSize: 20, color: colors.text, lineHeight: 22 },
+    compactMonth: { fontSize: 10, fontWeight: '600', color: colors.textMuted, textTransform: 'uppercase' as const },
+    compactCenter: { flex: 1 },
+    compactBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+    compactBadgeText: { fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
+    compactTime: { fontSize: 12, fontWeight: '500', color: colors.textMuted },
+    compactOpponent: { fontSize: 13, fontWeight: '600', color: colors.text },
+    compactTeam: { fontSize: 12, fontWeight: '500', color: colors.text },
+    expandedSection: { borderTopWidth: 1, borderTopColor: colors.glassBorder },
   });
 }
