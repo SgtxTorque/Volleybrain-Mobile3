@@ -101,7 +101,7 @@ export default function CoachScheduleScreen() {
   const { colors } = useTheme();
   const { user, profile } = useAuth();
   const { workingSeason } = useSeason();
-  const { isCoach } = usePermissions();
+  const { isCoach, isAdmin } = usePermissions();
   const router = useRouter();
   const s = useMemo(() => createStyles(colors), [colors]);
 
@@ -155,6 +155,23 @@ export default function CoachScheduleScreen() {
     if (!user?.id || !workingSeason?.id) return;
 
     try {
+      // Admin sees ALL teams in the season
+      if (isAdmin) {
+        const { data: allTeams } = await supabase
+          .from('teams')
+          .select('id, name, color')
+          .eq('season_id', workingSeason.id)
+          .order('name');
+        const result = (allTeams || []).map(t => ({
+          id: t.id, name: t.name, color: t.color || colors.primary,
+        }));
+        setTeams(result);
+        if (result.length > 0 && !newEvent.team_id) {
+          setNewEvent(prev => ({ ...prev, team_id: result[0].id }));
+        }
+        return;
+      }
+
       const { data: allStaffTeams } = await supabase
         .from('team_staff')
         .select('team_id, staff_role, teams (id, name, color, season_id)')
@@ -205,7 +222,7 @@ export default function CoachScheduleScreen() {
     } catch (err) {
       if (__DEV__) console.error('[CoachSchedule] fetchCoachTeams error:', err);
     }
-  }, [user?.id, workingSeason?.id, colors.primary]);
+  }, [user?.id, workingSeason?.id, colors.primary, isAdmin]);
 
   // =========================================================================
   // Data: fetch events with batched RSVPs

@@ -1,5 +1,6 @@
 import { useAuth } from '@/lib/auth';
 import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
+import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
@@ -104,12 +105,14 @@ export default function CoachChatScreen() {
   const { profile } = useAuth();
   const { workingSeason } = useSeason();
   const { colors } = useTheme();
+  const { isAdmin } = usePermissions();
   const router = useRouter();
   const s = useMemo(() => createStyles(colors), [colors]);
 
   // --- Channels ---
   const [channels, setChannels] = useState<Channel[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [adminMemberIds, setAdminMemberIds] = useState<Set<string>>(new Set());
 
   // --- Search ---
   const [searchQuery, setSearchQuery] = useState('');
@@ -146,6 +149,86 @@ export default function CoachChatScreen() {
   const fetchChannels = useCallback(async () => {
     if (!profile || !workingSeason) return;
 
+    // Admin: see ALL channels in the season
+    if (isAdmin) {
+      const { data: allChannels } = await supabase
+        .from('chat_channels')
+        .select('id, name, description, channel_type, avatar_url, team_id, created_at')
+        .eq('season_id', workingSeason.id);
+
+      if (!allChannels || allChannels.length === 0) { setChannels([]); return; }
+
+      // Check which channels admin is already a member of
+      const { data: myMemberships } = await supabase
+        .from('channel_members')
+        .select('channel_id, last_read_at')
+        .eq('user_id', profile.id)
+        .is('left_at', null);
+
+      const memberMap = new Map((myMemberships || []).map(m => [m.channel_id, m.last_read_at]));
+      setAdminMemberIds(new Set(memberMap.keys()));
+
+      const channelIds = allChannels.map(c => c.id);
+
+      // BATCH: recent messages
+      const { data: recentMessages } = await supabase
+        .from('chat_messages')
+        .select('id, channel_id, content, message_type, created_at, profiles:sender_id(full_name)')
+        .in('channel_id', channelIds)
+        .eq('is_deleted', false)
+        .order('created_at', { ascending: false })
+        .limit(channelIds.length * 2);
+
+      const lastMessageMap = new Map<string, any>();
+      for (const msg of (recentMessages || [])) {
+        if (!lastMessageMap.has(msg.channel_id)) {
+          lastMessageMap.set(msg.channel_id, msg);
+        }
+      }
+
+      // Unread counts (only for channels admin is a member of)
+      const unreadMap = new Map<string, number>();
+      const memberChannelIds = allChannels.filter(c => memberMap.has(c.id)).map(c => c.id);
+      if (memberChannelIds.length > 0) {
+        const unreadPromises = memberChannelIds.map(async (cId) => {
+          const { count } = await supabase
+            .from('chat_messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('channel_id', cId)
+            .eq('is_deleted', false)
+            .gt('created_at', memberMap.get(cId) || '1970-01-01');
+          return { channelId: cId, count: count || 0 };
+        });
+        const results = await Promise.all(unreadPromises);
+        for (const r of results) unreadMap.set(r.channelId, r.count);
+      }
+
+      // Assemble
+      const assembled: Channel[] = allChannels.map(c => {
+        const lastMsg = lastMessageMap.get(c.id);
+        return {
+          ...c,
+          last_message: lastMsg ? {
+            content: lastMsg.content,
+            sender_name: (lastMsg.profiles as any)?.full_name || 'Unknown',
+            created_at: lastMsg.created_at,
+            message_type: lastMsg.message_type,
+          } : undefined,
+          unread_count: unreadMap.get(c.id) || 0,
+        };
+      });
+
+      assembled.sort((a, b) => {
+        const aTime = a.last_message?.created_at || a.created_at;
+        const bTime = b.last_message?.created_at || b.created_at;
+        return new Date(bTime).getTime() - new Date(aTime).getTime();
+      });
+
+      setChannels(assembled);
+      return;
+    }
+
+    // Coach: only channels user is a member of
     const { data: memberChannels } = await supabase
       .from('channel_members')
       .select(`
@@ -213,7 +296,7 @@ export default function CoachChatScreen() {
     });
 
     setChannels(assembled);
-  }, [profile, workingSeason]);
+  }, [profile, workingSeason, isAdmin]);
 
   // =========================================================================
   // Pinning
@@ -305,7 +388,7 @@ export default function CoachChatScreen() {
       }
 
       await supabase.from('channel_members').insert([
-        { channel_id: newChannel.id, user_id: profile.id, display_name: profile.full_name, member_role: 'coach', can_post: true, can_moderate: true },
+        { channel_id: newChannel.id, user_id: profile.id, display_name: profile.full_name, member_role: isAdmin ? 'admin' : 'coach', can_post: true, can_moderate: true },
         { channel_id: newChannel.id, user_id: user.id, display_name: user.full_name, member_role: user.account_type || 'parent', can_post: true, can_moderate: user.account_type === 'admin' },
       ]);
 
@@ -371,6 +454,24 @@ export default function CoachChatScreen() {
     fetchChannels();
     router.push({ pathname: '/chat/[id]', params: { id: newChannel.id } } as any);
   }, [newChannelName, newChannelType, channelMembers, profile, workingSeason, fetchChannels, router]);
+
+  // =========================================================================
+  // Admin: auto-join channel on press
+  // =========================================================================
+  const handleChannelPress = useCallback(async (channelId: string) => {
+    if (isAdmin && !adminMemberIds.has(channelId)) {
+      await supabase.from('channel_members').insert({
+        channel_id: channelId,
+        user_id: profile!.id,
+        display_name: profile!.full_name,
+        member_role: 'admin',
+        can_post: true,
+        can_moderate: true,
+      });
+      setAdminMemberIds(prev => new Set([...prev, channelId]));
+    }
+    router.push({ pathname: '/chat/[id]', params: { id: channelId } } as any);
+  }, [isAdmin, adminMemberIds, profile, router]);
 
   // =========================================================================
   // Effects
@@ -502,7 +603,7 @@ export default function CoachChatScreen() {
         <TouchableOpacity
           style={[s.channelCard, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}
           activeOpacity={0.7}
-          onPress={() => router.push({ pathname: '/chat/[id]', params: { id: channel.id } } as any)}
+          onPress={() => handleChannelPress(channel.id)}
           onLongPress={() =>
             Alert.alert(
               isPinned ? 'Unpin Chat' : 'Pin Chat',
@@ -557,7 +658,7 @@ export default function CoachChatScreen() {
         </TouchableOpacity>
       );
     },
-    [colors, pinnedIds, typingMap, getChannelColor, router, togglePin, s],
+    [colors, pinnedIds, typingMap, getChannelColor, handleChannelPress, togglePin, s],
   );
 
   // =========================================================================
