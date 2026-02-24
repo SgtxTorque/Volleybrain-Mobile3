@@ -192,6 +192,7 @@ export default function RegistrationHubScreen() {
   const [denyReason, setDenyReason] = useState('');
   const [pendingTeamAssignIds, setPendingTeamAssignIds] = useState<string[]>([]);
   const [showBulkTeamPicker, setShowBulkTeamPicker] = useState(false);
+  const [showSeasonFilter, setShowSeasonFilter] = useState(false);
 
   // =====================================================
   // DATA FETCHING - Now queries ALL open seasons
@@ -1013,30 +1014,32 @@ export default function RegistrationHubScreen() {
   );
 
   const renderRegistrationCard = (registration: Registration) => {
-    const { player, payments, team, sport, season } = registration;
+    const { player, payments, team, sport } = registration;
     const config = statusConfig[registration.status];
-    const paymentPercent = payments && payments.total_due > 0 
-      ? Math.round((payments.total_paid / payments.total_due) * 100) 
-      : 0;
     const hasMedical = hasMedicalInfo(player);
-
     const isSelected = selectedIds.has(registration.id);
+
+    // Compact inline flags
+    const flags: { icon: string; color: string }[] = [];
+    if (hasMedical) flags.push({ icon: 'medkit', color: '#FF3B30' });
+    if (!player.waiver_liability) flags.push({ icon: 'document', color: '#FF3B30' });
+    if (player.placement_preferences) flags.push({ icon: 'flag', color: '#5AC8FA' });
 
     return (
       <TouchableOpacity
         key={registration.id}
         style={{
           backgroundColor: '#FFF',
-          borderRadius: radii.card,
-          padding: 16,
-          marginBottom: 12,
-          borderLeftWidth: 4,
+          borderRadius: 10,
+          paddingVertical: 10,
+          paddingHorizontal: 12,
+          marginBottom: 6,
+          borderLeftWidth: 3,
           borderLeftColor: config.color,
           borderWidth: isSelected ? 2 : 1,
           borderColor: isSelected ? '#2C5F7C' : 'rgba(0,0,0,0.06)',
-          ...shadows.card,
-          flexDirection: selectionMode ? 'row' : 'column',
-          alignItems: selectionMode ? 'flex-start' : 'stretch',
+          flexDirection: 'row',
+          alignItems: 'center',
         }}
         onPress={() => {
           if (selectionMode) {
@@ -1048,134 +1051,26 @@ export default function RegistrationHubScreen() {
         }}
       >
         {selectionMode && (
-          <View style={{ marginRight: 12, marginTop: 4 }}>
-            <Ionicons name={isSelected ? 'checkbox' : 'square-outline'} size={24} color={isSelected ? colors.primary : colors.textMuted} />
-          </View>
+          <Ionicons name={isSelected ? 'checkbox' : 'square-outline'} size={20} color={isSelected ? colors.primary : colors.textMuted} style={{ marginRight: 8 }} />
         )}
-        <View style={{ flex: 1 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <View style={{ flex: 1 }}>
-            {/* Sport Icon + Player Name */}
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              {sport && (
-                <Text style={{ fontSize: 18, marginRight: 8 }}>{sport.icon}</Text>
-              )}
-              <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>
-                {player.first_name} {player.last_name}
-              </Text>
-            </View>
-            <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 2 }}>
-              Grade {player.grade} • {player.player_type === 'returning' ? 'Returning' : 'New'}
-            </Text>
-            <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 2 }}>
-              {player.parent_name}
-            </Text>
-            {/* Season Name */}
-            {season && (
-              <Text style={{ fontSize: 12, color: sport?.color_primary || colors.primary, marginTop: 4 }}>
-                {season.name}
-              </Text>
-            )}
-          </View>
-          
-          <View style={{ alignItems: 'flex-end' }}>
-            <View style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              backgroundColor: `${config.color}20`,
-              paddingHorizontal: 8,
-              paddingVertical: 4,
-              borderRadius: 8,
-            }}>
-              <Ionicons name={config.icon as any} size={14} color={config.color} />
-              <Text style={{ fontSize: 12, color: config.color, marginLeft: 4, fontWeight: '600' }}>
-                {config.label}
-              </Text>
-            </View>
-            <Text style={{ fontSize: 11, color: colors.textSecondary, marginTop: 4 }}>
-              {formatDate(registration.submitted_at)}
-            </Text>
-          </View>
-        </View>
-
-        {/* Payment Progress */}
-        {['approved', 'active'].includes(registration.status) && payments && (
-          <View style={{ marginTop: 12 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-              <Text style={{ fontSize: 12, color: colors.textSecondary }}>
-                Payment: {formatCurrency(payments.total_paid)} / {formatCurrency(payments.total_due)}
-              </Text>
-              <Text style={{ fontSize: 12, color: paymentPercent >= 100 ? '#34C759' : colors.textSecondary }}>
-                {paymentPercent}%
-              </Text>
-            </View>
-            <View style={{ height: 4, backgroundColor: colors.border, borderRadius: 2 }}>
-              <View style={{
-                height: '100%',
-                width: `${Math.min(paymentPercent, 100)}%`,
-                backgroundColor: paymentPercent >= 100 ? '#34C759' : '#FFD700',
-                borderRadius: 2,
-              }} />
-            </View>
-          </View>
-        )}
-
-        {/* Team Assignment */}
-        {registration.status === 'rostered' && team && (
-          <View style={{
-            marginTop: 12,
-            flexDirection: 'row',
-            alignItems: 'center',
-            backgroundColor: colors.background,
-            padding: 8,
-            borderRadius: 8,
-          }}>
-            <Ionicons name="people" size={16} color="#AF52DE" />
-            <Text style={{ fontSize: 13, color: colors.text, marginLeft: 8 }}>{team.name}</Text>
-          </View>
-        )}
-
-        {/* Flags */}
-        <View style={{ flexDirection: 'row', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-          {hasMedical && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FF3B3020', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
-              <Ionicons name="medkit" size={12} color="#FF3B30" />
-              <Text style={{ fontSize: 11, color: '#FF3B30', marginLeft: 4 }}>Medical</Text>
-            </View>
-          )}
-          {player.placement_preferences && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#5AC8FA20', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
-              <Ionicons name="flag" size={12} color="#5AC8FA" />
-              <Text style={{ fontSize: 11, color: '#5AC8FA', marginLeft: 4 }}>Pref</Text>
-            </View>
-          )}
-          {registration.needs_evaluation && registration.status !== 'new' && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FF950020', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
-              <Ionicons name="clipboard" size={12} color="#FF9500" />
-              <Text style={{ fontSize: 11, color: '#FF9500', marginLeft: 4 }}>Eval</Text>
-            </View>
-          )}
-          {!player.waiver_liability && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FF3B3020', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
-              <Ionicons name="document" size={12} color="#FF3B30" />
-              <Text style={{ fontSize: 11, color: '#FF3B30', marginLeft: 4 }}>Waiver</Text>
-            </View>
-          )}
-          {requiredWaiverIds.length > 0 && (() => {
-            const ws = getWaiverStatus(registration.player_id);
-            return ws.complete ? (
-              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#34C75920', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
-                <Ionicons name="shield-checkmark" size={12} color="#34C759" />
-                <Text style={{ fontSize: 11, color: '#34C759', marginLeft: 4 }}>Waivers Complete</Text>
-              </View>
-            ) : (
-              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FF950020', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
-                <Ionicons name="alert-circle" size={12} color="#FF9500" />
-                <Text style={{ fontSize: 11, color: '#FF9500', marginLeft: 4 }}>{ws.missing} missing</Text>
-              </View>
-            );
-          })()}
-        </View>
+        {/* Sport icon */}
+        {sport && <Text style={{ fontSize: 16, marginRight: 6 }}>{sport.icon}</Text>}
+        {/* Name */}
+        <Text numberOfLines={1} style={{ flex: 1, fontSize: 14, fontWeight: '600', color: colors.text }}>
+          {player.first_name} {player.last_name}
+        </Text>
+        {/* Grade pill */}
+        <Text style={{ fontSize: 11, color: colors.textMuted, marginHorizontal: 4 }}>G{player.grade}</Text>
+        {/* Inline flag icons */}
+        {flags.map((f, i) => (
+          <Ionicons key={i} name={f.icon as any} size={12} color={f.color} style={{ marginLeft: 3 }} />
+        ))}
+        {/* Team badge (if rostered) */}
+        {team && <Ionicons name="people" size={13} color="#AF52DE" style={{ marginLeft: 4 }} />}
+        {/* Status badge */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: `${config.color}20`, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, marginLeft: 6 }}>
+          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: config.color }} />
+          <Text style={{ fontSize: 10, color: config.color, marginLeft: 3, fontWeight: '700' }}>{config.label}</Text>
         </View>
       </TouchableOpacity>
     );
@@ -1583,12 +1478,16 @@ export default function RegistrationHubScreen() {
       />
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
-        {/* All Open Seasons Badge */}
-        <View style={{ alignItems: 'center', marginBottom: 16 }}>
-          <View style={{ backgroundColor: '#14B8A620', paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20 }}>
-            <Text style={{ color: '#14B8A6', fontWeight: '700', fontSize: 13 }}>All Open Registrations ({seasons.length} season{seasons.length !== 1 ? 's' : ''})</Text>
-          </View>
-        </View>
+        {/* Season Filter Button (FIX 18) */}
+        <TouchableOpacity
+          onPress={() => setShowSeasonFilter(true)}
+          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', alignSelf: 'center', backgroundColor: colors.glassCard, borderWidth: 1, borderColor: colors.glassBorder, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, marginBottom: 12 }}
+        >
+          <Text style={{ color: activeSeasonFilter === 'all' ? '#14B8A6' : colors.primary, fontWeight: '700', fontSize: 13 }}>
+            {activeSeasonFilter === 'all' ? `All Seasons (${seasons.length})` : seasons.find(s => s.id === activeSeasonFilter)?.name || 'Season'}
+          </Text>
+          <Ionicons name="chevron-down" size={14} color={colors.textMuted} style={{ marginLeft: 4 }} />
+        </TouchableOpacity>
 
         {/* Sport Filter Pills */}
         {sports.length > 0 && (
@@ -1628,62 +1527,54 @@ export default function RegistrationHubScreen() {
           </ScrollView>
         )}
 
-        {/* Analytics Mini-Cards */}
+        {/* Registration Overview — consolidated single card (FIX 16) */}
         {stats && stats.total_count > 0 && (
-          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
-            <View style={{ flex: 1, backgroundColor: colors.glassCard, borderRadius: 12, padding: 10, alignItems: 'center', borderWidth: 1, borderColor: colors.glassBorder }}>
-              <Ionicons name="document-text" size={16} color="#2C5F7C" />
-              <Text style={{ fontSize: 18, fontWeight: '800', color: colors.text, marginTop: 2 }}>{stats.total_count}</Text>
-              <Text style={{ fontSize: 10, color: colors.textMuted }}>Total</Text>
+          <View style={{ backgroundColor: colors.glassCard, borderRadius: radii.card, borderWidth: 1, borderColor: colors.glassBorder, padding: 14, marginBottom: 12, ...shadows.card }}>
+            {/* Top row: Total | Approved | Rostered */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginBottom: 12 }}>
+              <View style={{ alignItems: 'center' }}>
+                <Text style={{ ...displayTextStyle, fontSize: 22, color: colors.text }}>{stats.total_count}</Text>
+                <Text style={{ fontSize: 10, color: colors.textMuted }}>Total</Text>
+              </View>
+              <View style={{ alignItems: 'center' }}>
+                <Text style={{ ...displayTextStyle, fontSize: 22, color: '#22C55E' }}>
+                  {Math.round(((stats.approved_count + stats.active_count + stats.rostered_count) / stats.total_count) * 100)}%
+                </Text>
+                <Text style={{ fontSize: 10, color: colors.textMuted }}>Approved</Text>
+              </View>
+              <View style={{ alignItems: 'center' }}>
+                <Text style={{ ...displayTextStyle, fontSize: 22, color: colors.text }}>{stats.rostered_count}</Text>
+                <Text style={{ fontSize: 10, color: colors.textMuted }}>Rostered</Text>
+              </View>
             </View>
-            <View style={{ flex: 1, backgroundColor: colors.glassCard, borderRadius: 12, padding: 10, alignItems: 'center', borderWidth: 1, borderColor: colors.glassBorder }}>
-              <Ionicons name="checkmark-circle" size={16} color="#22C55E" />
-              <Text style={{ fontSize: 18, fontWeight: '800', color: '#22C55E', marginTop: 2 }}>
-                {Math.round(((stats.approved_count + stats.active_count + stats.rostered_count) / stats.total_count) * 100)}%
-              </Text>
-              <Text style={{ fontSize: 10, color: colors.textMuted }}>Approved</Text>
+            {/* Status pills row */}
+            <View style={{ flexDirection: 'row', gap: 6, marginBottom: 12 }}>
+              <TouchableOpacity onPress={() => setActiveFilter('new')} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 6, borderRadius: 8, backgroundColor: activeFilter === 'new' ? '#E8913A15' : colors.background, borderWidth: activeFilter === 'new' ? 1.5 : 1, borderColor: activeFilter === 'new' ? '#E8913A' : colors.glassBorder }}>
+                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#E8913A' }} />
+                <Text style={{ fontSize: 11, fontWeight: '600', color: activeFilter === 'new' ? '#E8913A' : colors.text }}>New {stats.new_count}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setActiveFilter('approved')} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 6, borderRadius: 8, backgroundColor: activeFilter === 'approved' ? '#0EA5E915' : colors.background, borderWidth: activeFilter === 'approved' ? 1.5 : 1, borderColor: activeFilter === 'approved' ? '#0EA5E9' : colors.glassBorder }}>
+                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#0EA5E9' }} />
+                <Text style={{ fontSize: 11, fontWeight: '600', color: activeFilter === 'approved' ? '#0EA5E9' : colors.text }}>Paid {stats.approved_count}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setActiveFilter('active')} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 6, borderRadius: 8, backgroundColor: activeFilter === 'active' ? '#22C55E15' : colors.background, borderWidth: activeFilter === 'active' ? 1.5 : 1, borderColor: activeFilter === 'active' ? '#22C55E' : colors.glassBorder }}>
+                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#22C55E' }} />
+                <Text style={{ fontSize: 11, fontWeight: '600', color: activeFilter === 'active' ? '#22C55E' : colors.text }}>Ready {stats.active_count}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setActiveFilter('rostered')} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 6, borderRadius: 8, backgroundColor: activeFilter === 'rostered' ? '#2C5F7C15' : colors.background, borderWidth: activeFilter === 'rostered' ? 1.5 : 1, borderColor: activeFilter === 'rostered' ? '#2C5F7C' : colors.glassBorder }}>
+                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#2C5F7C' }} />
+                <Text style={{ fontSize: 11, fontWeight: '600', color: activeFilter === 'rostered' ? '#2C5F7C' : colors.text }}>Team {stats.rostered_count}</Text>
+              </TouchableOpacity>
             </View>
-            <View style={{ flex: 1, backgroundColor: colors.glassCard, borderRadius: 12, padding: 10, alignItems: 'center', borderWidth: 1, borderColor: colors.glassBorder }}>
-              <Ionicons name="people" size={16} color="#2C5F7C" />
-              <Text style={{ fontSize: 18, fontWeight: '800', color: colors.text, marginTop: 2 }}>{stats.rostered_count}</Text>
-              <Text style={{ fontSize: 10, color: colors.textMuted }}>Rostered</Text>
+            {/* Revenue progress bar */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+              <Text style={{ fontSize: 12, fontWeight: '600', color: '#22C55E' }}>{formatCurrency(stats.total_collected_revenue)} collected</Text>
+              <Text style={{ fontSize: 12, color: colors.textMuted }}>{formatCurrency(stats.total_expected_revenue)} expected</Text>
             </View>
-            <View style={{ flex: 1, backgroundColor: colors.glassCard, borderRadius: 12, padding: 10, alignItems: 'center', borderWidth: 1, borderColor: colors.glassBorder }}>
-              <Ionicons name="wallet" size={16} color="#E8913A" />
-              <Text style={{ fontSize: 18, fontWeight: '800', color: '#E8913A', marginTop: 2 }}>{formatCurrency(stats.total_expected_revenue)}</Text>
-              <Text style={{ fontSize: 10, color: colors.textMuted }}>Expected</Text>
+            <View style={{ height: 6, borderRadius: 3, backgroundColor: colors.glassBorder, overflow: 'hidden' }}>
+              <View style={{ height: 6, borderRadius: 3, backgroundColor: '#22C55E', width: `${stats.total_expected_revenue > 0 ? Math.min(Math.round((stats.total_collected_revenue / stats.total_expected_revenue) * 100), 100) : 0}%` }} />
             </View>
           </View>
-        )}
-
-        {/* Stats Cards */}
-        {stats && (
-          <>
-            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
-              {renderStatCard('New', stats.new_count, '#E8913A', 'new', () => setActiveFilter('new'))}
-              {renderStatCard('Paid', stats.approved_count, '#0EA5E9', 'approved', () => setActiveFilter('approved'))}
-              {renderStatCard('Ready', stats.active_count, '#22C55E', 'active', () => setActiveFilter('active'))}
-              {renderStatCard('Team', stats.rostered_count, '#2C5F7C', 'rostered', () => setActiveFilter('rostered'))}
-            </View>
-
-            {/* Revenue Overview */}
-            <Card style={{ marginBottom: 16 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                <Ionicons name="wallet" size={18} color="#2C5F7C" />
-                <Text style={{ color: colors.textSecondary, marginLeft: 8, fontWeight: '600' }}>Payment Overview</Text>
-              </View>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                <View>
-                  <Text style={{ ...displayTextStyle, fontSize: 24, color: '#22C55E' }}>{formatCurrency(stats.total_collected_revenue)}</Text>
-                  <Text style={{ color: colors.textSecondary, fontSize: 12 }}>Collected</Text>
-                </View>
-                <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={{ ...displayTextStyle, fontSize: 24, color: colors.text }}>{formatCurrency(stats.total_expected_revenue)}</Text>
-                  <Text style={{ color: colors.textSecondary, fontSize: 12 }}>Expected</Text>
-                </View>
-              </View>
-            </Card>
-          </>
         )}
 
         {/* Selection mode controls */}
@@ -1883,6 +1774,41 @@ export default function RegistrationHubScreen() {
             </View>
           </View>
         </View>
+      </Modal>
+
+      {/* Season Filter Modal (FIX 18) */}
+      <Modal visible={showSeasonFilter} transparent animationType="fade" onRequestClose={() => setShowSeasonFilter(false)}>
+        <TouchableOpacity activeOpacity={1} onPress={() => setShowSeasonFilter(false)} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }}>
+          <TouchableOpacity activeOpacity={1} onPress={() => {}} style={{ backgroundColor: colors.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingTop: 12, paddingBottom: 32, paddingHorizontal: 20, maxHeight: '50%' }}>
+            <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginBottom: 16 }} />
+            <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: 12 }}>Filter by Season</Text>
+            <TouchableOpacity
+              onPress={() => { setActiveSeasonFilter('all'); setShowSeasonFilter(false); }}
+              style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border }}
+            >
+              <Text style={{ fontSize: 15, fontWeight: activeSeasonFilter === 'all' ? '700' : '400', color: colors.text }}>All Seasons</Text>
+              {activeSeasonFilter === 'all' && <Ionicons name="checkmark" size={20} color={colors.primary} />}
+            </TouchableOpacity>
+            <ScrollView>
+              {seasons.map(s => {
+                const sport = sports.find(sp => sp.id === s.sport_id);
+                return (
+                  <TouchableOpacity
+                    key={s.id}
+                    onPress={() => { setActiveSeasonFilter(s.id); setShowSeasonFilter(false); }}
+                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      {sport && <Text style={{ fontSize: 16, marginRight: 8 }}>{sport.icon}</Text>}
+                      <Text style={{ fontSize: 15, fontWeight: activeSeasonFilter === s.id ? '700' : '400', color: colors.text }}>{s.name}</Text>
+                    </View>
+                    {activeSeasonFilter === s.id && <Ionicons name="checkmark" size={20} color={colors.primary} />}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </TouchableOpacity>
+        </TouchableOpacity>
       </Modal>
 
       {/* Detail Modal */}
