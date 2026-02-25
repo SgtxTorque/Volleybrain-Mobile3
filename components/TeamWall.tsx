@@ -678,6 +678,8 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
   const handleRefreshFeed = useCallback(async () => {
     setRefreshingFeed(true);
     setNewPostsCount(0);
+    setPostComments({});
+    setExpandedComments(new Set());
     await loadPosts();
     setRefreshingFeed(false);
   }, [teamId]);
@@ -889,15 +891,16 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
         }));
       }
 
-      // Update comment_count in DB (fire and forget)
+      // Update comment_count in DB
       const currentCount = posts.find((p) => p.id === postId)?.comment_count || 0;
-      supabase
+      const { error: updateError } = await supabase
         .from('team_posts')
         .update({ comment_count: currentCount })
-        .eq('id', postId)
-        .then(({ error: updateError }) => {
-          if (updateError && __DEV__) console.error('Error updating comment count:', updateError);
-        });
+        .eq('id', postId);
+      if (updateError && __DEV__) console.error('Error updating comment count:', updateError);
+
+      // Reload comments from DB to verify persistence
+      await loadComments(postId);
     } catch (error: any) {
       if (__DEV__) console.error('Error submitting comment:', error);
       setPostComments((prev) => ({
