@@ -258,32 +258,32 @@ const ReactionButton = ({
 const SkeletonPostCard = ({ colors }: { colors: any }) => (
   <View
     style={{
-      backgroundColor: '#FFF',
-      borderWidth: 1,
-      borderColor: 'rgba(0,0,0,0.06)',
-      borderRadius: 16,
-      marginBottom: 14,
-      padding: 16,
-      overflow: 'hidden',
+      borderBottomWidth: 1,
+      borderBottomColor: '#E5E5E5',
+      paddingBottom: 12,
+      marginBottom: 0,
     }}
   >
     {/* Header skeleton */}
-    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 14, marginBottom: 12 }}>
       <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.bgSecondary }} />
       <View style={{ marginLeft: 10, flex: 1 }}>
         <View style={{ width: 120, height: 14, borderRadius: 4, backgroundColor: colors.bgSecondary, marginBottom: 6 }} />
         <View style={{ width: 60, height: 10, borderRadius: 4, backgroundColor: colors.bgSecondary }} />
       </View>
-      <View style={{ width: 70, height: 22, borderRadius: 8, backgroundColor: colors.bgSecondary }} />
     </View>
     {/* Content skeleton */}
-    <View style={{ width: '100%', height: 14, borderRadius: 4, backgroundColor: colors.bgSecondary, marginBottom: 8 }} />
-    <View style={{ width: '80%', height: 14, borderRadius: 4, backgroundColor: colors.bgSecondary, marginBottom: 8 }} />
-    <View style={{ width: '60%', height: 14, borderRadius: 4, backgroundColor: colors.bgSecondary, marginBottom: 16 }} />
-    {/* Reaction bar skeleton */}
-    <View style={{ flexDirection: 'row', gap: 6, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.06)', paddingTop: 10 }}>
-      {[1, 2, 3, 4].map((i) => (
-        <View key={i} style={{ width: 36, height: 30, borderRadius: 15, backgroundColor: colors.bgSecondary }} />
+    <View style={{ paddingHorizontal: 16, marginBottom: 12 }}>
+      <View style={{ width: '100%', height: 14, borderRadius: 4, backgroundColor: colors.bgSecondary, marginBottom: 8 }} />
+      <View style={{ width: '80%', height: 14, borderRadius: 4, backgroundColor: colors.bgSecondary, marginBottom: 8 }} />
+      <View style={{ width: '60%', height: 14, borderRadius: 4, backgroundColor: colors.bgSecondary }} />
+    </View>
+    {/* Full-width image placeholder */}
+    <View style={{ width: '100%', height: 200, backgroundColor: colors.bgSecondary, marginBottom: 12 }} />
+    {/* Engagement row skeleton */}
+    <View style={{ flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 16, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#E5E5E5' }}>
+      {[1, 2, 3].map((i) => (
+        <View key={i} style={{ width: 60, height: 18, borderRadius: 4, backgroundColor: colors.bgSecondary }} />
       ))}
     </View>
   </View>
@@ -1404,15 +1404,19 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
           onPress={() => setShowNewPostModal(true)}
           activeOpacity={0.7}
         >
-          <View style={[s.composeAvatar, { backgroundColor: teamColor }]}>
-            <Text style={s.composeAvatarText}>
-              {getInitials(profile?.full_name || user?.email || null)}
-            </Text>
-          </View>
+          {profile?.avatar_url ? (
+            <Image source={{ uri: profile.avatar_url }} style={s.composeAvatarImg} />
+          ) : (
+            <View style={[s.composeAvatar, { backgroundColor: teamColor }]}>
+              <Text style={s.composeAvatarText}>
+                {getInitials(profile?.full_name || user?.email || null)}
+              </Text>
+            </View>
+          )}
           <View style={s.composeInputMock}>
             <Text style={s.composeInputText}>What's on your mind?</Text>
           </View>
-          <Ionicons name="create-outline" size={22} color={teamColor} />
+          <Ionicons name="camera-outline" size={22} color={teamColor} />
         </TouchableOpacity>
       )}
     </View>
@@ -2125,17 +2129,16 @@ const createStyles = (colors: any) =>
     composeCard: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: '#FFF',
-      borderWidth: 1,
-      borderColor: 'rgba(0,0,0,0.06)',
-      borderRadius: 16,
-      padding: 14,
-      marginBottom: 16,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
       gap: 12,
-      ...Platform.select({
-        ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 8 },
-        android: { elevation: 3 },
-      }),
+      borderBottomWidth: 1,
+      borderBottomColor: '#E5E5E5',
+    },
+    composeAvatarImg: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
     },
     composeAvatar: {
       width: 38,
