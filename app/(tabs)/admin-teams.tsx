@@ -350,6 +350,20 @@ export default function AdminTeamsScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
+        {/* All Players Directory */}
+        <TouchableOpacity
+          style={[s.allPlayersCard, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}
+          onPress={() => router.push('/(tabs)/players' as any)}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="people" size={22} color={colors.primary} />
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>All Players</Text>
+            <Text style={{ fontSize: 12, color: colors.textMuted }}>{totalRostered + unrosteredPlayers.length} players across {teams.length} teams</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </TouchableOpacity>
+
         {/* Stats summary */}
         <View style={s.statsRow}>
           <View style={[s.statBox, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}>
@@ -663,6 +677,13 @@ const createStyles = (colors: any) =>
     container: { flex: 1 },
     scroll: { flex: 1 },
     scrollContent: { paddingHorizontal: spacing.screenPadding, paddingTop: 12 },
+
+    // All Players card
+    allPlayersCard: {
+      flexDirection: 'row', alignItems: 'center', padding: 14,
+      borderRadius: radii.card, borderWidth: 1, marginBottom: 12,
+      ...shadows.card,
+    },
 
     // Stats
     statsRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
