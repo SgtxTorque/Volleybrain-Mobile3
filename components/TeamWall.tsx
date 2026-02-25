@@ -2046,8 +2046,6 @@ const createStyles = (colors: any) =>
       color: colors.text,
     },
 
-    // (old teamBanner styles removed — replaced by hero styles above)
-
     // Tab Bar
     tabBarScroll: {
       flexGrow: 0,
