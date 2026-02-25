@@ -21,6 +21,8 @@ import {
   Dimensions,
   FlatList,
   Image,
+  Keyboard,
+  KeyboardAvoidingView,
   Modal,
   Platform,
   RefreshControl,
@@ -873,6 +875,7 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
 
       // Reload comments from DB to verify persistence
       await loadComments(postId);
+      Keyboard.dismiss();
     } catch (error: any) {
       if (__DEV__) console.error('Error submitting comment:', error);
       setPostComments((prev) => ({
@@ -1411,6 +1414,19 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
                       placeholderTextColor={colors.textMuted}
                       multiline
                       maxLength={500}
+                      onFocus={() => {
+                        const idx = posts.findIndex((p) => p.id === post.id);
+                        if (idx >= 0) {
+                          setTimeout(() => {
+                            try {
+                              feedListRef.current?.scrollToIndex({ index: idx, viewOffset: -200, animated: true });
+                            } catch {
+                              // Fallback: scrollToEnd if scrollToIndex fails (no getItemLayout)
+                              feedListRef.current?.scrollToEnd({ animated: true });
+                            }
+                          }, 300);
+                        }
+                      }}
                     />
                     <TouchableOpacity
                       onPress={() => handleSubmitComment(post.id)}
@@ -1734,6 +1750,10 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
 
   return (
     <Wrapper style={s.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
       {/* Tab Content */}
       {(feedOnly || activeTab === 'feed') && (
         <View style={s.tabContent}>
@@ -1801,6 +1821,12 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
                 contentContainerStyle={s.listContent}
                 onScroll={handleScroll}
                 scrollEventThrottle={16}
+                keyboardShouldPersistTaps="handled"
+                onScrollToIndexFailed={(info) => {
+                  setTimeout(() => {
+                    feedListRef.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: true });
+                  }, 100);
+                }}
                 refreshControl={
                   <RefreshControl
                     refreshing={refreshingFeed}
@@ -1921,6 +1947,8 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
           <Text style={s.compactHeaderTitle} numberOfLines={1}>{team?.name}</Text>
         </Animated.View>
       )}
+
+      </KeyboardAvoidingView>
 
       {/* Who Reacted Modal */}
       <Modal visible={!!reactionsModalPostId} animationType="slide" transparent>
