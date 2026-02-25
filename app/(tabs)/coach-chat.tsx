@@ -49,6 +49,7 @@ type User = {
   full_name: string;
   email: string;
   account_type: string;
+  avatar_url?: string;
 };
 
 type ListItem =
@@ -133,6 +134,7 @@ export default function CoachChatScreen() {
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<User[]>([]);
   const [searching, setSearching] = useState(false);
+  const [orgMembers, setOrgMembers] = useState<User[]>([]);
 
   // --- Channel creation modal ---
   const [showNewChannel, setShowNewChannel] = useState(false);
@@ -331,21 +333,38 @@ export default function CoachChatScreen() {
   // =========================================================================
   // DM creation
   // =========================================================================
+  const fetchOrgMembers = useCallback(async () => {
+    const orgId = profile?.current_organization_id;
+    if (!orgId) return;
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, full_name, email, account_type, avatar_url')
+      .eq('current_organization_id', orgId)
+      .in('account_type', ['parent', 'coach', 'admin'])
+      .neq('id', profile?.id)
+      .order('account_type')
+      .order('full_name');
+    setOrgMembers(data || []);
+  }, [profile?.id, profile?.current_organization_id]);
+
   const searchUsers = useCallback(
     async (query: string) => {
       if (query.length < 2) { setSearchResults([]); return; }
       setSearching(true);
-      const { data } = await supabase
+      const orgId = profile?.current_organization_id;
+      let q = supabase
         .from('profiles')
-        .select('id, full_name, email, account_type')
+        .select('id, full_name, email, account_type, avatar_url')
         .or(`full_name.ilike.%${query}%,email.ilike.%${query}%`)
         .in('account_type', ['parent', 'coach', 'admin'])
         .neq('id', profile?.id)
         .limit(20);
+      if (orgId) q = q.eq('current_organization_id', orgId);
+      const { data } = await q;
       setSearchResults(data || []);
       setSearching(false);
     },
-    [profile?.id],
+    [profile?.id, profile?.current_organization_id],
   );
 
   const startDM = useCallback(
@@ -741,7 +760,7 @@ export default function CoachChatScreen() {
 
           <TouchableOpacity
             style={s.fabMenuItem}
-            onPress={() => { setFabExpanded(false); setShowDmModal(true); }}
+            onPress={() => { setFabExpanded(false); setShowDmModal(true); fetchOrgMembers(); }}
           >
             <Text style={s.fabMenuLabel}>New Message</Text>
             <View style={[s.fabMenuIcon, { backgroundColor: colors.primary }]}>
@@ -788,22 +807,34 @@ export default function CoachChatScreen() {
               {searching && (
                 <Text style={[s.searchingText, { color: colors.textMuted }]}>Searching...</Text>
               )}
-              {searchResults.map(u => (
-                <TouchableOpacity key={u.id} style={[s.userRow, { borderBottomColor: colors.border }]} onPress={() => startDM(u)}>
-                  <View style={[s.userAvatar, { backgroundColor: colors.primary + '20' }]}>
-                    <Text style={[s.userInitials, { color: colors.primary }]}>
-                      {(u.full_name || '?').split(' ').map(n => n[0]).join('').slice(0, 2)}
-                    </Text>
-                  </View>
-                  <View style={s.userInfo}>
-                    <Text style={[s.userName, { color: colors.text }]}>{u.full_name || 'Unknown'}</Text>
-                    <Text style={[s.userRole, { color: colors.textMuted }]}>{u.account_type}</Text>
-                  </View>
-                  <Ionicons name="chatbubble" size={20} color={colors.primary} />
-                </TouchableOpacity>
-              ))}
+              {/* Show search results when searching, otherwise show all org members */}
+              {(userSearchQuery.length >= 2 ? searchResults : orgMembers).map(u => {
+                const roleColors: Record<string, string> = { admin: '#AF52DE', coach: '#0EA5E9', parent: '#22C55E' };
+                const roleColor = roleColors[u.account_type] || colors.textMuted;
+                return (
+                  <TouchableOpacity key={u.id} style={[s.userRow, { borderBottomColor: colors.border }]} onPress={() => startDM(u)}>
+                    <View style={[s.userAvatar, { backgroundColor: colors.primary + '20' }]}>
+                      <Text style={[s.userInitials, { color: colors.primary }]}>
+                        {(u.full_name || '?').split(' ').map(n => n[0]).join('').slice(0, 2)}
+                      </Text>
+                    </View>
+                    <View style={s.userInfo}>
+                      <Text style={[s.userName, { color: colors.text }]}>{u.full_name || 'Unknown'}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 1 }}>
+                        <View style={{ backgroundColor: roleColor + '20', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
+                          <Text style={{ fontSize: 10, fontWeight: '700', color: roleColor, textTransform: 'capitalize' }}>{u.account_type}</Text>
+                        </View>
+                      </View>
+                    </View>
+                    <Ionicons name="chatbubble" size={20} color={colors.primary} />
+                  </TouchableOpacity>
+                );
+              })}
               {!searching && userSearchQuery.length >= 2 && searchResults.length === 0 && (
                 <Text style={[s.noResults, { color: colors.textMuted }]}>No users found</Text>
+              )}
+              {userSearchQuery.length < 2 && orgMembers.length === 0 && (
+                <Text style={[s.searchingText, { color: colors.textMuted }]}>Loading members...</Text>
               )}
             </ScrollView>
           </View>
