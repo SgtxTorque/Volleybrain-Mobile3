@@ -21,6 +21,7 @@ export default function PillTabs({ tabs, activeKey, onChange }: PillTabsProps) {
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
       contentContainerStyle={[styles.container, { backgroundColor: colors.secondary }]}
       style={styles.scrollOuter}
     >
@@ -65,11 +66,10 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
   },
   tab: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
     borderRadius: 20,
     alignItems: 'center',
-    maxWidth: 140,
   },
   tabText: {
     fontSize: 11,
