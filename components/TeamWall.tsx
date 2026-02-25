@@ -1,5 +1,7 @@
 import EmojiPicker from '@/components/EmojiPicker';
+import GiveShoutoutModal from '@/components/GiveShoutoutModal';
 import PhotoViewer, { GalleryItem } from '@/components/PhotoViewer';
+import ShoutoutCard, { parseShoutoutMetadata } from '@/components/ShoutoutCard';
 import ImagePreviewModal from '@/components/ui/ImagePreviewModal';
 import { getPositionInfo } from '@/constants/sport-display';
 import { useAuth } from '@/lib/auth';
@@ -319,6 +321,9 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
   const [submittingPost, setSubmittingPost] = useState(false);
   const [postMediaUrls, setPostMediaUrls] = useState<string[]>([]);
   const [uploadingMedia, setUploadingMedia] = useState(false);
+
+  // Shoutout modal
+  const [showShoutoutModal, setShowShoutoutModal] = useState(false);
 
   // Roster state
   const [roster, setRoster] = useState<RosterPlayer[]>([]);
@@ -1366,9 +1371,20 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
           </View>
         )}
 
-        {/* Post content */}
-        {post.title && <Text style={s.postTitle}>{post.title}</Text>}
-        <Text style={s.postContent}>{post.content}</Text>
+        {/* Shoutout post — special card rendering */}
+        {post.post_type === 'shoutout' && parseShoutoutMetadata(post.title) ? (
+          <ShoutoutCard
+            metadataJson={post.title}
+            giverName={authorName}
+            createdAt={post.created_at}
+          />
+        ) : (
+          <>
+            {/* Post content */}
+            {post.title && <Text style={s.postTitle}>{post.title}</Text>}
+            <Text style={s.postContent}>{post.content}</Text>
+          </>
+        )}
 
         {/* Multi-photo grid — edge-to-edge */}
         {post.media_urls && post.media_urls.length > 0 && (
@@ -1811,6 +1827,16 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
           <Ionicons name="camera-outline" size={22} color={teamColor} />
         </TouchableOpacity>
       )}
+      {/* Shoutout quick action — visible to all roles */}
+      <TouchableOpacity
+        style={s.shoutoutQuickBtn}
+        onPress={() => setShowShoutoutModal(true)}
+        activeOpacity={0.7}
+      >
+        <Text style={s.shoutoutQuickEmoji}>💪</Text>
+        <Text style={[s.shoutoutQuickText, { color: colors.textSecondary }]}>Give a Shoutout</Text>
+        <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+      </TouchableOpacity>
     </View>
   );
 
@@ -2143,7 +2169,7 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
                 style={s.postTypeScroller}
                 contentContainerStyle={s.postTypeScrollContent}
               >
-                {POST_TYPES.map((pt) => {
+                {POST_TYPES.filter((pt) => pt !== 'shoutout').map((pt) => {
                   const config = POST_TYPE_CONFIG[pt];
                   const isSelected = newPostType === pt;
                   return (
@@ -2278,6 +2304,16 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
           }
         }}
       />
+
+      {/* Give Shoutout Modal */}
+      {teamId && (
+        <GiveShoutoutModal
+          visible={showShoutoutModal}
+          teamId={teamId}
+          onClose={() => setShowShoutoutModal(false)}
+          onSuccess={() => loadPosts()}
+        />
+      )}
     </Wrapper>
   );
 }
@@ -2606,6 +2642,25 @@ const createStyles = (colors: any) =>
     composeInputText: {
       fontSize: 14,
       color: colors.textMuted,
+    },
+
+    // Shoutout quick action
+    shoutoutQuickBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      gap: 8,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    shoutoutQuickEmoji: {
+      fontSize: 20,
+    },
+    shoutoutQuickText: {
+      flex: 1,
+      fontSize: 14,
+      fontWeight: '600',
     },
 
     // Post Cards — flat, Facebook-style

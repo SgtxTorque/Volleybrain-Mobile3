@@ -22,11 +22,12 @@ CREATE TABLE IF NOT EXISTS shoutout_categories (
 );
 
 -- Shoutouts
+-- Note: receiver_id may reference profiles(id) OR players(id) depending on role
 CREATE TABLE IF NOT EXISTS shoutouts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   giver_id UUID NOT NULL REFERENCES profiles(id),
   giver_role TEXT NOT NULL,
-  receiver_id UUID NOT NULL REFERENCES profiles(id),
+  receiver_id UUID NOT NULL,
   receiver_role TEXT NOT NULL,
   team_id UUID REFERENCES teams(id),
   organization_id UUID NOT NULL,
@@ -64,7 +65,7 @@ CREATE TABLE IF NOT EXISTS coach_challenges (
 CREATE TABLE IF NOT EXISTS challenge_participants (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   challenge_id UUID NOT NULL REFERENCES coach_challenges(id) ON DELETE CASCADE,
-  player_id UUID NOT NULL REFERENCES profiles(id),
+  player_id UUID NOT NULL,
   current_value INTEGER DEFAULT 0,
   completed BOOLEAN DEFAULT false,
   completed_at TIMESTAMPTZ,
@@ -76,7 +77,7 @@ CREATE TABLE IF NOT EXISTS challenge_participants (
 -- XP Ledger
 CREATE TABLE IF NOT EXISTS xp_ledger (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  player_id UUID NOT NULL REFERENCES profiles(id),
+  player_id UUID NOT NULL,
   organization_id UUID NOT NULL,
   xp_amount INTEGER NOT NULL,
   source_type TEXT NOT NULL,
