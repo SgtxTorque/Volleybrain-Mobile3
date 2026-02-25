@@ -689,6 +689,25 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
     }
   };
 
+  const handleUploadCoverPhoto = async () => {
+    const media = await pickImage();
+    if (!media || !teamId) return;
+    const url = await uploadMedia(media, `team-banners/${teamId}`, 'media');
+    if (url) {
+      const { error } = await supabase
+        .from('teams')
+        .update({ banner_url: url })
+        .eq('id', teamId);
+      if (!error) {
+        setTeam(prev => prev ? { ...prev, banner_url: url } : prev);
+      } else {
+        Alert.alert('Error', 'Failed to update cover photo.');
+      }
+    } else {
+      Alert.alert('Error', 'Failed to upload cover photo.');
+    }
+  };
+
   const handleAddPostPhoto = async (source: 'library' | 'camera') => {
     setUploadingMedia(true);
     const media = source === 'library' ? await pickImage() : await takePhoto();
@@ -1227,49 +1246,92 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
 
   return (
     <Wrapper style={s.container}>
-      {/* Header — hidden in feedOnly mode */}
-      {!feedOnly && !embedded ? (
-        <View style={s.header}>
-          <TouchableOpacity
-            onPress={() => {
-              if (propTeamId) {
-                router.back();
-              } else {
-                setTeamId(null);
-                setTeam(null);
-                setPosts([]);
-                setRoster([]);
-                setEvents([]);
-              }
-            }}
-            style={s.backBtn}
-          >
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={s.headerTitle}>Team Wall</Text>
-          <View style={s.backBtn} />
-        </View>
-      ) : null}
-
-      {/* Team Banner — hidden in feedOnly mode */}
+      {/* Hero Cover Photo — hidden in feedOnly mode */}
       {!feedOnly && (
-      <View style={[s.teamBanner, { borderLeftColor: teamColor }]}>
-        <View style={[s.teamBannerStripe, { backgroundColor: teamColor }]} />
-        <View style={s.teamBannerContent}>
-          <Text style={s.teamBannerName}>{team?.name || 'Loading...'}</Text>
-          <View style={s.teamBannerStats}>
-            <View style={s.teamBannerStat}>
-              <Ionicons name="people" size={14} color={colors.textSecondary} />
-              <Text style={s.teamBannerStatText}>{playerCount} Players</Text>
-            </View>
-            <View style={s.teamBannerStatDivider} />
-            <View style={s.teamBannerStat}>
-              <Ionicons name="school" size={14} color={colors.textSecondary} />
-              <Text style={s.teamBannerStatText}>{coachCount} Coaches</Text>
+        <View style={s.heroContainer}>
+          {team?.banner_url ? (
+            <Image source={{ uri: team.banner_url }} style={s.heroCoverImage} resizeMode="cover" />
+          ) : (
+            <LinearGradient
+              colors={[teamColor, teamColor + 'B0', teamColor + '40']}
+              style={s.heroCoverImage}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <Text style={s.heroFallbackInitials}>
+                {team?.name?.charAt(0)?.toUpperCase() || '?'}
+              </Text>
+            </LinearGradient>
+          )}
+          {/* Dark gradient overlay */}
+          <LinearGradient
+            colors={['transparent', 'rgba(0,0,0,0.65)']}
+            style={s.heroGradientOverlay}
+          />
+          {/* Back button (standalone mode) */}
+          {!embedded && (
+            <TouchableOpacity
+              style={s.heroBackBtn}
+              onPress={() => {
+                if (propTeamId) {
+                  router.back();
+                } else {
+                  setTeamId(null);
+                  setTeam(null);
+                  setPosts([]);
+                  setRoster([]);
+                  setEvents([]);
+                }
+              }}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="arrow-back" size={22} color="#fff" />
+            </TouchableOpacity>
+          )}
+          {/* Camera button — coach/admin only */}
+          {isCoachOrAdmin && (
+            <TouchableOpacity
+              style={s.heroCameraBtn}
+              onPress={handleUploadCoverPhoto}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="camera" size={18} color="#fff" />
+            </TouchableOpacity>
+          )}
+          {/* Team info overlay */}
+          <View style={s.heroInfoOverlay}>
+            <Text style={s.heroTeamName}>{team?.name || 'Loading...'}</Text>
+            <Text style={s.heroTeamMeta}>
+              {playerCount} Players {'\u00B7'} {coachCount} Coaches
+            </Text>
+            <View style={s.heroPillRow}>
+              <TouchableOpacity style={s.heroPill} activeOpacity={0.7}>
+                <Ionicons name="images-outline" size={14} color="#fff" />
+                <Text style={s.heroPillText}>Gallery</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={s.heroPill}
+                activeOpacity={0.7}
+                onPress={() => {
+                  if (isCoachOrAdmin) {
+                    router.push('/standings' as any);
+                  } else {
+                    setActiveTab('schedule');
+                  }
+                }}
+              >
+                <Ionicons
+                  name={isCoachOrAdmin ? 'stats-chart-outline' : 'calendar-outline'}
+                  size={14}
+                  color="#fff"
+                />
+                <Text style={s.heroPillText}>
+                  {isCoachOrAdmin ? 'Stats' : 'Schedule'}
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
-      </View>
       )}
 
       {/* Tab Navigation — hidden in feedOnly mode */}
@@ -1636,7 +1698,94 @@ const createStyles = (colors: any) =>
       color: colors.textMuted,
     },
 
-    // Header (standalone)
+    // Hero Cover Photo
+    heroContainer: {
+      width: SCREEN_WIDTH,
+      height: HERO_HEIGHT,
+      position: 'relative',
+    },
+    heroCoverImage: {
+      width: '100%',
+      height: '100%',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    heroGradientOverlay: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: HERO_HEIGHT * 0.6,
+    },
+    heroBackBtn: {
+      position: 'absolute',
+      top: 12,
+      left: 12,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: 'rgba(0,0,0,0.45)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    heroCameraBtn: {
+      position: 'absolute',
+      top: 12,
+      right: 12,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: 'rgba(0,0,0,0.45)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    heroInfoOverlay: {
+      position: 'absolute',
+      bottom: 16,
+      left: 16,
+      right: 16,
+    },
+    heroTeamName: {
+      fontSize: 26,
+      fontWeight: '800',
+      color: '#FFFFFF',
+      marginBottom: 4,
+    },
+    heroTeamMeta: {
+      fontSize: 14,
+      color: 'rgba(255,255,255,0.85)',
+      fontWeight: '500',
+      marginBottom: 12,
+    },
+    heroPillRow: {
+      flexDirection: 'row',
+      gap: 10,
+    },
+    heroPill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: 'rgba(255,255,255,0.2)',
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.3)',
+    },
+    heroPillText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: '#FFFFFF',
+    },
+    heroFallbackInitials: {
+      fontSize: 64,
+      fontWeight: '800',
+      color: 'rgba(255,255,255,0.25)',
+      textAlign: 'center',
+      lineHeight: HERO_HEIGHT,
+    },
+
+    // Team Picker header (back button + title)
     header: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -1695,55 +1844,7 @@ const createStyles = (colors: any) =>
       color: colors.text,
     },
 
-    // Team Banner
-    teamBanner: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: '#FFF',
-      borderWidth: 1,
-      borderColor: 'rgba(0,0,0,0.06)',
-      borderLeftWidth: 4,
-      marginHorizontal: 16,
-      marginTop: 12,
-      borderRadius: 16,
-      overflow: 'hidden',
-      ...Platform.select({
-        ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-        android: { elevation: 6 },
-      }),
-    },
-    teamBannerStripe: {
-      width: 0,
-    },
-    teamBannerContent: {
-      flex: 1,
-      padding: 16,
-    },
-    teamBannerName: {
-      fontSize: 20,
-      fontWeight: '700',
-      color: colors.text,
-      marginBottom: 6,
-    },
-    teamBannerStats: {
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    teamBannerStat: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 5,
-    },
-    teamBannerStatText: {
-      fontSize: 13,
-      color: colors.textSecondary,
-    },
-    teamBannerStatDivider: {
-      width: 1,
-      height: 14,
-      backgroundColor: colors.border,
-      marginHorizontal: 12,
-    },
+    // (old teamBanner styles removed — replaced by hero styles above)
 
     // Tab Bar
     tabBarScroll: {
