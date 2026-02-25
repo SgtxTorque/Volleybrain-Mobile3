@@ -811,6 +811,23 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
     }
   };
 
+  const handleSharePost = async (post: Post) => {
+    try {
+      const authorName = post.profiles?.full_name || 'A teammate';
+      const teamName = team?.name || 'the team';
+      const message = `${authorName} posted on ${teamName}:\n\n${post.content}\n\nShared from VolleyBrain`;
+      await Share.share({ message });
+    } catch (_) {
+      // User cancelled share sheet
+    }
+    setShowPostActions(null);
+  };
+
+  const handleCopyPostText = async (post: Post) => {
+    await Clipboard.setStringAsync(post.content || '');
+    setShowPostActions(null);
+  };
+
   // =============================================================================
   // ROSTER TAB
   // =============================================================================
@@ -966,21 +983,16 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
     const isCoachPost = isAnnouncement;
 
     return (
-      <View
-        style={[
-          s.postCard,
-          isAnnouncement && { borderLeftWidth: 4, borderLeftColor: '#F97316' },
-        ]}
-      >
+      <View style={s.postCardFlat}>
         {/* Pinned indicator */}
         {post.is_pinned && (
-          <View style={s.pinnedBanner}>
-            <Ionicons name="pin" size={14} color="#F59E0B" />
-            <Text style={s.pinnedText}>Pinned Post</Text>
+          <View style={s.pinnedIndicator}>
+            <Ionicons name="pin" size={12} color={colors.textMuted} />
+            <Text style={s.pinnedIndicatorText}>Pinned</Text>
           </View>
         )}
 
-        {/* Post header: avatar + name + COACH badge + time ago + type badge */}
+        {/* Post header */}
         <View style={s.postHeader}>
           {post.profiles?.avatar_url ? (
             <Image source={{ uri: post.profiles.avatar_url }} style={s.postAvatar} />
@@ -999,67 +1011,51 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
                 </View>
               )}
             </View>
-            <Text style={s.postTimestamp}>{formatTimestamp(post.created_at)}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={s.postTimestamp}>{formatTimestamp(post.created_at)}</Text>
+              <View style={[s.postTypeBadge, { backgroundColor: typeConfig.color + '20' }]}>
+                <Ionicons name={typeConfig.icon} size={10} color={typeConfig.color} />
+                <Text style={[s.postTypeBadgeText, { color: typeConfig.color }]}>
+                  {typeConfig.label}
+                </Text>
+              </View>
+            </View>
           </View>
-          <View style={[s.postTypeBadge, { backgroundColor: typeConfig.color + '20' }]}>
-            <Ionicons name={typeConfig.icon} size={12} color={typeConfig.color} />
-            <Text style={[s.postTypeBadgeText, { color: typeConfig.color }]}>
-              {typeConfig.label}
-            </Text>
-          </View>
-          {isCoachOrAdmin && (
-            <TouchableOpacity
-              onPress={() => setShowPostActions(showPostActions === post.id ? null : post.id)}
-              style={{ padding: 6, marginLeft: 4 }}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Ionicons name="ellipsis-horizontal" size={20} color={colors.textMuted} />
-            </TouchableOpacity>
-          )}
+          {/* Three-dot menu — visible to all roles */}
+          <TouchableOpacity
+            onPress={() => setShowPostActions(showPostActions === post.id ? null : post.id)}
+            style={{ padding: 6, marginLeft: 4 }}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="ellipsis-horizontal" size={20} color={colors.textMuted} />
+          </TouchableOpacity>
         </View>
 
-        {/* Post actions dropdown (admin/coach moderation) */}
-        {isCoachOrAdmin && showPostActions === post.id && (
-          <View style={{
-            flexDirection: 'row',
-            gap: 8,
-            paddingHorizontal: 16,
-            paddingVertical: 8,
-            borderTopWidth: 1,
-            borderTopColor: colors.border,
-          }}>
-            <TouchableOpacity
-              onPress={() => handleTogglePin(post)}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 6,
-                backgroundColor: colors.primary + '15',
-                paddingHorizontal: 12,
-                paddingVertical: 8,
-                borderRadius: 8,
-              }}
-            >
-              <Ionicons name={post.is_pinned ? 'pin-outline' : 'pin'} size={16} color={colors.primary} />
-              <Text style={{ fontSize: 13, fontWeight: '600', color: colors.primary }}>
-                {post.is_pinned ? 'Unpin' : 'Pin'}
-              </Text>
+        {/* Post actions dropdown — role-aware */}
+        {showPostActions === post.id && (
+          <View style={s.postActionsRow}>
+            <TouchableOpacity onPress={() => handleSharePost(post)} style={s.postActionBtn}>
+              <Ionicons name="share-outline" size={16} color={colors.primary} />
+              <Text style={[s.postActionBtnText, { color: colors.primary }]}>Share</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => handleDeletePost(post.id)}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 6,
-                backgroundColor: '#FF3B3015',
-                paddingHorizontal: 12,
-                paddingVertical: 8,
-                borderRadius: 8,
-              }}
-            >
-              <Ionicons name="trash-outline" size={16} color="#FF3B30" />
-              <Text style={{ fontSize: 13, fontWeight: '600', color: '#FF3B30' }}>Delete</Text>
+            <TouchableOpacity onPress={() => handleCopyPostText(post)} style={s.postActionBtn}>
+              <Ionicons name="copy-outline" size={16} color={colors.primary} />
+              <Text style={[s.postActionBtnText, { color: colors.primary }]}>Copy</Text>
             </TouchableOpacity>
+            {isCoachOrAdmin && (
+              <TouchableOpacity onPress={() => handleTogglePin(post)} style={s.postActionBtn}>
+                <Ionicons name={post.is_pinned ? 'pin-outline' : 'pin'} size={16} color={colors.primary} />
+                <Text style={[s.postActionBtnText, { color: colors.primary }]}>
+                  {post.is_pinned ? 'Unpin' : 'Pin'}
+                </Text>
+              </TouchableOpacity>
+            )}
+            {(post.author_id === user?.id || isCoachOrAdmin) && (
+              <TouchableOpacity onPress={() => handleDeletePost(post.id)} style={s.postActionBtn}>
+                <Ionicons name="trash-outline" size={16} color="#FF3B30" />
+                <Text style={[s.postActionBtnText, { color: '#FF3B30' }]}>Delete</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
@@ -1067,22 +1063,46 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
         {post.title && <Text style={s.postTitle}>{post.title}</Text>}
         <Text style={s.postContent}>{post.content}</Text>
 
-        {/* Photo(s) - full width, tappable for fullscreen */}
+        {/* Multi-photo grid — edge-to-edge */}
         {post.media_urls && post.media_urls.length > 0 && (
-          <TouchableOpacity
-            style={s.postImageContainer}
-            onPress={() => setFullscreenImage(post.media_urls![0])}
-            activeOpacity={0.9}
-          >
-            <Image
-              source={{ uri: post.media_urls[0] }}
-              style={s.postImage}
-              resizeMode="cover"
-            />
-          </TouchableOpacity>
+          <View>
+            {post.media_urls.length === 1 && (
+              <TouchableOpacity onPress={() => setFullscreenImage(post.media_urls![0])} activeOpacity={0.9}>
+                <Image source={{ uri: post.media_urls[0] }} style={s.postImageFull} resizeMode="cover" />
+              </TouchableOpacity>
+            )}
+            {post.media_urls.length === 2 && (
+              <View style={s.postImageRow}>
+                {post.media_urls.map((url, i) => (
+                  <TouchableOpacity key={i} style={{ flex: 1 }} onPress={() => setFullscreenImage(url)} activeOpacity={0.9}>
+                    <Image source={{ uri: url }} style={s.postImageHalf} resizeMode="cover" />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+            {post.media_urls.length >= 3 && (
+              <View style={s.postImageGridContainer}>
+                <TouchableOpacity style={{ flex: 1 }} onPress={() => setFullscreenImage(post.media_urls![0])} activeOpacity={0.9}>
+                  <Image source={{ uri: post.media_urls[0] }} style={s.postImageGridMain} resizeMode="cover" />
+                </TouchableOpacity>
+                <View style={s.postImageGridSide}>
+                  {post.media_urls.slice(1, 3).map((url, i) => (
+                    <TouchableOpacity key={i} style={{ flex: 1 }} onPress={() => setFullscreenImage(url)} activeOpacity={0.9}>
+                      <Image source={{ uri: url }} style={s.postImageGridSmall} resizeMode="cover" />
+                      {i === 1 && post.media_urls!.length > 3 && (
+                        <View style={s.postImageOverlay}>
+                          <Text style={s.postImageOverlayText}>+{post.media_urls!.length - 3}</Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
+          </View>
         )}
 
-        {/* Animated reaction bar */}
+        {/* Reaction bar */}
         <View style={s.postFooter}>
           <View style={s.reactionBar}>
             {REACTION_CONFIG.map((reaction) => (
@@ -1118,6 +1138,35 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
                 </Text>
               </TouchableOpacity>
             )}
+          </View>
+
+          {/* Engagement row — Facebook-style Like / Comment / Share */}
+          <View style={s.engagementDivider} />
+          <View style={s.engagementRow}>
+            <TouchableOpacity
+              style={s.engagementBtn}
+              onPress={() => handleReaction(post.id, 'like')}
+            >
+              <Ionicons
+                name={currentUserReaction ? 'heart' : 'heart-outline'}
+                size={18}
+                color={currentUserReaction ? teamColor : colors.textMuted}
+              />
+              <Text style={[s.engagementBtnText, currentUserReaction && { color: teamColor }]}>
+                Like
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={s.engagementBtn}>
+              <Ionicons name="chatbubble-outline" size={18} color={colors.textMuted} />
+              <Text style={s.engagementBtnText}>Comment</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={s.engagementBtn}
+              onPress={() => handleSharePost(post)}
+            >
+              <Ionicons name="share-outline" size={18} color={colors.textMuted} />
+              <Text style={s.engagementBtnText}>Share</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -2028,7 +2077,6 @@ const createStyles = (colors: any) =>
       flex: 1,
     },
     listContent: {
-      padding: 16,
       paddingBottom: 100,
     },
 
@@ -2115,34 +2163,23 @@ const createStyles = (colors: any) =>
       color: colors.textMuted,
     },
 
-    // Post Cards
-    postCard: {
-      backgroundColor: '#FFF',
-      borderWidth: 1,
-      borderColor: 'rgba(0,0,0,0.06)',
-      borderRadius: 16,
-      marginBottom: 14,
-      overflow: 'hidden',
-      ...Platform.select({
-        ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-        android: { elevation: 6 },
-      }),
+    // Post Cards — flat, Facebook-style
+    postCardFlat: {
+      borderBottomWidth: 1,
+      borderBottomColor: '#E5E5E5',
+      paddingBottom: 4,
     },
-    pinnedBanner: {
+    pinnedIndicator: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 6,
+      gap: 4,
       paddingHorizontal: 16,
-      paddingTop: 12,
-      paddingBottom: 8,
-      backgroundColor: '#F59E0B10',
-      borderBottomWidth: 1,
-      borderBottomColor: 'rgba(0,0,0,0.06)',
+      paddingTop: 8,
     },
-    pinnedText: {
+    pinnedIndicatorText: {
       fontSize: 11,
-      fontWeight: '700',
-      color: '#F59E0B',
+      fontWeight: '600',
+      color: colors.textMuted,
       textTransform: 'uppercase',
       letterSpacing: 0.5,
     },
@@ -2223,16 +2260,50 @@ const createStyles = (colors: any) =>
       paddingBottom: 8,
     },
 
-    // Post image (full width, tappable)
-    postImageContainer: {
+    // Multi-photo grid — edge-to-edge
+    postImageFull: {
       width: '100%',
-      marginBottom: 4,
-    },
-    postImage: {
-      width: '100%',
-      height: 280,
+      height: 300,
       backgroundColor: colors.bgSecondary,
-      borderRadius: 0,
+    },
+    postImageRow: {
+      flexDirection: 'row',
+      gap: 2,
+    },
+    postImageHalf: {
+      width: '100%',
+      height: 200,
+      backgroundColor: colors.bgSecondary,
+    },
+    postImageGridContainer: {
+      flexDirection: 'row',
+      height: 300,
+      gap: 2,
+    },
+    postImageGridMain: {
+      width: '100%',
+      height: '100%',
+      backgroundColor: colors.bgSecondary,
+    },
+    postImageGridSide: {
+      flex: 1,
+      gap: 2,
+    },
+    postImageGridSmall: {
+      width: '100%',
+      height: '100%',
+      backgroundColor: colors.bgSecondary,
+    },
+    postImageOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    postImageOverlayText: {
+      fontSize: 24,
+      fontWeight: '800',
+      color: '#FFFFFF',
     },
 
     // Post footer
@@ -2261,6 +2332,54 @@ const createStyles = (colors: any) =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: 4,
+    },
+
+    // Post actions dropdown
+    postActionsRow: {
+      flexDirection: 'row',
+      gap: 8,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      flexWrap: 'wrap',
+    },
+    postActionBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      backgroundColor: colors.bgSecondary,
+      paddingHorizontal: 12,
+      paddingVertical: 7,
+      borderRadius: 8,
+    },
+    postActionBtnText: {
+      fontSize: 13,
+      fontWeight: '600',
+    },
+
+    // Engagement row (Like / Comment / Share)
+    engagementDivider: {
+      height: 1,
+      backgroundColor: '#E5E5E5',
+      marginHorizontal: 16,
+      marginTop: 4,
+    },
+    engagementRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      paddingVertical: 6,
+      paddingHorizontal: 16,
+    },
+    engagementBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 5,
+      paddingVertical: 6,
+      paddingHorizontal: 12,
+    },
+    engagementBtnText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.textMuted,
     },
 
     // New Posts Pill
