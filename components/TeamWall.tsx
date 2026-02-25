@@ -63,6 +63,7 @@ type Post = {
   is_published: boolean;
   reaction_count: number;
   comment_count?: number;
+  share_count?: number;
   created_at: string;
   profiles: PostProfile | null;
 };
@@ -456,6 +457,7 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
                 profiles: authorProfile || null,
                 reaction_count: 0,
                 comment_count: 0,
+                share_count: 0,
               };
               setPosts((prev) => [postWithProfile, ...prev]);
             }
@@ -795,7 +797,11 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
         .order('created_at', { ascending: true });
 
       if (data) {
-        setPostComments((prev) => ({ ...prev, [postId]: data as PostComment[] }));
+        const normalized = (data as any[]).map((c) => ({
+          ...c,
+          profiles: Array.isArray(c.profiles) ? c.profiles[0] || null : c.profiles || null,
+        }));
+        setPostComments((prev) => ({ ...prev, [postId]: normalized as PostComment[] }));
       }
     } catch (error) {
       if (__DEV__) console.error('Error loading comments:', error);
@@ -857,9 +863,13 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
       if (error) throw error;
 
       if (data) {
+        const normalized = {
+          ...(data as any),
+          profiles: Array.isArray((data as any).profiles) ? (data as any).profiles[0] || null : (data as any).profiles || null,
+        } as PostComment;
         setPostComments((prev) => ({
           ...prev,
-          [postId]: (prev[postId] || []).map((c) => (c.id === optimisticComment.id ? (data as PostComment) : c)),
+          [postId]: (prev[postId] || []).map((c) => (c.id === optimisticComment.id ? normalized : c)),
         }));
       }
 
@@ -952,7 +962,7 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
       if (error) throw error;
 
       if (data) {
-        setPosts((prev) => [{ ...data, reaction_count: 0, comment_count: 0 } as Post, ...prev]);
+        setPosts((prev) => [{ ...data, reaction_count: 0, comment_count: 0, share_count: 0 } as Post, ...prev]);
       }
 
       setNewPostContent('');
@@ -1018,7 +1028,21 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
       const authorName = post.profiles?.full_name || 'A teammate';
       const teamName = team?.name || 'the team';
       const message = `${authorName} posted on ${teamName}:\n\n${post.content}\n\nShared from VolleyBrain`;
-      await Share.share({ message });
+      const result = await Share.share({ message });
+
+      // Track share on success
+      if (result.action === Share.sharedAction || Platform.OS === 'android') {
+        setPosts((prev) =>
+          prev.map((p) => p.id === post.id ? { ...p, share_count: (p.share_count || 0) + 1 } : p)
+        );
+        supabase
+          .from('team_posts')
+          .update({ share_count: (post.share_count || 0) + 1 })
+          .eq('id', post.id)
+          .then(({ error }) => {
+            if (error && __DEV__) console.error('Error updating share count:', error);
+          });
+      }
     } catch (_) {
       // User cancelled share sheet
     }
@@ -1381,7 +1405,9 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
               onPress={() => handleSharePost(post)}
             >
               <Ionicons name="share-outline" size={18} color={colors.textMuted} />
-              <Text style={s.engagementBtnText}>Share</Text>
+              <Text style={s.engagementBtnText}>
+                Share{(post.share_count || 0) > 0 ? ` (${post.share_count})` : ''}
+              </Text>
             </TouchableOpacity>
           </View>
 
