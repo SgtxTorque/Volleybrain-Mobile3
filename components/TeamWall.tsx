@@ -1,4 +1,6 @@
 import EmojiPicker from '@/components/EmojiPicker';
+import ChallengeCard, { parseChallengeMetadata } from '@/components/ChallengeCard';
+import CreateChallengeModal from '@/components/CreateChallengeModal';
 import GiveShoutoutModal from '@/components/GiveShoutoutModal';
 import PhotoViewer, { GalleryItem } from '@/components/PhotoViewer';
 import ShoutoutCard, { parseShoutoutMetadata } from '@/components/ShoutoutCard';
@@ -324,6 +326,9 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
 
   // Shoutout modal
   const [showShoutoutModal, setShowShoutoutModal] = useState(false);
+
+  // Challenge modal
+  const [showChallengeModal, setShowChallengeModal] = useState(false);
 
   // Roster state
   const [roster, setRoster] = useState<RosterPlayer[]>([]);
@@ -1378,6 +1383,12 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
             giverName={authorName}
             createdAt={post.created_at}
           />
+        ) : post.post_type === 'challenge' && parseChallengeMetadata(post.title) ? (
+          <ChallengeCard
+            metadataJson={post.title}
+            coachName={authorName}
+            createdAt={post.created_at}
+          />
         ) : (
           <>
             {/* Post content */}
@@ -1837,6 +1848,18 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
         <Text style={[s.shoutoutQuickText, { color: colors.textSecondary }]}>Give a Shoutout</Text>
         <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
       </TouchableOpacity>
+      {/* Challenge quick action — coach/admin only */}
+      {isCoachOrAdmin && (
+        <TouchableOpacity
+          style={s.shoutoutQuickBtn}
+          onPress={() => setShowChallengeModal(true)}
+          activeOpacity={0.7}
+        >
+          <Text style={s.shoutoutQuickEmoji}>🏆</Text>
+          <Text style={[s.shoutoutQuickText, { color: colors.textSecondary }]}>Create Challenge</Text>
+          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+        </TouchableOpacity>
+      )}
     </View>
   );
 
@@ -2311,6 +2334,17 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
           visible={showShoutoutModal}
           teamId={teamId}
           onClose={() => setShowShoutoutModal(false)}
+          onSuccess={() => loadPosts()}
+        />
+      )}
+
+      {/* Create Challenge Modal */}
+      {teamId && (
+        <CreateChallengeModal
+          visible={showChallengeModal}
+          teamId={teamId}
+          organizationId={profile?.current_organization_id || ''}
+          onClose={() => setShowChallengeModal(false)}
           onSuccess={() => loadPosts()}
         />
       )}
