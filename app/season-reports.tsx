@@ -139,7 +139,7 @@ export default function SeasonReportsScreen() {
     // Fallback: just get teams directly
     const { data: simpleTeams } = await supabase.from('teams').select('id, name').eq('season_id', sid).order('name');
     const teamsList = simpleTeams || [];
-    const maxPerTeam = workingSeason.max_players_per_team || 15;
+    const maxPerTeam = (workingSeason as any).max_players_per_team || 15;
     if (teamsList.length > 0) {
       const teamIds = teamsList.map(t => t.id);
       const { data: tpData } = await supabase.from('team_players').select('team_id').in('team_id', teamIds);
