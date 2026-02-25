@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
+import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
@@ -14,6 +15,7 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  Image,
   Linking,
   Modal,
   Platform,
@@ -123,6 +125,10 @@ export default function AdminDashboard() {
   const [teamCodeDescription, setTeamCodeDescription] = useState('');
   const [teamSnapshots, setTeamSnapshots] = useState<TeamSnapshot[]>([]);
   const [blastCount, setBlastCount] = useState(0);
+
+  // Org banner photo
+  const [bannerUrl, setBannerUrl] = useState<string | null>((organization as any)?.settings?.banner_url || null);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
 
   // Needs Attention — single animated button + bottom sheet
   const [showAttentionSheet, setShowAttentionSheet] = useState(false);
@@ -814,6 +820,56 @@ export default function AdminDashboard() {
   }
 
   // ============================================
+  // BANNER PHOTO UPLOAD
+  // ============================================
+  const handlePickBanner = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Needed', 'Please grant photo library access to upload a banner.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.7,
+    });
+    if (result.canceled || !result.assets[0]) return;
+    setUploadingBanner(true);
+    try {
+      const asset = result.assets[0];
+      const ext = asset.uri.split('.').pop()?.toLowerCase() || 'jpg';
+      const validExt = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext) ? ext : 'jpg';
+      const contentType = `image/${validExt === 'jpg' ? 'jpeg' : validExt}`;
+      const orgId = organization?.id || 'unknown';
+      const filePath = `org-banners/${orgId}_${Date.now()}.${validExt}`;
+      const response = await fetch(asset.uri);
+      if (!response.ok) throw new Error('Could not read the selected image.');
+      const arrayBuffer = await response.arrayBuffer();
+      const { error: uploadError } = await supabase.storage
+        .from('media')
+        .upload(filePath, arrayBuffer, { contentType, upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from('media').getPublicUrl(filePath);
+      const publicUrl = urlData.publicUrl;
+      // Merge banner_url into existing settings JSONB
+      const existingSettings = (organization as any)?.settings || {};
+      const { error: updateError } = await supabase
+        .from('organizations')
+        .update({ settings: { ...existingSettings, banner_url: publicUrl } })
+        .eq('id', orgId);
+      if (updateError) throw updateError;
+      setBannerUrl(publicUrl);
+      Alert.alert('Success', 'Banner photo updated!');
+    } catch (error: any) {
+      if (__DEV__) console.error('Banner upload error:', error);
+      Alert.alert('Upload Failed', error.message || 'Failed to upload banner.');
+    } finally {
+      setUploadingBanner(false);
+    }
+  };
+
+  // ============================================
   // RENDER — Command Center
   // ============================================
 
@@ -828,12 +884,38 @@ export default function AdminDashboard() {
       {/* ====== 1. ORG HEALTH BANNER ====== */}
       <View style={s.sectionBlock}>
         <View style={[s.orgBanner, { marginHorizontal: spacing.screenPadding, overflow: 'hidden' }]}>
-          <LinearGradient
-            colors={[sportColors.primary, sportColors.primary + 'B0']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
+          {/* Custom photo background or dark gradient */}
+          {bannerUrl ? (
+            <>
+              <Image source={{ uri: bannerUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+              <LinearGradient
+                colors={['rgba(15,32,39,0.3)', 'rgba(32,58,67,0.7)', 'rgba(15,32,39,0.9)']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
+            </>
+          ) : (
+            <LinearGradient
+              colors={['#0F2027', '#203A43', '#2C5364']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+          )}
+          {/* Camera edit button */}
+          <TouchableOpacity
+            style={{ position: 'absolute', top: 10, right: 10, width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', zIndex: 10 }}
+            onPress={handlePickBanner}
+            disabled={uploadingBanner}
+          >
+            {uploadingBanner ? (
+              <ActivityIndicator size="small" color="#FFF" />
+            ) : (
+              <Ionicons name="camera" size={16} color="#FFF" />
+            )}
+          </TouchableOpacity>
+
           <View style={s.orgBannerHeader}>
             <View style={{ flex: 1 }}>
               <Text style={[s.orgBannerName, { color: '#FFF' }]}>{organization?.name || 'Organization'}</Text>

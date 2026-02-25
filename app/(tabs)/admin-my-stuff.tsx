@@ -6,6 +6,7 @@ import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { AccentColor, accentColors, useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
@@ -65,6 +66,7 @@ export default function AdminMyStuffScreen() {
   const [financials, setFinancials] = useState<FinancialSummary>({ collected: 0, outstanding: 0 });
   const [regOpen, setRegOpen] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
 
   // --- Derived ---
   const userName = profile?.full_name || user?.email?.split('@')[0] || 'User';
@@ -227,6 +229,54 @@ export default function AdminMyStuffScreen() {
   };
 
   // =========================================================================
+  // Banner upload handler
+  // =========================================================================
+  const handlePickBanner = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Needed', 'Please grant photo library access to upload a banner.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.7,
+    });
+    if (result.canceled || !result.assets[0]) return;
+    setUploadingBanner(true);
+    try {
+      const asset = result.assets[0];
+      const ext = asset.uri.split('.').pop()?.toLowerCase() || 'jpg';
+      const validExt = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext) ? ext : 'jpg';
+      const contentType = `image/${validExt === 'jpg' ? 'jpeg' : validExt}`;
+      const orgId = organization?.id || 'unknown';
+      const filePath = `org-banners/${orgId}_${Date.now()}.${validExt}`;
+      const response = await fetch(asset.uri);
+      if (!response.ok) throw new Error('Could not read the selected image.');
+      const arrayBuffer = await response.arrayBuffer();
+      const { error: uploadError } = await supabase.storage
+        .from('media')
+        .upload(filePath, arrayBuffer, { contentType, upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from('media').getPublicUrl(filePath);
+      const publicUrl = urlData.publicUrl;
+      const existingSettings = (organization as any)?.settings || {};
+      const { error: updateError } = await supabase
+        .from('organizations')
+        .update({ settings: { ...existingSettings, banner_url: publicUrl } })
+        .eq('id', orgId);
+      if (updateError) throw updateError;
+      Alert.alert('Success', 'Banner photo updated! Refresh the home screen to see it.');
+    } catch (error: any) {
+      if (__DEV__) console.error('Banner upload error:', error);
+      Alert.alert('Upload Failed', error.message || 'Failed to upload banner.');
+    } finally {
+      setUploadingBanner(false);
+    }
+  };
+
+  // =========================================================================
   // Render helpers
   // =========================================================================
 
@@ -377,6 +427,15 @@ export default function AdminMyStuffScreen() {
         <View style={s.menuCard}>
           {renderMenuRow('business', 'Org Directory', '/org-directory', colors.success, colors.success + '15')}
           {renderMenuRow('share-social', 'Invite Friends', '/invite-friends', colors.info, colors.info + '15')}
+          <TouchableOpacity style={s.menuRow} onPress={handlePickBanner} disabled={uploadingBanner} activeOpacity={0.7}>
+            <View style={[s.menuIcon, { backgroundColor: '#2C536415' }]}>
+              {uploadingBanner ? <ActivityIndicator size="small" color="#2C5364" /> : <Ionicons name="image" size={18} color="#2C5364" />}
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.menuLabel}>Upload Org Banner</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </TouchableOpacity>
         </View>
 
         {/* ================================================================ */}
