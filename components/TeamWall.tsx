@@ -4,6 +4,7 @@ import ImagePreviewModal from '@/components/ui/ImagePreviewModal';
 import { getPositionInfo } from '@/constants/sport-display';
 import { useAuth } from '@/lib/auth';
 import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
+import { usePermissions } from '@/lib/permissions-context';
 import { compressImage, pickImage, takePhoto, uploadMedia, MediaResult } from '@/lib/media-utils';
 import * as LegacyFileSystem from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library';
@@ -272,6 +273,7 @@ const SkeletonPostCard = ({ colors }: { colors: any }) => (
 export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnly = false, additionalTabs = [] }: TeamWallProps) {
   const { colors } = useTheme();
   const { user, profile, isAdmin } = useAuth();
+  const { isPlayer } = usePermissions();
   const { workingSeason } = useSeason();
   const router = useRouter();
   const { selectedTeamId: contextTeamId } = useTeamContext();
@@ -1725,22 +1727,18 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
             <TouchableOpacity
               style={s.heroPill}
               activeOpacity={0.7}
-              onPress={() => {
-                if (isCoachOrAdmin) {
-                  router.push('/standings' as any);
-                } else {
-                  setActiveTab('schedule');
-                }
-              }}
+              onPress={() => router.push('/standings' as any)}
             >
-              <Ionicons
-                name={isCoachOrAdmin ? 'stats-chart-outline' : 'calendar-outline'}
-                size={14}
-                color="#fff"
-              />
-              <Text style={s.heroPillText}>
-                {isCoachOrAdmin ? 'Stats' : 'Schedule'}
-              </Text>
+              <Ionicons name="stats-chart-outline" size={14} color="#fff" />
+              <Text style={s.heroPillText}>Stats</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={s.heroPill}
+              activeOpacity={0.7}
+              onPress={() => router.push('/achievements' as any)}
+            >
+              <Ionicons name="trophy-outline" size={14} color="#fff" />
+              <Text style={s.heroPillText}>Achievements</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1752,16 +1750,17 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
   // RENDER HELPER: Tab Bar
   // =============================================================================
 
+  const TABS: { key: TabKey; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+    { key: 'feed', label: 'Feed', icon: 'newspaper' },
+    { key: 'roster', label: 'Roster', icon: 'people' },
+    { key: 'schedule', label: 'Schedule', icon: 'calendar' },
+  ];
+
   const renderTabBar = () => {
     if (feedOnly) return null;
     return (
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.tabBarScroll} contentContainerStyle={s.tabBar}>
-        {([
-          { key: 'feed', label: 'Feed', icon: 'newspaper' as keyof typeof Ionicons.glyphMap },
-          { key: 'roster', label: 'Roster', icon: 'people' as keyof typeof Ionicons.glyphMap },
-          { key: 'schedule', label: 'Schedule', icon: 'calendar' as keyof typeof Ionicons.glyphMap },
-          ...additionalTabs.map(t => ({ key: t.key, label: t.label, icon: t.icon })),
-        ]).map((tab) => {
+      <View style={s.tabBar}>
+        {TABS.map((tab) => {
           const isActive = activeTab === tab.key;
           return (
             <TouchableOpacity
@@ -1781,7 +1780,7 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
             </TouchableOpacity>
           );
         })}
-      </ScrollView>
+      </View>
     );
   };
 
@@ -1791,7 +1790,7 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
 
   const renderFeedHeader = () => (
     <View>
-      {isCoachOrAdmin && (
+      {!isPlayer && (
         <TouchableOpacity
           style={s.composeCard}
           onPress={() => setShowNewPostModal(true)}
@@ -2029,18 +2028,6 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
           )}
         </View>
       )}
-
-      {/* Additional tabs (e.g., Achievements, Stats for coaches) */}
-      {!feedOnly && additionalTabs.map(tab => (
-        activeTab === tab.key ? (
-          <View key={tab.key} style={s.tabContent}>
-            <ScrollView contentContainerStyle={s.listContent} onScroll={handleScroll} scrollEventThrottle={16}>
-              {renderListHeaderOther()}
-              {tab.render()}
-            </ScrollView>
-          </View>
-        ) : null
-      ))}
 
       {/* Compact sticky header — fades in when hero scrolled off */}
       {!feedOnly && (
@@ -2507,24 +2494,20 @@ const createStyles = (colors: any) =>
     },
 
     // Tab Bar
-    tabBarScroll: {
-      flexGrow: 0,
-      marginTop: 12,
-    },
     tabBar: {
       flexDirection: 'row',
       paddingHorizontal: 16,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
+      marginTop: 12,
     },
     tab: {
-      minWidth: 80,
+      flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
       gap: 6,
       paddingVertical: 12,
-      marginRight: 8,
       borderBottomWidth: 2,
       borderBottomColor: 'transparent',
     },

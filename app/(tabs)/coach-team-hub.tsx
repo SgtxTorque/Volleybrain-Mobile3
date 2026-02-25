@@ -2,20 +2,17 @@ import AppHeaderBar from '@/components/ui/AppHeaderBar';
 import CarouselDots from '@/components/ui/CarouselDots';
 import TeamWall from '@/components/TeamWall';
 import { useAuth } from '@/lib/auth';
-import { radii, shadows, spacing } from '@/lib/design-tokens';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
   FlatList,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -41,7 +38,6 @@ export default function CoachTeamHubScreen() {
   const { colors } = useTheme();
   const { user } = useAuth();
   const { workingSeason } = useSeason();
-  const router = useRouter();
   const s = createStyles(colors);
 
   // State
@@ -151,61 +147,6 @@ export default function CoachTeamHubScreen() {
   );
 
   // ---------------------------------------------------------------------------
-  // Additional tabs for TeamWall (Achievements + Stats)
-  // ---------------------------------------------------------------------------
-
-  const coachExtraTabs = useMemo(() => [
-    {
-      key: 'achievements',
-      label: 'Achievements',
-      icon: 'trophy-outline' as keyof typeof Ionicons.glyphMap,
-      render: () => (
-        <View style={s.extraTabContent}>
-          <TouchableOpacity
-            style={s.extraTabCard}
-            onPress={() => router.push('/achievements' as any)}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="trophy" size={36} color={colors.primary} />
-            <Text style={[s.extraTabTitle, { color: colors.text }]}>Team Achievements</Text>
-            <Text style={[s.extraTabSubtitle, { color: colors.textMuted }]}>
-              View badges, milestones, and awards
-            </Text>
-            <View style={s.extraTabAction}>
-              <Text style={[s.extraTabActionText, { color: colors.primary }]}>View All</Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.primary} />
-            </View>
-          </TouchableOpacity>
-        </View>
-      ),
-    },
-    {
-      key: 'stats',
-      label: 'Stats',
-      icon: 'stats-chart-outline' as keyof typeof Ionicons.glyphMap,
-      render: () => (
-        <View style={s.extraTabContent}>
-          <TouchableOpacity
-            style={s.extraTabCard}
-            onPress={() => router.push('/standings' as any)}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="stats-chart" size={36} color={colors.primary} />
-            <Text style={[s.extraTabTitle, { color: colors.text }]}>Player Stats</Text>
-            <Text style={[s.extraTabSubtitle, { color: colors.textMuted }]}>
-              View season standings and player statistics
-            </Text>
-            <View style={s.extraTabAction}>
-              <Text style={[s.extraTabActionText, { color: colors.primary }]}>View All</Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.primary} />
-            </View>
-          </TouchableOpacity>
-        </View>
-      ),
-    },
-  ], [colors, router, s]);
-
-  // ---------------------------------------------------------------------------
   // Loading
   // ---------------------------------------------------------------------------
 
@@ -266,7 +207,10 @@ export default function CoachTeamHubScreen() {
           <FlatList
             ref={flatListRef}
             horizontal
-            pagingEnabled
+            snapToInterval={SCREEN_WIDTH}
+            snapToAlignment="start"
+            decelerationRate="fast"
+            disableIntervalMomentum
             scrollEnabled={coachTeams.length > 1}
             showsHorizontalScrollIndicator={false}
             data={coachTeams}
@@ -276,7 +220,6 @@ export default function CoachTeamHubScreen() {
                 <TeamWall
                   teamId={item.teamId}
                   embedded
-                  additionalTabs={coachExtraTabs}
                 />
               </View>
             )}
@@ -326,41 +269,5 @@ const createStyles = (colors: any) =>
     },
     feedContainer: {
       flex: 1,
-    },
-
-    // Extra tab content (Achievements, Stats)
-    extraTabContent: {
-      flex: 1,
-      padding: spacing.screenPadding,
-    },
-    extraTabCard: {
-      backgroundColor: colors.glassCard,
-      borderRadius: radii.card,
-      borderWidth: 1,
-      borderColor: colors.glassBorder,
-      padding: 24,
-      alignItems: 'center',
-      gap: 8,
-      ...shadows.card,
-    },
-    extraTabTitle: {
-      fontSize: 18,
-      fontWeight: '700',
-      marginTop: 4,
-    },
-    extraTabSubtitle: {
-      fontSize: 13,
-      textAlign: 'center',
-      lineHeight: 18,
-    },
-    extraTabAction: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      marginTop: 8,
-    },
-    extraTabActionText: {
-      fontSize: 14,
-      fontWeight: '600',
     },
   });

@@ -178,9 +178,7 @@ export default function PhotoViewer({
   const flatListRef = useRef<FlatList>(null);
 
   const current = items[currentIndex] || items[0];
-  if (!current) return null;
-
-  const isVideo = current.type === 'video';
+  const isVideo = current?.type === 'video';
 
   // -------------------------------------------------------------------------
   // Helpers
@@ -220,7 +218,7 @@ export default function PhotoViewer({
     } finally {
       setSaving(false);
     }
-  }, [current.url, isVideo]);
+  }, [current?.url, isVideo]);
 
   const handleShare = useCallback(async () => {
     try {
@@ -228,13 +226,13 @@ export default function PhotoViewer({
     } catch (err) {
       if (__DEV__) console.error('[PhotoViewer] share error:', err);
     }
-  }, [current.url]);
+  }, [current?.url]);
 
   const handleViewPost = useCallback(() => {
     setShowMenu(false);
     onClose();
     onViewPost?.(current.postId);
-  }, [current.postId, onClose, onViewPost]);
+  }, [current?.postId, onClose, onViewPost]);
 
   const handleDelete = useCallback(() => {
     setShowMenu(false);
@@ -253,7 +251,7 @@ export default function PhotoViewer({
         },
       ],
     );
-  }, [current.url, current.postId, onClose, onDelete]);
+  }, [current?.url, current?.postId, onClose, onDelete]);
 
   const openMenu = useCallback(() => {
     if (Platform.OS === 'ios') {
@@ -284,6 +282,8 @@ export default function PhotoViewer({
     },
     [items.length],
   );
+
+  if (!current) return null;
 
   // -------------------------------------------------------------------------
   // Render
