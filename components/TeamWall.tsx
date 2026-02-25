@@ -224,52 +224,6 @@ const formatTime = (time: string | null): string => {
 // ANIMATED REACTION BUTTON
 // =============================================================================
 
-const ReactionButton = ({
-  emoji,
-  isActive,
-  activeBg,
-  borderColor,
-  onPress,
-}: {
-  emoji: string;
-  isActive: boolean;
-  activeBg: string;
-  borderColor: string;
-  onPress: () => void;
-}) => {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-
-  const handlePress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    Animated.sequence([
-      Animated.timing(scaleAnim, { toValue: 1.4, duration: 100, useNativeDriver: true }),
-      Animated.spring(scaleAnim, { toValue: 1, friction: 3, useNativeDriver: true }),
-    ]).start();
-    onPress();
-  };
-
-  return (
-    <TouchableOpacity
-      onPress={handlePress}
-      activeOpacity={0.7}
-      style={[
-        {
-          paddingHorizontal: 10,
-          paddingVertical: 6,
-          borderRadius: 20,
-          borderWidth: 1,
-          borderColor: isActive ? activeBg : borderColor,
-          backgroundColor: isActive ? activeBg + '15' : 'transparent',
-        },
-      ]}
-    >
-      <Animated.Text style={[{ fontSize: 18 }, { transform: [{ scale: scaleAnim }] }]}>
-        {emoji}
-      </Animated.Text>
-    </TouchableOpacity>
-  );
-};
-
 // =============================================================================
 // SKELETON LOADING
 // =============================================================================
@@ -1350,69 +1304,30 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
           </View>
         )}
 
-        {/* Reaction bar */}
+        {/* Engagement row — Facebook-style Like / Comment / Share */}
         <View style={s.postFooter}>
-          <View style={s.reactionBar}>
-            {REACTION_CONFIG.map((reaction) => (
-              <ReactionButton
-                key={reaction.type}
-                emoji={reaction.emoji}
-                isActive={currentUserReaction === reaction.type}
-                activeBg={teamColor}
-                borderColor={colors.border}
-                onPress={() => handleReaction(post.id, reaction.type)}
-              />
-            ))}
-            <ReactionButton
-              emoji="➕"
-              isActive={false}
-              activeBg={teamColor}
-              borderColor={colors.border}
-              onPress={() => { setReactionPickerPostId(post.id); setShowReactionPicker(true); }}
-            />
-          </View>
-
-          <View style={s.postStats}>
+          <View style={s.engagementDivider} />
+          <View style={s.engagementRow}>
             {(() => {
               const { topEmojis, totalCount } = getReactionSummary(post.id);
-              if (totalCount === 0) return null;
+              const likeEmoji = currentUserReaction
+                ? REACTION_CONFIG.find(r => r.type === currentUserReaction)?.emoji || '❤️'
+                : topEmojis[0] || '❤️';
+              const isLiked = !!currentUserReaction;
               return (
                 <TouchableOpacity
-                  style={s.reactionSummaryRow}
-                  onPress={() => { setReactionsModalPostId(post.id); setReactionsModalTab('all'); }}
-                  activeOpacity={0.7}
+                  style={s.engagementBtn}
+                  onPress={() => handleReaction(post.id, 'heart')}
+                  onLongPress={() => { setReactionPickerPostId(post.id); setShowReactionPicker(true); }}
+                  delayLongPress={400}
                 >
-                  <Text style={s.reactionSummaryEmojis}>{topEmojis.join('')}</Text>
-                  <Text style={s.reactionSummaryCount}>{totalCount}</Text>
+                  <Text style={{ fontSize: 16 }}>{isLiked ? likeEmoji : '♡'}</Text>
+                  <Text style={[s.engagementBtnText, isLiked && { color: teamColor }]}>
+                    Like{totalCount > 0 ? ` (${totalCount})` : ''}
+                  </Text>
                 </TouchableOpacity>
               );
             })()}
-            {(post.comment_count || 0) > 0 && (
-              <TouchableOpacity style={s.commentLink} onPress={() => handleToggleComments(post.id)}>
-                <Ionicons name="chatbubble-outline" size={13} color={colors.textMuted} />
-                <Text style={s.postStatText}>
-                  {post.comment_count} {post.comment_count === 1 ? 'comment' : 'comments'}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Engagement row — Facebook-style Like / Comment / Share */}
-          <View style={s.engagementDivider} />
-          <View style={s.engagementRow}>
-            <TouchableOpacity
-              style={s.engagementBtn}
-              onPress={() => handleReaction(post.id, 'heart')}
-            >
-              <Ionicons
-                name={currentUserReaction ? 'heart' : 'heart-outline'}
-                size={18}
-                color={currentUserReaction ? teamColor : colors.textMuted}
-              />
-              <Text style={[s.engagementBtnText, currentUserReaction && { color: teamColor }]}>
-                Like
-              </Text>
-            </TouchableOpacity>
             <TouchableOpacity
               style={s.engagementBtn}
               onPress={() => handleToggleComments(post.id)}
@@ -2726,42 +2641,6 @@ const createStyles = (colors: any) =>
       borderTopWidth: 1,
       borderTopColor: 'rgba(0,0,0,0.06)',
     },
-    reactionBar: {
-      flexDirection: 'row',
-      gap: 6,
-      marginBottom: 6,
-    },
-    postStats: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 14,
-    },
-    postStatText: {
-      fontSize: 12,
-      color: colors.textMuted,
-      fontWeight: '500',
-    },
-    commentLink: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-    },
-
-    // Reaction summary row
-    reactionSummaryRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-    },
-    reactionSummaryEmojis: {
-      fontSize: 16,
-    },
-    reactionSummaryCount: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: colors.textMuted,
-    },
-
     // Who Reacted modal
     reactionsTabScroll: {
       flexGrow: 0,
