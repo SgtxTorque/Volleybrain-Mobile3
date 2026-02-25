@@ -1,8 +1,12 @@
 import EmojiPicker from '@/components/EmojiPicker';
+import PhotoViewer, { GalleryItem } from '@/components/PhotoViewer';
+import ImagePreviewModal from '@/components/ui/ImagePreviewModal';
 import { getPositionInfo } from '@/constants/sport-display';
 import { useAuth } from '@/lib/auth';
 import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
-import { pickImage, takePhoto, uploadMedia } from '@/lib/media-utils';
+import { compressImage, pickImage, takePhoto, uploadMedia, MediaResult } from '@/lib/media-utils';
+import * as LegacyFileSystem from 'expo-file-system/legacy';
+import * as MediaLibrary from 'expo-media-library';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTeamContext } from '@/lib/team-context';
@@ -322,8 +326,14 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
   const [loadingSchedule, setLoadingSchedule] = useState(false);
 
-  // Fullscreen image viewer
-  const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
+  // Photo viewer state
+  const [viewerVisible, setViewerVisible] = useState(false);
+  const [viewerItems, setViewerItems] = useState<GalleryItem[]>([]);
+  const [viewerIndex, setViewerIndex] = useState(0);
+
+  // Image preview (upload flow)
+  const [pendingMedia, setPendingMedia] = useState<MediaResult | null>(null);
+  const [pendingMediaTarget, setPendingMediaTarget] = useState<'post' | 'cover'>('post');
 
   // Post actions menu (admin/coach moderation)
   const [showPostActions, setShowPostActions] = useState<string | null>(null);
@@ -895,33 +905,111 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
   const handleUploadCoverPhoto = async () => {
     const media = await pickImage();
     if (!media || !teamId) return;
-    const url = await uploadMedia(media, `team-banners/${teamId}`, 'media');
-    if (url) {
-      const { error } = await supabase
-        .from('teams')
-        .update({ banner_url: url })
-        .eq('id', teamId);
-      if (!error) {
-        setTeam(prev => prev ? { ...prev, banner_url: url } : prev);
+    setPendingMediaTarget('cover');
+    setPendingMedia(media);
+  };
+
+  const handlePreviewAccept = async (result: MediaResult) => {
+    setPendingMedia(null);
+    if (pendingMediaTarget === 'cover') {
+      // Cover photo upload
+      const url = await uploadMedia(result, `team-banners/${teamId}`, 'media');
+      if (url) {
+        const { error } = await supabase
+          .from('teams')
+          .update({ banner_url: url })
+          .eq('id', teamId);
+        if (!error) {
+          setTeam(prev => prev ? { ...prev, banner_url: url } : prev);
+        } else {
+          Alert.alert('Error', 'Failed to update cover photo.');
+        }
       } else {
-        Alert.alert('Error', 'Failed to update cover photo.');
+        Alert.alert('Error', 'Failed to upload cover photo.');
       }
     } else {
-      Alert.alert('Error', 'Failed to upload cover photo.');
+      // Post photo upload
+      setUploadingMedia(true);
+      const url = await uploadMedia(result, `team-wall/${teamId}`, 'media');
+      if (url) {
+        setPostMediaUrls(prev => [...prev, url]);
+      } else {
+        Alert.alert('Error', 'Failed to upload photo.');
+      }
+      setUploadingMedia(false);
     }
   };
 
   const handleAddPostPhoto = async (source: 'library' | 'camera') => {
-    setUploadingMedia(true);
     const media = source === 'library' ? await pickImage() : await takePhoto();
-    if (!media || !teamId) { setUploadingMedia(false); return; }
-    const url = await uploadMedia(media, `team-wall/${teamId}`, 'media');
-    if (url) {
-      setPostMediaUrls(prev => [...prev, url]);
+    if (!media || !teamId) return;
+    setPendingMediaTarget('post');
+    setPendingMedia(media);
+  };
+
+  // Open photo viewer for a post's media
+  const openPostPhotoViewer = (post: Post, mediaIndex: number) => {
+    const urls = post.media_urls || [];
+    const authorProfile = (post as any).profiles || {};
+    const items: GalleryItem[] = urls.map((url: string) => ({
+      url,
+      type: (/\.(mp4|mov|webm|avi)(\?|$)/i.test(url) ? 'video' : 'image') as 'image' | 'video',
+      postId: post.id,
+      authorName: authorProfile?.full_name || 'Unknown',
+      authorAvatar: authorProfile?.avatar_url || null,
+      createdAt: post.created_at,
+      caption: post.content,
+      teamName: team?.name || 'Team',
+      reactions: [],
+    }));
+    setViewerItems(items);
+    setViewerIndex(mediaIndex);
+    setViewerVisible(true);
+  };
+
+  // Long-press on a post photo — context menu
+  const handleImageLongPress = (post: Post, url: string, mediaIndex: number) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (Platform.OS === 'ios') {
+      const { ActionSheetIOS } = require('react-native');
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['Save Photo', 'Share Photo', 'View Full Screen', 'Cancel'],
+          cancelButtonIndex: 3,
+        },
+        async (idx: number) => {
+          if (idx === 0) {
+            const { status } = await MediaLibrary.requestPermissionsAsync();
+            if (status !== 'granted') { Alert.alert('Permission Required', 'VolleyBrain needs permission to save photos.'); return; }
+            const localUri = `${LegacyFileSystem.cacheDirectory}vb_save_${Date.now()}.jpg`;
+            const dl = await LegacyFileSystem.downloadAsync(url, localUri);
+            await MediaLibrary.saveToLibraryAsync(dl.uri);
+            Alert.alert('Saved', 'Photo saved to your device.');
+          } else if (idx === 1) {
+            Share.share({ message: url, url });
+          } else if (idx === 2) {
+            openPostPhotoViewer(post, mediaIndex);
+          }
+        },
+      );
     } else {
-      Alert.alert('Error', 'Failed to upload photo.');
+      Alert.alert('Photo Options', undefined, [
+        {
+          text: 'Save Photo',
+          onPress: async () => {
+            const { status } = await MediaLibrary.requestPermissionsAsync();
+            if (status !== 'granted') { Alert.alert('Permission Required', 'VolleyBrain needs permission to save photos.'); return; }
+            const localUri = `${LegacyFileSystem.cacheDirectory}vb_save_${Date.now()}.jpg`;
+            const dl = await LegacyFileSystem.downloadAsync(url, localUri);
+            await MediaLibrary.saveToLibraryAsync(dl.uri);
+            Alert.alert('Saved', 'Photo saved to your device.');
+          },
+        },
+        { text: 'Share Photo', onPress: () => Share.share({ message: url }) },
+        { text: 'View Full Screen', onPress: () => openPostPhotoViewer(post, mediaIndex) },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
     }
-    setUploadingMedia(false);
   };
 
   const handleSubmitPost = async () => {
@@ -1284,14 +1372,24 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
         {post.media_urls && post.media_urls.length > 0 && (
           <View>
             {post.media_urls.length === 1 && (
-              <TouchableOpacity onPress={() => setFullscreenImage(post.media_urls![0])} activeOpacity={0.9}>
+              <TouchableOpacity
+                onPress={() => openPostPhotoViewer(post, 0)}
+                onLongPress={() => handleImageLongPress(post, post.media_urls![0], 0)}
+                activeOpacity={0.9}
+              >
                 <Image source={{ uri: post.media_urls[0] }} style={s.postImageFull} resizeMode="cover" />
               </TouchableOpacity>
             )}
             {post.media_urls.length === 2 && (
               <View style={s.postImageRow}>
                 {post.media_urls.map((url, i) => (
-                  <TouchableOpacity key={i} style={{ flex: 1 }} onPress={() => setFullscreenImage(url)} activeOpacity={0.9}>
+                  <TouchableOpacity
+                    key={i}
+                    style={{ flex: 1 }}
+                    onPress={() => openPostPhotoViewer(post, i)}
+                    onLongPress={() => handleImageLongPress(post, url, i)}
+                    activeOpacity={0.9}
+                  >
                     <Image source={{ uri: url }} style={s.postImageHalf} resizeMode="cover" />
                   </TouchableOpacity>
                 ))}
@@ -1299,12 +1397,23 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
             )}
             {post.media_urls.length >= 3 && (
               <View style={s.postImageGridContainer}>
-                <TouchableOpacity style={{ flex: 1 }} onPress={() => setFullscreenImage(post.media_urls![0])} activeOpacity={0.9}>
+                <TouchableOpacity
+                  style={{ flex: 1 }}
+                  onPress={() => openPostPhotoViewer(post, 0)}
+                  onLongPress={() => handleImageLongPress(post, post.media_urls![0], 0)}
+                  activeOpacity={0.9}
+                >
                   <Image source={{ uri: post.media_urls[0] }} style={s.postImageGridMain} resizeMode="cover" />
                 </TouchableOpacity>
                 <View style={s.postImageGridSide}>
                   {post.media_urls.slice(1, 3).map((url, i) => (
-                    <TouchableOpacity key={i} style={{ flex: 1 }} onPress={() => setFullscreenImage(url)} activeOpacity={0.9}>
+                    <TouchableOpacity
+                      key={i}
+                      style={{ flex: 1 }}
+                      onPress={() => openPostPhotoViewer(post, i + 1)}
+                      onLongPress={() => handleImageLongPress(post, url, i + 1)}
+                      activeOpacity={0.9}
+                    >
                       <Image source={{ uri: url }} style={s.postImageGridSmall} resizeMode="cover" />
                       {i === 1 && post.media_urls!.length > 3 && (
                         <View style={s.postImageOverlay}>
@@ -1605,7 +1714,11 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
             {playerCount} Players {'\u00B7'} {coachCount} Coaches
           </Text>
           <View style={s.heroPillRow}>
-            <TouchableOpacity style={s.heroPill} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={s.heroPill}
+              activeOpacity={0.7}
+              onPress={() => router.push({ pathname: '/team-gallery' as any, params: { teamId, teamName: team?.name || 'Team' } })}
+            >
               <Ionicons name="images-outline" size={14} color="#fff" />
               <Text style={s.heroPillText}>Gallery</Text>
             </TouchableOpacity>
@@ -2150,24 +2263,22 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
         </View>
       </Modal>
 
-      {/* Fullscreen Image Viewer */}
-      <Modal visible={!!fullscreenImage} animationType="fade" transparent>
-        <View style={s.fullscreenOverlay}>
-          <TouchableOpacity
-            style={s.fullscreenCloseBtn}
-            onPress={() => setFullscreenImage(null)}
-          >
-            <Ionicons name="close-circle" size={36} color="#fff" />
-          </TouchableOpacity>
-          {fullscreenImage && (
-            <Image
-              source={{ uri: fullscreenImage }}
-              style={s.fullscreenImage}
-              resizeMode="contain"
-            />
-          )}
-        </View>
-      </Modal>
+      {/* Photo Viewer (zoom, swipe, info, save) */}
+      <PhotoViewer
+        visible={viewerVisible}
+        items={viewerItems}
+        initialIndex={viewerIndex}
+        isCoachOrAdmin={isCoachOrAdmin}
+        onClose={() => setViewerVisible(false)}
+      />
+
+      {/* Image Preview (upload flow) */}
+      <ImagePreviewModal
+        visible={!!pendingMedia}
+        media={pendingMedia}
+        onAccept={handlePreviewAccept}
+        onCancel={() => setPendingMedia(null)}
+      />
       {/* Emoji Picker for custom reactions */}
       <EmojiPicker
         visible={showReactionPicker}
@@ -3150,20 +3261,4 @@ const createStyles = (colors: any) =>
     },
 
     // Fullscreen Image Viewer
-    fullscreenOverlay: {
-      flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.95)',
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    fullscreenCloseBtn: {
-      position: 'absolute',
-      top: 60,
-      right: 20,
-      zIndex: 10,
-    },
-    fullscreenImage: {
-      width: '100%',
-      height: '80%',
-    },
   });

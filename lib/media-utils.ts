@@ -30,7 +30,7 @@ export const pickImage = async (): Promise<MediaResult | null> => {
 
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ['images'],
-    allowsEditing: true,
+    allowsEditing: false,
     quality: 1,
   });
 
@@ -77,7 +77,7 @@ export const takePhoto = async (): Promise<MediaResult | null> => {
   if (!hasPermission) return null;
 
   const result = await ImagePicker.launchCameraAsync({
-    allowsEditing: true,
+    allowsEditing: false,
     quality: 1,
   });
 
@@ -120,6 +120,30 @@ export const compressImage = async (
     width: result.width,
     height: result.height,
   };
+};
+
+export const rotateImage = async (
+  uri: string,
+  degrees: number,
+): Promise<{ uri: string; width: number; height: number }> => {
+  const result = await ImageManipulator.manipulateAsync(
+    uri,
+    [{ rotate: degrees }],
+    { compress: IMAGE_QUALITY, format: ImageManipulator.SaveFormat.JPEG },
+  );
+  return { uri: result.uri, width: result.width, height: result.height };
+};
+
+export const cropImage = async (
+  uri: string,
+  crop: { originX: number; originY: number; width: number; height: number },
+): Promise<{ uri: string; width: number; height: number }> => {
+  const result = await ImageManipulator.manipulateAsync(
+    uri,
+    [{ crop }],
+    { compress: IMAGE_QUALITY, format: ImageManipulator.SaveFormat.JPEG },
+  );
+  return { uri: result.uri, width: result.width, height: result.height };
 };
 
 export const uploadMedia = async (
