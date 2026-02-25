@@ -95,6 +95,15 @@ type PostReaction = {
   profiles: { full_name: string | null; avatar_url: string | null };
 };
 
+type PostComment = {
+  id: string;
+  post_id: string;
+  author_id: string;
+  content: string;
+  created_at: string;
+  profiles: { id: string; full_name: string | null; avatar_url: string | null } | null;
+};
+
 type PostType = 'text' | 'announcement' | 'game_recap' | 'shoutout' | 'milestone' | 'photo';
 
 type ReactionType = 'like' | 'heart' | 'fire' | 'clap' | 'muscle' | 'volleyball' | (string & {});
@@ -332,6 +341,14 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
   const [reactionPickerPostId, setReactionPickerPostId] = useState<string | null>(null);
   const [reactionsModalPostId, setReactionsModalPostId] = useState<string | null>(null);
   const [reactionsModalTab, setReactionsModalTab] = useState<string>('all');
+
+  // Comments
+  const [postComments, setPostComments] = useState<Record<string, PostComment[]>>({});
+  const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
+  const [commentText, setCommentText] = useState<Record<string, string>>({});
+  const [showAllComments, setShowAllComments] = useState<Set<string>>(new Set());
+  const [loadingComments, setLoadingComments] = useState<Set<string>>(new Set());
+  const [submittingComment, setSubmittingComment] = useState<Set<string>>(new Set());
 
   // New post modal
   const [showNewPostModal, setShowNewPostModal] = useState(false);
@@ -761,6 +778,117 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
       topEmojis: sorted.map(([type]) => emojiMap[type] || type),
       totalCount: reactions.length,
     };
+  };
+
+  // =============================================================================
+  // COMMENTS
+  // =============================================================================
+
+  const loadComments = async (postId: string) => {
+    setLoadingComments((prev) => new Set(prev).add(postId));
+    try {
+      const { data } = await supabase
+        .from('team_post_comments')
+        .select('id, post_id, author_id, content, created_at, profiles:author_id(id, full_name, avatar_url)')
+        .eq('post_id', postId)
+        .eq('is_deleted', false)
+        .order('created_at', { ascending: true });
+
+      if (data) {
+        setPostComments((prev) => ({ ...prev, [postId]: data as PostComment[] }));
+      }
+    } catch (error) {
+      if (__DEV__) console.error('Error loading comments:', error);
+    } finally {
+      setLoadingComments((prev) => {
+        const next = new Set(prev);
+        next.delete(postId);
+        return next;
+      });
+    }
+  };
+
+  const handleToggleComments = (postId: string) => {
+    setExpandedComments((prev) => {
+      const next = new Set(prev);
+      if (next.has(postId)) {
+        next.delete(postId);
+      } else {
+        next.add(postId);
+        if (!postComments[postId]) {
+          loadComments(postId);
+        }
+      }
+      return next;
+    });
+  };
+
+  const handleSubmitComment = async (postId: string) => {
+    const text = (commentText[postId] || '').trim();
+    if (!text || !user?.id) return;
+
+    setSubmittingComment((prev) => new Set(prev).add(postId));
+
+    const optimisticComment: PostComment = {
+      id: `temp-${Date.now()}`,
+      post_id: postId,
+      author_id: user.id,
+      content: text,
+      created_at: new Date().toISOString(),
+      profiles: { id: user.id, full_name: profile?.full_name || null, avatar_url: profile?.avatar_url || null },
+    };
+
+    setPostComments((prev) => ({
+      ...prev,
+      [postId]: [...(prev[postId] || []), optimisticComment],
+    }));
+    setCommentText((prev) => ({ ...prev, [postId]: '' }));
+    setPosts((prev) =>
+      prev.map((p) => (p.id === postId ? { ...p, comment_count: (p.comment_count || 0) + 1 } : p))
+    );
+
+    try {
+      const { data, error } = await supabase
+        .from('team_post_comments')
+        .insert({ post_id: postId, author_id: user.id, content: text })
+        .select('id, post_id, author_id, content, created_at, profiles:author_id(id, full_name, avatar_url)')
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setPostComments((prev) => ({
+          ...prev,
+          [postId]: (prev[postId] || []).map((c) => (c.id === optimisticComment.id ? (data as PostComment) : c)),
+        }));
+      }
+
+      // Update comment_count in DB (fire and forget)
+      const currentCount = posts.find((p) => p.id === postId)?.comment_count || 0;
+      supabase
+        .from('team_posts')
+        .update({ comment_count: currentCount })
+        .eq('id', postId)
+        .then(({ error: updateError }) => {
+          if (updateError && __DEV__) console.error('Error updating comment count:', updateError);
+        });
+    } catch (error: any) {
+      if (__DEV__) console.error('Error submitting comment:', error);
+      setPostComments((prev) => ({
+        ...prev,
+        [postId]: (prev[postId] || []).filter((c) => c.id !== optimisticComment.id),
+      }));
+      setPosts((prev) =>
+        prev.map((p) => (p.id === postId ? { ...p, comment_count: Math.max(0, (p.comment_count || 0) - 1) } : p))
+      );
+      Alert.alert('Error', 'Failed to post comment.');
+    } finally {
+      setSubmittingComment((prev) => {
+        const next = new Set(prev);
+        next.delete(postId);
+        return next;
+      });
+    }
   };
 
   const handleUploadCoverPhoto = async () => {
@@ -1214,7 +1342,7 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
               );
             })()}
             {(post.comment_count || 0) > 0 && (
-              <TouchableOpacity style={s.commentLink}>
+              <TouchableOpacity style={s.commentLink} onPress={() => handleToggleComments(post.id)}>
                 <Ionicons name="chatbubble-outline" size={13} color={colors.textMuted} />
                 <Text style={s.postStatText}>
                   {post.comment_count} {post.comment_count === 1 ? 'comment' : 'comments'}
@@ -1239,9 +1367,14 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
                 Like
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity style={s.engagementBtn}>
-              <Ionicons name="chatbubble-outline" size={18} color={colors.textMuted} />
-              <Text style={s.engagementBtnText}>Comment</Text>
+            <TouchableOpacity
+              style={s.engagementBtn}
+              onPress={() => handleToggleComments(post.id)}
+            >
+              <Ionicons name="chatbubble-outline" size={18} color={expandedComments.has(post.id) ? teamColor : colors.textMuted} />
+              <Text style={[s.engagementBtnText, expandedComments.has(post.id) && { color: teamColor }]}>
+                Comment{(post.comment_count || 0) > 0 ? ` (${post.comment_count})` : ''}
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={s.engagementBtn}
@@ -1251,6 +1384,90 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
               <Text style={s.engagementBtnText}>Share</Text>
             </TouchableOpacity>
           </View>
+
+          {/* Inline Comments */}
+          {expandedComments.has(post.id) && (
+            <View style={s.commentsSection}>
+              {loadingComments.has(post.id) ? (
+                <ActivityIndicator size="small" color={teamColor} style={{ paddingVertical: 12 }} />
+              ) : (
+                <>
+                  {(postComments[post.id]?.length || 0) > 2 && !showAllComments.has(post.id) && (
+                    <TouchableOpacity
+                      onPress={() => setShowAllComments((prev) => new Set(prev).add(post.id))}
+                      style={s.viewAllCommentsBtn}
+                    >
+                      <Text style={s.viewAllCommentsText}>
+                        View all {postComments[post.id]?.length} comments
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {(showAllComments.has(post.id)
+                    ? postComments[post.id] || []
+                    : (postComments[post.id] || []).slice(-2)
+                  ).map((comment) => {
+                    const cName = comment.profiles?.full_name || 'Unknown';
+                    const cAvColor = getAvatarColor(cName);
+                    return (
+                      <View key={comment.id} style={s.commentRow}>
+                        {comment.profiles?.avatar_url ? (
+                          <Image source={{ uri: comment.profiles.avatar_url }} style={s.commentAvatar} />
+                        ) : (
+                          <View style={[s.commentAvatarFallback, { backgroundColor: cAvColor }]}>
+                            <Text style={{ fontSize: 10, fontWeight: '700', color: '#fff' }}>
+                              {getInitials(cName)}
+                            </Text>
+                          </View>
+                        )}
+                        <View style={s.commentBubble}>
+                          <Text style={s.commentAuthor}>{cName}</Text>
+                          <Text style={s.commentContent}>{comment.content}</Text>
+                        </View>
+                        <Text style={s.commentTimestamp}>{formatTimestamp(comment.created_at)}</Text>
+                      </View>
+                    );
+                  })}
+
+                  <View style={s.commentInputRow}>
+                    {profile?.avatar_url ? (
+                      <Image source={{ uri: profile.avatar_url }} style={s.commentInputAvatar} />
+                    ) : (
+                      <View style={[s.commentInputAvatarFallback, { backgroundColor: teamColor }]}>
+                        <Text style={{ fontSize: 10, fontWeight: '700', color: '#fff' }}>
+                          {getInitials(profile?.full_name || null)}
+                        </Text>
+                      </View>
+                    )}
+                    <TextInput
+                      style={s.commentInput}
+                      value={commentText[post.id] || ''}
+                      onChangeText={(text) => setCommentText((prev) => ({ ...prev, [post.id]: text }))}
+                      placeholder="Write a comment..."
+                      placeholderTextColor={colors.textMuted}
+                      multiline
+                      maxLength={500}
+                    />
+                    <TouchableOpacity
+                      onPress={() => handleSubmitComment(post.id)}
+                      disabled={!(commentText[post.id] || '').trim() || submittingComment.has(post.id)}
+                      style={{ padding: 6 }}
+                    >
+                      {submittingComment.has(post.id) ? (
+                        <ActivityIndicator size="small" color={teamColor} />
+                      ) : (
+                        <Ionicons
+                          name="send"
+                          size={20}
+                          color={(commentText[post.id] || '').trim() ? teamColor : colors.textMuted}
+                        />
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
+            </View>
+          )}
         </View>
       </View>
     );
@@ -2589,6 +2806,97 @@ const createStyles = (colors: any) =>
       fontSize: 13,
       fontWeight: '600',
       color: colors.textMuted,
+    },
+
+    // Inline Comments
+    commentsSection: {
+      borderTopWidth: 1,
+      borderTopColor: '#E5E5E5',
+      marginTop: 4,
+      paddingTop: 8,
+      paddingHorizontal: 16,
+    },
+    viewAllCommentsBtn: {
+      paddingVertical: 6,
+    },
+    viewAllCommentsText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.textMuted,
+    },
+    commentRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 8,
+      marginBottom: 10,
+    },
+    commentAvatar: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+    },
+    commentAvatarFallback: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    commentBubble: {
+      flex: 1,
+      backgroundColor: colors.bgSecondary,
+      borderRadius: 12,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+    },
+    commentAuthor: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: colors.text,
+      marginBottom: 2,
+    },
+    commentContent: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      lineHeight: 18,
+    },
+    commentTimestamp: {
+      fontSize: 11,
+      color: colors.textMuted,
+      marginTop: 4,
+    },
+    commentInputRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginTop: 8,
+      paddingTop: 8,
+      borderTopWidth: 1,
+      borderTopColor: '#F0F0F0',
+    },
+    commentInputAvatar: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+    },
+    commentInputAvatarFallback: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    commentInput: {
+      flex: 1,
+      backgroundColor: colors.bgSecondary,
+      borderRadius: 18,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      fontSize: 13,
+      color: colors.text,
+      maxHeight: 80,
+      borderWidth: 1,
+      borderColor: colors.border,
     },
 
     // New Posts Pill
