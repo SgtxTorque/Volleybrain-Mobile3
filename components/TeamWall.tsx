@@ -1216,126 +1216,103 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
     );
   };
 
-  const renderFeedHeader = () => (
-    <View>
-      {isCoachOrAdmin && (
-        <TouchableOpacity
-          style={s.composeCard}
-          onPress={() => setShowNewPostModal(true)}
-          activeOpacity={0.7}
-        >
-          <View style={[s.composeAvatar, { backgroundColor: teamColor }]}>
-            <Text style={s.composeAvatarText}>
-              {getInitials(profile?.full_name || user?.email || null)}
-            </Text>
-          </View>
-          <View style={s.composeInputMock}>
-            <Text style={s.composeInputText}>What's on your mind?</Text>
-          </View>
-          <Ionicons name="create-outline" size={22} color={teamColor} />
-        </TouchableOpacity>
-      )}
-    </View>
-  );
-
   // =============================================================================
-  // MAIN RENDER
+  // RENDER HELPER: Hero Section
   // =============================================================================
 
-  const Wrapper = (embedded || feedOnly) ? View : SafeAreaView;
-
-  return (
-    <Wrapper style={s.container}>
-      {/* Hero Cover Photo — hidden in feedOnly mode */}
-      {!feedOnly && (
-        <View style={s.heroContainer}>
-          {team?.banner_url ? (
-            <Image source={{ uri: team.banner_url }} style={s.heroCoverImage} resizeMode="cover" />
-          ) : (
-            <LinearGradient
-              colors={[teamColor, teamColor + 'B0', teamColor + '40']}
-              style={s.heroCoverImage}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <Text style={s.heroFallbackInitials}>
-                {team?.name?.charAt(0)?.toUpperCase() || '?'}
-              </Text>
-            </LinearGradient>
-          )}
-          {/* Dark gradient overlay */}
+  const renderHeroSection = () => {
+    if (feedOnly) return null;
+    return (
+      <View style={s.heroContainer}>
+        {team?.banner_url ? (
+          <Image source={{ uri: team.banner_url }} style={s.heroCoverImage} resizeMode="cover" />
+        ) : (
           <LinearGradient
-            colors={['transparent', 'rgba(0,0,0,0.65)']}
-            style={s.heroGradientOverlay}
-          />
-          {/* Back button (standalone mode) */}
-          {!embedded && (
+            colors={[teamColor, teamColor + 'B0', teamColor + '40']}
+            style={s.heroCoverImage}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <Text style={s.heroFallbackInitials}>
+              {team?.name?.charAt(0)?.toUpperCase() || '?'}
+            </Text>
+          </LinearGradient>
+        )}
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.65)']}
+          style={s.heroGradientOverlay}
+        />
+        {!embedded && (
+          <TouchableOpacity
+            style={s.heroBackBtn}
+            onPress={() => {
+              if (propTeamId) {
+                router.back();
+              } else {
+                setTeamId(null);
+                setTeam(null);
+                setPosts([]);
+                setRoster([]);
+                setEvents([]);
+              }
+            }}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="arrow-back" size={22} color="#fff" />
+          </TouchableOpacity>
+        )}
+        {isCoachOrAdmin && (
+          <TouchableOpacity
+            style={s.heroCameraBtn}
+            onPress={handleUploadCoverPhoto}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="camera" size={18} color="#fff" />
+          </TouchableOpacity>
+        )}
+        <View style={s.heroInfoOverlay}>
+          <Text style={s.heroTeamName}>{team?.name || 'Loading...'}</Text>
+          <Text style={s.heroTeamMeta}>
+            {playerCount} Players {'\u00B7'} {coachCount} Coaches
+          </Text>
+          <View style={s.heroPillRow}>
+            <TouchableOpacity style={s.heroPill} activeOpacity={0.7}>
+              <Ionicons name="images-outline" size={14} color="#fff" />
+              <Text style={s.heroPillText}>Gallery</Text>
+            </TouchableOpacity>
             <TouchableOpacity
-              style={s.heroBackBtn}
+              style={s.heroPill}
+              activeOpacity={0.7}
               onPress={() => {
-                if (propTeamId) {
-                  router.back();
+                if (isCoachOrAdmin) {
+                  router.push('/standings' as any);
                 } else {
-                  setTeamId(null);
-                  setTeam(null);
-                  setPosts([]);
-                  setRoster([]);
-                  setEvents([]);
+                  setActiveTab('schedule');
                 }
               }}
-              activeOpacity={0.7}
             >
-              <Ionicons name="arrow-back" size={22} color="#fff" />
+              <Ionicons
+                name={isCoachOrAdmin ? 'stats-chart-outline' : 'calendar-outline'}
+                size={14}
+                color="#fff"
+              />
+              <Text style={s.heroPillText}>
+                {isCoachOrAdmin ? 'Stats' : 'Schedule'}
+              </Text>
             </TouchableOpacity>
-          )}
-          {/* Camera button — coach/admin only */}
-          {isCoachOrAdmin && (
-            <TouchableOpacity
-              style={s.heroCameraBtn}
-              onPress={handleUploadCoverPhoto}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="camera" size={18} color="#fff" />
-            </TouchableOpacity>
-          )}
-          {/* Team info overlay */}
-          <View style={s.heroInfoOverlay}>
-            <Text style={s.heroTeamName}>{team?.name || 'Loading...'}</Text>
-            <Text style={s.heroTeamMeta}>
-              {playerCount} Players {'\u00B7'} {coachCount} Coaches
-            </Text>
-            <View style={s.heroPillRow}>
-              <TouchableOpacity style={s.heroPill} activeOpacity={0.7}>
-                <Ionicons name="images-outline" size={14} color="#fff" />
-                <Text style={s.heroPillText}>Gallery</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={s.heroPill}
-                activeOpacity={0.7}
-                onPress={() => {
-                  if (isCoachOrAdmin) {
-                    router.push('/standings' as any);
-                  } else {
-                    setActiveTab('schedule');
-                  }
-                }}
-              >
-                <Ionicons
-                  name={isCoachOrAdmin ? 'stats-chart-outline' : 'calendar-outline'}
-                  size={14}
-                  color="#fff"
-                />
-                <Text style={s.heroPillText}>
-                  {isCoachOrAdmin ? 'Stats' : 'Schedule'}
-                </Text>
-              </TouchableOpacity>
-            </View>
           </View>
         </View>
-      )}
+      </View>
+    );
+  };
 
-      {/* Tab Navigation — hidden in feedOnly mode */}
-      {!feedOnly && (
+  // =============================================================================
+  // RENDER HELPER: Tab Bar
+  // =============================================================================
+
+  const renderTabBar = () => {
+    if (feedOnly) return null;
+    return (
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.tabBarScroll} contentContainerStyle={s.tabBar}>
         {([
           { key: 'feed', label: 'Feed', icon: 'newspaper' as keyof typeof Ionicons.glyphMap },
@@ -1363,14 +1340,94 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
           );
         })}
       </ScrollView>
-      )}
+    );
+  };
 
+  // =============================================================================
+  // RENDER HELPER: Feed Composer
+  // =============================================================================
+
+  const renderFeedHeader = () => (
+    <View>
+      {isCoachOrAdmin && (
+        <TouchableOpacity
+          style={s.composeCard}
+          onPress={() => setShowNewPostModal(true)}
+          activeOpacity={0.7}
+        >
+          <View style={[s.composeAvatar, { backgroundColor: teamColor }]}>
+            <Text style={s.composeAvatarText}>
+              {getInitials(profile?.full_name || user?.email || null)}
+            </Text>
+          </View>
+          <View style={s.composeInputMock}>
+            <Text style={s.composeInputText}>What's on your mind?</Text>
+          </View>
+          <Ionicons name="create-outline" size={22} color={teamColor} />
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+
+  // Combines hero + tabs + optional feed composer into one list header
+  const renderListHeaderFeed = () => (
+    <View>
+      {renderHeroSection()}
+      {renderTabBar()}
+      {renderFeedHeader()}
+    </View>
+  );
+
+  const renderListHeaderOther = () => (
+    <View>
+      {renderHeroSection()}
+      {renderTabBar()}
+    </View>
+  );
+
+  // =============================================================================
+  // Animated interpolations for sticky behavior
+  // =============================================================================
+
+  const stickyTabOpacity = scrollY.interpolate({
+    inputRange: [HERO_HEIGHT - TAB_BAR_HEIGHT, HERO_HEIGHT],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+  const compactHeaderOpacity = scrollY.interpolate({
+    inputRange: [HERO_HEIGHT, HERO_HEIGHT + 40],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+
+  // =============================================================================
+  // Scroll handler
+  // =============================================================================
+
+  const handleScroll = Animated.event(
+    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+    { useNativeDriver: false }
+  );
+
+  // =============================================================================
+  // MAIN RENDER
+  // =============================================================================
+
+  const Wrapper = (embedded || feedOnly) ? View : SafeAreaView;
+
+  return (
+    <Wrapper style={s.container}>
       {/* Tab Content */}
       {(feedOnly || activeTab === 'feed') && (
         <View style={s.tabContent}>
           {loadingPosts && posts.length === 0 ? (
-            <ScrollView style={s.tabContent} contentContainerStyle={s.listContent}>
-              {renderFeedHeader()}
+            <ScrollView
+              style={s.tabContent}
+              contentContainerStyle={s.listContent}
+              onScroll={handleScroll}
+              scrollEventThrottle={16}
+            >
+              {renderListHeaderFeed()}
               <SkeletonPostCard colors={colors} />
               <SkeletonPostCard colors={colors} />
               <SkeletonPostCard colors={colors} />
@@ -1379,6 +1436,8 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
             <ScrollView
               style={s.tabContent}
               contentContainerStyle={s.emptyFeedScroll}
+              onScroll={handleScroll}
+              scrollEventThrottle={16}
               refreshControl={
                 <RefreshControl
                   refreshing={refreshingFeed}
@@ -1388,7 +1447,7 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
                 />
               }
             >
-              {renderFeedHeader()}
+              {renderListHeaderFeed()}
 
               <View style={s.emptyStateContainer}>
                 <Ionicons name="megaphone-outline" size={56} color={teamColor + '50'} />
@@ -1421,8 +1480,10 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
                 data={posts}
                 keyExtractor={(item) => item.id}
                 renderItem={renderPostCard}
-                ListHeaderComponent={renderFeedHeader}
+                ListHeaderComponent={renderListHeaderFeed}
                 contentContainerStyle={s.listContent}
+                onScroll={handleScroll}
+                scrollEventThrottle={16}
                 refreshControl={
                   <RefreshControl
                     refreshing={refreshingFeed}
@@ -1455,21 +1516,30 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
       {!feedOnly && activeTab === 'roster' && (
         <View style={s.tabContent}>
           {loadingRoster ? (
-            <View style={s.centered}>
-              <ActivityIndicator size="large" color={teamColor} />
-            </View>
+            <ScrollView contentContainerStyle={s.listContent}>
+              {renderListHeaderOther()}
+              <View style={s.centered}>
+                <ActivityIndicator size="large" color={teamColor} />
+              </View>
+            </ScrollView>
           ) : roster.length === 0 ? (
-            <View style={s.centered}>
-              <Ionicons name="people-outline" size={56} color={teamColor + '50'} />
-              <Text style={s.emptyTitle}>Roster Loading</Text>
-              <Text style={s.emptySubtitle}>Players will show up once the coach builds the roster.</Text>
-            </View>
+            <ScrollView contentContainerStyle={s.listContent}>
+              {renderListHeaderOther()}
+              <View style={s.centered}>
+                <Ionicons name="people-outline" size={56} color={teamColor + '50'} />
+                <Text style={s.emptyTitle}>Roster Loading</Text>
+                <Text style={s.emptySubtitle}>Players will show up once the coach builds the roster.</Text>
+              </View>
+            </ScrollView>
           ) : (
             <FlatList
               data={roster}
               keyExtractor={(item) => item.id}
               renderItem={renderRosterPlayer}
+              ListHeaderComponent={renderListHeaderOther}
               contentContainerStyle={s.listContent}
+              onScroll={handleScroll}
+              scrollEventThrottle={16}
               showsVerticalScrollIndicator={false}
             />
           )}
@@ -1479,21 +1549,30 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
       {!feedOnly && activeTab === 'schedule' && (
         <View style={s.tabContent}>
           {loadingSchedule ? (
-            <View style={s.centered}>
-              <ActivityIndicator size="large" color={teamColor} />
-            </View>
+            <ScrollView contentContainerStyle={s.listContent}>
+              {renderListHeaderOther()}
+              <View style={s.centered}>
+                <ActivityIndicator size="large" color={teamColor} />
+              </View>
+            </ScrollView>
           ) : events.length === 0 ? (
-            <View style={s.centered}>
-              <Ionicons name="calendar-outline" size={56} color={teamColor + '50'} />
-              <Text style={s.emptyTitle}>Schedule TBD</Text>
-              <Text style={s.emptySubtitle}>Events will appear here once they're on the calendar.</Text>
-            </View>
+            <ScrollView contentContainerStyle={s.listContent}>
+              {renderListHeaderOther()}
+              <View style={s.centered}>
+                <Ionicons name="calendar-outline" size={56} color={teamColor + '50'} />
+                <Text style={s.emptyTitle}>Schedule TBD</Text>
+                <Text style={s.emptySubtitle}>Events will appear here once they're on the calendar.</Text>
+              </View>
+            </ScrollView>
           ) : (
             <FlatList
               data={events}
               keyExtractor={(item) => item.id}
               renderItem={renderScheduleEvent}
+              ListHeaderComponent={renderListHeaderOther}
               contentContainerStyle={s.listContent}
+              onScroll={handleScroll}
+              scrollEventThrottle={16}
               showsVerticalScrollIndicator={false}
             />
           )}
@@ -1504,10 +1583,34 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
       {!feedOnly && additionalTabs.map(tab => (
         activeTab === tab.key ? (
           <View key={tab.key} style={s.tabContent}>
-            {tab.render()}
+            <ScrollView contentContainerStyle={s.listContent} onScroll={handleScroll} scrollEventThrottle={16}>
+              {renderListHeaderOther()}
+              {tab.render()}
+            </ScrollView>
           </View>
         ) : null
       ))}
+
+      {/* Compact sticky header — fades in when hero scrolled off */}
+      {!feedOnly && (
+        <Animated.View style={[s.compactHeader, { opacity: compactHeaderOpacity }]} pointerEvents="box-none">
+          {team?.banner_url ? (
+            <Image source={{ uri: team.banner_url }} style={s.compactHeaderThumb} />
+          ) : (
+            <View style={[s.compactHeaderThumb, { backgroundColor: teamColor }]}>
+              <Text style={s.compactHeaderThumbText}>{team?.name?.charAt(0) || '?'}</Text>
+            </View>
+          )}
+          <Text style={s.compactHeaderTitle} numberOfLines={1}>{team?.name}</Text>
+        </Animated.View>
+      )}
+
+      {/* Sticky tab bar — fades in when original tabs scroll off */}
+      {!feedOnly && (
+        <Animated.View style={[s.stickyTabBar, { opacity: stickyTabOpacity }]}>
+          {renderTabBar()}
+        </Animated.View>
+      )}
 
       {/* New Post Modal */}
       <Modal visible={showNewPostModal} animationType="slide" transparent>
@@ -1783,6 +1886,52 @@ const createStyles = (colors: any) =>
       color: 'rgba(255,255,255,0.25)',
       textAlign: 'center',
       lineHeight: HERO_HEIGHT,
+    },
+
+    // Compact sticky header (fades in on scroll)
+    compactHeader: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      height: COMPACT_HEADER_HEIGHT,
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      gap: 10,
+      backgroundColor: colors.background,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      zIndex: 100,
+    },
+    compactHeaderThumb: {
+      width: 30,
+      height: 30,
+      borderRadius: 6,
+      justifyContent: 'center',
+      alignItems: 'center',
+      overflow: 'hidden',
+    },
+    compactHeaderThumbText: {
+      fontSize: 14,
+      fontWeight: '800',
+      color: '#fff',
+    },
+    compactHeaderTitle: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.text,
+      flex: 1,
+    },
+
+    // Sticky tab bar overlay
+    stickyTabBar: {
+      position: 'absolute',
+      top: COMPACT_HEADER_HEIGHT,
+      left: 0,
+      right: 0,
+      backgroundColor: colors.background,
+      zIndex: 99,
     },
 
     // Team Picker header (back button + title)
