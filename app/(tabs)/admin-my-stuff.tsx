@@ -53,7 +53,7 @@ const ACCENT_KEYS: AccentColor[] = ['orange', 'blue', 'purple', 'green', 'rose',
 export default function AdminMyStuffScreen() {
   const { colors, isDark, toggleTheme, accentColor, changeAccent } = useTheme();
   const { user, profile, organization, signOut } = useAuth();
-  const { workingSeason } = useSeason();
+  const { workingSeason, setWorkingSeason, allSeasons } = useSeason();
   const router = useRouter();
   const s = createStyles(colors);
 
@@ -304,6 +304,13 @@ export default function AdminMyStuffScreen() {
   const formatCurrency = (amt: number) =>
     '$' + amt.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
+  const navigateToSeason = (season: SeasonInfo) => {
+    // Match against full Season objects from context so setWorkingSeason gets the right shape
+    const fullSeason = allSeasons.find(s => s.id === season.id);
+    if (fullSeason) setWorkingSeason(fullSeason);
+    router.push('/season-settings' as any);
+  };
+
   const formatDate = (iso: string) => {
     const d = new Date(iso);
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -459,28 +466,38 @@ export default function AdminMyStuffScreen() {
           ) : (
             <>
               {/* Active seasons */}
-              {seasons.filter(ss => ss.status === 'active').map(season => {
-                const isActive = season.id === workingSeason?.id;
-                return (
-                  <TouchableOpacity key={season.id} style={s.menuRow} onPress={() => router.push('/season-settings' as any)} activeOpacity={0.7}>
-                    <View style={[s.menuIcon, { backgroundColor: colors.success + '15' }]}>
-                      <Ionicons name="trophy" size={18} color={colors.success} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[s.menuLabel, { fontWeight: '700' }]}>{season.name}</Text>
-                    </View>
-                    {isActive && (
-                      <View style={[s.activeBadge, { backgroundColor: colors.success + '15' }]}>
-                        <Text style={[s.activeBadgeText, { color: colors.success }]}>Active</Text>
-                      </View>
-                    )}
-                    <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-                  </TouchableOpacity>
-                );
-              })}
+              {seasons.filter(ss => ss.status === 'active').map(season => (
+                <TouchableOpacity key={season.id} style={s.menuRow} onPress={() => navigateToSeason(season)} activeOpacity={0.7}>
+                  <View style={[s.menuIcon, { backgroundColor: colors.success + '15' }]}>
+                    <Ionicons name="trophy" size={18} color={colors.success} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[s.menuLabel, { fontWeight: '700' }]}>{season.name}</Text>
+                  </View>
+                  <View style={[s.activeBadge, { backgroundColor: colors.success + '15' }]}>
+                    <Text style={[s.activeBadgeText, { color: colors.success }]}>Active</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                </TouchableOpacity>
+              ))}
+              {/* Draft seasons */}
+              {seasons.filter(ss => ss.status === 'draft').map(season => (
+                <TouchableOpacity key={season.id} style={s.menuRow} onPress={() => navigateToSeason(season)} activeOpacity={0.7}>
+                  <View style={[s.menuIcon, { backgroundColor: '#E8913A15' }]}>
+                    <Ionicons name="construct" size={18} color="#E8913A" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={s.menuLabel}>{season.name}</Text>
+                  </View>
+                  <View style={[s.activeBadge, { backgroundColor: '#E8913A15' }]}>
+                    <Text style={[s.activeBadgeText, { color: '#E8913A' }]}>Draft</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                </TouchableOpacity>
+              ))}
               {/* Upcoming seasons */}
               {seasons.filter(ss => ss.status === 'upcoming').map(season => (
-                <TouchableOpacity key={season.id} style={s.menuRow} onPress={() => router.push('/season-settings' as any)} activeOpacity={0.7}>
+                <TouchableOpacity key={season.id} style={s.menuRow} onPress={() => navigateToSeason(season)} activeOpacity={0.7}>
                   <View style={[s.menuIcon, { backgroundColor: colors.info + '15' }]}>
                     <Ionicons name="time" size={18} color={colors.info} />
                   </View>
@@ -506,12 +523,15 @@ export default function AdminMyStuffScreen() {
                     <Ionicons name={showArchived ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textMuted} />
                   </TouchableOpacity>
                   {showArchived && seasons.filter(ss => ss.status === 'completed').map(season => (
-                    <TouchableOpacity key={season.id} style={[s.menuRow, { paddingLeft: 24 }]} onPress={() => router.push('/season-settings' as any)} activeOpacity={0.7}>
+                    <TouchableOpacity key={season.id} style={[s.menuRow, { paddingLeft: 24 }]} onPress={() => navigateToSeason(season)} activeOpacity={0.7}>
                       <View style={[s.menuIcon, { backgroundColor: colors.textMuted + '10' }]}>
                         <Ionicons name="trophy" size={18} color={colors.textMuted} />
                       </View>
                       <View style={{ flex: 1 }}>
                         <Text style={[s.menuLabel, { color: colors.textMuted }]}>{season.name}</Text>
+                      </View>
+                      <View style={[s.activeBadge, { backgroundColor: colors.textMuted + '10' }]}>
+                        <Text style={[s.activeBadgeText, { color: colors.textMuted }]}>Completed</Text>
                       </View>
                       <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
                     </TouchableOpacity>
