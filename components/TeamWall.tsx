@@ -788,6 +788,22 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
     }
   };
 
+  // Auto-expand posts with exactly 1 comment (show inline per spec)
+  useEffect(() => {
+    if (posts.length === 0) return;
+    const singleCommentPosts = posts.filter(
+      (p) => p.comment_count === 1 && !expandedComments.has(p.id) && !postComments[p.id]
+    );
+    if (singleCommentPosts.length > 0) {
+      setExpandedComments((prev) => {
+        const next = new Set(prev);
+        singleCommentPosts.forEach((p) => next.add(p.id));
+        return next;
+      });
+      singleCommentPosts.forEach((p) => loadComments(p.id));
+    }
+  }, [posts]);
+
   const handleToggleComments = (postId: string) => {
     setExpandedComments((prev) => {
       const next = new Set(prev);
@@ -1321,7 +1337,7 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
                   delayLongPress={400}
                 >
                   <Text style={{ fontSize: 16 }}>{isLiked ? likeEmoji : '♡'}</Text>
-                  <Text style={[s.engagementBtnText, isLiked && { color: teamColor }]}>
+                  <Text style={[s.engagementBtnText, isLiked && { color: colors.primary }]}>
                     Like{totalCount > 0 ? ` (${totalCount})` : ''}
                   </Text>
                 </TouchableOpacity>
@@ -1331,8 +1347,8 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
               style={s.engagementBtn}
               onPress={() => handleToggleComments(post.id)}
             >
-              <Ionicons name="chatbubble-outline" size={18} color={expandedComments.has(post.id) ? teamColor : colors.textMuted} />
-              <Text style={[s.engagementBtnText, expandedComments.has(post.id) && { color: teamColor }]}>
+              <Ionicons name="chatbubble-outline" size={18} color={expandedComments.has(post.id) ? colors.primary : colors.textMuted} />
+              <Text style={[s.engagementBtnText, expandedComments.has(post.id) && { color: colors.primary }]}>
                 Comment{(post.comment_count || 0) > 0 ? ` (${post.comment_count})` : ''}
               </Text>
             </TouchableOpacity>
