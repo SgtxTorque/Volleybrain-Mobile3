@@ -1,5 +1,5 @@
 import AppHeaderBar from '@/components/ui/AppHeaderBar';
-import PillTabs from '@/components/ui/PillTabs';
+import CarouselDots from '@/components/ui/CarouselDots';
 import TeamWall from '@/components/TeamWall';
 import { useAuth } from '@/lib/auth';
 import { radii, shadows, spacing } from '@/lib/design-tokens';
@@ -8,15 +8,19 @@ import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Dimensions,
+  FlatList,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // ---------------------------------------------------------------------------
 // Types
@@ -42,8 +46,10 @@ export default function CoachTeamHubScreen() {
 
   // State
   const [coachTeams, setCoachTeams] = useState<CoachTeam[]>([]);
-  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pagerHeight, setPagerHeight] = useState(0);
   const [loading, setLoading] = useState(true);
+  const flatListRef = useRef<FlatList>(null);
 
   // ---------------------------------------------------------------------------
   // Data: resolve coach → teams via team_staff + team_coaches + coaches fallback
@@ -114,9 +120,6 @@ export default function CoachTeamHubScreen() {
         .filter(Boolean) as CoachTeam[];
 
       setCoachTeams(teams);
-      if (teams.length > 0 && !selectedTeamId) {
-        setSelectedTeamId(teams[0].teamId);
-      }
     } catch (err) {
       if (__DEV__) console.error('[CoachTeamHub] fetchCoachTeams error:', err);
     } finally {
@@ -131,6 +134,21 @@ export default function CoachTeamHubScreen() {
   useEffect(() => {
     fetchCoachTeams();
   }, [fetchCoachTeams]);
+
+  // ---------------------------------------------------------------------------
+  // Swipe pager — track current page
+  // ---------------------------------------------------------------------------
+
+  const handleScroll = useCallback(
+    (e: any) => {
+      const x = e.nativeEvent.contentOffset.x;
+      const idx = Math.round(x / SCREEN_WIDTH);
+      if (idx >= 0 && idx < coachTeams.length) {
+        setPageIndex(idx);
+      }
+    },
+    [coachTeams.length],
+  );
 
   // ---------------------------------------------------------------------------
   // Additional tabs for TeamWall (Achievements + Stats)
@@ -206,7 +224,7 @@ export default function CoachTeamHubScreen() {
   // Empty state
   // ---------------------------------------------------------------------------
 
-  if (coachTeams.length === 0 || !selectedTeamId) {
+  if (coachTeams.length === 0) {
     return (
       <SafeAreaView style={[s.container, { backgroundColor: colors.background }]}>
         <AppHeaderBar title="MY TEAM" showAvatar={false} showNotificationBell={false} />
@@ -222,27 +240,59 @@ export default function CoachTeamHubScreen() {
   }
 
   // ---------------------------------------------------------------------------
-  // Main render
+  // Main render — swipe pager
   // ---------------------------------------------------------------------------
-
-  const teamTabs = coachTeams.map((t) => ({ key: t.teamId, label: t.teamName }));
 
   return (
     <SafeAreaView style={[s.container, { backgroundColor: colors.background }]} edges={['top']}>
       <AppHeaderBar title="MY TEAM" showAvatar={false} showNotificationBell={false} />
 
-      {/* Team selector pills — static, above TeamWall (matches Coach Home pattern) */}
+      {/* Carousel indicator dots — above hero, below header */}
       {coachTeams.length > 1 && (
-        <PillTabs tabs={teamTabs} activeKey={selectedTeamId} onChange={setSelectedTeamId} />
+        <CarouselDots
+          total={coachTeams.length}
+          activeIndex={pageIndex}
+          activeColor={colors.primary}
+          inactiveColor={colors.textMuted}
+        />
       )}
 
-      {/* TeamWall with coach extra tabs: Feed | Roster | Schedule | Achievements | Stats */}
-      <View style={s.feedContainer}>
-        <TeamWall
-          teamId={selectedTeamId}
-          embedded
-          additionalTabs={coachExtraTabs}
-        />
+      {/* Swipe pager — each page is an independent TeamWall instance */}
+      <View
+        style={s.feedContainer}
+        onLayout={(e) => setPagerHeight(e.nativeEvent.layout.height)}
+      >
+        {pagerHeight > 0 && (
+          <FlatList
+            ref={flatListRef}
+            horizontal
+            pagingEnabled
+            scrollEnabled={coachTeams.length > 1}
+            showsHorizontalScrollIndicator={false}
+            data={coachTeams}
+            keyExtractor={(item) => item.teamId}
+            renderItem={({ item }) => (
+              <View style={{ width: SCREEN_WIDTH, height: pagerHeight }}>
+                <TeamWall
+                  teamId={item.teamId}
+                  embedded
+                  additionalTabs={coachExtraTabs}
+                />
+              </View>
+            )}
+            getItemLayout={(_, index) => ({
+              length: SCREEN_WIDTH,
+              offset: SCREEN_WIDTH * index,
+              index,
+            })}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+            initialNumToRender={coachTeams.length}
+            maxToRenderPerBatch={coachTeams.length}
+            windowSize={21}
+            removeClippedSubviews={false}
+          />
+        )}
       </View>
     </SafeAreaView>
   );

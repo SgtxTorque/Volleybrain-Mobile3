@@ -1,6 +1,6 @@
 import AppHeaderBar from '@/components/ui/AppHeaderBar';
+import CarouselDots from '@/components/ui/CarouselDots';
 import SectionHeader from '@/components/ui/SectionHeader';
-import PillTabs from '@/components/ui/PillTabs';
 import TeamWall from '@/components/TeamWall';
 import { useAuth } from '@/lib/auth';
 import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
@@ -9,15 +9,19 @@ import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Dimensions,
+  FlatList,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // ---------------------------------------------------------------------------
 // Types
@@ -66,13 +70,11 @@ export default function ParentTeamHubScreen() {
 
   // State
   const [childTeams, setChildTeams] = useState<ChildTeam[]>([]);
-  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
-  const [teamRecord, setTeamRecord] = useState<TeamRecord | null>(null);
+  const [teamRecords, setTeamRecords] = useState<Record<string, TeamRecord>>({});
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pagerHeight, setPagerHeight] = useState(0);
   const [loading, setLoading] = useState(true);
-
-  // Derived
-  const selectedTeam = childTeams.find((t) => t.teamId === selectedTeamId);
-  const teamColor = selectedTeam?.teamColor || colors.primary;
+  const flatListRef = useRef<FlatList>(null);
 
   // ---------------------------------------------------------------------------
   // Data: resolve parent → children → teams
@@ -114,7 +116,6 @@ export default function ParentTeamHubScreen() {
 
       if (playerIds.length === 0) {
         setChildTeams([]);
-        setSelectedTeamId(null);
         setLoading(false);
         return;
       }
@@ -148,11 +149,6 @@ export default function ParentTeamHubScreen() {
 
       const teams = Array.from(teamsMap.values());
       setChildTeams(teams);
-
-      // Auto-select first team
-      if (teams.length > 0 && !selectedTeamId) {
-        setSelectedTeamId(teams[0].teamId);
-      }
     } catch (err) {
       if (__DEV__) console.error('[ParentTeamHub] fetchChildTeams error:', err);
     } finally {
@@ -161,30 +157,35 @@ export default function ParentTeamHubScreen() {
   }, [user?.id, profile?.email]);
 
   // ---------------------------------------------------------------------------
-  // Data: W-L record from standings view
+  // Data: batch-fetch W-L records for all teams
   // ---------------------------------------------------------------------------
 
-  const fetchTeamRecord = useCallback(async (teamId: string) => {
+  const fetchAllTeamRecords = useCallback(async (teamIds: string[]) => {
+    if (teamIds.length === 0) return;
     try {
       const { data } = await supabase
         .from('v_season_standings')
-        .select('wins, losses, record, current_streak')
-        .eq('team_id', teamId)
-        .maybeSingle();
+        .select('team_id, wins, losses, record, current_streak')
+        .in('team_id', teamIds);
 
-      if (data) {
-        setTeamRecord({
-          wins: data.wins ?? 0,
-          losses: data.losses ?? 0,
-          record: data.record || `${data.wins ?? 0}-${data.losses ?? 0}`,
-          streak: data.current_streak || null,
-        });
-      } else {
-        setTeamRecord({ wins: 0, losses: 0, record: '0-0', streak: null });
+      const records: Record<string, TeamRecord> = {};
+      for (const d of data || []) {
+        records[d.team_id] = {
+          wins: d.wins ?? 0,
+          losses: d.losses ?? 0,
+          record: d.record || `${d.wins ?? 0}-${d.losses ?? 0}`,
+          streak: d.current_streak || null,
+        };
       }
+      // Default for teams with no standings row
+      for (const id of teamIds) {
+        if (!records[id]) {
+          records[id] = { wins: 0, losses: 0, record: '0-0', streak: null };
+        }
+      }
+      setTeamRecords(records);
     } catch (err) {
-      if (__DEV__) console.error('[ParentTeamHub] fetchTeamRecord error:', err);
-      setTeamRecord({ wins: 0, losses: 0, record: '0-0', streak: null });
+      if (__DEV__) console.error('[ParentTeamHub] fetchAllTeamRecords error:', err);
     }
   }, []);
 
@@ -197,23 +198,33 @@ export default function ParentTeamHubScreen() {
   }, [fetchChildTeams]);
 
   useEffect(() => {
-    if (selectedTeamId) {
-      fetchTeamRecord(selectedTeamId);
+    if (childTeams.length > 0) {
+      fetchAllTeamRecords(childTeams.map((t) => t.teamId));
     }
-  }, [selectedTeamId, fetchTeamRecord]);
+  }, [childTeams, fetchAllTeamRecords]);
+
+  // ---------------------------------------------------------------------------
+  // Swipe pager — track current page
+  // ---------------------------------------------------------------------------
+
+  const handleScroll = useCallback(
+    (e: any) => {
+      const x = e.nativeEvent.contentOffset.x;
+      const idx = Math.round(x / SCREEN_WIDTH);
+      if (idx >= 0 && idx < childTeams.length) {
+        setPageIndex(idx);
+      }
+    },
+    [childTeams.length],
+  );
 
   // ---------------------------------------------------------------------------
   // Handlers
   // ---------------------------------------------------------------------------
 
-  const handleTeamChange = (key: string) => {
-    setSelectedTeamId(key);
-    setTeamRecord(null);
-  };
-
-  const handleQuickLink = (item: typeof QUICK_LINKS[number]) => {
-    if (item.needsTeamId && selectedTeamId) {
-      router.push({ pathname: item.route as any, params: { teamId: selectedTeamId } });
+  const handleQuickLink = (item: typeof QUICK_LINKS[number], teamId: string) => {
+    if (item.needsTeamId) {
+      router.push({ pathname: item.route as any, params: { teamId } });
     } else {
       router.push(item.route as any);
     }
@@ -238,7 +249,7 @@ export default function ParentTeamHubScreen() {
   // Empty state
   // ---------------------------------------------------------------------------
 
-  if (childTeams.length === 0 || !selectedTeamId) {
+  if (childTeams.length === 0) {
     return (
       <SafeAreaView style={[s.container, { backgroundColor: colors.background }]}>
         <AppHeaderBar title="MY TEAM" showAvatar={false} showNotificationBell={false} />
@@ -254,62 +265,111 @@ export default function ParentTeamHubScreen() {
   }
 
   // ---------------------------------------------------------------------------
-  // Main render
+  // Main render — swipe pager
   // ---------------------------------------------------------------------------
-
-  const teamTabs = childTeams.map((t) => ({ key: t.teamId, label: t.teamName }));
 
   return (
     <SafeAreaView style={[s.container, { backgroundColor: colors.background }]} edges={['top']}>
       <AppHeaderBar title="MY TEAM" showAvatar={false} showNotificationBell={false} />
 
-      {/* Team selector pills — only if multiple teams */}
+      {/* Carousel indicator dots — above hero, below header */}
       {childTeams.length > 1 && (
-        <PillTabs tabs={teamTabs} activeKey={selectedTeamId} onChange={handleTeamChange} />
+        <CarouselDots
+          total={childTeams.length}
+          activeIndex={pageIndex}
+          activeColor={colors.primary}
+          inactiveColor={colors.textMuted}
+        />
       )}
 
-      {/* Hero Header Card */}
-      <View style={[s.heroCard, { borderLeftColor: teamColor, borderLeftWidth: 4 }]}>
-        <View style={s.heroContent}>
-          <View style={s.heroLeft}>
-            <Text style={[s.heroTeamName, { color: colors.text }]} numberOfLines={1}>
-              {selectedTeam?.teamName || 'Team'}
-            </Text>
-            {selectedTeam && childTeams.length > 1 && (
-              <Text style={[s.heroChildName, { color: colors.textSecondary }]} numberOfLines={1}>
-                {selectedTeam.childName}
-              </Text>
-            )}
-          </View>
-          <View style={s.heroRight}>
-            <View style={[s.recordBadge, { backgroundColor: teamColor }]}>
-              <Text style={s.recordText}>{teamRecord?.record || '0-0'}</Text>
-            </View>
-            {teamRecord?.streak ? (
-              <Text style={[s.streakText, { color: colors.textMuted }]}>{teamRecord.streak}</Text>
-            ) : null}
-          </View>
-        </View>
-      </View>
+      {/* Swipe pager — each page is an independent team view */}
+      <View
+        style={s.feedContainer}
+        onLayout={(e) => setPagerHeight(e.nativeEvent.layout.height)}
+      >
+        {pagerHeight > 0 && (
+          <FlatList
+            ref={flatListRef}
+            horizontal
+            pagingEnabled
+            scrollEnabled={childTeams.length > 1}
+            showsHorizontalScrollIndicator={false}
+            data={childTeams}
+            keyExtractor={(item) => item.teamId}
+            renderItem={({ item }) => {
+              const teamColor = item.teamColor || colors.primary;
+              const record = teamRecords[item.teamId];
+              return (
+                <View style={{ width: SCREEN_WIDTH, height: pagerHeight }}>
+                  {/* Hero Header Card */}
+                  <View style={[s.heroCard, { borderLeftColor: teamColor, borderLeftWidth: 4 }]}>
+                    <View style={s.heroContent}>
+                      <View style={s.heroLeft}>
+                        <Text style={[s.heroTeamName, { color: colors.text }]} numberOfLines={1}>
+                          {item.teamName}
+                        </Text>
+                        {childTeams.length > 1 && (
+                          <Text
+                            style={[s.heroChildName, { color: colors.textSecondary }]}
+                            numberOfLines={1}
+                          >
+                            {item.childName}
+                          </Text>
+                        )}
+                      </View>
+                      <View style={s.heroRight}>
+                        <View style={[s.recordBadge, { backgroundColor: teamColor }]}>
+                          <Text style={s.recordText}>{record?.record || '0-0'}</Text>
+                        </View>
+                        {record?.streak ? (
+                          <Text style={[s.streakText, { color: colors.textMuted }]}>
+                            {record.streak}
+                          </Text>
+                        ) : null}
+                      </View>
+                    </View>
+                  </View>
 
-      {/* Quick Links Row */}
-      <View style={s.quickLinksRow}>
-        {QUICK_LINKS.map((item, i) => (
-          <React.Fragment key={item.key}>
-            {i > 0 && <Text style={[s.quickLinkSep, { color: colors.glassBorder }]}>·</Text>}
-            <TouchableOpacity onPress={() => handleQuickLink(item)} activeOpacity={0.7}>
-              <Text style={[s.quickLinkText, { color: teamColor }]}>{item.label}</Text>
-            </TouchableOpacity>
-          </React.Fragment>
-        ))}
-      </View>
+                  {/* Quick Links Row */}
+                  <View style={s.quickLinksRow}>
+                    {QUICK_LINKS.map((link, i) => (
+                      <React.Fragment key={link.key}>
+                        {i > 0 && (
+                          <Text style={[s.quickLinkSep, { color: colors.glassBorder }]}>·</Text>
+                        )}
+                        <TouchableOpacity
+                          onPress={() => handleQuickLink(link, item.teamId)}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={[s.quickLinkText, { color: teamColor }]}>{link.label}</Text>
+                        </TouchableOpacity>
+                      </React.Fragment>
+                    ))}
+                  </View>
 
-      {/* Section header */}
-      <SectionHeader title="Team Feed" />
+                  {/* Section header */}
+                  <SectionHeader title="Team Feed" />
 
-      {/* TeamWall in feedOnly mode */}
-      <View style={s.feedContainer}>
-        <TeamWall teamId={selectedTeamId} embedded feedOnly />
+                  {/* TeamWall in feedOnly mode */}
+                  <View style={s.wallContainer}>
+                    <TeamWall teamId={item.teamId} embedded feedOnly />
+                  </View>
+                </View>
+              );
+            }}
+            getItemLayout={(_, index) => ({
+              length: SCREEN_WIDTH,
+              offset: SCREEN_WIDTH * index,
+              index,
+            })}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+            initialNumToRender={childTeams.length}
+            maxToRenderPerBatch={childTeams.length}
+            windowSize={21}
+            removeClippedSubviews={false}
+          />
+        )}
       </View>
     </SafeAreaView>
   );
@@ -413,6 +473,9 @@ const createStyles = (colors: any) =>
 
     // Feed container
     feedContainer: {
+      flex: 1,
+    },
+    wallContainer: {
       flex: 1,
     },
   });
