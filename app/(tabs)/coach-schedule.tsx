@@ -584,7 +584,14 @@ export default function CoachScheduleScreen() {
           return (
             <TouchableOpacity
               key={ds}
-              onPress={() => { setSelectedDate(date); setHasUserSelectedDate(true); }}
+              onPress={() => {
+                if (hasUserSelectedDate && toDateStr(selectedDate) === ds) {
+                  setHasUserSelectedDate(false);
+                } else {
+                  setSelectedDate(date);
+                  setHasUserSelectedDate(true);
+                }
+              }}
               style={s.dayCell}
               activeOpacity={0.7}
             >

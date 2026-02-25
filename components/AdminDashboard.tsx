@@ -932,7 +932,7 @@ export default function AdminDashboard() {
                 </View>
               )}
             </View>
-            <Text style={s.quickLabel}>Registrations</Text>
+            <Text style={s.quickLabel}>Regs</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
