@@ -1,7 +1,10 @@
+import AchievementCelebrationModal from '@/components/AchievementCelebrationModal';
 import RarityGlow from '@/components/RarityGlow';
-import type { AchievementFull } from '@/lib/achievement-types';
+import type { AchievementFull, UnseenAchievement } from '@/lib/achievement-types';
 import { RARITY_CONFIG } from '@/lib/achievement-types';
+import { checkAllAchievements, fetchPlayerXP, getUnseenAchievements, markAchievementsSeen } from '@/lib/achievement-engine';
 import { useAuth } from '@/lib/auth';
+import { getLevelFromXP, getLevelTier } from '@/lib/engagement-constants';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
@@ -141,6 +144,9 @@ export default function AchievementsScreen() {
   const [earnedCounts, setEarnedCounts] = useState<Record<string, number>>({});
   const [selectedAchievement, setSelectedAchievement] = useState<Achievement | null>(null);
   const [trackedIds, setTrackedIds] = useState<Set<string>>(new Set());
+  const [totalXp, setTotalXp] = useState(0);
+  const [unseenAchievements, setUnseenAchievements] = useState<UnseenAchievement[]>([]);
+  const [showCelebration, setShowCelebration] = useState(false);
 
   useEffect(() => {
     if (user?.id && workingSeason?.id) {
@@ -151,8 +157,8 @@ export default function AchievementsScreen() {
   // Auto-unlock after data loads
   const seasonStatsCount = Object.keys(seasonStats).length;
   useEffect(() => {
-    if (!loading && playerId && allAchievements.length > 0 && seasonStatsCount > 0) {
-      unlockNewAchievements();
+    if (!loading && playerId && allAchievements.length > 0) {
+      runAutoUnlock();
     }
   }, [loading, playerId, allAchievements.length, seasonStatsCount]);
 
@@ -262,6 +268,12 @@ export default function AchievementsScreen() {
         }
         setEarnedCounts(counts);
       }
+
+      // Fetch XP/level data
+      if (resolvedPlayerId) {
+        const xpData = await fetchPlayerXP(resolvedPlayerId);
+        setTotalXp(xpData.totalXp);
+      }
     } catch (error) {
       if (__DEV__) console.error('Error loading achievements:', error);
     } finally {
@@ -269,61 +281,35 @@ export default function AchievementsScreen() {
     }
   };
 
-  // Auto-unlock achievements when season stats meet thresholds + update progress
-  const unlockNewAchievements = async () => {
-    if (!playerId || !workingSeason?.id || allAchievements.length === 0 || Object.keys(seasonStats).length === 0) return;
+  // Auto-unlock achievements using the enhanced engine (handles all types)
+  const runAutoUnlock = async () => {
+    if (!playerId || !workingSeason?.id || allAchievements.length === 0) return;
 
-    const toUnlock: { achievement_id: string; stat_value_at_unlock: number }[] = [];
-    const progressRows: { player_id: string; achievement_id: string; current_value: number; target_value: number; last_updated_at: string }[] = [];
-    const now = new Date().toISOString();
+    const result = await checkAllAchievements(playerId, workingSeason.id);
 
-    for (const ach of allAchievements) {
-      if (!ach.stat_key || ach.threshold == null) continue;
-      if (ach.requires_verification) continue;
-
-      const currentVal = seasonStats[ach.stat_key] ?? 0;
-
-      // Always update progress for stat-based achievements
-      progressRows.push({
-        player_id: playerId,
-        achievement_id: ach.id,
-        current_value: currentVal,
-        target_value: ach.threshold,
-        last_updated_at: now,
-      });
-
-      // Check for new unlock
-      if (earnedMap[ach.id]) continue;
-      if (currentVal >= ach.threshold) {
-        toUnlock.push({ achievement_id: ach.id, stat_value_at_unlock: currentVal });
-      }
+    // Update season stats with the comprehensive stats gathered by engine
+    if (Object.keys(result.allStats).length > 0) {
+      setSeasonStats(result.allStats);
     }
 
-    // Batch upsert progress
-    if (progressRows.length > 0) {
-      await supabase
-        .from('player_achievement_progress')
-        .upsert(progressRows, { onConflict: 'player_id,achievement_id' })
-        .then(({ error }) => { if (__DEV__ && error) console.error('Progress upsert:', error); });
-    }
-
-    if (toUnlock.length === 0) return;
-
-    const rows = toUnlock.map((u) => ({
-      player_id: playerId,
-      achievement_id: u.achievement_id,
-      earned_at: now,
-      season_id: workingSeason.id,
-      stat_value_at_unlock: u.stat_value_at_unlock,
-    }));
-
-    const { error } = await supabase
-      .from('player_achievements')
-      .upsert(rows, { onConflict: 'player_id,achievement_id', ignoreDuplicates: true });
-
-    if (!error && rows.length > 0) {
+    if (result.newUnlocks.length > 0) {
       // Refresh to show newly unlocked
       await loadData();
+    }
+
+    // Check for unseen achievements to celebrate
+    const unseen = await getUnseenAchievements(playerId);
+    if (unseen.length > 0) {
+      setUnseenAchievements(unseen);
+      setShowCelebration(true);
+    }
+  };
+
+  const handleCelebrationDismiss = async () => {
+    setShowCelebration(false);
+    setUnseenAchievements([]);
+    if (playerId) {
+      await markAchievementsSeen(playerId);
     }
   };
 
@@ -546,8 +532,37 @@ export default function AchievementsScreen() {
       ? getProgressForAchievement(nextToEarn, earnedMap[nextToEarn.id], seasonStats)
       : null;
 
+    const levelInfo = getLevelFromXP(totalXp);
+    const tier = getLevelTier(levelInfo.level);
+
     return (
       <View>
+        {/* Level & XP Bar */}
+        <View style={s.xpCard}>
+          <View style={s.xpHeaderRow}>
+            <View style={[s.levelBadge, { backgroundColor: tier.color + '25', borderColor: tier.color }]}>
+              <Text style={[s.levelNumber, { color: tier.color }]}>{levelInfo.level}</Text>
+            </View>
+            <View style={s.xpInfo}>
+              <Text style={s.xpTierName}>{tier.name}</Text>
+              <Text style={s.xpLabel}>
+                {totalXp} / {levelInfo.nextLevelXp} XP to Level {levelInfo.level + 1}
+              </Text>
+            </View>
+          </View>
+          <View style={s.xpBarBg}>
+            <View
+              style={[
+                s.xpBarFill,
+                {
+                  width: `${levelInfo.progress}%` as any,
+                  backgroundColor: tier.color,
+                },
+              ]}
+            />
+          </View>
+        </View>
+
         {/* Summary Card */}
         <View style={s.summaryCard}>
           <View style={s.summaryRow}>
@@ -942,6 +957,18 @@ export default function AchievementsScreen() {
 
       {/* Detail Modal */}
       {renderDetailModal()}
+
+      {/* Celebration Modal */}
+      {showCelebration && unseenAchievements.length > 0 && (
+        <AchievementCelebrationModal
+          unseen={unseenAchievements}
+          onDismiss={handleCelebrationDismiss}
+          onViewAllTrophies={() => {
+            handleCelebrationDismiss();
+          }}
+          themeColors={DARK}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -1008,6 +1035,61 @@ const createStyles = () =>
       fontSize: 13,
       fontWeight: '800',
       color: DARK.gold,
+    },
+
+    // Level & XP Bar
+    xpCard: {
+      backgroundColor: DARK.card,
+      borderRadius: 16,
+      padding: 16,
+      marginHorizontal: 16,
+      marginTop: 16,
+      borderWidth: 1,
+      borderColor: DARK.border,
+    },
+    xpHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 14,
+      marginBottom: 12,
+    },
+    levelBadge: {
+      width: 52,
+      height: 52,
+      borderRadius: 26,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 2,
+    },
+    levelNumber: {
+      fontSize: 22,
+      fontWeight: '900',
+    },
+    xpInfo: {
+      flex: 1,
+    },
+    xpTierName: {
+      fontSize: 16,
+      fontWeight: '800',
+      color: DARK.text,
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+    },
+    xpLabel: {
+      fontSize: 13,
+      fontWeight: '500',
+      color: DARK.textMuted,
+      marginTop: 2,
+    },
+    xpBarBg: {
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: 'rgba(255,255,255,0.08)',
+      overflow: 'hidden',
+    },
+    xpBarFill: {
+      height: '100%',
+      borderRadius: 4,
     },
 
     // Summary Card
