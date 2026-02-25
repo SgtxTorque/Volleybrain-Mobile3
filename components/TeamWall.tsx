@@ -1442,11 +1442,6 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
   // Animated interpolations for sticky behavior
   // =============================================================================
 
-  const stickyTabOpacity = scrollY.interpolate({
-    inputRange: [HERO_HEIGHT - TAB_BAR_HEIGHT, HERO_HEIGHT],
-    outputRange: [0, 1],
-    extrapolate: 'clamp',
-  });
   const compactHeaderOpacity = scrollY.interpolate({
     inputRange: [HERO_HEIGHT, HERO_HEIGHT + 40],
     outputRange: [0, 1],
@@ -1655,13 +1650,6 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
             </View>
           )}
           <Text style={s.compactHeaderTitle} numberOfLines={1}>{team?.name}</Text>
-        </Animated.View>
-      )}
-
-      {/* Sticky tab bar — fades in when original tabs scroll off */}
-      {!feedOnly && (
-        <Animated.View style={[s.stickyTabBar, { opacity: stickyTabOpacity }]}>
-          {renderTabBar()}
         </Animated.View>
       )}
 
@@ -1977,16 +1965,6 @@ const createStyles = (colors: any) =>
       flex: 1,
     },
 
-    // Sticky tab bar overlay
-    stickyTabBar: {
-      position: 'absolute',
-      top: COMPACT_HEADER_HEIGHT,
-      left: 0,
-      right: 0,
-      backgroundColor: colors.background,
-      zIndex: 99,
-    },
-
     // Team Picker header (back button + title)
     header: {
       flexDirection: 'row',
@@ -2064,6 +2042,7 @@ const createStyles = (colors: any) =>
       justifyContent: 'center',
       gap: 6,
       paddingVertical: 12,
+      marginRight: 8,
       borderBottomWidth: 2,
       borderBottomColor: 'transparent',
     },
@@ -2168,7 +2147,8 @@ const createStyles = (colors: any) =>
     postCardFlat: {
       borderBottomWidth: 1,
       borderBottomColor: '#E5E5E5',
-      paddingBottom: 4,
+      paddingTop: 12,
+      paddingBottom: 16,
     },
     pinnedIndicator: {
       flexDirection: 'row',
