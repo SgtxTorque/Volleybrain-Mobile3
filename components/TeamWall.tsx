@@ -8,19 +8,23 @@ import { supabase } from '@/lib/supabase';
 import { useTeamContext } from '@/lib/team-context';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Animated,
+  Dimensions,
   FlatList,
   Image,
   Modal,
   Platform,
   RefreshControl,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -38,6 +42,7 @@ type Team = {
   name: string;
   color: string | null;
   season_id: string | null;
+  banner_url: string | null;
 };
 
 type PostProfile = {
@@ -135,6 +140,11 @@ const AVATAR_COLORS = [
   '#F97316', '#10B981', '#3B82F6', '#A855F7', '#EF4444',
   '#F59E0B', '#0EA5E9', '#EC4899', '#14B8A6', '#8B5CF6',
 ];
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const HERO_HEIGHT = Math.round(SCREEN_HEIGHT * 0.37);
+const COMPACT_HEADER_HEIGHT = 56;
+const TAB_BAR_HEIGHT = 48;
 
 // =============================================================================
 // HELPERS
@@ -339,6 +349,7 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
   // New posts pill
   const [newPostsCount, setNewPostsCount] = useState(0);
   const feedListRef = useRef<FlatList>(null);
+  const scrollY = useRef(new Animated.Value(0)).current;
 
   // Force feed tab when feedOnly mode
   useEffect(() => {
@@ -438,13 +449,13 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
     try {
       const { data: staffTeams } = await supabase
         .from('team_staff')
-        .select('team_id, teams(id, name, color, season_id)')
+        .select('team_id, teams(id, name, color, season_id, banner_url)')
         .eq('user_id', user.id)
         .eq('is_active', true);
 
       const { data: playerTeams } = await supabase
         .from('team_players')
-        .select('team_id, teams(id, name, color, season_id)')
+        .select('team_id, teams(id, name, color, season_id, banner_url)')
         .eq('player_id', user.id);
 
       const teamsMap = new Map<string, Team>();
@@ -452,7 +463,7 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
       if (staffTeams) {
         for (const row of staffTeams) {
           const t = row.teams as any;
-          if (t) teamsMap.set(t.id, { id: t.id, name: t.name, color: t.color, season_id: t.season_id });
+          if (t) teamsMap.set(t.id, { id: t.id, name: t.name, color: t.color, season_id: t.season_id, banner_url: t.banner_url || null });
         }
       }
 
@@ -460,7 +471,7 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
         for (const row of playerTeams) {
           const t = row.teams as any;
           if (t && !teamsMap.has(t.id)) {
-            teamsMap.set(t.id, { id: t.id, name: t.name, color: t.color, season_id: t.season_id });
+            teamsMap.set(t.id, { id: t.id, name: t.name, color: t.color, season_id: t.season_id, banner_url: t.banner_url || null });
           }
         }
       }
@@ -468,7 +479,7 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
       if (isAdmin && workingSeason?.id && teamsMap.size === 0) {
         const { data: allTeams } = await supabase
           .from('teams')
-          .select('id, name, color, season_id')
+          .select('id, name, color, season_id, banner_url')
           .eq('season_id', workingSeason.id)
           .order('name');
         if (allTeams) {
@@ -500,7 +511,7 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
     try {
       const { data: teamData } = await supabase
         .from('teams')
-        .select('id, name, color, season_id')
+        .select('id, name, color, season_id, banner_url')
         .eq('id', teamId)
         .single();
 
