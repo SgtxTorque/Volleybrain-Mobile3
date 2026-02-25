@@ -80,6 +80,13 @@ export function getLevelTier(level: number) {
   return LEVEL_TIERS.find((t) => level >= t.min && level <= t.max) || LEVEL_TIERS[0];
 }
 
+/** Check if adding XP causes a level-up */
+export function checkLevelUp(oldXp: number, newXp: number): { leveledUp: boolean; oldLevel: number; newLevel: number } {
+  const oldLevel = getLevelFromXP(oldXp).level;
+  const newLevel = getLevelFromXP(newXp).level;
+  return { leveledUp: newLevel > oldLevel, oldLevel, newLevel };
+}
+
 /** Default shoutout categories (mirrors SQL seed, for use in app before DB fetch) */
 export const DEFAULT_SHOUTOUT_CATEGORIES = [
   { name: 'Great Effort', emoji: '💪', color: '#E74C3C', description: 'Gave 100% effort' },
