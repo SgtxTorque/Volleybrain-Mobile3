@@ -373,6 +373,19 @@ export default function AchievementsScreen() {
     return map;
   }, [allAchievements]);
 
+  // Progress nudges: achievements at 80%+ completion
+  const almostThere = useMemo(() => {
+    const nudges: Array<{ ach: Achievement; pct: number; current: number; target: number }> = [];
+    for (const ach of allAchievements) {
+      if (earnedMap[ach.id]?.earned_at) continue;
+      const prog = getProgressForAchievement(ach, earnedMap[ach.id], seasonStats);
+      if (prog.pct >= 80 && prog.pct < 100) {
+        nudges.push({ ach, pct: prog.pct, current: prog.current, target: prog.target });
+      }
+    }
+    return nudges.sort((a, b) => b.pct - a.pct).slice(0, 3);
+  }, [allAchievements, earnedMap, seasonStats]);
+
   // "Next to earn" recommendation: unearned with highest progress %
   const nextToEarn = useMemo(() => {
     let best: Achievement | null = null;
@@ -613,6 +626,33 @@ export default function AchievementsScreen() {
             </View>
           )}
         </View>
+
+        {/* Almost There nudges */}
+        {almostThere.length > 0 && (
+          <View style={s.nudgeSection}>
+            <View style={s.nudgeHeader}>
+              <Ionicons name="flash" size={14} color="#F59E0B" />
+              <Text style={s.nudgeTitle}>Almost There!</Text>
+            </View>
+            {almostThere.map((n) => (
+              <TouchableOpacity
+                key={n.ach.id}
+                style={s.nudgeRow}
+                onPress={() => handleBadgePress(n.ach)}
+                activeOpacity={0.7}
+              >
+                <Text style={s.nudgeEmoji}>{n.ach.icon || '\uD83C\uDFC6'}</Text>
+                <View style={s.nudgeInfo}>
+                  <Text style={s.nudgeName}>{n.ach.name}</Text>
+                  <View style={s.nudgeProgressBg}>
+                    <View style={[s.nudgeProgressFill, { width: `${n.pct}%` as any }]} />
+                  </View>
+                </View>
+                <Text style={s.nudgePct}>{n.current}/{n.target}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
 
         {/* Category Filter */}
         <ScrollView
@@ -1090,6 +1130,64 @@ const createStyles = () =>
     xpBarFill: {
       height: '100%',
       borderRadius: 4,
+    },
+
+    // Almost There nudges
+    nudgeSection: {
+      marginHorizontal: 16,
+      marginTop: 12,
+      backgroundColor: DARK.card,
+      borderRadius: 14,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: DARK.border,
+    },
+    nudgeHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      marginBottom: 10,
+    },
+    nudgeTitle: {
+      fontSize: 13,
+      fontWeight: '800',
+      color: '#F59E0B',
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+    },
+    nudgeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      paddingVertical: 6,
+    },
+    nudgeEmoji: {
+      fontSize: 22,
+    },
+    nudgeInfo: {
+      flex: 1,
+    },
+    nudgeName: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: DARK.text,
+      marginBottom: 3,
+    },
+    nudgeProgressBg: {
+      height: 5,
+      borderRadius: 2.5,
+      backgroundColor: 'rgba(255,255,255,0.08)',
+      overflow: 'hidden',
+    },
+    nudgeProgressFill: {
+      height: '100%',
+      borderRadius: 2.5,
+      backgroundColor: '#F59E0B',
+    },
+    nudgePct: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: DARK.textSecondary,
     },
 
     // Summary Card
