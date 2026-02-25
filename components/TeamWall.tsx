@@ -89,6 +89,12 @@ type ScheduleEvent = {
   notes: string | null;
 };
 
+type PostReaction = {
+  user_id: string;
+  reaction_type: string;
+  profiles: { full_name: string | null; avatar_url: string | null };
+};
+
 type PostType = 'text' | 'announcement' | 'game_recap' | 'shoutout' | 'milestone' | 'photo';
 
 type ReactionType = 'like' | 'heart' | 'fire' | 'clap' | 'muscle' | 'volleyball' | (string & {});
@@ -321,8 +327,11 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
   const [loadingPosts, setLoadingPosts] = useState(false);
   const [refreshingFeed, setRefreshingFeed] = useState(false);
   const [userReactions, setUserReactions] = useState<Record<string, string>>({});
+  const [postReactions, setPostReactions] = useState<Record<string, PostReaction[]>>({});
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [reactionPickerPostId, setReactionPickerPostId] = useState<string | null>(null);
+  const [reactionsModalPostId, setReactionsModalPostId] = useState<string | null>(null);
+  const [reactionsModalTab, setReactionsModalTab] = useState<string>('all');
 
   // New post modal
   const [showNewPostModal, setShowNewPostModal] = useState(false);
@@ -590,21 +599,38 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
       const postsData = (data as Post[]) || [];
       setPosts(postsData);
 
-      // Load user's reactions for these posts
-      if (user?.id && postsData.length > 0) {
+      // Load reactions for these posts (user's + all)
+      if (postsData.length > 0) {
         const postIds = postsData.map((p) => p.id);
-        const { data: reactions } = await supabase
+
+        // Fetch ALL reactions with profile info (batched)
+        const { data: allReactions } = await supabase
           .from('team_post_reactions')
-          .select('post_id, reaction_type')
-          .eq('user_id', user.id)
+          .select('post_id, user_id, reaction_type, profiles:user_id(full_name, avatar_url)')
           .in('post_id', postIds);
 
-        if (reactions) {
+        if (allReactions) {
+          // Build user reactions map
           const reactionsMap: Record<string, string> = {};
-          for (const r of reactions) {
-            reactionsMap[r.post_id] = r.reaction_type;
+          // Build all reactions grouped by post
+          const grouped: Record<string, PostReaction[]> = {};
+
+          for (const r of allReactions as any[]) {
+            // Current user's reaction
+            if (user?.id && r.user_id === user.id) {
+              reactionsMap[r.post_id] = r.reaction_type;
+            }
+            // All reactions grouped by post
+            if (!grouped[r.post_id]) grouped[r.post_id] = [];
+            grouped[r.post_id].push({
+              user_id: r.user_id,
+              reaction_type: r.reaction_type,
+              profiles: r.profiles || { full_name: null, avatar_url: null },
+            });
           }
+
           setUserReactions(reactionsMap);
+          setPostReactions(grouped);
         }
       }
     } catch (error) {
@@ -636,6 +662,7 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
     // Optimistic update
     const prevReactions = { ...userReactions };
     const prevPosts = [...posts];
+    const prevPostReactions = { ...postReactions };
     const newReactions = { ...userReactions };
     const updatedPosts = posts.map((p) => {
       if (p.id === postId) {
@@ -657,6 +684,28 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
     } else {
       newReactions[postId] = reactionType;
     }
+
+    // Optimistic update for postReactions (all reactions list)
+    const currentPostReactions = [...(postReactions[postId] || [])];
+    if (isRemoving) {
+      const updated = currentPostReactions.filter((r) => r.user_id !== user.id);
+      setPostReactions({ ...postReactions, [postId]: updated });
+    } else if (currentReaction) {
+      const updated = currentPostReactions.map((r) =>
+        r.user_id === user.id ? { ...r, reaction_type: reactionType } : r
+      );
+      setPostReactions({ ...postReactions, [postId]: updated });
+    } else {
+      setPostReactions({
+        ...postReactions,
+        [postId]: [...currentPostReactions, {
+          user_id: user.id,
+          reaction_type: reactionType,
+          profiles: { full_name: profile?.full_name || null, avatar_url: profile?.avatar_url || null },
+        }],
+      });
+    }
+
     setUserReactions(newReactions);
     setPosts(updatedPosts);
 
@@ -686,7 +735,32 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
       if (__DEV__) console.error('Error toggling reaction:', error);
       setUserReactions(prevReactions);
       setPosts(prevPosts);
+      setPostReactions(prevPostReactions);
     }
+  };
+
+  const getReactionSummary = (postId: string): { topEmojis: string[]; totalCount: number } => {
+    const reactions = postReactions[postId] || [];
+    if (reactions.length === 0) return { topEmojis: [], totalCount: 0 };
+
+    const counts: Record<string, number> = {};
+    for (const r of reactions) {
+      counts[r.reaction_type] = (counts[r.reaction_type] || 0) + 1;
+    }
+
+    const emojiMap: Record<string, string> = {};
+    for (const rc of REACTION_CONFIG) {
+      emojiMap[rc.type] = rc.emoji;
+    }
+
+    const sorted = Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3);
+
+    return {
+      topEmojis: sorted.map(([type]) => emojiMap[type] || type),
+      totalCount: reactions.length,
+    };
   };
 
   const handleUploadCoverPhoto = async () => {
@@ -1125,11 +1199,20 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
           </View>
 
           <View style={s.postStats}>
-            {(post.reaction_count || 0) > 0 && (
-              <Text style={s.postStatText}>
-                {post.reaction_count} {post.reaction_count === 1 ? 'reaction' : 'reactions'}
-              </Text>
-            )}
+            {(() => {
+              const { topEmojis, totalCount } = getReactionSummary(post.id);
+              if (totalCount === 0) return null;
+              return (
+                <TouchableOpacity
+                  style={s.reactionSummaryRow}
+                  onPress={() => { setReactionsModalPostId(post.id); setReactionsModalTab('all'); }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={s.reactionSummaryEmojis}>{topEmojis.join('')}</Text>
+                  <Text style={s.reactionSummaryCount}>{totalCount}</Text>
+                </TouchableOpacity>
+              );
+            })()}
             {(post.comment_count || 0) > 0 && (
               <TouchableOpacity style={s.commentLink}>
                 <Ionicons name="chatbubble-outline" size={13} color={colors.textMuted} />
@@ -1145,7 +1228,7 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
           <View style={s.engagementRow}>
             <TouchableOpacity
               style={s.engagementBtn}
-              onPress={() => handleReaction(post.id, 'like')}
+              onPress={() => handleReaction(post.id, 'heart')}
             >
               <Ionicons
                 name={currentUserReaction ? 'heart' : 'heart-outline'}
@@ -1652,6 +1735,85 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
           <Text style={s.compactHeaderTitle} numberOfLines={1}>{team?.name}</Text>
         </Animated.View>
       )}
+
+      {/* Who Reacted Modal */}
+      <Modal visible={!!reactionsModalPostId} animationType="slide" transparent>
+        <View style={s.modalOverlay}>
+          <View style={s.modalContent}>
+            <View style={s.modalHeader}>
+              <Text style={s.modalTitle}>Reactions</Text>
+              <TouchableOpacity onPress={() => { setReactionsModalPostId(null); setReactionsModalTab('all'); }}>
+                <Ionicons name="close" size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            {reactionsModalPostId && (() => {
+              const reactions = postReactions[reactionsModalPostId] || [];
+              const counts: Record<string, number> = {};
+              for (const r of reactions) {
+                counts[r.reaction_type] = (counts[r.reaction_type] || 0) + 1;
+              }
+              const emojiMap: Record<string, string> = {};
+              for (const rc of REACTION_CONFIG) { emojiMap[rc.type] = rc.emoji; }
+
+              const tabs = [
+                { key: 'all', label: `All (${reactions.length})` },
+                ...Object.entries(counts)
+                  .sort((a, b) => b[1] - a[1])
+                  .map(([type, count]) => ({
+                    key: type,
+                    label: `${emojiMap[type] || type} (${count})`,
+                  })),
+              ];
+
+              const filteredReactions = reactionsModalTab === 'all'
+                ? reactions
+                : reactions.filter((r) => r.reaction_type === reactionsModalTab);
+
+              return (
+                <View style={{ flex: 1 }}>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.reactionsTabScroll} contentContainerStyle={s.reactionsTabBar}>
+                    {tabs.map((tab) => (
+                      <TouchableOpacity
+                        key={tab.key}
+                        style={[s.reactionsTab, reactionsModalTab === tab.key && s.reactionsTabActive]}
+                        onPress={() => setReactionsModalTab(tab.key)}
+                      >
+                        <Text style={[s.reactionsTabText, reactionsModalTab === tab.key && { color: teamColor, fontWeight: '700' }]}>
+                          {tab.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+
+                  <FlatList
+                    data={filteredReactions}
+                    keyExtractor={(item, index) => `${item.user_id}-${index}`}
+                    renderItem={({ item }) => (
+                      <View style={s.reactionsUserRow}>
+                        {item.profiles.avatar_url ? (
+                          <Image source={{ uri: item.profiles.avatar_url }} style={s.reactionsUserAvatar} />
+                        ) : (
+                          <View style={[s.reactionsUserAvatarFallback, { backgroundColor: getAvatarColor(item.profiles.full_name || '?') }]}>
+                            <Text style={{ fontSize: 13, fontWeight: '700', color: '#fff' }}>
+                              {getInitials(item.profiles.full_name)}
+                            </Text>
+                          </View>
+                        )}
+                        <Text style={s.reactionsUserName} numberOfLines={1}>
+                          {item.profiles.full_name || 'Unknown'}
+                        </Text>
+                        <Text style={{ fontSize: 18 }}>{emojiMap[item.reaction_type] || item.reaction_type}</Text>
+                      </View>
+                    )}
+                    contentContainerStyle={{ paddingBottom: 40 }}
+                  />
+                </View>
+              );
+            })()}
+          </View>
+        </View>
+      </Modal>
 
       {/* New Post Modal */}
       <Modal visible={showNewPostModal} animationType="slide" transparent>
@@ -2313,6 +2475,72 @@ const createStyles = (colors: any) =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: 4,
+    },
+
+    // Reaction summary row
+    reactionSummaryRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    reactionSummaryEmojis: {
+      fontSize: 16,
+    },
+    reactionSummaryCount: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.textMuted,
+    },
+
+    // Who Reacted modal
+    reactionsTabScroll: {
+      flexGrow: 0,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    reactionsTabBar: {
+      flexDirection: 'row',
+      paddingHorizontal: 16,
+      gap: 4,
+    },
+    reactionsTab: {
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      borderBottomWidth: 2,
+      borderBottomColor: 'transparent',
+    },
+    reactionsTabActive: {
+      borderBottomColor: colors.primary,
+    },
+    reactionsTabText: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: colors.textMuted,
+    },
+    reactionsUserRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      gap: 12,
+    },
+    reactionsUserAvatar: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+    },
+    reactionsUserAvatarFallback: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    reactionsUserName: {
+      flex: 1,
+      fontSize: 15,
+      fontWeight: '500',
+      color: colors.text,
     },
 
     // Post actions dropdown
