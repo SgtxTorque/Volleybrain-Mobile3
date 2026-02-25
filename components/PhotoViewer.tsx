@@ -3,12 +3,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { Video, ResizeMode } from 'expo-av';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library';
-import React, { useCallback, useRef, useState } from 'react';
+import * as ScreenOrientation from 'expo-screen-orientation';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActionSheetIOS,
   ActivityIndicator,
   Alert,
-  Dimensions,
   FlatList,
   Image,
   Modal,
@@ -17,6 +17,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import {
@@ -30,8 +31,6 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
-
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // =============================================================================
 // TYPES
@@ -65,9 +64,13 @@ type PhotoViewerProps = {
 
 function ZoomableImage({
   uri,
+  width,
+  height,
   onZoomChange,
 }: {
   uri: string;
+  width: number;
+  height: number;
   onZoomChange?: (zoomed: boolean) => void;
 }) {
   const scale = useSharedValue(1);
@@ -146,10 +149,10 @@ function ZoomableImage({
 
   return (
     <GestureDetector gesture={gesture}>
-      <Animated.View style={[styles.zoomContainer, animatedStyle]}>
+      <Animated.View style={[{ width, height, justifyContent: 'center', alignItems: 'center' }, animatedStyle]}>
         <Image
           source={{ uri }}
-          style={styles.fullImage}
+          style={{ width, height }}
           resizeMode="contain"
         />
       </Animated.View>
@@ -171,6 +174,7 @@ export default function PhotoViewer({
   onDelete,
 }: PhotoViewerProps) {
   const { colors } = useTheme();
+  const { width: screenW, height: screenH } = useWindowDimensions();
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [isZoomed, setIsZoomed] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -179,6 +183,21 @@ export default function PhotoViewer({
 
   const current = items[currentIndex] || items[0];
   const isVideo = current?.type === 'video';
+
+  // -------------------------------------------------------------------------
+  // Orientation lock/unlock
+  // -------------------------------------------------------------------------
+
+  useEffect(() => {
+    if (visible) {
+      ScreenOrientation.unlockAsync().catch(() => {});
+    } else {
+      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
+    }
+    return () => {
+      ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
+    };
+  }, [visible]);
 
   // -------------------------------------------------------------------------
   // Helpers
@@ -200,6 +219,7 @@ export default function PhotoViewer({
   // -------------------------------------------------------------------------
 
   const handleSave = useCallback(async () => {
+    if (!current) return;
     try {
       setSaving(true);
       const { status } = await MediaLibrary.requestPermissionsAsync();
@@ -221,6 +241,7 @@ export default function PhotoViewer({
   }, [current?.url, isVideo]);
 
   const handleShare = useCallback(async () => {
+    if (!current) return;
     try {
       await Share.share({ message: current.url, url: current.url });
     } catch (err) {
@@ -231,10 +252,11 @@ export default function PhotoViewer({
   const handleViewPost = useCallback(() => {
     setShowMenu(false);
     onClose();
-    onViewPost?.(current.postId);
+    onViewPost?.(current?.postId);
   }, [current?.postId, onClose, onViewPost]);
 
   const handleDelete = useCallback(() => {
+    if (!current) return;
     setShowMenu(false);
     Alert.alert(
       'Delete Photo',
@@ -274,13 +296,13 @@ export default function PhotoViewer({
 
   const handleScroll = useCallback(
     (e: any) => {
-      const idx = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+      const idx = Math.round(e.nativeEvent.contentOffset.x / screenW);
       if (idx >= 0 && idx < items.length) {
         setCurrentIndex(idx);
         setIsZoomed(false);
       }
     },
-    [items.length],
+    [items.length, screenW],
   );
 
   if (!current) return null;
@@ -291,8 +313,8 @@ export default function PhotoViewer({
 
   return (
     <Modal visible={visible} animationType="fade" transparent statusBarTranslucent>
-      <GestureHandlerRootView style={styles.root}>
-        <View style={styles.container}>
+      <GestureHandlerRootView style={staticStyles.root}>
+        <View style={staticStyles.container}>
           {/* Swipeable media pages */}
           <FlatList
             ref={flatListRef}
@@ -304,17 +326,17 @@ export default function PhotoViewer({
             keyExtractor={(_, i) => String(i)}
             initialScrollIndex={initialIndex}
             getItemLayout={(_, index) => ({
-              length: SCREEN_WIDTH,
-              offset: SCREEN_WIDTH * index,
+              length: screenW,
+              offset: screenW * index,
               index,
             })}
             onMomentumScrollEnd={handleScroll}
             renderItem={({ item }) => (
-              <View style={styles.page}>
+              <View style={{ width: screenW, height: screenH, justifyContent: 'center', alignItems: 'center' }}>
                 {item.type === 'video' ? (
                   <Video
                     source={{ uri: item.url }}
-                    style={styles.fullImage}
+                    style={{ width: screenW, height: screenH }}
                     resizeMode={ResizeMode.CONTAIN}
                     useNativeControls
                     shouldPlay={false}
@@ -322,6 +344,8 @@ export default function PhotoViewer({
                 ) : (
                   <ZoomableImage
                     uri={item.url}
+                    width={screenW}
+                    height={screenH}
                     onZoomChange={setIsZoomed}
                   />
                 )}
@@ -330,51 +354,51 @@ export default function PhotoViewer({
           />
 
           {/* Top bar */}
-          <View style={styles.topBar}>
-            <TouchableOpacity onPress={onClose} style={styles.topBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+          <View style={staticStyles.topBar}>
+            <TouchableOpacity onPress={onClose} style={staticStyles.topBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
               <Ionicons name="close" size={28} color="#fff" />
             </TouchableOpacity>
-            <View style={styles.topBarCounter}>
+            <View style={staticStyles.topBarCounter}>
               {items.length > 1 && (
-                <Text style={styles.counterText}>{currentIndex + 1} / {items.length}</Text>
+                <Text style={staticStyles.counterText}>{currentIndex + 1} / {items.length}</Text>
               )}
             </View>
-            <View style={styles.topBarRight}>
-              <TouchableOpacity onPress={handleSave} style={styles.topBtn} disabled={saving} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+            <View style={staticStyles.topBarRight}>
+              <TouchableOpacity onPress={handleSave} style={staticStyles.topBtn} disabled={saving} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
                 {saving ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
                   <Ionicons name="download-outline" size={24} color="#fff" />
                 )}
               </TouchableOpacity>
-              <TouchableOpacity onPress={openMenu} style={styles.topBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+              <TouchableOpacity onPress={openMenu} style={staticStyles.topBtn} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
                 <Ionicons name="ellipsis-horizontal" size={24} color="#fff" />
               </TouchableOpacity>
             </View>
           </View>
 
           {/* Bottom info panel */}
-          <View style={styles.bottomPanel}>
-            <View style={styles.authorRow}>
+          <View style={staticStyles.bottomPanel}>
+            <View style={staticStyles.authorRow}>
               {current.authorAvatar ? (
-                <Image source={{ uri: current.authorAvatar }} style={styles.authorAvatar} />
+                <Image source={{ uri: current.authorAvatar }} style={staticStyles.authorAvatar} />
               ) : (
-                <View style={[styles.authorAvatarPlaceholder, { backgroundColor: colors.primary }]}>
+                <View style={[staticStyles.authorAvatarPlaceholder, { backgroundColor: colors.primary }]}>
                   <Ionicons name="person" size={14} color="#fff" />
                 </View>
               )}
-              <View style={styles.authorInfo}>
-                <Text style={styles.authorName} numberOfLines={1}>{current.authorName || 'Unknown'}</Text>
-                <Text style={styles.dateLine}>{formatDate(current.createdAt)} · {current.teamName}</Text>
+              <View style={staticStyles.authorInfo}>
+                <Text style={staticStyles.authorName} numberOfLines={1}>{current.authorName || 'Unknown'}</Text>
+                <Text style={staticStyles.dateLine}>{formatDate(current.createdAt)} · {current.teamName}</Text>
               </View>
             </View>
             {current.caption ? (
-              <Text style={styles.caption} numberOfLines={3}>{current.caption}</Text>
+              <Text style={staticStyles.caption} numberOfLines={3}>{current.caption}</Text>
             ) : null}
             {current.reactions.length > 0 && (
-              <View style={styles.reactionRow}>
+              <View style={staticStyles.reactionRow}>
                 {current.reactions.map((r, i) => (
-                  <Text key={i} style={styles.reactionChip}>{r.emoji} {r.count}</Text>
+                  <Text key={i} style={staticStyles.reactionChip}>{r.emoji} {r.count}</Text>
                 ))}
               </View>
             )}
@@ -383,31 +407,31 @@ export default function PhotoViewer({
           {/* Android action menu overlay */}
           {showMenu && Platform.OS !== 'ios' && (
             <TouchableOpacity
-              style={styles.menuOverlay}
+              style={staticStyles.menuOverlay}
               activeOpacity={1}
               onPress={() => setShowMenu(false)}
             >
-              <View style={styles.menuSheet}>
-                <TouchableOpacity style={styles.menuItem} onPress={() => { setShowMenu(false); handleSave(); }}>
+              <View style={staticStyles.menuSheet}>
+                <TouchableOpacity style={staticStyles.menuItem} onPress={() => { setShowMenu(false); handleSave(); }}>
                   <Ionicons name="download-outline" size={20} color="#fff" />
-                  <Text style={styles.menuItemText}>Save to Device</Text>
+                  <Text style={staticStyles.menuItemText}>Save to Device</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.menuItem} onPress={() => { setShowMenu(false); handleShare(); }}>
+                <TouchableOpacity style={staticStyles.menuItem} onPress={() => { setShowMenu(false); handleShare(); }}>
                   <Ionicons name="share-outline" size={20} color="#fff" />
-                  <Text style={styles.menuItemText}>Share</Text>
+                  <Text style={staticStyles.menuItemText}>Share</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.menuItem} onPress={() => { setShowMenu(false); handleViewPost(); }}>
+                <TouchableOpacity style={staticStyles.menuItem} onPress={() => { setShowMenu(false); handleViewPost(); }}>
                   <Ionicons name="chatbubble-outline" size={20} color="#fff" />
-                  <Text style={styles.menuItemText}>View Original Post</Text>
+                  <Text style={staticStyles.menuItemText}>View Original Post</Text>
                 </TouchableOpacity>
                 {isCoachOrAdmin && (
-                  <TouchableOpacity style={styles.menuItem} onPress={handleDelete}>
+                  <TouchableOpacity style={staticStyles.menuItem} onPress={handleDelete}>
                     <Ionicons name="trash-outline" size={20} color="#FF3B30" />
-                    <Text style={[styles.menuItemText, { color: '#FF3B30' }]}>Delete Photo</Text>
+                    <Text style={[staticStyles.menuItemText, { color: '#FF3B30' }]}>Delete Photo</Text>
                   </TouchableOpacity>
                 )}
-                <TouchableOpacity style={[styles.menuItem, styles.menuCancel]} onPress={() => setShowMenu(false)}>
-                  <Text style={styles.menuItemText}>Cancel</Text>
+                <TouchableOpacity style={[staticStyles.menuItem, staticStyles.menuCancel]} onPress={() => setShowMenu(false)}>
+                  <Text style={staticStyles.menuItemText}>Cancel</Text>
                 </TouchableOpacity>
               </View>
             </TouchableOpacity>
@@ -422,27 +446,11 @@ export default function PhotoViewer({
 // STYLES
 // =============================================================================
 
-const styles = StyleSheet.create({
+const staticStyles = StyleSheet.create({
   root: { flex: 1 },
   container: {
     flex: 1,
     backgroundColor: '#000',
-  },
-  page: {
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  zoomContainer: {
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  fullImage: {
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT * 0.7,
   },
 
   // Top bar

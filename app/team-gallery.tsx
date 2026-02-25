@@ -159,6 +159,8 @@ export default function TeamGalleryScreen() {
     const items: FlatMediaItem[] = [];
     for (const post of posts) {
       for (const url of post.media_urls) {
+        // Only include valid remote URLs (skip local file:// or data: URIs)
+        if (!url.startsWith('http')) continue;
         const type = isVideoUrl(url) ? 'video' : 'image';
         items.push({ url, type, post });
       }
