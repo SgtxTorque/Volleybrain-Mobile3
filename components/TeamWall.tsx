@@ -1,5 +1,4 @@
 import EmojiPicker from '@/components/EmojiPicker';
-import PillTabs from '@/components/ui/PillTabs';
 import { getPositionInfo } from '@/constants/sport-display';
 import { useAuth } from '@/lib/auth';
 import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
@@ -130,8 +129,6 @@ type TeamWallProps = {
   embedded?: boolean;
   feedOnly?: boolean;
   additionalTabs?: AdditionalTab[];
-  teamOptions?: { key: string; label: string }[];
-  onTeamChange?: (teamId: string) => void;
 };
 
 // =============================================================================
@@ -268,7 +265,7 @@ const SkeletonPostCard = ({ colors }: { colors: any }) => (
 // MAIN COMPONENT
 // =============================================================================
 
-export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnly = false, additionalTabs = [], teamOptions, onTeamChange }: TeamWallProps) {
+export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnly = false, additionalTabs = [] }: TeamWallProps) {
   const { colors } = useTheme();
   const { user, profile, isAdmin } = useAuth();
   const { workingSeason } = useSeason();
@@ -1555,10 +1552,6 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
   const renderHeroSection = () => {
     if (feedOnly) return null;
     return (
-      <View>
-        {teamOptions && teamOptions.length > 1 && onTeamChange && (
-          <PillTabs tabs={teamOptions} activeKey={teamId || ''} onChange={onTeamChange} />
-        )}
       <View style={s.heroContainer}>
         {team?.banner_url ? (
           <Image source={{ uri: team.banner_url }} style={s.heroCoverImage} resizeMode="cover" />
@@ -1638,7 +1631,6 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
             </TouchableOpacity>
           </View>
         </View>
-      </View>
       </View>
     );
   };

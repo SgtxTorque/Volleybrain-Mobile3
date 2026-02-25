@@ -1,4 +1,5 @@
 import AppHeaderBar from '@/components/ui/AppHeaderBar';
+import PillTabs from '@/components/ui/PillTabs';
 import TeamWall from '@/components/TeamWall';
 import { useAuth } from '@/lib/auth';
 import { radii, shadows, spacing } from '@/lib/design-tokens';
@@ -230,15 +231,17 @@ export default function CoachTeamHubScreen() {
     <SafeAreaView style={[s.container, { backgroundColor: colors.background }]} edges={['top']}>
       <AppHeaderBar title="MY TEAM" showAvatar={false} showNotificationBell={false} />
 
+      {/* Team selector pills — static, above TeamWall (matches Coach Home pattern) */}
+      {coachTeams.length > 1 && (
+        <PillTabs tabs={teamTabs} activeKey={selectedTeamId} onChange={setSelectedTeamId} />
+      )}
+
       {/* TeamWall with coach extra tabs: Feed | Roster | Schedule | Achievements | Stats */}
-      {/* Team selector pills are passed to TeamWall so they scroll with the hero */}
       <View style={s.feedContainer}>
         <TeamWall
           teamId={selectedTeamId}
           embedded
           additionalTabs={coachExtraTabs}
-          teamOptions={teamTabs}
-          onTeamChange={setSelectedTeamId}
         />
       </View>
     </SafeAreaView>
