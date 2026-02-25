@@ -304,7 +304,6 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
   const [postComments, setPostComments] = useState<Record<string, PostComment[]>>({});
   const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
   const [commentText, setCommentText] = useState<Record<string, string>>({});
-  const [showAllComments, setShowAllComments] = useState<Set<string>>(new Set());
   const [loadingComments, setLoadingComments] = useState<Set<string>>(new Set());
   const [submittingComment, setSubmittingComment] = useState<Set<string>>(new Set());
 
@@ -1355,21 +1354,7 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
                 <ActivityIndicator size="small" color={teamColor} style={{ paddingVertical: 12 }} />
               ) : (
                 <>
-                  {(postComments[post.id]?.length || 0) > 2 && !showAllComments.has(post.id) && (
-                    <TouchableOpacity
-                      onPress={() => setShowAllComments((prev) => new Set(prev).add(post.id))}
-                      style={s.viewAllCommentsBtn}
-                    >
-                      <Text style={s.viewAllCommentsText}>
-                        View all {postComments[post.id]?.length} comments
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-
-                  {(showAllComments.has(post.id)
-                    ? postComments[post.id] || []
-                    : (postComments[post.id] || []).slice(-2)
-                  ).map((comment) => {
+                  {(postComments[post.id] || []).map((comment) => {
                     const cName = comment.profiles?.full_name || 'Unknown';
                     const cAvColor = getAvatarColor(cName);
                     return (
@@ -2747,14 +2732,6 @@ const createStyles = (colors: any) =>
       marginTop: 4,
       paddingTop: 8,
       paddingHorizontal: 16,
-    },
-    viewAllCommentsBtn: {
-      paddingVertical: 6,
-    },
-    viewAllCommentsText: {
-      fontSize: 13,
-      fontWeight: '600',
-      color: colors.textMuted,
     },
     commentRow: {
       flexDirection: 'row',
