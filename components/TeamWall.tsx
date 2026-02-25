@@ -395,6 +395,22 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
     }
   }, [contextTeamId, embedded]);
 
+  // Sync teamId when propTeamId changes (e.g., coach switching teams via PillTabs)
+  useEffect(() => {
+    if (propTeamId && propTeamId !== teamId) {
+      setTeamId(propTeamId);
+      setTeam(null);
+      setPosts([]);
+      setRoster([]);
+      setEvents([]);
+      setNewPostsCount(0);
+      setPostReactions({});
+      setUserReactions({});
+      setPostComments({});
+      setExpandedComments(new Set());
+    }
+  }, [propTeamId]);
+
   // =============================================================================
   // TEAM PICKER - Load user's teams if no teamId provided
   // =============================================================================
