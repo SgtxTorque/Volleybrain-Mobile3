@@ -70,7 +70,8 @@ const CATEGORIES: Record<string, CategoryConfig> = {
   Defensive: { label: 'Defensive', icon: 'shield', color: '#3B82F6' },
   Playmaker: { label: 'Playmaker', icon: 'people', color: '#10B981' },
   Heart: { label: 'Heart', icon: 'heart', color: '#EC4899' },
-  Elite: { label: 'Elite', icon: 'diamond', color: '#F59E0B' },
+  Community: { label: 'Community', icon: 'megaphone', color: '#F59E0B' },
+  Elite: { label: 'Elite', icon: 'diamond', color: '#FFD700' },
 };
 
 const RARITY_COLORS: Record<string, { bg: string; text: string; label: string }> = {

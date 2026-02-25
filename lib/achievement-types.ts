@@ -28,6 +28,7 @@ export type AchievementFull = {
   frame_url: string | null;
   glow_url: string | null;
   unlock_effect_url: string | null;
+  xp_reward: number | null;
 };
 
 /** A player_achievements row joined with its achievement */
