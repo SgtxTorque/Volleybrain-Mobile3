@@ -36,6 +36,7 @@ export default function PillTabs({ tabs, activeKey, onChange }: PillTabsProps) {
             ]}
             onPress={() => onChange(tab.key)}
             activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
           >
             <Text
               style={[
@@ -56,7 +57,8 @@ export default function PillTabs({ tabs, activeKey, onChange }: PillTabsProps) {
 const styles = StyleSheet.create({
   scrollOuter: {
     flexGrow: 0,
-    marginVertical: 8,
+    marginTop: 4,
+    marginBottom: 8,
   },
   container: {
     flexDirection: 'row',

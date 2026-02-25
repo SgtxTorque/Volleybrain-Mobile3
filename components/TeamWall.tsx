@@ -1352,7 +1352,10 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
             >
               <Ionicons name="chatbubble-outline" size={18} color={expandedComments.has(post.id) ? colors.primary : colors.textMuted} />
               <Text style={[s.engagementBtnText, expandedComments.has(post.id) && { color: colors.primary }]}>
-                Comment{(post.comment_count || 0) > 0 ? ` (${post.comment_count})` : ''}
+                Comment{(() => {
+                  const count = postComments[post.id]?.length ?? post.comment_count ?? 0;
+                  return count > 0 ? ` (${count})` : '';
+                })()}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
