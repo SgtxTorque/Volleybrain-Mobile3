@@ -1,6 +1,16 @@
+import {
+  checkRoleAchievements,
+  fetchUserXP,
+  getUnseenRoleAchievements,
+  markAchievementsSeen,
+  type RoleAchievementWithStatus,
+  getRoleAchievements,
+} from '@/lib/achievement-engine';
+import type { UnseenAchievement } from '@/lib/achievement-types';
 import { useAuth } from '@/lib/auth';
 import { getDefaultHeroImage } from '@/lib/default-images';
 import { displayTextStyle, radii, shadows } from '@/lib/design-tokens';
+import { getLevelTier } from '@/lib/engagement-constants';
 import { useSeason } from '@/lib/season';
 import { useSport } from '@/lib/sport';
 import { supabase } from '@/lib/supabase';
@@ -20,6 +30,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import AchievementCelebrationModal from './AchievementCelebrationModal';
+import LevelBadge from './LevelBadge';
 import AppHeaderBar from './ui/AppHeaderBar';
 import PillTabs from './ui/PillTabs';
 import SectionHeader from './ui/SectionHeader';
@@ -146,6 +158,10 @@ export default function CoachDashboard() {
   const carouselRef = useRef<FlatList>(null);
   const [prepProgress, setPrepProgress] = useState<Record<string, { rsvps: boolean; attendance: boolean; lineup: boolean }>>({});
   const [availableCount, setAvailableCount] = useState<{ available: number; total: number } | null>(null);
+  const [coachXp, setCoachXp] = useState({ totalXp: 0, level: 1, progress: 0, nextLevelXp: 100 });
+  const [coachBadges, setCoachBadges] = useState<RoleAchievementWithStatus[]>([]);
+  const [unseenAchievements, setUnseenAchievements] = useState<UnseenAchievement[]>([]);
+  const [showCelebration, setShowCelebration] = useState(false);
 
   useEffect(() => {
     fetchCoachData();
@@ -276,6 +292,38 @@ export default function CoachDashboard() {
 
       setTeams(teamsWithCounts);
       if (activeTeamIndex >= teamsWithCounts.length) setActiveTeamIndex(0);
+
+      // Fetch coach XP, achievements, and check for new unlocks
+      (async () => {
+        try {
+          const [xpData, badges, unseen] = await Promise.all([
+            fetchUserXP(user.id),
+            getRoleAchievements(user.id, 'coach'),
+            getUnseenRoleAchievements(user.id),
+          ]);
+          setCoachXp(xpData);
+          setCoachBadges(badges);
+          if (unseen.length > 0) {
+            setUnseenAchievements(unseen);
+            setShowCelebration(true);
+          }
+
+          // Trigger achievement check in background
+          checkRoleAchievements(user.id, 'coach', workingSeason?.id).then(({ newUnlocks }) => {
+            if (newUnlocks.length > 0) {
+              // Refresh badges and check for unseen
+              getRoleAchievements(user.id, 'coach').then(setCoachBadges);
+              getUnseenRoleAchievements(user.id).then((u) => {
+                if (u.length > 0) {
+                  setUnseenAchievements(u);
+                  setShowCelebration(true);
+                }
+              });
+              fetchUserXP(user.id).then(setCoachXp);
+            }
+          });
+        } catch {}
+      })();
     } catch (error) {
       if (__DEV__) console.error('Error fetching coach data:', error);
     } finally {
@@ -588,6 +636,7 @@ export default function CoachDashboard() {
   // ============================================
 
   return (
+    <>
     <ScrollView
       style={s.container}
       contentContainerStyle={{ paddingBottom: 120 }}
@@ -677,6 +726,60 @@ export default function CoachDashboard() {
               )}
             </View>
           </TouchableOpacity>
+        </View>
+      )}
+
+      {/* ================================================================ */}
+      {/* 3b. COACH LEVEL & BADGE SHOWCASE                                  */}
+      {/* ================================================================ */}
+      {coachXp.level > 0 && (
+        <View style={s.sectionBlock}>
+          <View style={[s.levelCard, { marginHorizontal: 16 }]}>
+            {/* Level + XP Bar */}
+            <View style={s.levelRow}>
+              <LevelBadge level={coachXp.level} size="medium" />
+              <View style={s.levelInfo}>
+                <Text style={s.levelLabel}>Level {coachXp.level}</Text>
+                <View style={s.xpBarBg}>
+                  <View style={[s.xpBarFill, { width: `${Math.min(coachXp.progress, 100)}%` as any }]} />
+                </View>
+                <Text style={s.xpText}>{coachXp.totalXp} / {coachXp.nextLevelXp} XP</Text>
+              </View>
+            </View>
+
+            {/* Badge Showcase — earned badges, rarest first */}
+            {coachBadges.filter(b => b.earned).length > 0 && (
+              <View style={s.badgeShowcase}>
+                <Text style={s.badgeShowcaseLabel}>BADGES EARNED</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                  {coachBadges
+                    .filter(b => b.earned)
+                    .sort((a, b) => {
+                      const order = ['legendary', 'epic', 'rare', 'uncommon', 'common'];
+                      return order.indexOf(a.rarity) - order.indexOf(b.rarity);
+                    })
+                    .map(badge => (
+                      <View key={badge.id} style={[s.badgePill, { borderColor: getLevelTier(coachXp.level).color + '40' }]}>
+                        <Text style={s.badgeIcon}>{badge.icon}</Text>
+                        <Text style={s.badgeName} numberOfLines={1}>{badge.name}</Text>
+                      </View>
+                    ))}
+                </ScrollView>
+              </View>
+            )}
+
+            {/* Almost there nudge */}
+            {(() => {
+              const nudge = coachBadges
+                .filter(b => !b.earned && b.stat_key && b.threshold)
+                .map(b => {
+                  const current = 0; // We'd need stats here; show as a prompt to check achievements
+                  return b;
+                })
+                .find(() => false); // Nudge requires stat context — handled in Phase 6
+              return null;
+            })()}
+          </View>
         </View>
       )}
 
@@ -1013,6 +1116,33 @@ export default function CoachDashboard() {
       )}
 
     </ScrollView>
+
+    {/* Achievement Celebration Modal */}
+    {showCelebration && unseenAchievements.length > 0 && (
+      <AchievementCelebrationModal
+        unseen={unseenAchievements}
+        onDismiss={() => {
+          setShowCelebration(false);
+          if (user?.id) markAchievementsSeen(user.id);
+        }}
+        onViewAllTrophies={() => {
+          setShowCelebration(false);
+          if (user?.id) markAchievementsSeen(user.id);
+          router.push('/team-hub' as any);
+        }}
+        themeColors={{
+          bg: colors.background,
+          card: colors.card,
+          cardAlt: colors.cardAlt || colors.card,
+          border: colors.border,
+          text: colors.text,
+          textSecondary: colors.textSecondary,
+          textMuted: colors.textMuted,
+          gold: '#FFD700',
+        }}
+      />
+    )}
+    </>
   );
 }
 
@@ -1449,6 +1579,75 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontSize: 10,
     fontWeight: '800',
     color: '#FFF',
+  },
+
+  // ========== LEVEL & BADGE SHOWCASE ==========
+  levelCard: {
+    backgroundColor: colors.glassCard,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    padding: 14,
+    ...shadows.card,
+  },
+  levelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  levelInfo: {
+    flex: 1,
+  },
+  levelLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  xpBarBg: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.bgSecondary || 'rgba(255,255,255,0.1)',
+    overflow: 'hidden' as const,
+  },
+  xpBarFill: {
+    height: '100%' as any,
+    borderRadius: 3,
+    backgroundColor: colors.teal || '#14B8A6',
+  },
+  xpText: {
+    fontSize: 10,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+  badgeShowcase: {
+    marginTop: 12,
+    gap: 6,
+  },
+  badgeShowcaseLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: colors.textMuted,
+    letterSpacing: 0.5,
+  },
+  badgePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.glassCard,
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    gap: 4,
+  },
+  badgeIcon: {
+    fontSize: 14,
+  },
+  badgeName: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.text,
+    maxWidth: 80,
   },
 
   // ========== EMPTY STATES ==========
