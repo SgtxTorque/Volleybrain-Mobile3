@@ -29,6 +29,12 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import {
+  checkRoleAchievements,
+  fetchUserXP,
+  getRoleAchievements,
+  type RoleAchievementWithStatus,
+} from '@/lib/achievement-engine';
 import AppHeaderBar from './ui/AppHeaderBar';
 import SectionHeader from './ui/SectionHeader';
 
@@ -125,6 +131,7 @@ export default function AdminDashboard() {
   const [teamCodeDescription, setTeamCodeDescription] = useState('');
   const [teamSnapshots, setTeamSnapshots] = useState<TeamSnapshot[]>([]);
   const [blastCount, setBlastCount] = useState(0);
+  const [adminBadges, setAdminBadges] = useState<RoleAchievementWithStatus[]>([]);
 
   // Org banner photo
   const [bannerUrl, setBannerUrl] = useState<string | null>((organization as any)?.settings?.banner_url || null);
@@ -778,10 +785,28 @@ export default function AdminDashboard() {
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
+  const fetchAdminAchievements = async () => {
+    if (!profile?.id) return;
+    try {
+      const badges = await getRoleAchievements(profile.id, 'admin');
+      setAdminBadges(badges);
+      // Background unlock check
+      checkRoleAchievements(profile.id, 'admin', workingSeason?.id).then(({ newUnlocks }) => {
+        if (newUnlocks.length > 0) {
+          getRoleAchievements(profile.id, 'admin').then(setAdminBadges);
+        }
+      });
+    } catch {}
+  };
+
+  useEffect(() => {
+    if (profile?.id) fetchAdminAchievements();
+  }, [profile?.id, workingSeason?.id]);
+
   const onRefresh = async () => {
     setRefreshing(true);
     await refreshSeasons();
-    await Promise.all([fetchStats(), fetchPendingInvites(), fetchTeamSnapshots()]);
+    await Promise.all([fetchStats(), fetchPendingInvites(), fetchTeamSnapshots(), fetchAdminAchievements()]);
     setRefreshing(false);
   };
 
@@ -1613,6 +1638,32 @@ export default function AdminDashboard() {
         </View>
       </Modal>
 
+      {/* ====== 7. ORG MILESTONES (Admin Achievements — Lightweight) ====== */}
+      {adminBadges.filter(b => b.earned).length > 0 && (
+        <View style={s.sectionBlock}>
+          <View style={{ paddingHorizontal: spacing.screenPadding }}>
+            <SectionHeader title="Org Milestones" />
+          </View>
+          <View style={[s.milestonesCard, { marginHorizontal: spacing.screenPadding }]}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingHorizontal: 2 }}>
+              {adminBadges
+                .filter(b => b.earned)
+                .sort((a, b) => {
+                  const order = ['legendary', 'epic', 'rare', 'uncommon', 'common'];
+                  return order.indexOf(a.rarity) - order.indexOf(b.rarity);
+                })
+                .map(badge => (
+                  <View key={badge.id} style={s.milestonePill}>
+                    <Text style={{ fontSize: 18 }}>{badge.icon}</Text>
+                    <Text style={s.milestoneName} numberOfLines={1}>{badge.name}</Text>
+                    <Text style={s.milestoneDesc} numberOfLines={1}>{badge.description}</Text>
+                  </View>
+                ))}
+            </ScrollView>
+          </View>
+        </View>
+      )}
+
       {/* Bottom padding */}
       <View style={{ height: 120 }} />
     </ScrollView>
@@ -2063,6 +2114,36 @@ const createStyles = (colors: any, sportColors: any) => StyleSheet.create({
     fontSize: 12,
     color: colors.textMuted,
     marginTop: 2,
+  },
+
+  // ========== ORG MILESTONES ==========
+  milestonesCard: {
+    backgroundColor: colors.glassCard,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: colors.glassBorder,
+    padding: 14,
+    ...shadows.card,
+  },
+  milestonePill: {
+    alignItems: 'center' as const,
+    backgroundColor: colors.bgSecondary || 'rgba(255,255,255,0.05)',
+    borderRadius: radii.card,
+    padding: 12,
+    minWidth: 100,
+    gap: 4,
+  },
+  milestoneName: {
+    fontSize: 12,
+    fontWeight: '700' as const,
+    color: colors.text,
+    textAlign: 'center' as const,
+  },
+  milestoneDesc: {
+    fontSize: 10,
+    color: colors.textMuted,
+    textAlign: 'center' as const,
+    maxWidth: 90,
   },
 
   // Modals
