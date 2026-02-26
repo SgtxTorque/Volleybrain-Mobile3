@@ -9,6 +9,14 @@ import type { AchievementFull, AchievementProgress, UnseenAchievement } from './
 
 const LAST_SEEN_KEY = 'vb_achievement_last_seen_';
 
+/** Map simplified role names to user_roles.role values */
+const ROLE_DB_MAP: Record<string, string[]> = {
+  coach: ['head_coach', 'assistant_coach'],
+  parent: ['parent'],
+  admin: ['league_admin'],
+  player: ['player'],
+};
+
 // =============================================================================
 // 1. checkAndUnlockAchievements — called after game stats are saved
 // =============================================================================
@@ -383,11 +391,14 @@ async function awardAchievementXP(playerId: string, achievement: AchievementFull
     description: `Unlocked "${achievement.name}" (+${xp} XP)`,
   });
 
-  // Update profile total_xp and level
+  // Resolve to profiles.id for XP update (playerId may be players.id)
+  const profileId = await resolveProfileIdFromPlayer(playerId);
+  if (!profileId) return;
+
   const { data: profile } = await supabase
     .from('profiles')
     .select('total_xp')
-    .eq('id', playerId)
+    .eq('id', profileId)
     .single();
 
   const currentXP = profile?.total_xp || 0;
@@ -397,7 +408,17 @@ async function awardAchievementXP(playerId: string, achievement: AchievementFull
   await supabase
     .from('profiles')
     .update({ total_xp: newXP, player_level: level })
-    .eq('id', playerId);
+    .eq('id', profileId);
+}
+
+/** Resolve a players.id to its linked profiles.id (via parent_account_id). */
+async function resolveProfileIdFromPlayer(playerId: string): Promise<string | null> {
+  // Check if it's already a profiles.id
+  const { data: direct } = await supabase.from('profiles').select('id').eq('id', playerId).maybeSingle();
+  if (direct) return direct.id;
+  // Look up linked profile via players.parent_account_id
+  const { data: player } = await supabase.from('players').select('parent_account_id').eq('id', playerId).maybeSingle();
+  return player?.parent_account_id || null;
 }
 
 // =============================================================================
@@ -507,10 +528,14 @@ export async function fetchPlayerXP(
   playerId: string,
 ): Promise<{ totalXp: number; level: number; progress: number; nextLevelXp: number }> {
   try {
+    // playerId may be a players.id — resolve to profiles.id for XP lookup
+    const profileId = await resolveProfileIdFromPlayer(playerId);
+    if (!profileId) return { totalXp: 0, level: 1, progress: 0, nextLevelXp: 100 };
+
     const { data } = await supabase
       .from('profiles')
       .select('total_xp, player_level')
-      .eq('id', playerId)
+      .eq('id', profileId)
       .single();
 
     const totalXp = data?.total_xp || 0;
@@ -523,5 +548,694 @@ export async function fetchPlayerXP(
     };
   } catch {
     return { totalXp: 0, level: 1, progress: 0, nextLevelXp: 100 };
+  }
+}
+
+// =============================================================================
+// 6. fetchUserXP — get current XP and level for any user (profiles.id directly)
+// =============================================================================
+
+export async function fetchUserXP(
+  userId: string,
+): Promise<{ totalXp: number; level: number; progress: number; nextLevelXp: number }> {
+  try {
+    const { data } = await supabase
+      .from('profiles')
+      .select('total_xp, player_level')
+      .eq('id', userId)
+      .single();
+
+    const totalXp = data?.total_xp || 0;
+    const levelInfo = getLevelFromXP(totalXp);
+    return {
+      totalXp,
+      level: levelInfo.level,
+      progress: levelInfo.progress,
+      nextLevelXp: levelInfo.nextLevelXp,
+    };
+  } catch {
+    return { totalXp: 0, level: 1, progress: 0, nextLevelXp: 100 };
+  }
+}
+
+// =============================================================================
+// 7. checkRoleAchievements — multi-role achievement check (coach/parent/admin)
+// =============================================================================
+
+type RoleCheckResult = {
+  newUnlocks: string[];
+  allStats: Record<string, number>;
+};
+
+export async function checkRoleAchievements(
+  userId: string,
+  userRole: 'coach' | 'parent' | 'admin',
+  seasonId?: string,
+): Promise<RoleCheckResult> {
+  try {
+    // Fetch achievements for this role + shared 'all' achievements
+    const { data: achievements } = await supabase
+      .from('achievements')
+      .select('*')
+      .eq('is_active', true)
+      .in('target_role', [userRole, 'all']);
+    if (!achievements || achievements.length === 0) return { newUnlocks: [], allStats: {} };
+
+    // Fetch already-earned from user_achievements
+    const { data: alreadyEarned } = await supabase
+      .from('user_achievements')
+      .select('achievement_id')
+      .eq('user_id', userId);
+    const earnedSet = new Set((alreadyEarned || []).map((e) => e.achievement_id));
+
+    // Gather role-specific stats
+    let allStats: Record<string, number> = {};
+    if (userRole === 'coach') {
+      allStats = await gatherCoachStats(userId, seasonId);
+    } else if (userRole === 'parent') {
+      allStats = await gatherParentStats(userId, seasonId);
+    } else if (userRole === 'admin') {
+      allStats = await gatherAdminStats(userId, seasonId);
+    }
+
+    // Also gather shoutout counts (shared 'all' achievements)
+    const [givenRes, receivedRes] = await Promise.all([
+      supabase.from('shoutouts').select('id', { count: 'exact', head: true }).eq('giver_id', userId),
+      supabase.from('shoutouts').select('id', { count: 'exact', head: true }).eq('receiver_id', userId),
+    ]);
+    allStats['shoutouts_given'] = givenRes.count || 0;
+    allStats['shoutouts_received'] = receivedRes.count || 0;
+
+    const now = new Date().toISOString();
+    const newUnlocks: Array<{
+      user_id: string;
+      achievement_id: string;
+      earned_at: string;
+      stat_value_at_unlock: number;
+      season_id?: string;
+    }> = [];
+
+    for (const ach of achievements as AchievementFull[]) {
+      if (ach.threshold == null) continue;
+      if (ach.requires_verification) continue;
+      if (!ach.stat_key) continue;
+
+      const currentVal = allStats[ach.stat_key] ?? 0;
+
+      // Check for new unlock
+      if (earnedSet.has(ach.id)) continue;
+      if (currentVal >= ach.threshold) {
+        newUnlocks.push({
+          user_id: userId,
+          achievement_id: ach.id,
+          earned_at: now,
+          stat_value_at_unlock: currentVal,
+          season_id: seasonId,
+        });
+      }
+    }
+
+    // Batch insert new unlocks into user_achievements
+    if (newUnlocks.length > 0) {
+      const { error } = await supabase
+        .from('user_achievements')
+        .upsert(newUnlocks, { onConflict: 'user_id,achievement_id', ignoreDuplicates: true });
+      if (__DEV__ && error) console.error('Role achievement unlock error:', error);
+
+      // Award XP for new unlocks
+      for (const unlock of newUnlocks) {
+        const ach = (achievements as AchievementFull[]).find((a) => a.id === unlock.achievement_id);
+        if (ach?.xp_reward) {
+          await awardRoleXP(userId, ach);
+        }
+      }
+    }
+
+    return {
+      newUnlocks: newUnlocks.map((u) => u.achievement_id),
+      allStats,
+    };
+  } catch (err) {
+    if (__DEV__) console.error('checkRoleAchievements error:', err);
+    return { newUnlocks: [], allStats: {} };
+  }
+}
+
+// =============================================================================
+// 8. Role-Specific Stat Resolvers
+// =============================================================================
+
+/** Get team IDs for a coach */
+async function getCoachTeamIds(userId: string, seasonId?: string): Promise<string[]> {
+  let query = supabase
+    .from('team_staff')
+    .select('team_id')
+    .eq('user_id', userId)
+    .eq('is_active', true);
+  // If seasonId, filter teams by season
+  const { data } = await query;
+  if (!data || data.length === 0) return [];
+  const teamIds = data.map((d) => d.team_id as string);
+
+  if (seasonId) {
+    const { data: teams } = await supabase
+      .from('teams')
+      .select('id')
+      .in('id', teamIds)
+      .eq('season_id', seasonId);
+    return teams ? teams.map((t) => t.id) : [];
+  }
+  return teamIds;
+}
+
+/** Get all team IDs for a coach across all seasons (career) */
+async function getCoachAllTeamIds(userId: string): Promise<string[]> {
+  const { data } = await supabase
+    .from('team_staff')
+    .select('team_id')
+    .eq('user_id', userId)
+    .eq('is_active', true);
+  return data ? data.map((d) => d.team_id as string) : [];
+}
+
+/** Get parent's children player IDs */
+async function getParentChildIds(userId: string): Promise<string[]> {
+  const { data } = await supabase
+    .from('players')
+    .select('id')
+    .eq('parent_account_id', userId);
+  return data ? data.map((d) => d.id) : [];
+}
+
+/** Get admin's organization IDs */
+async function getAdminOrgIds(userId: string): Promise<string[]> {
+  const { data } = await supabase
+    .from('user_roles')
+    .select('organization_id')
+    .eq('user_id', userId)
+    .eq('role', 'league_admin')
+    .eq('is_active', true);
+  return data ? data.map((d) => d.organization_id as string) : [];
+}
+
+// ---- COACH STATS ----
+
+async function gatherCoachStats(userId: string, seasonId?: string): Promise<Record<string, number>> {
+  const stats: Record<string, number> = {};
+
+  const [seasonTeamIds, allTeamIds] = await Promise.all([
+    seasonId ? getCoachTeamIds(userId, seasonId) : getCoachTeamIds(userId),
+    getCoachAllTeamIds(userId),
+  ]);
+
+  // teams_coached
+  stats['teams_coached'] = allTeamIds.length;
+
+  if (allTeamIds.length === 0) return stats;
+
+  // roster_assignments — total players across all current teams
+  const { count: rosterCount } = await supabase
+    .from('team_players')
+    .select('id', { count: 'exact', head: true })
+    .in('team_id', allTeamIds);
+  stats['roster_assignments'] = rosterCount || 0;
+
+  // roster_size — max players on any single team
+  const { data: rosterData } = await supabase
+    .from('team_players')
+    .select('team_id')
+    .in('team_id', allTeamIds);
+  if (rosterData) {
+    const teamCounts: Record<string, number> = {};
+    for (const r of rosterData) {
+      teamCounts[r.team_id] = (teamCounts[r.team_id] || 0) + 1;
+    }
+    stats['roster_size'] = Math.max(0, ...Object.values(teamCounts));
+  }
+
+  const activeTeamIds = seasonTeamIds.length > 0 ? seasonTeamIds : allTeamIds;
+
+  // games_completed (season)
+  if (activeTeamIds.length > 0) {
+    const { count: gamesCount } = await supabase
+      .from('schedule_events')
+      .select('id', { count: 'exact', head: true })
+      .in('team_id', activeTeamIds)
+      .eq('event_type', 'game')
+      .not('game_status', 'is', null)
+      .in('game_status', ['completed', 'final']);
+    stats['games_completed'] = gamesCount || 0;
+  }
+
+  // career_games (all teams, all seasons)
+  if (allTeamIds.length > 0) {
+    const { count: careerCount } = await supabase
+      .from('schedule_events')
+      .select('id', { count: 'exact', head: true })
+      .in('team_id', allTeamIds)
+      .eq('event_type', 'game')
+      .not('game_status', 'is', null)
+      .in('game_status', ['completed', 'final']);
+    stats['career_games'] = careerCount || 0;
+  }
+
+  // win_streak + season_win_pct
+  if (activeTeamIds.length > 0) {
+    const { data: gameResults } = await supabase
+      .from('schedule_events')
+      .select('game_result, event_date')
+      .in('team_id', activeTeamIds)
+      .eq('event_type', 'game')
+      .not('game_result', 'is', null)
+      .order('event_date', { ascending: false });
+
+    if (gameResults && gameResults.length > 0) {
+      // Win streak (consecutive from most recent)
+      let streak = 0;
+      for (const g of gameResults) {
+        if (g.game_result === 'win') streak++;
+        else break;
+      }
+      stats['win_streak'] = streak;
+
+      // Win percentage
+      const wins = gameResults.filter((g) => g.game_result === 'win').length;
+      stats['season_win_pct'] = gameResults.length > 0 ? Math.round((wins / gameResults.length) * 100) : 0;
+    }
+  }
+
+  // games_with_stats
+  if (activeTeamIds.length > 0) {
+    const { count: statsCount } = await supabase
+      .from('schedule_events')
+      .select('id', { count: 'exact', head: true })
+      .in('team_id', activeTeamIds)
+      .eq('stats_entered', true);
+    stats['games_with_stats'] = statsCount || 0;
+  }
+
+  // badges_awarded — player achievements for players on coach's teams
+  if (allTeamIds.length > 0) {
+    const { data: teamPlayers } = await supabase
+      .from('team_players')
+      .select('player_id')
+      .in('team_id', allTeamIds);
+    if (teamPlayers && teamPlayers.length > 0) {
+      const playerIds = [...new Set(teamPlayers.map((tp) => tp.player_id as string))];
+      const { count: badgeCount } = await supabase
+        .from('player_achievements')
+        .select('id', { count: 'exact', head: true })
+        .in('player_id', playerIds);
+      stats['badges_awarded'] = badgeCount || 0;
+
+      // players_leveled_up — players with level > 1
+      const { count: leveledCount } = await supabase
+        .from('profiles')
+        .select('id', { count: 'exact', head: true })
+        .in('id', playerIds)
+        .gt('player_level', 1);
+      stats['players_leveled_up'] = leveledCount || 0;
+    }
+  }
+
+  // challenges_created
+  const { count: challengeCount } = await supabase
+    .from('coach_challenges')
+    .select('id', { count: 'exact', head: true })
+    .eq('coach_id', userId);
+  stats['challenges_created'] = challengeCount || 0;
+
+  // full_participation_challenges — challenges where all team players opted in
+  const { data: challenges } = await supabase
+    .from('coach_challenges')
+    .select('id, team_id')
+    .eq('coach_id', userId);
+  if (challenges && challenges.length > 0) {
+    let fullPart = 0;
+    for (const ch of challenges) {
+      const [{ count: partCount }, { count: teamSize }] = await Promise.all([
+        supabase.from('challenge_participants').select('id', { count: 'exact', head: true }).eq('challenge_id', ch.id),
+        supabase.from('team_players').select('id', { count: 'exact', head: true }).eq('team_id', ch.team_id),
+      ]);
+      if (teamSize && teamSize > 0 && partCount && partCount >= teamSize) {
+        fullPart++;
+      }
+    }
+    stats['full_participation_challenges'] = fullPart;
+  }
+
+  return stats;
+}
+
+// ---- PARENT STATS ----
+
+async function gatherParentStats(userId: string, seasonId?: string): Promise<Record<string, number>> {
+  const stats: Record<string, number> = {};
+
+  const childIds = await getParentChildIds(userId);
+
+  // rsvps_going (parent responded_by)
+  const { count: rsvpCount } = await supabase
+    .from('event_rsvps')
+    .select('id', { count: 'exact', head: true })
+    .eq('responded_by', userId)
+    .eq('status', 'going');
+  stats['rsvps_going'] = rsvpCount || 0;
+
+  // season_rsvp_pct — percentage of season game events RSVPed going
+  if (seasonId && childIds.length > 0) {
+    const { data: seasonGames } = await supabase
+      .from('schedule_events')
+      .select('id')
+      .eq('season_id', seasonId)
+      .eq('event_type', 'game');
+
+    if (seasonGames && seasonGames.length > 0) {
+      const eventIds = seasonGames.map((e) => e.id);
+      const { count: goingCount } = await supabase
+        .from('event_rsvps')
+        .select('id', { count: 'exact', head: true })
+        .eq('responded_by', userId)
+        .eq('status', 'going')
+        .in('event_id', eventIds);
+      stats['season_rsvp_pct'] = Math.round(((goingCount || 0) / seasonGames.length) * 100);
+    }
+  }
+
+  // early_rsvps — RSVPs within 1 hour of event creation (simplified: check responded_at vs event created_at)
+  if (childIds.length > 0) {
+    const { data: rsvps } = await supabase
+      .from('event_rsvps')
+      .select('event_id, responded_at')
+      .eq('responded_by', userId)
+      .eq('status', 'going');
+
+    if (rsvps && rsvps.length > 0) {
+      const eventIds = rsvps.map((r) => r.event_id as string);
+      const { data: events } = await supabase
+        .from('schedule_events')
+        .select('id, created_at')
+        .in('id', eventIds);
+
+      if (events) {
+        const eventCreatedMap: Record<string, string> = {};
+        for (const e of events) eventCreatedMap[e.id] = e.created_at;
+
+        let earlyCount = 0;
+        for (const r of rsvps) {
+          const created = eventCreatedMap[r.event_id];
+          if (created && r.responded_at) {
+            const diff = new Date(r.responded_at).getTime() - new Date(created).getTime();
+            if (diff <= 3600000) earlyCount++; // 1 hour in ms
+          }
+        }
+        stats['early_rsvps'] = earlyCount;
+      }
+    }
+  }
+
+  // volunteer_signups
+  const { count: volCount } = await supabase
+    .from('event_volunteers')
+    .select('id', { count: 'exact', head: true })
+    .eq('profile_id', userId);
+  stats['volunteer_signups'] = volCount || 0;
+
+  // on_time_payments — payments made before due_date for parent's children
+  if (childIds.length > 0) {
+    const { data: paidPayments } = await supabase
+      .from('payments')
+      .select('paid_date, due_date')
+      .in('player_id', childIds)
+      .eq('paid', true)
+      .not('due_date', 'is', null);
+
+    if (paidPayments) {
+      stats['on_time_payments'] = paidPayments.filter(
+        (p) => p.paid_date && p.due_date && new Date(p.paid_date) <= new Date(p.due_date),
+      ).length;
+    }
+
+    // full_payments — look for lump-sum payments (fee_type or fee_category heuristic)
+    const { count: fullPay } = await supabase
+      .from('payments')
+      .select('id', { count: 'exact', head: true })
+      .in('player_id', childIds)
+      .eq('paid', true)
+      .eq('fee_type', 'registration');
+    stats['full_payments'] = fullPay || 0;
+
+    // seasons_current — seasons where no overdue balance exists
+    if (seasonId) {
+      const { data: overdue } = await supabase
+        .from('payments')
+        .select('id')
+        .in('player_id', childIds)
+        .eq('season_id', seasonId)
+        .eq('paid', false)
+        .not('due_date', 'is', null)
+        .lt('due_date', new Date().toISOString().split('T')[0])
+        .limit(1);
+      stats['seasons_current'] = (!overdue || overdue.length === 0) ? 1 : 0;
+    }
+  }
+
+  // post_reactions
+  const { count: reactCount } = await supabase
+    .from('team_post_reactions')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId);
+  stats['post_reactions'] = reactCount || 0;
+
+  // posts_created
+  const { count: postCount } = await supabase
+    .from('team_posts')
+    .select('id', { count: 'exact', head: true })
+    .eq('author_id', userId);
+  stats['posts_created'] = postCount || 0;
+
+  // photos_uploaded — count posts with media_urls (no dedicated gallery table)
+  const { data: mediaPosts } = await supabase
+    .from('team_posts')
+    .select('media_urls')
+    .eq('author_id', userId)
+    .not('media_urls', 'is', null);
+  if (mediaPosts) {
+    let photoCount = 0;
+    for (const p of mediaPosts) {
+      if (Array.isArray(p.media_urls)) photoCount += p.media_urls.length;
+    }
+    stats['photos_uploaded'] = photoCount;
+  }
+
+  // children_teams — distinct teams across all children
+  if (childIds.length > 0) {
+    const { data: teamData } = await supabase
+      .from('team_players')
+      .select('team_id')
+      .in('player_id', childIds);
+    if (teamData) {
+      const uniqueTeams = new Set(teamData.map((t) => t.team_id));
+      stats['children_teams'] = uniqueTeams.size;
+    }
+  }
+
+  return stats;
+}
+
+// ---- ADMIN STATS ----
+
+async function gatherAdminStats(userId: string, seasonId?: string): Promise<Record<string, number>> {
+  const stats: Record<string, number> = {};
+
+  const orgIds = await getAdminOrgIds(userId);
+  if (orgIds.length === 0) return stats;
+
+  // seasons_created
+  const { count: seasonsCount } = await supabase
+    .from('seasons')
+    .select('id', { count: 'exact', head: true })
+    .in('organization_id', orgIds);
+  stats['seasons_created'] = seasonsCount || 0;
+
+  // seasons_completed
+  const { count: completedSeasons } = await supabase
+    .from('seasons')
+    .select('id', { count: 'exact', head: true })
+    .in('organization_id', orgIds)
+    .eq('status', 'completed');
+  stats['seasons_completed'] = completedSeasons || 0;
+
+  // total_players — count registrations with status 'approved' or 'rostered'
+  const { count: playerCount } = await supabase
+    .from('registrations')
+    .select('id', { count: 'exact', head: true })
+    .in('season_id', await getOrgSeasonIds(orgIds))
+    .in('status', ['approved', 'rostered', 'paid']);
+  stats['total_players'] = playerCount || 0;
+
+  // teams_created
+  const seasonIds = await getOrgSeasonIds(orgIds);
+  if (seasonIds.length > 0) {
+    const { count: teamCount } = await supabase
+      .from('teams')
+      .select('id', { count: 'exact', head: true })
+      .in('season_id', seasonIds);
+    stats['teams_created'] = teamCount || 0;
+  }
+
+  // season_revenue (current season)
+  if (seasonId) {
+    const { data: payments } = await supabase
+      .from('payments')
+      .select('amount')
+      .eq('season_id', seasonId)
+      .eq('paid', true);
+    if (payments) {
+      stats['season_revenue'] = payments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    }
+  }
+
+  // blasts_sent
+  const { count: blastCount } = await supabase
+    .from('announcements')
+    .select('id', { count: 'exact', head: true })
+    .eq('created_by', userId);
+  stats['blasts_sent'] = blastCount || 0;
+
+  // registrations_processed
+  const { count: regCount } = await supabase
+    .from('registrations')
+    .select('id', { count: 'exact', head: true })
+    .eq('reviewed_by', userId)
+    .in('status', ['approved', 'rostered', 'paid']);
+  stats['registrations_processed'] = regCount || 0;
+
+  return stats;
+}
+
+/** Helper: get all season IDs for a set of organizations */
+async function getOrgSeasonIds(orgIds: string[]): Promise<string[]> {
+  if (orgIds.length === 0) return [];
+  const { data } = await supabase
+    .from('seasons')
+    .select('id')
+    .in('organization_id', orgIds);
+  return data ? data.map((s) => s.id) : [];
+}
+
+// =============================================================================
+// 9. Award XP for role achievements (coaches/parents/admins)
+// =============================================================================
+
+async function awardRoleXP(userId: string, achievement: AchievementFull): Promise<void> {
+  const xp = achievement.xp_reward;
+  if (!xp || xp <= 0) return;
+
+  // Insert XP ledger entry
+  await supabase.from('xp_ledger').insert({
+    player_id: userId,
+    organization_id: null,
+    xp_amount: xp,
+    source_type: 'achievement',
+    source_id: achievement.id,
+    description: `Unlocked "${achievement.name}" (+${xp} XP)`,
+  });
+
+  // Update profile XP directly (userId IS profiles.id for non-player roles)
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('total_xp')
+    .eq('id', userId)
+    .single();
+
+  const currentXP = profile?.total_xp || 0;
+  const newXP = currentXP + xp;
+  const { level } = getLevelFromXP(newXP);
+
+  await supabase
+    .from('profiles')
+    .update({ total_xp: newXP, player_level: level })
+    .eq('id', userId);
+}
+
+// =============================================================================
+// 10. getUnseenRoleAchievements — detect unlocked but not-yet-celebrated
+// =============================================================================
+
+export async function getUnseenRoleAchievements(userId: string): Promise<UnseenAchievement[]> {
+  try {
+    const lastSeenStr = await AsyncStorage.getItem(LAST_SEEN_KEY + userId);
+    const lastSeen = lastSeenStr || '1970-01-01T00:00:00Z';
+
+    const { data } = await supabase
+      .from('user_achievements')
+      .select('*, achievements(*)')
+      .eq('user_id', userId)
+      .gt('earned_at', lastSeen)
+      .order('earned_at', { ascending: true });
+
+    if (!data || data.length === 0) return [];
+
+    return data.map((d) => ({
+      id: d.id,
+      player_id: d.user_id,
+      achievement_id: d.achievement_id,
+      earned_at: d.earned_at,
+      game_id: null,
+      team_id: null,
+      season_id: d.season_id,
+      stat_value_at_unlock: d.stat_value_at_unlock,
+      verified_by: null,
+      verified_at: null,
+      achievements: d.achievements as AchievementFull,
+    })) as UnseenAchievement[];
+  } catch (err) {
+    if (__DEV__) console.error('getUnseenRoleAchievements error:', err);
+    return [];
+  }
+}
+
+// =============================================================================
+// 11. getRoleAchievements — fetch all achievements for a role with earned status
+// =============================================================================
+
+export type RoleAchievementWithStatus = AchievementFull & {
+  earned: boolean;
+  earned_at: string | null;
+};
+
+export async function getRoleAchievements(
+  userId: string,
+  userRole: 'coach' | 'parent' | 'admin',
+): Promise<RoleAchievementWithStatus[]> {
+  try {
+    const [{ data: achievements }, { data: earned }] = await Promise.all([
+      supabase
+        .from('achievements')
+        .select('*')
+        .eq('is_active', true)
+        .in('target_role', [userRole, 'all'])
+        .order('display_order'),
+      supabase
+        .from('user_achievements')
+        .select('achievement_id, earned_at')
+        .eq('user_id', userId),
+    ]);
+
+    if (!achievements) return [];
+    const earnedMap: Record<string, string> = {};
+    for (const e of earned || []) {
+      earnedMap[e.achievement_id] = e.earned_at;
+    }
+
+    return (achievements as AchievementFull[]).map((a) => ({
+      ...a,
+      earned: !!earnedMap[a.id],
+      earned_at: earnedMap[a.id] || null,
+    }));
+  } catch (err) {
+    if (__DEV__) console.error('getRoleAchievements error:', err);
+    return [];
   }
 }

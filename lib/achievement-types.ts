@@ -29,6 +29,7 @@ export type AchievementFull = {
   glow_url: string | null;
   unlock_effect_url: string | null;
   xp_reward: number | null;
+  target_role: string | null; // 'player' | 'coach' | 'parent' | 'admin' | 'all'
 };
 
 /** A player_achievements row joined with its achievement */
