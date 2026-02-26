@@ -2,9 +2,19 @@ import AchievementCelebrationModal from '@/components/AchievementCelebrationModa
 import RarityGlow from '@/components/RarityGlow';
 import type { AchievementFull, UnseenAchievement } from '@/lib/achievement-types';
 import { RARITY_CONFIG } from '@/lib/achievement-types';
-import { checkAllAchievements, fetchPlayerXP, getUnseenAchievements, markAchievementsSeen } from '@/lib/achievement-engine';
+import {
+  checkAllAchievements,
+  checkRoleAchievements,
+  fetchPlayerXP,
+  fetchUserXP,
+  getRoleAchievements,
+  getUnseenAchievements,
+  getUnseenRoleAchievements,
+  markAchievementsSeen,
+} from '@/lib/achievement-engine';
 import { useAuth } from '@/lib/auth';
 import { getLevelFromXP, getLevelTier } from '@/lib/engagement-constants';
+import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
@@ -68,7 +78,7 @@ type PlayerSeasonStats = Record<string, number>;
 // CONSTANTS
 // =============================================================================
 
-const CATEGORIES: Record<string, CategoryConfig> = {
+const PLAYER_CATEGORIES: Record<string, CategoryConfig> = {
   Offensive: { label: 'Offensive', icon: 'flash', color: '#FF3B3B' },
   Defensive: { label: 'Defensive', icon: 'shield', color: '#3B82F6' },
   Playmaker: { label: 'Playmaker', icon: 'people', color: '#10B981' },
@@ -76,6 +86,38 @@ const CATEGORIES: Record<string, CategoryConfig> = {
   Community: { label: 'Community', icon: 'megaphone', color: '#F59E0B' },
   Elite: { label: 'Elite', icon: 'diamond', color: '#FFD700' },
 };
+
+const COACH_CATEGORIES: Record<string, CategoryConfig> = {
+  'Team Builder': { label: 'Team Builder', icon: 'people', color: '#3B82F6' },
+  'Game Day': { label: 'Game Day', icon: 'football', color: '#EF4444' },
+  Development: { label: 'Development', icon: 'trending-up', color: '#10B981' },
+  Engagement: { label: 'Engagement', icon: 'flame', color: '#F59E0B' },
+  Community: { label: 'Community', icon: 'megaphone', color: '#EC4899' },
+};
+
+const PARENT_CATEGORIES: Record<string, CategoryConfig> = {
+  'Team Spirit': { label: 'Team Spirit', icon: 'heart', color: '#EC4899' },
+  Support: { label: 'Support', icon: 'hand-left', color: '#3B82F6' },
+  Financial: { label: 'Financial', icon: 'cash', color: '#10B981' },
+  Engagement: { label: 'Engagement', icon: 'chatbubbles', color: '#F59E0B' },
+  Community: { label: 'Community', icon: 'megaphone', color: '#A855F7' },
+};
+
+const ADMIN_CATEGORIES: Record<string, CategoryConfig> = {
+  Operations: { label: 'Operations', icon: 'settings', color: '#3B82F6' },
+  Management: { label: 'Management', icon: 'grid', color: '#10B981' },
+  Community: { label: 'Community', icon: 'megaphone', color: '#F59E0B' },
+};
+
+const ROLE_CATEGORY_MAP: Record<string, Record<string, CategoryConfig>> = {
+  player: PLAYER_CATEGORIES,
+  coach: COACH_CATEGORIES,
+  parent: PARENT_CATEGORIES,
+  admin: ADMIN_CATEGORIES,
+};
+
+// Merged CATEGORIES used for rendering — gets set dynamically based on role
+let CATEGORIES: Record<string, CategoryConfig> = PLAYER_CATEGORIES;
 
 const RARITY_COLORS: Record<string, { bg: string; text: string; label: string }> = {
   common: { bg: '#94A3B820', text: '#94A3B8', label: 'Common' },
@@ -133,7 +175,20 @@ export default function AchievementsScreen() {
   useTheme(); // keep hook call for consistency
   const { user } = useAuth();
   const { workingSeason } = useSeason();
+  const { isAdmin, isCoach, isParent, isPlayer } = usePermissions();
   const router = useRouter();
+
+  // Detect effective role for this screen
+  const effectiveRole: 'player' | 'coach' | 'parent' | 'admin' = isAdmin
+    ? 'admin'
+    : isCoach
+      ? 'coach'
+      : isParent
+        ? 'parent'
+        : 'player';
+
+  // Set categories based on role
+  CATEGORIES = ROLE_CATEGORY_MAP[effectiveRole] || PLAYER_CATEGORIES;
 
   const [loading, setLoading] = useState(true);
   const [allAchievements, setAllAchievements] = useState<Achievement[]>([]);
@@ -196,14 +251,20 @@ export default function AchievementsScreen() {
   const loadData = async () => {
     setLoading(true);
     try {
+      // Non-player roles use a different data path
+      if (effectiveRole !== 'player' && user?.id) {
+        return await loadRoleData();
+      }
+
       const resolvedPlayerId = await resolvePlayerId();
       setPlayerId(resolvedPlayerId);
 
-      // Fetch all active achievements
+      // Fetch all active achievements (player + all)
       const { data: achievements } = await supabase
         .from('achievements')
         .select('*')
         .eq('is_active', true)
+        .in('target_role', ['player', 'all'])
         .order('display_order');
 
       if (achievements) {
@@ -281,6 +342,75 @@ export default function AchievementsScreen() {
     }
   };
 
+  /** Load data for coach/parent/admin roles */
+  const loadRoleData = async () => {
+    if (!user?.id) return;
+    try {
+      const roleKey = effectiveRole as 'coach' | 'parent' | 'admin';
+
+      // Fetch role-specific achievements with earned status
+      const roleAchievements = await getRoleAchievements(user.id, roleKey);
+      setAllAchievements(roleAchievements);
+
+      // Build earned map from roleAchievements
+      const map: Record<string, PlayerAchievement> = {};
+      for (const ra of roleAchievements) {
+        if (ra.earned) {
+          map[ra.id] = {
+            id: ra.id,
+            player_id: user.id,
+            achievement_id: ra.id,
+            earned_at: ra.earned_at,
+            progress: null,
+            achievements: ra,
+          };
+        }
+      }
+      setEarnedMap(map);
+      setPlayerId(user.id);
+
+      // Fetch XP
+      const xpData = await fetchUserXP(user.id);
+      setTotalXp(xpData.totalXp);
+
+      // Run achievement check in background
+      const result = await checkRoleAchievements(user.id, roleKey, workingSeason?.id);
+      if (result.allStats) setSeasonStats(result.allStats);
+      if (result.newUnlocks.length > 0) {
+        // Refresh
+        const refreshed = await getRoleAchievements(user.id, roleKey);
+        setAllAchievements(refreshed);
+        const newMap: Record<string, PlayerAchievement> = {};
+        for (const ra of refreshed) {
+          if (ra.earned) {
+            newMap[ra.id] = {
+              id: ra.id,
+              player_id: user.id,
+              achievement_id: ra.id,
+              earned_at: ra.earned_at,
+              progress: null,
+              achievements: ra,
+            };
+          }
+        }
+        setEarnedMap(newMap);
+        const xp = await fetchUserXP(user.id);
+        setTotalXp(xp.totalXp);
+      }
+
+      // Check for unseen
+      const unseen = await getUnseenRoleAchievements(user.id);
+      if (unseen.length > 0) {
+        setUnseenAchievements(unseen);
+        setShowCelebration(true);
+      }
+    } catch (error) {
+      if (__DEV__) console.error('Error loading role achievements:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Auto-unlock achievements using the enhanced engine (handles all types)
   const runAutoUnlock = async () => {
     if (!playerId || !workingSeason?.id || allAchievements.length === 0) return;
@@ -308,8 +438,10 @@ export default function AchievementsScreen() {
   const handleCelebrationDismiss = async () => {
     setShowCelebration(false);
     setUnseenAchievements([]);
-    if (playerId) {
-      await markAchievementsSeen(playerId);
+    // For role users, use user.id; for players, use playerId
+    const markId = effectiveRole !== 'player' ? user?.id : playerId;
+    if (markId) {
+      await markAchievementsSeen(markId);
     }
   };
 
