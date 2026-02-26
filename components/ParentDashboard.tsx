@@ -26,8 +26,22 @@ import {
   View,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import {
+  checkRoleAchievements,
+  fetchPlayerXP,
+  fetchUserXP,
+  getUnseenRoleAchievements,
+  getRoleAchievements,
+  markAchievementsSeen,
+  type RoleAchievementWithStatus,
+} from '@/lib/achievement-engine';
+import type { UnseenAchievement } from '@/lib/achievement-types';
+import { getLevelTier } from '@/lib/engagement-constants';
+import { fetchShoutoutStats } from '@/lib/shoutout-service';
+import AchievementCelebrationModal from './AchievementCelebrationModal';
 import AnnouncementBanner from './AnnouncementBanner';
 import EventDetailModal from './EventDetailModal';
+import LevelBadge from './LevelBadge';
 import AppHeaderBar from './ui/AppHeaderBar';
 import { ScheduleEvent } from './EventCard';
 import SectionHeader from './ui/SectionHeader';
@@ -254,6 +268,17 @@ export default function ParentDashboard() {
   const [lastChat, setLastChat] = useState<LastChatPreview | null>(null);
   const [seasonRecord, setSeasonRecord] = useState<SeasonRecord | null>(null);
 
+  // Child engagement data
+  const [childXp, setChildXp] = useState<{ totalXp: number; level: number; progress: number } | null>(null);
+  const [childShoutouts, setChildShoutouts] = useState<{ received: number; given: number; categoryBreakdown: Array<{ category: string; emoji: string; color: string; count: number }> } | null>(null);
+  const [childAchievementCount, setChildAchievementCount] = useState(0);
+
+  // Parent's own engagement
+  const [parentXp, setParentXp] = useState({ totalXp: 0, level: 1, progress: 0, nextLevelXp: 100 });
+  const [parentBadges, setParentBadges] = useState<RoleAchievementWithStatus[]>([]);
+  const [unseenAchievements, setUnseenAchievements] = useState<UnseenAchievement[]>([]);
+  const [showCelebration, setShowCelebration] = useState(false);
+
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
@@ -308,6 +333,18 @@ export default function ParentDashboard() {
   useEffect(() => {
     if (activeChild) {
       fetchChildStats(activeChild.id);
+      // Fetch engagement data for active child
+      fetchPlayerXP(activeChild.id).then(setChildXp).catch(() => {});
+      fetchShoutoutStats(activeChild.id).then(setChildShoutouts).catch(() => {});
+      (async () => {
+        try {
+          const { count } = await supabase
+            .from('player_achievements')
+            .select('id', { count: 'exact', head: true })
+            .eq('player_id', activeChild.id);
+          setChildAchievementCount(count || 0);
+        } catch {}
+      })();
     }
   }, [activeChild?.id, workingSeason?.id]);
 
@@ -637,6 +674,39 @@ export default function ParentDashboard() {
       fetchLastChatData();
       if (teamIds.length > 0) {
         fetchSeasonRecordData(teamIds);
+      }
+
+      // Fetch parent's own engagement data
+      if (user?.id) {
+        (async () => {
+          try {
+            const [xpData, badges, unseen] = await Promise.all([
+              fetchUserXP(user.id),
+              getRoleAchievements(user.id, 'parent'),
+              getUnseenRoleAchievements(user.id),
+            ]);
+            setParentXp(xpData);
+            setParentBadges(badges);
+            if (unseen.length > 0) {
+              setUnseenAchievements(unseen);
+              setShowCelebration(true);
+            }
+
+            // Background check for new unlocks
+            checkRoleAchievements(user.id, 'parent', workingSeason?.id).then(({ newUnlocks }) => {
+              if (newUnlocks.length > 0) {
+                getRoleAchievements(user.id, 'parent').then(setParentBadges);
+                getUnseenRoleAchievements(user.id).then((u) => {
+                  if (u.length > 0) {
+                    setUnseenAchievements(u);
+                    setShowCelebration(true);
+                  }
+                });
+                fetchUserXP(user.id).then(setParentXp);
+              }
+            });
+          } catch {}
+        })();
       }
 
     } catch (err) {
@@ -1413,6 +1483,117 @@ export default function ParentDashboard() {
       )}
 
       {/* ================================================================ */}
+      {/* SECTION 4B: CHILD ENGAGEMENT SUMMARY (XP, achievements, shoutouts) */}
+      {/* ================================================================ */}
+      {activeChild && (childXp || childShoutouts || childAchievementCount > 0) && (
+        <View style={s.sectionBlock}>
+          <View style={{ paddingHorizontal: 16 }}>
+            <SectionHeader title={`${activeChild.first_name}'s Progress`} />
+          </View>
+          <View style={{ paddingHorizontal: 16, gap: 10 }}>
+            {/* XP / Level row */}
+            {childXp && childXp.level > 0 && (
+              <View style={[s.engagementRow, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}>
+                <LevelBadge level={childXp.level} size="medium" />
+                <View style={{ flex: 1 }}>
+                  <Text style={[s.engagementLabel, { color: colors.text }]}>
+                    Level {childXp.level} — {getLevelTier(childXp.level).name}
+                  </Text>
+                  <View style={[s.engagementBarBg, { backgroundColor: colors.secondary }]}>
+                    <View style={[s.engagementBarFill, { width: `${Math.min(childXp.progress, 100)}%` as any, backgroundColor: getLevelTier(childXp.level).color }]} />
+                  </View>
+                  <Text style={[s.engagementMeta, { color: colors.textMuted }]}>
+                    {childXp.totalXp.toLocaleString()} XP
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            {/* Achievements + Shoutouts pills */}
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              {childAchievementCount > 0 && (
+                <TouchableOpacity
+                  style={[s.engagementPill, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}
+                  onPress={() => router.push(('/child-detail?playerId=' + activeChild.id) as any)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={{ fontSize: 22 }}>🏆</Text>
+                  <Text style={[s.engagementPillValue, { color: colors.text }]}>{childAchievementCount}</Text>
+                  <Text style={[s.engagementPillLabel, { color: colors.textMuted }]}>Badges</Text>
+                </TouchableOpacity>
+              )}
+              {childShoutouts && childShoutouts.received > 0 && (
+                <TouchableOpacity
+                  style={[s.engagementPill, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}
+                  onPress={() => router.push(('/child-detail?playerId=' + activeChild.id) as any)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={{ fontSize: 22 }}>💪</Text>
+                  <Text style={[s.engagementPillValue, { color: colors.text }]}>{childShoutouts.received}</Text>
+                  <Text style={[s.engagementPillLabel, { color: colors.textMuted }]}>Shoutouts</Text>
+                </TouchableOpacity>
+              )}
+              {childShoutouts && childShoutouts.categoryBreakdown.length > 0 && (
+                <View style={[s.engagementPill, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder, flex: 1 }]}>
+                  <View style={{ flexDirection: 'row', gap: 3 }}>
+                    {childShoutouts.categoryBreakdown.slice(0, 3).map((c, i) => (
+                      <Text key={i} style={{ fontSize: 16 }}>{c.emoji}</Text>
+                    ))}
+                  </View>
+                  <Text style={[s.engagementPillLabel, { color: colors.textMuted }]}>Top Recognition</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* ================================================================ */}
+      {/* SECTION 4C: PARENT ENGAGEMENT (XP, badges)                       */}
+      {/* ================================================================ */}
+      {parentXp.level > 0 && (
+        <View style={s.sectionBlock}>
+          <View style={{ paddingHorizontal: 16 }}>
+            <SectionHeader title="My Engagement" />
+          </View>
+          <View style={{ paddingHorizontal: 16 }}>
+            <View style={[s.parentLevelCard, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}>
+              <View style={s.parentLevelRow}>
+                <LevelBadge level={parentXp.level} size="medium" />
+                <View style={{ flex: 1 }}>
+                  <Text style={[s.parentLevelLabel, { color: colors.text }]}>Level {parentXp.level}</Text>
+                  <View style={[s.parentXpBarBg, { backgroundColor: colors.bgSecondary || 'rgba(255,255,255,0.1)' }]}>
+                    <View style={[s.parentXpBarFill, { width: `${Math.min(parentXp.progress, 100)}%` as any, backgroundColor: colors.teal || '#14B8A6' }]} />
+                  </View>
+                  <Text style={[s.parentXpText, { color: colors.textMuted }]}>{parentXp.totalXp} / {parentXp.nextLevelXp} XP</Text>
+                </View>
+              </View>
+
+              {/* Earned badge pills */}
+              {parentBadges.filter(b => b.earned).length > 0 && (
+                <View style={{ marginTop: 10 }}>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                    {parentBadges
+                      .filter(b => b.earned)
+                      .sort((a, b) => {
+                        const order = ['legendary', 'epic', 'rare', 'uncommon', 'common'];
+                        return order.indexOf(a.rarity) - order.indexOf(b.rarity);
+                      })
+                      .map(badge => (
+                        <View key={badge.id} style={[s.parentBadgePill, { borderColor: getLevelTier(parentXp.level).color + '40' }]}>
+                          <Text style={{ fontSize: 14 }}>{badge.icon}</Text>
+                          <Text style={[s.parentBadgeName, { color: colors.text }]} numberOfLines={1}>{badge.name}</Text>
+                        </View>
+                      ))}
+                  </ScrollView>
+                </View>
+              )}
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* ================================================================ */}
       {/* SECTION 5: LAST CHAT PREVIEW (conditional)                        */}
       {/* ================================================================ */}
       {lastChat && (
@@ -1615,6 +1796,32 @@ export default function ParentDashboard() {
           </View>
         </TouchableOpacity>
       </Modal>
+
+    {/* Achievement Celebration Modal */}
+    {showCelebration && unseenAchievements.length > 0 && (
+      <AchievementCelebrationModal
+        unseen={unseenAchievements}
+        onDismiss={() => {
+          setShowCelebration(false);
+          if (user?.id) markAchievementsSeen(user.id);
+        }}
+        onViewAllTrophies={() => {
+          setShowCelebration(false);
+          if (user?.id) markAchievementsSeen(user.id);
+          router.push('/team-hub' as any);
+        }}
+        themeColors={{
+          bg: colors.background,
+          card: colors.card,
+          cardAlt: colors.cardAlt || colors.card,
+          border: colors.border,
+          text: colors.text,
+          textSecondary: colors.textSecondary,
+          textMuted: colors.textMuted,
+          gold: '#FFD700',
+        }}
+      />
+    )}
 
     </Animated.View>
   );
@@ -2009,6 +2216,100 @@ const createStyles = (colors: any) => StyleSheet.create({
     fontWeight: '600',
     color: '#14B8A6',
     marginTop: 6,
+  },
+
+  // ========== ENGAGEMENT SUMMARY (Section 4B) ==========
+  engagementRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: radii.card,
+    borderWidth: 1,
+  },
+  engagementLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  engagementBarBg: {
+    height: 6,
+    borderRadius: 3,
+    marginTop: 6,
+    overflow: 'hidden',
+  },
+  engagementBarFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  engagementMeta: {
+    fontSize: 11,
+    fontWeight: '500',
+    marginTop: 4,
+  },
+  engagementPill: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    gap: 4,
+    minWidth: 80,
+  },
+  engagementPillValue: {
+    fontSize: 22,
+    fontWeight: '900',
+  },
+  engagementPillLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+  },
+
+  // ========== PARENT ENGAGEMENT (Section 4C) ==========
+  parentLevelCard: {
+    borderRadius: radii.card,
+    borderWidth: 1,
+    padding: 14,
+    ...shadows.card,
+  },
+  parentLevelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  parentLevelLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  parentXpBarBg: {
+    height: 6,
+    borderRadius: 3,
+    overflow: 'hidden' as const,
+  },
+  parentXpBarFill: {
+    height: '100%' as any,
+    borderRadius: 3,
+  },
+  parentXpText: {
+    fontSize: 10,
+    marginTop: 2,
+  },
+  parentBadgePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.glassCard,
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    gap: 4,
+  },
+  parentBadgeName: {
+    fontSize: 11,
+    fontWeight: '600',
+    maxWidth: 80,
   },
 
   // ========== CHAT PREVIEW (Section 5) ==========
