@@ -36,6 +36,14 @@ type Organization = {
   [key: string]: any;
 };
 
+type OrphanPlayer = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  season_id: string;
+  family_id: string | null;
+};
+
 type AuthContextType = {
   session: Session | null;
   user: User | null;
@@ -44,6 +52,9 @@ type AuthContextType = {
   isAdmin: boolean;
   isPlatformAdmin: boolean;
   needsOnboarding: boolean;
+  hasOrphanRecords: boolean;
+  orphanPlayers: OrphanPlayer[];
+  clearOrphanFlag: () => void;
   loading: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
@@ -68,6 +79,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [hasOrphanRecords, setHasOrphanRecords] = useState(false);
+  const [orphanPlayers, setOrphanPlayers] = useState<OrphanPlayer[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -186,6 +199,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (pushErr) {
         console.error('Push token registration error:', pushErr);
       }
+
+      // Check for orphan records (web registrations without account link)
+      try {
+        const { data: orphans } = await supabase
+          .from('players')
+          .select('id, first_name, last_name, season_id, family_id')
+          .eq('parent_email', session.user.email!)
+          .is('parent_account_id', null)
+          .limit(10);
+
+        if (orphans && orphans.length > 0) {
+          setOrphanPlayers(orphans);
+          setHasOrphanRecords(true);
+        } else {
+          setOrphanPlayers([]);
+          setHasOrphanRecords(false);
+        }
+      } catch {
+        // Non-critical — skip orphan check
+      }
     } catch (err) {
       console.error('Auth init error:', err);
     }
@@ -199,6 +232,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const completeOnboarding = async () => {
     setNeedsOnboarding(false);
     await init();
+  };
+
+  const clearOrphanFlag = () => {
+    setHasOrphanRecords(false);
+    setOrphanPlayers([]);
   };
 
   // -----------------------------------------------
@@ -275,6 +313,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isAdmin,
       isPlatformAdmin,
       needsOnboarding,
+      hasOrphanRecords,
+      orphanPlayers,
+      clearOrphanFlag,
       loading,
       signUp,
       signIn,

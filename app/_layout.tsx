@@ -19,7 +19,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
-  const { session, loading, profile, needsOnboarding } = useAuth();
+  const { session, loading, profile, needsOnboarding, hasOrphanRecords } = useAuth();
   const { colors, isDark } = useTheme();
   const segments = useSegments();
   const router = useRouter();
@@ -44,6 +44,9 @@ function RootLayoutNav() {
       } else if (needsOnboarding) {
         hasNavigated.current = true;
         router.replace('/(auth)/league-setup');
+      } else if (hasOrphanRecords) {
+        hasNavigated.current = true;
+        router.replace('/claim-account' as any);
       } else {
         hasNavigated.current = true;
         router.replace('/(tabs)');
@@ -55,7 +58,7 @@ function RootLayoutNav() {
       hasNavigated.current = true;
       router.replace('/(auth)/league-setup');
     }
-  }, [session, loading, profile?.pending_approval, needsOnboarding]);
+  }, [session, loading, profile?.pending_approval, needsOnboarding, hasOrphanRecords]);
 
   useEffect(() => {
     hasNavigated.current = false;
