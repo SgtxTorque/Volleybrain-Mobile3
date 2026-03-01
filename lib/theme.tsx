@@ -4,7 +4,7 @@ import { Platform, ViewStyle } from 'react-native';
 
 type ThemeMode = 'dark' | 'light';
 
-export type AccentColor = 'steelblue' | 'orange' | 'blue' | 'purple' | 'green' | 'rose' | 'slate';
+export type AccentColor = 'lynx' | 'steelblue' | 'orange' | 'blue' | 'purple' | 'green' | 'rose' | 'slate';
 
 type AccentColorSet = {
   primary: string;
@@ -14,6 +14,7 @@ type AccentColorSet = {
 };
 
 export const accentColors: Record<AccentColor, AccentColorSet> = {
+  lynx:      { primary: '#4BB9EC', light: '#E8F4FD', dark: '#2A9BD4', glow: 'rgba(75, 185, 236, 0.15)' },
   steelblue: { primary: '#2C5F7C', light: '#E8F0F5', dark: '#1B3A52', glow: 'rgba(44, 95, 124, 0.15)' },
   orange: { primary: '#F97316', light: '#FFEDD5', dark: '#C2410C', glow: 'rgba(249, 115, 22, 0.15)' },
   blue:   { primary: '#0EA5E9', light: '#E0F2FE', dark: '#0369A1', glow: 'rgba(14, 165, 233, 0.15)' },
@@ -54,50 +55,50 @@ export type ThemeColors = {
   secondary: string;
 };
 
-// Dark colors — v0 design system
+// Dark colors — Lynx brand palette
 const darkColorsBase: ThemeColors = {
-  background: '#1B2838',
-  bgSecondary: '#243447',
-  bgTertiary: '#1B2838',
-  card: '#243447',
-  cardAlt: '#2C3E50',
-  border: '#2C3E50',
+  background: '#0A1B33',
+  bgSecondary: '#1A2332',
+  bgTertiary: '#0A1B33',
+  card: '#1A2332',
+  cardAlt: '#232F3E',
+  border: '#2A3545',
   text: '#E8F0F5',
   textSecondary: '#8899A6',
   textMuted: '#6B7C8A',
-  glassCard: '#243447',
-  glassBorder: '#2C3E50',
-  primary: '#2C5F7C',
-  success: '#22C55E',
-  warning: '#E8913A',
-  danger: '#D94F4F',
-  info: '#14B8A6',
+  glassCard: 'rgba(26, 35, 50, 0.85)',
+  glassBorder: '#2A3545',
+  primary: '#4BB9EC',
+  success: '#10B981',
+  warning: '#F59E0B',
+  danger: '#EF4444',
+  info: '#4BB9EC',
   teal: '#14B8A6',
   navy: '#E8F0F5',
-  secondary: '#2C3E50',
+  secondary: '#232F3E',
 };
 
-// Light colors — v0 design system
+// Light colors — Lynx brand palette
 const lightColorsBase: ThemeColors = {
-  background: '#FFFFFF',
-  bgSecondary: '#E8F0F5',
-  bgTertiary: '#D9E2E9',
+  background: '#F5F7FA',
+  bgSecondary: '#F0F3F7',
+  bgTertiary: '#DFE4EA',
   card: '#FFFFFF',
-  cardAlt: '#F5F7FA',
-  border: '#D9E2E9',
-  text: '#1B2838',
-  textSecondary: '#6B7C8A',
+  cardAlt: '#F0F3F7',
+  border: '#DFE4EA',
+  text: '#10284C',
+  textSecondary: '#5A6B7F',
   textMuted: '#8899A6',
   glassCard: '#FFFFFF',
-  glassBorder: '#D9E2E9',
-  primary: '#2C5F7C',
-  success: '#22C55E',
-  warning: '#E8913A',
-  danger: '#D94F4F',
-  info: '#14B8A6',
+  glassBorder: '#DFE4EA',
+  primary: '#4BB9EC',
+  success: '#10B981',
+  warning: '#F59E0B',
+  danger: '#EF4444',
+  info: '#4BB9EC',
   teal: '#14B8A6',
-  navy: '#1B2838',
-  secondary: '#E8F0F5',
+  navy: '#10284C',
+  secondary: '#F0F3F7',
 };
 
 type ThemeContextType = {
@@ -114,8 +115,8 @@ type ThemeContextType = {
 const ThemeContext = createContext<ThemeContextType>({
   mode: 'light',
   colors: lightColorsBase,
-  accent: accentColors.steelblue,
-  accentColor: 'steelblue',
+  accent: accentColors.lynx,
+  accentColor: 'lynx',
   changeAccent: () => {},
   toggleTheme: () => {},
   setTheme: () => {},
@@ -124,7 +125,7 @@ const ThemeContext = createContext<ThemeContextType>({
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [mode, setMode] = useState<ThemeMode>('light');
-  const [accentColor, setAccentColor] = useState<AccentColor>('steelblue');
+  const [accentColor, setAccentColor] = useState<AccentColor>('lynx');
 
   useEffect(() => {
     loadPreferences();
