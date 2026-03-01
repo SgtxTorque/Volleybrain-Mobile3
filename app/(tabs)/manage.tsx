@@ -25,7 +25,6 @@ type AttentionCard = {
   key: string;
   label: string;
   count: number;
-  icon: keyof typeof Ionicons.glyphMap;
   color: string;
   route: string;
 };
@@ -216,7 +215,6 @@ export default function ManageScreen() {
       key: 'regs',
       label: 'Pending\nRegistrations',
       count: counts.pendingRegs,
-      icon: 'person-add',
       color: counts.pendingRegs > 0 ? colors.danger : colors.success,
       route: '/registration-hub',
     },
@@ -224,7 +222,6 @@ export default function ManageScreen() {
       key: 'payments',
       label: 'Unpaid\nBalances',
       count: counts.unpaidBalances,
-      icon: 'card',
       color: counts.unpaidBalances > 0 ? colors.warning : colors.success,
       route: '/(tabs)/payments',
     },
@@ -232,7 +229,6 @@ export default function ManageScreen() {
       key: 'unrostered',
       label: 'Unrostered\nPlayers',
       count: counts.unrostered,
-      icon: 'people',
       color: counts.unrostered > 0 ? colors.info : colors.success,
       route: '/team-management',
     },
@@ -240,7 +236,6 @@ export default function ManageScreen() {
       key: 'approvals',
       label: 'Pending\nApprovals',
       count: counts.pendingApprovals,
-      icon: 'shield-checkmark',
       color: counts.pendingApprovals > 0 ? colors.danger : colors.success,
       route: '/users',
     },
@@ -630,7 +625,7 @@ const createStyles = (colors: any) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      paddingVertical: 12,
+      paddingVertical: 16,
       gap: 6,
     },
     activityViewAllText: {
