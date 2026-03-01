@@ -8,7 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useState } from 'react';
-import { Dimensions, LayoutAnimation, Platform, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, UIManager, View } from 'react-native';
+import { Alert, Dimensions, LayoutAnimation, Platform, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, UIManager, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   interpolate,
@@ -188,7 +188,7 @@ export default function GestureDrawer() {
   const { isOpen, closeDrawer, openDrawer } = useDrawer();
   const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
-  const { user, profile, organization } = useAuth();
+  const { user, profile, organization, signOut } = useAuth();
   const { actualRoles, isAdmin, isCoach, isParent, isPlayer } = usePermissions();
   const router = useRouter();
 
@@ -297,13 +297,34 @@ export default function GestureDrawer() {
     setTimeout(() => router.push(route as never), 150);
   };
 
+  const handleSignOut = () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: () => {
+            closeDrawer();
+            setTimeout(() => signOut(), 200);
+          },
+        },
+      ],
+    );
+  };
+
   // 0 = closed, 1 = open
   const progress = useSharedValue(0);
   const dragStartX = useSharedValue(0);
   const isDragging = useSharedValue(false);
 
-  // Sync isOpen state → animation
+  // Sync isOpen state → animation + haptic on open
   useEffect(() => {
+    if (isOpen) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
     progress.value = withSpring(isOpen ? 1 : 0, SPRING_CONFIG);
   }, [isOpen]);
 
@@ -602,6 +623,22 @@ export default function GestureDrawer() {
               );
             })}
           </ScrollView>
+
+          {/* ====== FOOTER ====== */}
+          <View style={styles.footer}>
+            <View style={[styles.footerDivider, { backgroundColor: colors.border }]} />
+            <TouchableOpacity
+              style={styles.signOutButton}
+              onPress={handleSignOut}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="log-out-outline" size={20} color={colors.danger} />
+              <Text style={[styles.signOutText, { color: colors.danger }]}>Sign Out</Text>
+            </TouchableOpacity>
+            <Text style={[styles.versionText, { color: colors.textMuted }]}>
+              Lynx v1.0.0
+            </Text>
+          </View>
         </Animated.View>
       </GestureDetector>
     </>
@@ -816,5 +853,30 @@ const styles = StyleSheet.create({
   },
   menuItemChevron: {
     marginLeft: 4,
+  },
+  // Footer
+  footer: {
+    paddingHorizontal: 20,
+    paddingBottom: 8,
+  },
+  footerDivider: {
+    height: StyleSheet.hairlineWidth,
+    marginBottom: 8,
+  },
+  signOutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  signOutText: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginLeft: 10,
+  },
+  versionText: {
+    fontSize: 11,
+    textAlign: 'center',
+    paddingTop: 4,
+    paddingBottom: 4,
   },
 });
