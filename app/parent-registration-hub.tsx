@@ -448,7 +448,7 @@ export default function ParentRegistrationHub() {
                 <TouchableOpacity
                   key={season.id}
                   style={s.seasonCard}
-                  onPress={() => router.push(`/(auth)/parent-register?seasonId=${season.id}` as any)}
+                  onPress={() => router.push(`/register/${season.id}` as any)}
                   activeOpacity={0.8}
                 >
                   <View style={s.seasonCardHeader}>

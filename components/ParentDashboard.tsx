@@ -1747,7 +1747,7 @@ export default function ParentDashboard() {
             </View>
             <Text style={s.emptyHeroTitle}>No athletes registered yet</Text>
             <Text style={s.emptyHeroSub}>Register your child to get started</Text>
-            <TouchableOpacity style={s.emptyHeroBtn} onPress={() => router.push('/(auth)/parent-register')}>
+            <TouchableOpacity style={s.emptyHeroBtn} onPress={() => router.push('/parent-registration-hub' as any)}>
               <Ionicons name="add-circle" size={20} color="#FFF" />
               <Text style={s.emptyHeroBtnText}>Register a Child</Text>
             </TouchableOpacity>
