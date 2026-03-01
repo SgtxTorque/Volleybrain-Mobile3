@@ -463,6 +463,20 @@ export default function RegistrationWizardScreen() {
       }
     }
 
+    // Validate waivers step
+    if (stepKey === 'waivers' && data) {
+      for (const [key, waiver] of Object.entries(data.config.waivers)) {
+        if (waiver.enabled && waiver.required && !waiverState[key]) {
+          Alert.alert('Required Waiver', `You must accept the "${waiver.title}" to continue.`);
+          return;
+        }
+      }
+      if (!signature.trim()) {
+        Alert.alert('Signature Required', 'Please type your full name as a digital signature.');
+        return;
+      }
+    }
+
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
     }
@@ -981,14 +995,57 @@ export default function RegistrationWizardScreen() {
               </View>
             )}
           </View>
+        ) : currentStepDef?.key === 'waivers' && data ? (
+          /* ============ WAIVERS & SIGNATURE STEP ============ */
+          <View style={s.stepContainer}>
+            <Text style={s.sectionTitle}>Waivers & Agreements</Text>
+
+            {Object.entries(data.config.waivers)
+              .filter(([_, w]) => w.enabled)
+              .map(([key, waiver]) => {
+                const accepted = waiverState[key] || false;
+                return (
+                  <View key={key} style={s.waiverCard}>
+                    <TouchableOpacity
+                      style={s.waiverHeader}
+                      onPress={() => setWaiverState(prev => ({ ...prev, [key]: !prev[key] }))}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[s.checkbox, accepted && { backgroundColor: accentColor, borderColor: accentColor }]}>
+                        {accepted && <Ionicons name="checkmark" size={14} color="#FFF" />}
+                      </View>
+                      <Text style={s.waiverTitle}>
+                        {waiver.title}
+                        {waiver.required && <Text style={s.required}> *</Text>}
+                      </Text>
+                    </TouchableOpacity>
+                    <Text style={s.waiverText}>{waiver.text}</Text>
+                  </View>
+                );
+              })}
+
+            {/* Digital Signature */}
+            <View style={s.signatureSection}>
+              <Text style={s.sectionTitle}>Digital Signature</Text>
+              <Text style={s.signatureHint}>
+                By typing your full name below, you agree to the terms above.
+              </Text>
+              <TextInput
+                style={s.signatureInput}
+                value={signature}
+                onChangeText={setSignature}
+                placeholder={sharedInfo.parent1_name || 'Full legal name'}
+                placeholderTextColor={colors.textMuted}
+                autoCapitalize="words"
+              />
+            </View>
+          </View>
         ) : (
-          /* ============ PLACEHOLDER FOR REMAINING STEPS ============ */
+          /* ============ PLACEHOLDER (review step built in Phase 6) ============ */
           <View style={s.stepPlaceholder}>
             <Ionicons name="construct-outline" size={36} color={colors.textMuted} />
             <Text style={s.placeholderTitle}>{currentStepDef?.label}</Text>
-            <Text style={s.placeholderText}>This step will be built in Phase {
-              currentStepDef?.key === 'waivers' ? '5' : '6'
-            }.</Text>
+            <Text style={s.placeholderText}>This step will be built in Phase 6.</Text>
           </View>
         )}
       </ScrollView>
@@ -1401,6 +1458,54 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: colors.textSecondary,
+  },
+
+  // Waiver cards
+  waiverCard: {
+    backgroundColor: colors.card,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 14,
+    gap: 10,
+    ...shadows.card,
+  },
+  waiverHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  waiverTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text,
+    flex: 1,
+  },
+  waiverText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    lineHeight: 19,
+    marginLeft: 36,
+  },
+
+  // Digital signature
+  signatureSection: {
+    gap: 8,
+    marginTop: 8,
+  },
+  signatureHint: {
+    fontSize: 13,
+    color: colors.textMuted,
+    lineHeight: 18,
+  },
+  signatureInput: {
+    backgroundColor: colors.background,
+    borderBottomWidth: 2,
+    borderBottomColor: colors.border,
+    padding: 14,
+    fontSize: 18,
+    color: colors.text,
+    fontStyle: 'italic',
   },
 
   // Medical toggle
