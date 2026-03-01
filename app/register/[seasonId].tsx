@@ -156,6 +156,9 @@ export default function RegistrationWizardScreen() {
     options: { label: string; value: string }[];
   }>({ visible: false, field: '', title: '', options: [] });
 
+  // Emergency/Medical (Phase 4)
+  const [showMedicalFields, setShowMedicalFields] = useState(false);
+
   // Load config on mount
   useEffect(() => {
     if (!seasonId) return;
@@ -374,6 +377,16 @@ export default function RegistrationWizardScreen() {
     }
   }, []);
 
+  // Update shared info field (parent, emergency, medical)
+  const updateSharedField = useCallback((field: string, value: string) => {
+    setSharedInfo(prev => ({ ...prev, [field]: value }));
+  }, []);
+
+  // Update custom answer
+  const updateCustomAnswer = useCallback((index: number, value: string) => {
+    setCustomAnswers(prev => ({ ...prev, [String(index)]: value }));
+  }, []);
+
   const handleBack = () => {
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
@@ -412,6 +425,38 @@ export default function RegistrationWizardScreen() {
           if (fieldCfg?.enabled && fieldCfg.required && !child[key]?.trim()) {
             setActiveChildIndex(i);
             Alert.alert('Required Field', `Please fill in "${fieldCfg.label}" for ${child.first_name || `Child #${i + 1}`}.`);
+            return;
+          }
+        }
+      }
+    }
+
+    // Validate parent step
+    if (stepKey === 'parent' && data) {
+      for (const key of FIELD_ORDER.parent_fields) {
+        const fieldCfg = data.config.parent_fields[key];
+        if (fieldCfg?.enabled && fieldCfg.required && !sharedInfo[key]?.trim()) {
+          Alert.alert('Required Field', `Please fill in "${fieldCfg.label}".`);
+          return;
+        }
+      }
+    }
+
+    // Validate emergency step
+    if (stepKey === 'emergency' && data) {
+      for (const key of FIELD_ORDER.emergency_fields) {
+        const fieldCfg = data.config.emergency_fields[key];
+        if (fieldCfg?.enabled && fieldCfg.required && !sharedInfo[key]?.trim()) {
+          Alert.alert('Required Field', `Please fill in "${fieldCfg.label}".`);
+          return;
+        }
+      }
+      // Validate required custom questions
+      if (data.config.custom_questions?.length) {
+        for (let i = 0; i < data.config.custom_questions.length; i++) {
+          const q = data.config.custom_questions[i];
+          if (q.required && !customAnswers[String(i)]?.trim()) {
+            Alert.alert('Required Question', `Please answer: "${q.question}"`);
             return;
           }
         }
@@ -778,16 +823,171 @@ export default function RegistrationWizardScreen() {
               </View>
             )}
           </View>
+        ) : currentStepDef?.key === 'parent' && data ? (
+          /* ============ PARENT/GUARDIAN STEP ============ */
+          <View style={s.stepContainer}>
+            <Text style={s.sectionTitle}>Parent / Guardian Information</Text>
+            <Text style={s.sectionSubtitle}>This info is shared across all children</Text>
+
+            <View style={s.fieldsContainer}>
+              {FIELD_ORDER.parent_fields
+                .filter(key => data.config.parent_fields[key]?.enabled)
+                .map(key => {
+                  const fieldCfg = data.config.parent_fields[key];
+                  const value = sharedInfo[key] || '';
+
+                  // Group dividers
+                  const showParent2Header = key === 'parent2_name';
+                  const showAddressHeader = key === 'address';
+
+                  return (
+                    <View key={key}>
+                      {showParent2Header && (
+                        <Text style={[s.sectionTitle, { marginTop: 8 }]}>Second Parent/Guardian</Text>
+                      )}
+                      {showAddressHeader && (
+                        <Text style={[s.sectionTitle, { marginTop: 8 }]}>Address</Text>
+                      )}
+                      <View style={s.fieldBlock}>
+                        <Text style={s.fieldLabel}>
+                          {fieldCfg.label}
+                          {fieldCfg.required && <Text style={s.required}> *</Text>}
+                        </Text>
+                        <TextInput
+                          style={s.input}
+                          value={value}
+                          onChangeText={v => updateSharedField(key, v)}
+                          placeholder={fieldCfg.label}
+                          placeholderTextColor={colors.textMuted}
+                          keyboardType={key.includes('email') ? 'email-address' : key.includes('phone') ? 'phone-pad' : 'default'}
+                          autoCapitalize={key.includes('email') ? 'none' : key.includes('name') ? 'words' : 'sentences'}
+                          autoComplete={key.includes('email') ? 'email' : key.includes('phone') ? 'tel' : undefined}
+                        />
+                      </View>
+                    </View>
+                  );
+                })}
+            </View>
+          </View>
+        ) : currentStepDef?.key === 'emergency' && data ? (
+          /* ============ EMERGENCY & MEDICAL STEP ============ */
+          <View style={s.stepContainer}>
+            {/* Emergency Contact */}
+            {Object.values(data.config.emergency_fields).some(f => f.enabled) && (
+              <View style={s.sectionBlock}>
+                <Text style={s.sectionTitle}>Emergency Contact</Text>
+                <View style={s.fieldsContainer}>
+                  {FIELD_ORDER.emergency_fields
+                    .filter(key => data.config.emergency_fields[key]?.enabled)
+                    .map(key => {
+                      const fieldCfg = data.config.emergency_fields[key];
+                      return (
+                        <View key={key} style={s.fieldBlock}>
+                          <Text style={s.fieldLabel}>
+                            {fieldCfg.label}
+                            {fieldCfg.required && <Text style={s.required}> *</Text>}
+                          </Text>
+                          <TextInput
+                            style={s.input}
+                            value={sharedInfo[key] || ''}
+                            onChangeText={v => updateSharedField(key, v)}
+                            placeholder={fieldCfg.label}
+                            placeholderTextColor={colors.textMuted}
+                            keyboardType={key.includes('phone') ? 'phone-pad' : 'default'}
+                            autoCapitalize={key.includes('name') ? 'words' : 'sentences'}
+                          />
+                        </View>
+                      );
+                    })}
+                </View>
+              </View>
+            )}
+
+            {/* Medical Info */}
+            {Object.values(data.config.medical_fields).some(f => f.enabled) && (
+              <View style={s.sectionBlock}>
+                <Text style={s.sectionTitle}>Medical Information</Text>
+                <View style={s.medicalToggle}>
+                  <Text style={s.medicalToggleText}>
+                    Does your child have any medical conditions, allergies, or take medications?
+                  </Text>
+                  <View style={s.toggleRow}>
+                    <TouchableOpacity
+                      style={[s.toggleBtn, !showMedicalFields && { backgroundColor: colors.border }]}
+                      onPress={() => setShowMedicalFields(false)}
+                    >
+                      <Text style={[s.toggleBtnText, !showMedicalFields && { fontWeight: '700' }]}>No</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[s.toggleBtn, showMedicalFields && { backgroundColor: accentColor }]}
+                      onPress={() => setShowMedicalFields(true)}
+                    >
+                      <Text style={[s.toggleBtnText, showMedicalFields && { color: '#FFF', fontWeight: '700' }]}>Yes</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {showMedicalFields && (
+                  <View style={s.fieldsContainer}>
+                    {FIELD_ORDER.medical_fields
+                      .filter(key => data.config.medical_fields[key]?.enabled)
+                      .map(key => {
+                        const fieldCfg = data.config.medical_fields[key];
+                        return (
+                          <View key={key} style={s.fieldBlock}>
+                            <Text style={s.fieldLabel}>
+                              {fieldCfg.label}
+                              {fieldCfg.required && <Text style={s.required}> *</Text>}
+                            </Text>
+                            <TextInput
+                              style={[s.input, { minHeight: 60, textAlignVertical: 'top' }]}
+                              value={sharedInfo[key] || ''}
+                              onChangeText={v => updateSharedField(key, v)}
+                              placeholder={fieldCfg.label}
+                              placeholderTextColor={colors.textMuted}
+                              multiline
+                              keyboardType={key.includes('phone') ? 'phone-pad' : 'default'}
+                            />
+                          </View>
+                        );
+                      })}
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* Custom Questions */}
+            {data.config.custom_questions?.length > 0 && (
+              <View style={s.sectionBlock}>
+                <Text style={s.sectionTitle}>Additional Questions</Text>
+                <View style={s.fieldsContainer}>
+                  {data.config.custom_questions.map((q, idx) => (
+                    <View key={`cq-${idx}`} style={s.fieldBlock}>
+                      <Text style={s.fieldLabel}>
+                        {q.question}
+                        {q.required && <Text style={s.required}> *</Text>}
+                      </Text>
+                      <TextInput
+                        style={[s.input, { minHeight: 60, textAlignVertical: 'top' }]}
+                        value={customAnswers[String(idx)] || ''}
+                        onChangeText={v => updateCustomAnswer(idx, v)}
+                        placeholder="Your answer"
+                        placeholderTextColor={colors.textMuted}
+                        multiline
+                      />
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+          </View>
         ) : (
-          /* ============ PLACEHOLDER FOR OTHER STEPS ============ */
+          /* ============ PLACEHOLDER FOR REMAINING STEPS ============ */
           <View style={s.stepPlaceholder}>
             <Ionicons name="construct-outline" size={36} color={colors.textMuted} />
             <Text style={s.placeholderTitle}>{currentStepDef?.label}</Text>
             <Text style={s.placeholderText}>This step will be built in Phase {
-              currentStepDef?.key === 'parent' ? '4' :
-              currentStepDef?.key === 'emergency' ? '4' :
-              currentStepDef?.key === 'waivers' ? '5' :
-              '6'
+              currentStepDef?.key === 'waivers' ? '5' : '6'
             }.</Text>
           </View>
         )}
@@ -1201,6 +1401,38 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: colors.textSecondary,
+  },
+
+  // Medical toggle
+  medicalToggle: {
+    backgroundColor: colors.card,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 14,
+    gap: 10,
+  },
+  medicalToggleText: {
+    fontSize: 14,
+    color: colors.text,
+    lineHeight: 20,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  toggleBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  toggleBtnText: {
+    fontSize: 15,
+    color: colors.text,
   },
 
   // Player info — child tabs
