@@ -4,6 +4,7 @@ import { useFirstTimeWelcome } from '@/lib/first-time-welcome';
 import { usePermissions } from '@/lib/permissions-context';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
+import { useDrawerBadges } from '@/hooks/useDrawerBadges';
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -23,9 +24,13 @@ export default function TabLayout() {
   const showCoachTabs = isCoach && !isAdmin;
   // Admin gets the redesigned admin tab layout
   const showAdminTabs = isAdmin;
+  // Default role (player or no specific role) — not parent, coach, or admin
+  const showDefaultTabs = !showParentTabs && !showCoachTabs && !showAdminTabs;
   useFirstTimeWelcome(primaryRole);
   const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [unreadAlertCount, setUnreadAlertCount] = useState(0);
+  // Drawer badge counts for More tab
+  const { totalActionable } = useDrawerBadges(true);
 
   // Fetch unread counts
   useEffect(() => {
@@ -202,21 +207,8 @@ export default function TabLayout() {
         }}
       />
 
-      {/* MANAGE — hidden for parent and coach roles */}
-      <Tabs.Screen
-        name="manage"
-        options={{
-          href: (showParentTabs || showCoachTabs || showAdminTabs) ? null : undefined,
-          title: 'Manage',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? 'construct' : 'construct-outline'}
-              size={24}
-              color={color}
-            />
-          ),
-        }}
-      />
+      {/* MANAGE — hidden for ALL roles, content moved to drawer */}
+      <Tabs.Screen name="manage" options={{ href: null }} />
 
       {/* ME — hidden, replaced by drawer profile */}
       <Tabs.Screen name="me" options={{ href: null }} />
@@ -386,7 +378,23 @@ export default function TabLayout() {
 
       {/* ====== HIDDEN TABS ====== */}
       <Tabs.Screen name="schedule" options={{ href: null }} />
-      <Tabs.Screen name="chats" options={{ href: null }} />
+      {/* CHAT (Default/Player) */}
+      <Tabs.Screen
+        name="chats"
+        options={{
+          href: showDefaultTabs ? undefined : null,
+          title: 'Chat',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline'}
+              size={24}
+              color={color}
+            />
+          ),
+          tabBarBadge: showDefaultTabs && totalUnread > 0 ? totalUnread : undefined,
+          tabBarBadgeStyle: { backgroundColor: colors.danger, fontSize: 10 },
+        }}
+      />
       <Tabs.Screen name="messages" options={{ href: null }} />
       <Tabs.Screen name="players" options={{ href: null }} />
       <Tabs.Screen name="teams" options={{ href: null }} />
@@ -404,6 +412,8 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => (
             <Ionicons name="menu" size={24} color={color} />
           ),
+          tabBarBadge: totalActionable > 0 ? (totalActionable > 99 ? '99+' : totalActionable) : undefined,
+          tabBarBadgeStyle: { backgroundColor: colors.danger, fontSize: 10 },
           tabBarButton: ({ children, style }) => (
             <Pressable style={style} onPress={openDrawer}>
               {children}
