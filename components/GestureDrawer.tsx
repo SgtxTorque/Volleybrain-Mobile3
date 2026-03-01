@@ -8,7 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import React, { useCallback, useEffect, useState } from 'react';
-import { Dimensions, Platform, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, LayoutAnimation, Platform, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, UIManager, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   interpolate,
@@ -35,6 +35,152 @@ const ROLE_DISPLAY: Record<UserRole, string> = {
   parent: 'Parent',
   player: 'Player',
 };
+
+// Enable LayoutAnimation on Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+type MenuItem = {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  route: string;
+  webOnly?: boolean;
+};
+
+type MenuSection = {
+  id: string;
+  title: string;
+  items: MenuItem[];
+  collapsible: boolean;
+  defaultOpen: boolean;
+  roleGate?: 'admin' | 'coach' | 'admin_coach' | 'parent' | 'player';
+};
+
+const MENU_SECTIONS: MenuSection[] = [
+  {
+    id: 'quick',
+    title: 'Quick Access',
+    collapsible: false,
+    defaultOpen: true,
+    items: [
+      { icon: 'home', label: 'Home', route: '/(tabs)' },
+      { icon: 'calendar', label: 'Schedule', route: '/(tabs)/schedule' },
+      { icon: 'chatbubble-ellipses', label: 'Chats', route: '/(tabs)/chats' },
+      { icon: 'megaphone-outline', label: 'Announcements', route: '/(tabs)/messages' },
+      { icon: 'people', label: 'Team Wall', route: '/(tabs)/connect' },
+    ],
+  },
+  {
+    id: 'admin',
+    title: 'Admin Tools',
+    collapsible: true,
+    defaultOpen: true,
+    roleGate: 'admin',
+    items: [
+      { icon: 'person-add', label: 'Registration Hub', route: '/registration-hub' },
+      { icon: 'people-circle', label: 'User Management', route: '/users' },
+      { icon: 'card', label: 'Payment Admin', route: '/(tabs)/payments' },
+      { icon: 'shirt', label: 'Team Management', route: '/team-management' },
+      { icon: 'shirt-outline', label: 'Jersey Management', route: '/(tabs)/jersey-management' },
+      { icon: 'clipboard', label: 'Coach Directory', route: '/coach-directory' },
+      { icon: 'calendar-outline', label: 'Season Management', route: '/season-settings' },
+      { icon: 'bar-chart', label: 'Reports & Analytics', route: '/(tabs)/reports-tab' },
+      { icon: 'business', label: 'Org Directory', route: '/org-directory' },
+      { icon: 'archive', label: 'Season Archives', route: '/season-archives' },
+      { icon: 'megaphone', label: 'Blast Composer', route: '/blast-composer' },
+      { icon: 'time', label: 'Blast History', route: '/blast-history' },
+      { icon: 'document-text', label: 'Form Builder', route: '/web-features', webOnly: true },
+      { icon: 'shield-checkmark', label: 'Waiver Editor', route: '/web-features', webOnly: true },
+      { icon: 'card-outline', label: 'Payment Gateway', route: '/web-features', webOnly: true },
+      { icon: 'settings-outline', label: 'Org Settings', route: '/web-features', webOnly: true },
+    ],
+  },
+  {
+    id: 'coaching',
+    title: 'Coaching Tools',
+    collapsible: true,
+    defaultOpen: false,
+    roleGate: 'admin_coach',
+    items: [
+      { icon: 'analytics', label: 'Game Prep', route: '/game-prep' },
+      { icon: 'grid', label: 'Lineup Builder', route: '/lineup-builder' },
+      { icon: 'checkmark-circle', label: 'Attendance', route: '/attendance' },
+      { icon: 'stats-chart', label: 'Game Results', route: '/game-results' },
+      { icon: 'calendar-outline', label: 'Coach Availability', route: '/coach-availability' },
+      { icon: 'person-circle', label: 'Coach Profile', route: '/coach-profile' },
+      { icon: 'shirt', label: 'My Teams', route: '/(tabs)/my-teams' },
+      { icon: 'people', label: 'Roster', route: '/(tabs)/players' },
+    ],
+  },
+  {
+    id: 'family',
+    title: 'My Family',
+    collapsible: true,
+    defaultOpen: true,
+    roleGate: 'parent',
+    items: [
+      { icon: 'people', label: 'My Children', route: '/my-kids' },
+      { icon: 'clipboard', label: 'Registration', route: '/parent-registration-hub' },
+      { icon: 'wallet', label: 'Payments', route: '/family-payments' },
+      { icon: 'document-text', label: 'Waivers', route: '/my-waivers' },
+      { icon: 'share-social', label: 'Invite Friends', route: '/invite-friends' },
+      { icon: 'lock-closed', label: 'Data Rights', route: '/data-rights' },
+    ],
+  },
+  {
+    id: 'player',
+    title: 'My Stuff',
+    collapsible: true,
+    defaultOpen: true,
+    roleGate: 'player',
+    items: [
+      { icon: 'shirt', label: 'My Teams', route: '/(tabs)/my-teams' },
+      { icon: 'stats-chart', label: 'My Stats', route: '/my-stats' },
+      { icon: 'ribbon', label: 'Achievements', route: '/achievements' },
+      { icon: 'calendar', label: 'Schedule', route: '/(tabs)/schedule' },
+    ],
+  },
+  {
+    id: 'community',
+    title: 'League & Community',
+    collapsible: true,
+    defaultOpen: false,
+    items: [
+      { icon: 'people', label: 'Team Wall', route: '/(tabs)/connect' },
+      { icon: 'trophy', label: 'Standings', route: '/standings' },
+      { icon: 'ribbon', label: 'Achievements', route: '/achievements' },
+      { icon: 'school', label: 'Coach Directory', route: '/coach-directory' },
+      { icon: 'business', label: 'Find Organizations', route: '/org-directory' },
+    ],
+  },
+  {
+    id: 'settings',
+    title: 'Settings & Privacy',
+    collapsible: true,
+    defaultOpen: false,
+    items: [
+      { icon: 'person-circle', label: 'My Profile', route: '/profile' },
+      { icon: 'settings', label: 'Settings', route: '/(tabs)/settings' },
+      { icon: 'notifications-outline', label: 'Notifications', route: '/notification-preferences' },
+      { icon: 'calendar', label: 'Season Settings', route: '/season-settings' },
+      { icon: 'archive', label: 'Season History', route: '/season-archives' },
+      { icon: 'shield-checkmark', label: 'Privacy Policy', route: '/privacy-policy' },
+      { icon: 'document', label: 'Terms of Service', route: '/terms-of-service' },
+    ],
+  },
+  {
+    id: 'help',
+    title: 'Help & Support',
+    collapsible: true,
+    defaultOpen: false,
+    items: [
+      { icon: 'help-circle', label: 'Help Center', route: '/help' },
+      { icon: 'globe', label: 'Web Features', route: '/web-features' },
+      { icon: 'lock-closed', label: 'Data Rights', route: '/data-rights' },
+    ],
+  },
+];
 
 export default function GestureDrawer() {
   const { isOpen, closeDrawer, openDrawer } = useDrawer();
@@ -137,6 +283,40 @@ export default function GestureDrawer() {
   }, [isOpen, fetchBadgeCounts]);
 
   const handleShortcutPress = (route: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    closeDrawer();
+    setTimeout(() => router.push(route as never), 150);
+  };
+
+  // ====== MENU SECTIONS ======
+  // Filter sections by role
+  const visibleSections = MENU_SECTIONS.filter((s) => {
+    if (!s.roleGate) return true;
+    if (s.roleGate === 'admin') return isAdmin;
+    if (s.roleGate === 'coach') return isCoach;
+    if (s.roleGate === 'admin_coach') return isAdmin || isCoach;
+    if (s.roleGate === 'parent') return isParent;
+    if (s.roleGate === 'player') return isPlayer;
+    return true;
+  });
+
+  // Track collapsed state per section
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    MENU_SECTIONS.forEach((s) => {
+      if (s.collapsible) {
+        initial[s.id] = !s.defaultOpen;
+      }
+    });
+    return initial;
+  });
+
+  const toggleSection = (id: string) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setCollapsedSections((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const handleMenuItemPress = (route: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     closeDrawer();
     setTimeout(() => router.push(route as never), 150);
@@ -368,12 +548,75 @@ export default function GestureDrawer() {
             </ScrollView>
           </View>
 
-          {/* ====== MENU BODY (Phase 3) ====== */}
-          <View style={styles.menuBody}>
-            <Text style={[styles.menuPlaceholder, { color: colors.textMuted }]}>
-              Menu sections coming in Phase 3
-            </Text>
-          </View>
+          {/* ====== MENU SECTIONS ====== */}
+          <ScrollView
+            style={styles.menuBody}
+            contentContainerStyle={styles.menuContent}
+            showsVerticalScrollIndicator={false}
+            bounces
+          >
+            {visibleSections.map((section, sectionIdx) => {
+              const isCollapsed = collapsedSections[section.id];
+              return (
+                <View key={section.id}>
+                  {/* Section divider */}
+                  {sectionIdx > 0 && (
+                    <View style={[styles.sectionDivider, { backgroundColor: colors.border }]} />
+                  )}
+
+                  {/* Section header */}
+                  {section.collapsible ? (
+                    <TouchableOpacity
+                      style={styles.sectionHeader}
+                      onPress={() => toggleSection(section.id)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+                        {section.title}
+                      </Text>
+                      <Ionicons
+                        name={isCollapsed ? 'chevron-down' : 'chevron-up'}
+                        size={16}
+                        color={colors.textMuted}
+                      />
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={styles.sectionHeader}>
+                      <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+                        {section.title}
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* Section items */}
+                  {!isCollapsed && section.items.map((item) => (
+                    <TouchableOpacity
+                      key={item.label + item.route}
+                      style={styles.menuItem}
+                      onPress={() => handleMenuItemPress(item.route)}
+                      activeOpacity={0.65}
+                    >
+                      <View style={[styles.menuItemIcon, { backgroundColor: isDark ? colors.background : colors.border + '50' }]}>
+                        <Ionicons name={item.icon} size={18} color={colors.primary} />
+                      </View>
+                      <Text
+                        style={[styles.menuItemLabel, { color: colors.text }]}
+                        numberOfLines={1}
+                      >
+                        {item.label}
+                      </Text>
+                      {item.webOnly && (
+                        <View style={[styles.webBadge, { backgroundColor: colors.primary + '20' }]}>
+                          <Text style={[styles.webBadgeText, { color: colors.primary }]}>Web</Text>
+                        </View>
+                      )}
+                      <Ionicons name="chevron-forward" size={14} color={colors.textMuted} style={styles.menuItemChevron} />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              );
+            })}
+          </ScrollView>
         </Animated.View>
       </GestureDetector>
     </>
@@ -509,14 +752,62 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 13,
   },
-  // Menu body
+  // Menu sections
   menuBody: {
     flex: 1,
-    justifyContent: 'center',
+  },
+  menuContent: {
+    paddingBottom: 24,
+  },
+  sectionDivider: {
+    height: StyleSheet.hairlineWidth,
+    marginHorizontal: 16,
+    marginVertical: 4,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
     paddingHorizontal: 20,
   },
-  menuPlaceholder: {
+  menuItemIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  menuItemLabel: {
+    flex: 1,
     fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 12,
+  },
+  webBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  webBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  menuItemChevron: {
+    marginLeft: 4,
   },
 });
