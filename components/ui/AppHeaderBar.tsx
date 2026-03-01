@@ -1,10 +1,10 @@
 import RoleSelector from '@/components/RoleSelector';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 type AppHeaderBarProps = {
-  /** Show VOLLEYBRAIN logo (default true). Set false when using `title`. */
+  /** Show LYNX logo (default true). Set false when using `title`. */
   showLogo?: boolean;
   /** Screen title shown instead of logo (e.g. "SCHEDULE", "TEAM WALL"). */
   title?: string;
@@ -51,10 +51,12 @@ export default function AppHeaderBar({
           </TouchableOpacity>
         ) : showLogo ? (
           <>
-            <View style={styles.logoCircle}>
-              <Ionicons name="globe-outline" size={14} color="#FFF" />
-            </View>
-            <Text style={styles.logoText}>VOLLEYBRAIN</Text>
+            <Image
+              source={require('@/assets/images/lynx-icon.png')}
+              style={styles.logoIcon}
+              resizeMode="contain"
+            />
+            <Text style={styles.logoText}>LYNX</Text>
           </>
         ) : null}
         {title ? <Text style={styles.titleText}>{title}</Text> : null}
@@ -88,7 +90,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#2C5F7C',
+    backgroundColor: '#10284C',
     paddingVertical: 8,
     paddingHorizontal: 16,
     minHeight: 48,
@@ -98,13 +100,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  logoCircle: {
+  logoIcon: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   logoText: {
     fontSize: 12,
@@ -136,7 +135,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     backgroundColor: '#D94F4F',
     borderWidth: 1.5,
-    borderColor: '#2C5F7C',
+    borderColor: '#10284C',
   },
   avatar: {
     width: 32,
