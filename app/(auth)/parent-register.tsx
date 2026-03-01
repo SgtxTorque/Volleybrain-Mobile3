@@ -426,7 +426,7 @@ export default function ParentRegisterScreen() {
           {step === 'account' && (
             <View style={s.stepContent}>
               <Text style={s.stepTitle}>Create Your Account</Text>
-              <Text style={s.stepSubtitle}>This will be your login for VolleyBrain</Text>
+              <Text style={s.stepSubtitle}>This will be your login for Lynx</Text>
 
               <View style={s.inputGroup}>
                 <Text style={s.label}>Full Name *</Text>
@@ -512,7 +512,7 @@ export default function ParentRegisterScreen() {
                 />
                 <Text style={s.consentText}>
                   As the parent or legal guardian, I consent to the collection and use of my child's
-                  personal information (name, date of birth, and team participation data) by VolleyBrain
+                  personal information (name, date of birth, and team participation data) by Lynx
                   for the purpose of league registration and team management. I understand I can request
                   deletion of this data at any time by contacting support. *
                 </Text>
@@ -529,7 +529,7 @@ export default function ParentRegisterScreen() {
               }}>
                 <Ionicons name="shield-checkmark" size={20} color={colors.info} />
                 <Text style={{ flex: 1, fontSize: 13, color: colors.info, lineHeight: 18 }}>
-                  VolleyBrain complies with COPPA. We never sell children's data and only collect
+                  Lynx complies with COPPA. We never sell children's data and only collect
                   what's necessary for league operations.
                 </Text>
               </View>

@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
+    Image,
     KeyboardAvoidingView,
     Modal,
     Platform,
@@ -84,9 +85,12 @@ export default function LoginScreen() {
       >
         {/* Logo */}
         <View style={s.logoContainer}>
-          <Text style={s.logoEmoji}>🏐</Text>
-          <Text style={s.logoText}>VolleyBrain</Text>
-          <Text style={s.tagline}>Youth Volleyball Management</Text>
+          <Image
+            source={require('@/assets/images/lynx-logo.png')}
+            style={s.logoImage}
+            resizeMode="contain"
+          />
+          <Text style={s.tagline}>Youth Sports Management</Text>
         </View>
 
         {/* Form */}
@@ -206,14 +210,10 @@ const createStyles = (colors: any) => StyleSheet.create({
     alignItems: 'center',
     marginBottom: 48,
   },
-  logoEmoji: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
-  logoText: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: colors.primary,
+  logoImage: {
+    width: 200,
+    height: 82,
+    marginBottom: 12,
   },
   tagline: {
     fontSize: 16,

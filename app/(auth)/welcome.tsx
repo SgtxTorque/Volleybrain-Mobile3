@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -121,33 +122,23 @@ export default function WelcomeScreen() {
         >
           {/* Logo & Branding */}
           <View style={{ alignItems: 'center', marginTop: 16, marginBottom: 24 }}>
-            <View style={{
-              width: 90,
-              height: 90,
-              borderRadius: 45,
-              backgroundColor: colors.primary + '20',
-              borderWidth: 3,
-              borderColor: colors.primary,
-              justifyContent: 'center',
-              alignItems: 'center',
-              marginBottom: 14,
-            }}>
-              <Text style={{ fontSize: 44 }}>🏐</Text>
-            </View>
-            <Text style={{
-              fontSize: 32,
-              fontWeight: '800',
-              color: colors.text,
-            }}>
-              VolleyBrain
-            </Text>
+            <Image
+              source={require('@/assets/images/lynx-mascot.png')}
+              style={{ width: 120, height: 172, marginBottom: 14 }}
+              resizeMode="contain"
+            />
+            <Image
+              source={require('@/assets/images/lynx-logo.png')}
+              style={{ width: 180, height: 74, marginBottom: 4 }}
+              resizeMode="contain"
+            />
             <Text style={{
               fontSize: 15,
               color: colors.primary,
               fontWeight: '600',
               marginTop: 4,
             }}>
-              Youth Volleyball Management
+              Youth Sports Management
             </Text>
           </View>
 

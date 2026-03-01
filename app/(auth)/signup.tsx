@@ -5,6 +5,7 @@ import React, { useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
+    Image,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -66,8 +67,11 @@ export default function SignupScreen() {
       <ScrollView contentContainerStyle={s.scrollContent}>
         <View style={s.content}>
           <View style={s.logoContainer}>
-            <Text style={s.logoEmoji}>🏐</Text>
-            <Text style={s.logoText}>VolleyBrain</Text>
+            <Image
+              source={require('@/assets/images/lynx-logo.png')}
+              style={s.logoImage}
+              resizeMode="contain"
+            />
             <Text style={s.tagline}>Create Your Account</Text>
           </View>
 
@@ -148,14 +152,10 @@ const createStyles = (colors: any) => StyleSheet.create({
     alignItems: 'center',
     marginBottom: 48,
   },
-  logoEmoji: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
-  logoText: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: colors.primary,
+  logoImage: {
+    width: 200,
+    height: 82,
+    marginBottom: 12,
   },
   tagline: {
     fontSize: 16,
