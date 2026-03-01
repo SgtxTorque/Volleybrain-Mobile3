@@ -1,5 +1,7 @@
 import CoppaConsentModal from '@/components/CoppaConsentModal';
+import GestureDrawer from '@/components/GestureDrawer';
 import { AuthProvider, useAuth } from '@/lib/auth';
+import { DrawerProvider } from '@/lib/drawer-context';
 import { PermissionsProvider } from '@/lib/permissions-context';
 import { SeasonProvider } from '@/lib/season';
 import { SportProvider } from '@/lib/sport';
@@ -12,6 +14,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useRef } from 'react';
 import { KeyboardAvoidingView, Platform } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -119,6 +122,7 @@ function RootLayoutNav() {
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="(tabs)" />
         </Stack>
+        <GestureDrawer />
       </KeyboardAvoidingView>
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <CoppaConsentModal />
@@ -140,16 +144,20 @@ export default function RootLayout() {
   if (!fontsLoaded) return null;
 
   return (
-    <AuthProvider>
-      <ThemeProvider>
-        <SportProvider>
-          <SeasonProvider>
-            <PermissionsProvider>
-              <RootLayoutNav />
-            </PermissionsProvider>
-          </SeasonProvider>
-        </SportProvider>
-      </ThemeProvider>
-    </AuthProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AuthProvider>
+        <ThemeProvider>
+          <SportProvider>
+            <SeasonProvider>
+              <PermissionsProvider>
+                <DrawerProvider>
+                  <RootLayoutNav />
+                </DrawerProvider>
+              </PermissionsProvider>
+            </SeasonProvider>
+          </SportProvider>
+        </ThemeProvider>
+      </AuthProvider>
+    </GestureHandlerRootView>
   );
 }

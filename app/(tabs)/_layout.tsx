@@ -1,4 +1,5 @@
 import { useAuth } from '@/lib/auth';
+import { useDrawer } from '@/lib/drawer-context';
 import { useFirstTimeWelcome } from '@/lib/first-time-welcome';
 import { usePermissions } from '@/lib/permissions-context';
 import { supabase } from '@/lib/supabase';
@@ -6,7 +7,7 @@ import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Platform, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TabLayout() {
@@ -14,6 +15,7 @@ export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const { loading, isAdmin, isCoach, isParent } = usePermissions();
   const { profile } = useAuth();
+  const { openDrawer } = useDrawer();
   const primaryRole = isCoach ? 'coach' : isParent ? 'parent' : null;
   // Pure parent (not also a coach/admin) gets the redesigned parent tab layout
   const showParentTabs = isParent && !isCoach && !isAdmin;
@@ -216,21 +218,8 @@ export default function TabLayout() {
         }}
       />
 
-      {/* ME — hidden for parent and coach roles */}
-      <Tabs.Screen
-        name="me"
-        options={{
-          href: (showParentTabs || showCoachTabs || showAdminTabs) ? null : undefined,
-          title: 'Me',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? 'person' : 'person-outline'}
-              size={24}
-              color={color}
-            />
-          ),
-        }}
-      />
+      {/* ME — hidden, replaced by drawer profile */}
+      <Tabs.Screen name="me" options={{ href: null }} />
 
       {/* ====== PARENT-ONLY TABS ====== */}
 
@@ -282,21 +271,8 @@ export default function TabLayout() {
         }}
       />
 
-      {/* MY STUFF (Parent) */}
-      <Tabs.Screen
-        name="parent-my-stuff"
-        options={{
-          href: showParentTabs ? undefined : null,
-          title: 'My Stuff',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? 'person' : 'person-outline'}
-              size={24}
-              color={color}
-            />
-          ),
-        }}
-      />
+      {/* MY STUFF (Parent) — hidden, replaced by drawer */}
+      <Tabs.Screen name="parent-my-stuff" options={{ href: null }} />
 
       {/* ====== COACH-ONLY TABS ====== */}
 
@@ -350,21 +326,8 @@ export default function TabLayout() {
         }}
       />
 
-      {/* MY STUFF (Coach) */}
-      <Tabs.Screen
-        name="coach-my-stuff"
-        options={{
-          href: showCoachTabs ? undefined : null,
-          title: 'My Stuff',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? 'person' : 'person-outline'}
-              size={24}
-              color={color}
-            />
-          ),
-        }}
-      />
+      {/* MY STUFF (Coach) — hidden, replaced by drawer */}
+      <Tabs.Screen name="coach-my-stuff" options={{ href: null }} />
 
       {/* ====== ADMIN-ONLY TABS ====== */}
 
@@ -418,21 +381,8 @@ export default function TabLayout() {
         }}
       />
 
-      {/* MY STUFF (Admin) */}
-      <Tabs.Screen
-        name="admin-my-stuff"
-        options={{
-          href: showAdminTabs ? undefined : null,
-          title: 'My Stuff',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? 'person' : 'person-outline'}
-              size={24}
-              color={color}
-            />
-          ),
-        }}
-      />
+      {/* MY STUFF (Admin) — hidden, replaced by drawer */}
+      <Tabs.Screen name="admin-my-stuff" options={{ href: null }} />
 
       {/* ====== HIDDEN TABS ====== */}
       <Tabs.Screen name="schedule" options={{ href: null }} />
@@ -446,7 +396,21 @@ export default function TabLayout() {
       <Tabs.Screen name="settings" options={{ href: null }} />
       <Tabs.Screen name="my-teams" options={{ href: null }} />
       <Tabs.Screen name="jersey-management" options={{ href: null }} />
-      <Tabs.Screen name="menu-placeholder" options={{ href: null }} />
+      {/* MORE (☰) — opens gesture drawer for ALL roles */}
+      <Tabs.Screen
+        name="menu-placeholder"
+        options={{
+          title: 'More',
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="menu" size={24} color={color} />
+          ),
+          tabBarButton: ({ children, style }) => (
+            <Pressable style={style} onPress={openDrawer}>
+              {children}
+            </Pressable>
+          ),
+        }}
+      />
     </Tabs>
   );
 }
