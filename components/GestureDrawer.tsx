@@ -7,7 +7,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Dimensions, LayoutAnimation, Platform, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, UIManager, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -18,8 +18,9 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { supabase } from '@/lib/supabase';
 import type { UserRole } from '@/lib/permissions';
+import { useDrawerBadges } from '@/hooks/useDrawerBadges';
+import type { DrawerBadges } from '@/hooks/useDrawerBadges';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const DRAWER_WIDTH = Math.min(SCREEN_WIDTH * 0.82, 340);
@@ -46,6 +47,7 @@ type MenuItem = {
   label: string;
   route: string;
   webOnly?: boolean;
+  badgeKey?: keyof DrawerBadges;
 };
 
 type MenuSection = {
@@ -66,7 +68,7 @@ const MENU_SECTIONS: MenuSection[] = [
     items: [
       { icon: 'home', label: 'Home', route: '/(tabs)' },
       { icon: 'calendar', label: 'Schedule', route: '/(tabs)/schedule' },
-      { icon: 'chatbubble-ellipses', label: 'Chats', route: '/(tabs)/chats' },
+      { icon: 'chatbubble-ellipses', label: 'Chats', route: '/(tabs)/chats', badgeKey: 'unreadChats' },
       { icon: 'megaphone-outline', label: 'Announcements', route: '/(tabs)/messages' },
       { icon: 'people', label: 'Team Wall', route: '/(tabs)/connect' },
     ],
@@ -78,10 +80,10 @@ const MENU_SECTIONS: MenuSection[] = [
     defaultOpen: true,
     roleGate: 'admin',
     items: [
-      { icon: 'person-add', label: 'Registration Hub', route: '/registration-hub' },
-      { icon: 'people-circle', label: 'User Management', route: '/users' },
-      { icon: 'card', label: 'Payment Admin', route: '/(tabs)/payments' },
-      { icon: 'shirt', label: 'Team Management', route: '/team-management' },
+      { icon: 'person-add', label: 'Registration Hub', route: '/registration-hub', badgeKey: 'pendingRegistrations' },
+      { icon: 'people-circle', label: 'User Management', route: '/users', badgeKey: 'pendingApprovals' },
+      { icon: 'card', label: 'Payment Admin', route: '/(tabs)/payments', badgeKey: 'unpaidPaymentsAdmin' },
+      { icon: 'shirt', label: 'Team Management', route: '/team-management', badgeKey: 'unrosteredPlayers' },
       { icon: 'shirt-outline', label: 'Jersey Management', route: '/(tabs)/jersey-management' },
       { icon: 'clipboard', label: 'Coach Directory', route: '/coach-directory' },
       { icon: 'calendar-outline', label: 'Season Management', route: '/season-settings' },
@@ -122,8 +124,8 @@ const MENU_SECTIONS: MenuSection[] = [
     items: [
       { icon: 'people', label: 'My Children', route: '/my-kids' },
       { icon: 'clipboard', label: 'Registration', route: '/parent-registration-hub' },
-      { icon: 'wallet', label: 'Payments', route: '/family-payments' },
-      { icon: 'document-text', label: 'Waivers', route: '/my-waivers' },
+      { icon: 'wallet', label: 'Payments', route: '/family-payments', badgeKey: 'unpaidPaymentsParent' },
+      { icon: 'document-text', label: 'Waivers', route: '/my-waivers', badgeKey: 'unsignedWaivers' },
       { icon: 'share-social', label: 'Invite Friends', route: '/invite-friends' },
       { icon: 'lock-closed', label: 'Data Rights', route: '/data-rights' },
     ],
@@ -245,42 +247,15 @@ export default function GestureDrawer() {
     return items;
   })();
 
-  // Badge counts for shortcut dots
-  const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
+  // Centralized badge counts (fetched via hook when drawer opens)
+  const { badges, loading: badgesLoading } = useDrawerBadges(isOpen);
 
-  const fetchBadgeCounts = useCallback(async () => {
-    const counts: Record<string, number> = {};
-    try {
-      if (isAdmin && profile?.current_organization_id) {
-        // Pending registrations
-        const { count: pendingRegs } = await supabase
-          .from('registrations')
-          .select('*', { count: 'exact', head: true })
-          .eq('status', 'new');
-        if (pendingRegs) counts.registration = pendingRegs;
-      }
-
-      if (isParent && profile?.id) {
-        // Unpaid fees — payments where paid = false for this family
-        const { count: unpaid } = await supabase
-          .from('payments')
-          .select('*', { count: 'exact', head: true })
-          .eq('paid', false)
-          .eq('family_email', user?.email || '');
-        if (unpaid) counts.payments = unpaid;
-      }
-    } catch {
-      // Silently fail — badges are non-critical
-    }
-    setBadgeCounts(counts);
-  }, [isAdmin, isParent, profile?.current_organization_id, profile?.id, user?.email]);
-
-  // Fetch badges when drawer opens
-  useEffect(() => {
-    if (isOpen) {
-      fetchBadgeCounts();
-    }
-  }, [isOpen, fetchBadgeCounts]);
+  // Map shortcut keys → badge keys for dot rendering
+  const shortcutBadgeMap: Record<string, keyof DrawerBadges> = {
+    registration: 'pendingRegistrations',
+    payments: 'unpaidPaymentsParent',
+    chats: 'unreadChats',
+  };
 
   const handleShortcutPress = (route: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -533,7 +508,7 @@ export default function GestureDrawer() {
                 >
                   <View style={styles.shortcutIconWrap}>
                     <Ionicons name={s.icon} size={22} color={colors.primary} />
-                    {(badgeCounts[s.key] ?? 0) > 0 && (
+                    {(badges[shortcutBadgeMap[s.key]] ?? 0) > 0 && (
                       <View style={[styles.badgeDot, { backgroundColor: colors.danger }]} />
                     )}
                   </View>
@@ -605,6 +580,16 @@ export default function GestureDrawer() {
                       >
                         {item.label}
                       </Text>
+                      {item.badgeKey && badges[item.badgeKey] > 0 && (
+                        <View style={[styles.menuBadge, { backgroundColor: colors.danger }]}>
+                          <Text style={styles.menuBadgeText}>
+                            {badges[item.badgeKey] > 99 ? '99+' : badges[item.badgeKey]}
+                          </Text>
+                        </View>
+                      )}
+                      {item.badgeKey && badgesLoading && !badges[item.badgeKey] && (
+                        <View style={[styles.menuBadgeSkeleton, { backgroundColor: colors.border }]} />
+                      )}
                       {item.webOnly && (
                         <View style={[styles.webBadge, { backgroundColor: colors.primary + '20' }]}>
                           <Text style={[styles.webBadgeText, { color: colors.primary }]}>Web</Text>
@@ -806,6 +791,28 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '700',
     letterSpacing: 0.3,
+  },
+  menuBadge: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    paddingHorizontal: 5,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 6,
+  },
+  menuBadgeText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '700',
+    lineHeight: 14,
+  },
+  menuBadgeSkeleton: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    marginRight: 6,
+    opacity: 0.3,
   },
   menuItemChevron: {
     marginLeft: 4,
