@@ -3,18 +3,22 @@ import {
   loadRegistrationConfig,
   type LoadedRegistrationData,
   type RegistrationConfig,
+  type SeasonFee,
 } from '@/lib/registration-config';
+import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { spacing, radii, shadows } from '@/lib/design-tokens';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Image,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -27,6 +31,23 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 type StepDef = { key: string; label: string };
 
 type ChildData = Record<string, string>;
+
+type ReturningPlayer = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  grade: number | null;
+  birth_date: string | null;
+  gender: string | null;
+  school: string | null;
+  family_id: string | null;
+  uniform_size_jersey: string | null;
+  uniform_size_shorts: string | null;
+  jersey_pref_1: number | null;
+  sport_id: string | null;
+  position: string | null;
+  experience_level: string | null;
+};
 
 // ============================================
 // COMPONENT
@@ -51,6 +72,13 @@ export default function RegistrationWizardScreen() {
   const [customAnswers, setCustomAnswers] = useState<Record<string, string>>({});
   const [signature, setSignature] = useState('');
 
+  // Child management (Phase 2)
+  const [returningPlayers, setReturningPlayers] = useState<ReturningPlayer[]>([]);
+  const [selectedReturningIds, setSelectedReturningIds] = useState<string[]>([]);
+  const [newChildren, setNewChildren] = useState<ChildData[]>([]);
+  const [existingFamilyId, setExistingFamilyId] = useState<string | null>(null);
+  const [familyLoading, setFamilyLoading] = useState(false);
+
   // Load config on mount
   useEffect(() => {
     if (!seasonId) return;
@@ -70,17 +98,97 @@ export default function RegistrationWizardScreen() {
 
       setData(result);
 
-      // Pre-fill parent info from profile
-      setSharedInfo(prev => ({
-        ...prev,
-        parent1_name: profile?.full_name || '',
-        parent1_email: user?.email || '',
-        parent1_phone: profile?.phone || '',
-      }));
+      // Detect returning family
+      await detectReturningFamily(result);
     } catch (err: any) {
       setError(err.message || 'Failed to load registration form.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const detectReturningFamily = async (result: LoadedRegistrationData) => {
+    setFamilyLoading(true);
+    try {
+      // 1. Check player_parents for existing children
+      if (profile?.id) {
+        const { data: linkedPlayers } = await supabase
+          .from('player_parents')
+          .select('player_id, players(id, first_name, last_name, grade, birth_date, gender, school, family_id, uniform_size_jersey, uniform_size_shorts, jersey_pref_1, sport_id, position, experience_level)')
+          .eq('parent_id', profile.id);
+
+        if (linkedPlayers && linkedPlayers.length > 0) {
+          // Deduplicate by player id (a child may have multiple parent links)
+          const seen = new Set<string>();
+          const unique: ReturningPlayer[] = [];
+          for (const lp of linkedPlayers) {
+            const p = lp.players as any;
+            if (p && !seen.has(p.id)) {
+              seen.add(p.id);
+              unique.push({
+                id: p.id,
+                first_name: p.first_name,
+                last_name: p.last_name,
+                grade: p.grade,
+                birth_date: p.birth_date,
+                gender: p.gender,
+                school: p.school,
+                family_id: p.family_id,
+                uniform_size_jersey: p.uniform_size_jersey,
+                uniform_size_shorts: p.uniform_size_shorts,
+                jersey_pref_1: p.jersey_pref_1,
+                sport_id: p.sport_id,
+                position: p.position,
+                experience_level: p.experience_level,
+              });
+            }
+          }
+          setReturningPlayers(unique);
+        }
+      }
+
+      // 2. Check families table by account_id
+      if (user?.id) {
+        const { data: family } = await supabase
+          .from('families')
+          .select('*')
+          .eq('account_id', user.id)
+          .limit(1)
+          .maybeSingle();
+
+        if (family) {
+          setExistingFamilyId(family.id);
+          // Pre-fill shared info from family record
+          setSharedInfo({
+            parent1_name: family.primary_contact_name || profile?.full_name || '',
+            parent1_email: family.primary_contact_email || user?.email || '',
+            parent1_phone: family.primary_contact_phone || (profile as any)?.phone || '',
+            parent2_name: family.secondary_contact_name || '',
+            parent2_email: family.secondary_contact_email || '',
+            parent2_phone: family.secondary_contact_phone || '',
+            address: family.address || '',
+            emergency_name: family.emergency_contact_name || '',
+            emergency_phone: family.emergency_contact_phone || '',
+            emergency_relation: family.emergency_contact_relation || '',
+          });
+        } else {
+          // No family — pre-fill from profile only
+          setSharedInfo({
+            parent1_name: profile?.full_name || '',
+            parent1_email: user?.email || '',
+            parent1_phone: (profile as any)?.phone || '',
+          });
+        }
+      }
+    } catch {
+      // Non-critical — just skip pre-fill
+      setSharedInfo({
+        parent1_name: profile?.full_name || '',
+        parent1_email: user?.email || '',
+        parent1_phone: (profile as any)?.phone || '',
+      });
+    } finally {
+      setFamilyLoading(false);
     }
   };
 
@@ -109,6 +217,71 @@ export default function RegistrationWizardScreen() {
   // Accent color: sport color → org color → theme primary
   const accentColor = data?.sport?.color_primary || data?.organization?.primary_color || colors.primary;
 
+  // All children to register (returning selected + new)
+  const allChildren = useMemo((): ChildData[] => {
+    const returning = returningPlayers
+      .filter(p => selectedReturningIds.includes(p.id))
+      .map(p => ({
+        first_name: p.first_name || '',
+        last_name: p.last_name || '',
+        birth_date: p.birth_date || '',
+        grade: p.grade != null ? String(p.grade) : '',
+        gender: p.gender || '',
+        school: p.school || '',
+        uniform_size_jersey: p.uniform_size_jersey || '',
+        uniform_size_shorts: p.uniform_size_shorts || '',
+        jersey_pref_1: p.jersey_pref_1 != null ? String(p.jersey_pref_1) : '',
+        position_preference: p.position || '',
+        experience_level: p.experience_level || '',
+        _isReturning: 'true',
+        _returningPlayerId: p.id,
+      }));
+    return [...returning, ...newChildren];
+  }, [returningPlayers, selectedReturningIds, newChildren]);
+
+  // Fee calculation
+  const feeBreakdown = useMemo(() => {
+    if (!data?.fees || allChildren.length === 0) return null;
+    const childCount = allChildren.length;
+    const lines: { label: string; amount: number; detail: string }[] = [];
+    let total = 0;
+
+    for (const fee of data.fees) {
+      const lineAmount = fee.amount * childCount;
+      lines.push({
+        label: fee.fee_name,
+        amount: lineAmount,
+        detail: childCount > 1 ? `$${fee.amount} x ${childCount}` : `$${fee.amount}`,
+      });
+      total += lineAmount;
+    }
+    return { lines, total, childCount };
+  }, [data?.fees, allChildren.length]);
+
+  // Toggle returning player selection
+  const toggleReturning = useCallback((playerId: string) => {
+    setSelectedReturningIds(prev =>
+      prev.includes(playerId) ? prev.filter(id => id !== playerId) : [...prev, playerId]
+    );
+  }, []);
+
+  // Add a new blank child
+  const addNewChild = useCallback(() => {
+    setNewChildren(prev => [...prev, { first_name: '', last_name: '' }]);
+  }, []);
+
+  // Remove a new child by index
+  const removeNewChild = useCallback((index: number) => {
+    setNewChildren(prev => prev.filter((_, i) => i !== index));
+  }, []);
+
+  // Update a new child field
+  const updateNewChild = useCallback((index: number, field: string, value: string) => {
+    setNewChildren(prev => prev.map((child, i) =>
+      i === index ? { ...child, [field]: value } : child
+    ));
+  }, []);
+
   const handleBack = () => {
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
@@ -118,6 +291,25 @@ export default function RegistrationWizardScreen() {
   };
 
   const handleNext = () => {
+    const stepKey = steps[currentStep]?.key;
+
+    // Validate children step
+    if (stepKey === 'children') {
+      if (allChildren.length === 0) {
+        Alert.alert('No Children Selected', 'Please select at least one returning child or add a new child to continue.');
+        return;
+      }
+      // Validate new children have names
+      for (let i = 0; i < newChildren.length; i++) {
+        if (!newChildren[i].first_name?.trim() || !newChildren[i].last_name?.trim()) {
+          Alert.alert('Missing Info', `Please enter the first and last name for new child #${i + 1}.`);
+          return;
+        }
+      }
+      // Sync allChildren into the children state for later phases
+      setChildren(allChildren);
+    }
+
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
     }
@@ -212,19 +404,146 @@ export default function RegistrationWizardScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Placeholder per step — replaced in later phases */}
-        <View style={s.stepPlaceholder}>
-          <Ionicons name="construct-outline" size={36} color={colors.textMuted} />
-          <Text style={s.placeholderTitle}>{currentStepDef?.label}</Text>
-          <Text style={s.placeholderText}>This step will be built in Phase {
-            currentStepDef?.key === 'children' ? '2' :
-            currentStepDef?.key === 'player' ? '3' :
-            currentStepDef?.key === 'parent' ? '4' :
-            currentStepDef?.key === 'emergency' ? '4' :
-            currentStepDef?.key === 'waivers' ? '5' :
-            '6'
-          }.</Text>
-        </View>
+        {currentStepDef?.key === 'children' ? (
+          /* ============ CHILDREN STEP ============ */
+          <View style={s.stepContainer}>
+            {familyLoading ? (
+              <View style={s.centerContent}>
+                <ActivityIndicator size="small" color={accentColor} />
+                <Text style={s.loadingText}>Checking for existing family...</Text>
+              </View>
+            ) : (
+              <>
+                {/* Returning Players */}
+                {returningPlayers.length > 0 && (
+                  <View style={s.sectionBlock}>
+                    <Text style={s.sectionTitle}>Returning Players</Text>
+                    <Text style={s.sectionSubtitle}>Select children to re-register</Text>
+                    {returningPlayers.map(player => {
+                      const selected = selectedReturningIds.includes(player.id);
+                      return (
+                        <TouchableOpacity
+                          key={player.id}
+                          style={[s.returningCard, selected && { borderColor: accentColor, borderWidth: 2 }]}
+                          onPress={() => toggleReturning(player.id)}
+                          activeOpacity={0.7}
+                        >
+                          <View style={s.returningCardLeft}>
+                            <View style={[s.checkbox, selected && { backgroundColor: accentColor, borderColor: accentColor }]}>
+                              {selected && <Ionicons name="checkmark" size={14} color="#FFF" />}
+                            </View>
+                            <View style={s.returningInfo}>
+                              <Text style={s.returningName}>{player.first_name} {player.last_name}</Text>
+                              <Text style={s.returningDetail}>
+                                {player.grade != null ? `Grade ${player.grade === 0 ? 'K' : player.grade}` : ''}
+                                {player.school ? ` · ${player.school}` : ''}
+                              </Text>
+                            </View>
+                          </View>
+                          <View style={[s.returningBadge, { backgroundColor: accentColor + '20' }]}>
+                            <Text style={[s.returningBadgeText, { color: accentColor }]}>Returning</Text>
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                )}
+
+                {/* New Children */}
+                <View style={s.sectionBlock}>
+                  {newChildren.length > 0 && (
+                    <>
+                      <Text style={s.sectionTitle}>New Children</Text>
+                      {newChildren.map((child, idx) => (
+                        <View key={`new-${idx}`} style={s.newChildCard}>
+                          <View style={s.newChildHeader}>
+                            <Text style={s.newChildLabel}>New Child #{idx + 1}</Text>
+                            <TouchableOpacity onPress={() => removeNewChild(idx)} hitSlop={8}>
+                              <Ionicons name="close-circle" size={22} color={colors.danger} />
+                            </TouchableOpacity>
+                          </View>
+                          <View style={s.newChildFields}>
+                            <View style={s.fieldHalf}>
+                              <Text style={s.fieldLabel}>First Name <Text style={s.required}>*</Text></Text>
+                              <TextInput
+                                style={s.input}
+                                value={child.first_name}
+                                onChangeText={v => updateNewChild(idx, 'first_name', v)}
+                                placeholder="First name"
+                                placeholderTextColor={colors.textMuted}
+                                autoCapitalize="words"
+                              />
+                            </View>
+                            <View style={s.fieldHalf}>
+                              <Text style={s.fieldLabel}>Last Name <Text style={s.required}>*</Text></Text>
+                              <TextInput
+                                style={s.input}
+                                value={child.last_name}
+                                onChangeText={v => updateNewChild(idx, 'last_name', v)}
+                                placeholder="Last name"
+                                placeholderTextColor={colors.textMuted}
+                                autoCapitalize="words"
+                              />
+                            </View>
+                          </View>
+                        </View>
+                      ))}
+                    </>
+                  )}
+
+                  <TouchableOpacity style={[s.addChildBtn, { borderColor: accentColor }]} onPress={addNewChild}>
+                    <Ionicons name="add-circle-outline" size={22} color={accentColor} />
+                    <Text style={[s.addChildBtnText, { color: accentColor }]}>Register a New Child</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Fee Preview */}
+                {feeBreakdown && feeBreakdown.lines.length > 0 && (
+                  <View style={s.feeCard}>
+                    <Text style={s.feeTitle}>Estimated Fees</Text>
+                    {feeBreakdown.lines.map((line, idx) => (
+                      <View key={idx} style={s.feeLine}>
+                        <Text style={s.feeLabel}>{line.label}</Text>
+                        <Text style={s.feeAmount}>{line.detail} = ${line.amount}</Text>
+                      </View>
+                    ))}
+                    <View style={s.feeDivider} />
+                    <View style={s.feeLine}>
+                      <Text style={s.feeTotalLabel}>Total Due</Text>
+                      <Text style={s.feeTotalAmount}>${feeBreakdown.total}</Text>
+                    </View>
+                    <Text style={s.feeDisclaimer}>
+                      {feeBreakdown.childCount} child{feeBreakdown.childCount !== 1 ? 'ren' : ''} selected
+                    </Text>
+                  </View>
+                )}
+
+                {/* Selection summary */}
+                {allChildren.length > 0 && (
+                  <View style={s.selectionSummary}>
+                    <Ionicons name="people-outline" size={18} color={accentColor} />
+                    <Text style={s.selectionText}>
+                      {allChildren.length} child{allChildren.length !== 1 ? 'ren' : ''} selected for registration
+                    </Text>
+                  </View>
+                )}
+              </>
+            )}
+          </View>
+        ) : (
+          /* ============ PLACEHOLDER FOR OTHER STEPS ============ */
+          <View style={s.stepPlaceholder}>
+            <Ionicons name="construct-outline" size={36} color={colors.textMuted} />
+            <Text style={s.placeholderTitle}>{currentStepDef?.label}</Text>
+            <Text style={s.placeholderText}>This step will be built in Phase {
+              currentStepDef?.key === 'player' ? '3' :
+              currentStepDef?.key === 'parent' ? '4' :
+              currentStepDef?.key === 'emergency' ? '4' :
+              currentStepDef?.key === 'waivers' ? '5' :
+              '6'
+            }.</Text>
+          </View>
+        )}
       </ScrollView>
 
       {/* ============ FOOTER ============ */}
@@ -392,7 +711,207 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
     paddingBottom: 24,
   },
 
-  // Placeholder
+  // Step container
+  stepContainer: {
+    gap: 16,
+  },
+
+  // Sections
+  sectionBlock: {
+    gap: 10,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  sectionSubtitle: {
+    fontSize: 13,
+    color: colors.textMuted,
+    marginTop: -4,
+  },
+
+  // Returning player cards
+  returningCard: {
+    backgroundColor: colors.card,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    ...shadows.card,
+  },
+  returningCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  returningInfo: {
+    flex: 1,
+  },
+  returningName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  returningDetail: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  returningBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    marginLeft: 8,
+  },
+  returningBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+
+  // New child cards
+  newChildCard: {
+    backgroundColor: colors.card,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 14,
+    gap: 10,
+    ...shadows.card,
+  },
+  newChildHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  newChildLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  newChildFields: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  fieldHalf: {
+    flex: 1,
+    gap: 4,
+  },
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: colors.textSecondary,
+  },
+  required: {
+    color: colors.danger,
+  },
+  input: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.card,
+    padding: 12,
+    fontSize: 15,
+    color: colors.text,
+  },
+
+  // Add child button
+  addChildBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderRadius: radii.card,
+    paddingVertical: 16,
+    marginTop: 4,
+  },
+  addChildBtnText: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+
+  // Fee preview
+  feeCard: {
+    backgroundColor: colors.card,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 16,
+    gap: 8,
+    ...shadows.card,
+  },
+  feeTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  feeLine: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  feeLabel: {
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  feeAmount: {
+    fontSize: 14,
+    color: colors.text,
+    fontWeight: '500',
+  },
+  feeDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: 4,
+  },
+  feeTotalLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  feeTotalAmount: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  feeDisclaimer: {
+    fontSize: 12,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginTop: 2,
+  },
+
+  // Selection summary
+  selectionSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+  },
+  selectionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+
+  // Placeholder (for remaining steps)
   stepPlaceholder: {
     backgroundColor: colors.card,
     borderRadius: radii.card,
