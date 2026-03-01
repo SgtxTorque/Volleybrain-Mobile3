@@ -18,15 +18,12 @@ export default function TabLayout() {
   const { profile } = useAuth();
   const { openDrawer } = useDrawer();
   const primaryRole = isCoach ? 'coach' : isParent ? 'parent' : null;
-  // Pure parent (not also a coach/admin) gets the redesigned parent tab layout
-  const showParentTabs = isParent && !isCoach && !isAdmin;
-  // Coach (including coach-parents, but not admins) gets the redesigned coach tab layout
-  const showCoachTabs = isCoach && !isAdmin;
-  // Admin gets the redesigned admin tab layout
-  const showAdminTabs = isAdmin;
-  // Default role (player or no specific role) — not parent, coach, or admin
-  const showDefaultTabs = !showParentTabs && !showCoachTabs && !showAdminTabs;
   useFirstTimeWelcome(primaryRole);
+
+  // Tab 2 slot: Admin > Coach > Parent > Player priority
+  const showManageTab = isAdmin;
+  // Parent (non-admin) gets "Schedule" label on gameday tab; Coach/Player get "Game Day"
+  const isParentOnly = isParent && !isAdmin;
   const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [unreadAlertCount, setUnreadAlertCount] = useState(0);
   // Drawer badge counts for More tab
@@ -156,9 +153,7 @@ export default function TabLayout() {
         },
       }}
     >
-      {/* ====== VISIBLE TABS ====== */}
-
-      {/* HOME */}
+      {/* ====== TAB 1: HOME (all roles) ====== */}
       <Tabs.Screen
         name="index"
         options={{
@@ -173,15 +168,15 @@ export default function TabLayout() {
         }}
       />
 
-      {/* GAME DAY — hidden for parent and coach roles */}
+      {/* ====== TAB 2a: MANAGE (Admin only) ====== */}
       <Tabs.Screen
-        name="gameday"
+        name="manage"
         options={{
-          href: (showParentTabs || showCoachTabs || showAdminTabs) ? null : undefined,
-          title: 'Game Day',
+          href: showManageTab ? undefined : null,
+          title: 'Manage',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
-              name={focused ? 'flash' : 'flash-outline'}
+              name={focused ? 'construct' : 'construct-outline'}
               size={24}
               color={color}
             />
@@ -189,15 +184,33 @@ export default function TabLayout() {
         }}
       />
 
-      {/* TEAM (Connect) — hidden for parent and coach roles */}
+      {/* ====== TAB 2b: GAME DAY / SCHEDULE (non-Admin) ====== */}
       <Tabs.Screen
-        name="connect"
+        name="gameday"
         options={{
-          href: (showParentTabs || showCoachTabs || showAdminTabs) ? null : undefined,
-          title: 'Team',
+          href: showManageTab ? null : undefined,
+          title: isParentOnly ? 'Schedule' : 'Game Day',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
-              name={focused ? 'people' : 'people-outline'}
+              name={isParentOnly
+                ? (focused ? 'calendar' : 'calendar-outline')
+                : (focused ? 'flash' : 'flash-outline')
+              }
+              size={24}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      {/* ====== TAB 3: CHAT (all roles) ====== */}
+      <Tabs.Screen
+        name="chats"
+        options={{
+          title: 'Chat',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline'}
               size={24}
               color={color}
             />
@@ -207,194 +220,22 @@ export default function TabLayout() {
         }}
       />
 
-      {/* MANAGE — hidden for ALL roles, content moved to drawer */}
-      <Tabs.Screen name="manage" options={{ href: null }} />
-
-      {/* ME — hidden, replaced by drawer profile */}
+      {/* ====== HIDDEN TABS (accessible via drawer / deep links) ====== */}
+      <Tabs.Screen name="connect" options={{ href: null }} />
       <Tabs.Screen name="me" options={{ href: null }} />
-
-      {/* ====== PARENT-ONLY TABS ====== */}
-
-      {/* SCHEDULE (Parent) */}
-      <Tabs.Screen
-        name="parent-schedule"
-        options={{
-          href: showParentTabs ? undefined : null,
-          title: 'Schedule',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? 'calendar' : 'calendar-outline'}
-              size={24}
-              color={color}
-            />
-          ),
-        }}
-      />
-
-      {/* CHAT (Parent) */}
-      <Tabs.Screen
-        name="parent-chat"
-        options={{
-          href: showParentTabs ? undefined : null,
-          title: 'Chat',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline'}
-              size={24}
-              color={color}
-            />
-          ),
-        }}
-      />
-
-      {/* TEAM HUB (Parent) */}
-      <Tabs.Screen
-        name="parent-team-hub"
-        options={{
-          href: showParentTabs ? undefined : null,
-          title: 'Team',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? 'people' : 'people-outline'}
-              size={24}
-              color={color}
-            />
-          ),
-        }}
-      />
-
-      {/* MY STUFF (Parent) — hidden, replaced by drawer */}
+      <Tabs.Screen name="parent-schedule" options={{ href: null }} />
+      <Tabs.Screen name="parent-chat" options={{ href: null }} />
+      <Tabs.Screen name="parent-team-hub" options={{ href: null }} />
       <Tabs.Screen name="parent-my-stuff" options={{ href: null }} />
-
-      {/* ====== COACH-ONLY TABS ====== */}
-
-      {/* SCHEDULE (Coach) */}
-      <Tabs.Screen
-        name="coach-schedule"
-        options={{
-          href: showCoachTabs ? undefined : null,
-          title: 'Schedule',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? 'calendar' : 'calendar-outline'}
-              size={24}
-              color={color}
-            />
-          ),
-        }}
-      />
-
-      {/* CHAT (Coach) */}
-      <Tabs.Screen
-        name="coach-chat"
-        options={{
-          href: showCoachTabs ? undefined : null,
-          title: 'Chat',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline'}
-              size={24}
-              color={color}
-            />
-          ),
-          tabBarBadge: showCoachTabs && totalUnread > 0 ? totalUnread : undefined,
-          tabBarBadgeStyle: { backgroundColor: colors.danger, fontSize: 10 },
-        }}
-      />
-
-      {/* TEAM HUB (Coach) */}
-      <Tabs.Screen
-        name="coach-team-hub"
-        options={{
-          href: showCoachTabs ? undefined : null,
-          title: 'Team',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? 'people' : 'people-outline'}
-              size={24}
-              color={color}
-            />
-          ),
-        }}
-      />
-
-      {/* MY STUFF (Coach) — hidden, replaced by drawer */}
+      <Tabs.Screen name="coach-schedule" options={{ href: null }} />
+      <Tabs.Screen name="coach-chat" options={{ href: null }} />
+      <Tabs.Screen name="coach-team-hub" options={{ href: null }} />
       <Tabs.Screen name="coach-my-stuff" options={{ href: null }} />
-
-      {/* ====== ADMIN-ONLY TABS ====== */}
-
-      {/* SCHEDULE (Admin) */}
-      <Tabs.Screen
-        name="admin-schedule"
-        options={{
-          href: showAdminTabs ? undefined : null,
-          title: 'Schedule',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? 'calendar' : 'calendar-outline'}
-              size={24}
-              color={color}
-            />
-          ),
-        }}
-      />
-
-      {/* CHAT (Admin) */}
-      <Tabs.Screen
-        name="admin-chat"
-        options={{
-          href: showAdminTabs ? undefined : null,
-          title: 'Chat',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline'}
-              size={24}
-              color={color}
-            />
-          ),
-          tabBarBadge: showAdminTabs && totalUnread > 0 ? totalUnread : undefined,
-          tabBarBadgeStyle: { backgroundColor: colors.danger, fontSize: 10 },
-        }}
-      />
-
-      {/* TEAMS (Admin) */}
-      <Tabs.Screen
-        name="admin-teams"
-        options={{
-          href: showAdminTabs ? undefined : null,
-          title: 'Teams',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? 'people' : 'people-outline'}
-              size={24}
-              color={color}
-            />
-          ),
-        }}
-      />
-
-      {/* MY STUFF (Admin) — hidden, replaced by drawer */}
+      <Tabs.Screen name="admin-schedule" options={{ href: null }} />
+      <Tabs.Screen name="admin-chat" options={{ href: null }} />
+      <Tabs.Screen name="admin-teams" options={{ href: null }} />
       <Tabs.Screen name="admin-my-stuff" options={{ href: null }} />
-
-      {/* ====== HIDDEN TABS ====== */}
       <Tabs.Screen name="schedule" options={{ href: null }} />
-      {/* CHAT (Default/Player) */}
-      <Tabs.Screen
-        name="chats"
-        options={{
-          href: showDefaultTabs ? undefined : null,
-          title: 'Chat',
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline'}
-              size={24}
-              color={color}
-            />
-          ),
-          tabBarBadge: showDefaultTabs && totalUnread > 0 ? totalUnread : undefined,
-          tabBarBadgeStyle: { backgroundColor: colors.danger, fontSize: 10 },
-        }}
-      />
       <Tabs.Screen name="messages" options={{ href: null }} />
       <Tabs.Screen name="players" options={{ href: null }} />
       <Tabs.Screen name="teams" options={{ href: null }} />
