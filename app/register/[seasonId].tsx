@@ -1,6 +1,8 @@
 import { useAuth } from '@/lib/auth';
 import {
+  FIELD_ORDER,
   loadRegistrationConfig,
+  type FieldConfig,
   type LoadedRegistrationData,
   type RegistrationConfig,
   type SeasonFee,
@@ -9,12 +11,16 @@ import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { spacing, radii, shadows } from '@/lib/design-tokens';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  FlatList,
   Image,
+  Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -50,6 +56,67 @@ type ReturningPlayer = {
 };
 
 // ============================================
+// PICKER OPTIONS
+// ============================================
+
+const SIZE_OPTIONS = [
+  { label: 'Youth Small (YS)', value: 'YS' },
+  { label: 'Youth Medium (YM)', value: 'YM' },
+  { label: 'Youth Large (YL)', value: 'YL' },
+  { label: 'Adult Small (AS)', value: 'AS' },
+  { label: 'Adult Medium (AM)', value: 'AM' },
+  { label: 'Adult Large (AL)', value: 'AL' },
+  { label: 'Adult XL (AXL)', value: 'AXL' },
+  { label: 'Adult XXL (AXXL)', value: 'AXXL' },
+];
+
+const PICKER_OPTIONS: Record<string, { label: string; value: string }[]> = {
+  grade: [
+    { label: 'Kindergarten', value: '0' },
+    ...Array.from({ length: 12 }, (_, i) => ({ label: `Grade ${i + 1}`, value: String(i + 1) })),
+  ],
+  gender: [
+    { label: 'Male', value: 'Male' },
+    { label: 'Female', value: 'Female' },
+  ],
+  shirt_size: SIZE_OPTIONS,
+  jersey_size: SIZE_OPTIONS,
+  shorts_size: SIZE_OPTIONS,
+  experience_level: [
+    { label: 'Beginner', value: 'Beginner' },
+    { label: 'Intermediate', value: 'Intermediate' },
+    { label: 'Advanced', value: 'Advanced' },
+    { label: 'Elite', value: 'Elite' },
+  ],
+};
+
+/** Fields that use a picker modal */
+const PICKER_FIELDS = new Set(Object.keys(PICKER_OPTIONS));
+
+/** Fields that use numeric keyboard */
+const NUMERIC_FIELDS = new Set(['preferred_number', 'height', 'weight']);
+
+/** Format date for display */
+function formatDate(dateStr: string): string {
+  if (!dateStr) return '';
+  try {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  } catch {
+    return dateStr;
+  }
+}
+
+/** Get display value for picker fields */
+function getPickerDisplay(field: string, value: string): string {
+  if (!value) return '';
+  const options = PICKER_OPTIONS[field];
+  if (!options) return value;
+  const found = options.find(o => o.value === value);
+  return found?.label || value;
+}
+
+// ============================================
 // COMPONENT
 // ============================================
 
@@ -78,6 +145,16 @@ export default function RegistrationWizardScreen() {
   const [newChildren, setNewChildren] = useState<ChildData[]>([]);
   const [existingFamilyId, setExistingFamilyId] = useState<string | null>(null);
   const [familyLoading, setFamilyLoading] = useState(false);
+
+  // Player info step (Phase 3)
+  const [activeChildIndex, setActiveChildIndex] = useState(0);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [pickerModal, setPickerModal] = useState<{
+    visible: boolean;
+    field: string;
+    title: string;
+    options: { label: string; value: string }[];
+  }>({ visible: false, field: '', title: '', options: [] });
 
   // Load config on mount
   useEffect(() => {
@@ -282,6 +359,21 @@ export default function RegistrationWizardScreen() {
     ));
   }, []);
 
+  // Update a child field (used in player info step)
+  const updateChild = useCallback((index: number, field: string, value: string) => {
+    setChildren(prev => prev.map((child, i) =>
+      i === index ? { ...child, [field]: value } : child
+    ));
+  }, []);
+
+  // Open picker modal for a field
+  const openPicker = useCallback((field: string, label: string) => {
+    const options = PICKER_OPTIONS[field];
+    if (options) {
+      setPickerModal({ visible: true, field, title: label, options });
+    }
+  }, []);
+
   const handleBack = () => {
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
@@ -308,6 +400,22 @@ export default function RegistrationWizardScreen() {
       }
       // Sync allChildren into the children state for later phases
       setChildren(allChildren);
+    }
+
+    // Validate player info step
+    if (stepKey === 'player' && data) {
+      const cfg = data.config;
+      for (let i = 0; i < children.length; i++) {
+        const child = children[i];
+        for (const key of FIELD_ORDER.player_fields) {
+          const fieldCfg = cfg.player_fields[key];
+          if (fieldCfg?.enabled && fieldCfg.required && !child[key]?.trim()) {
+            setActiveChildIndex(i);
+            Alert.alert('Required Field', `Please fill in "${fieldCfg.label}" for ${child.first_name || `Child #${i + 1}`}.`);
+            return;
+          }
+        }
+      }
     }
 
     if (currentStep < steps.length - 1) {
@@ -530,13 +638,152 @@ export default function RegistrationWizardScreen() {
               </>
             )}
           </View>
+        ) : currentStepDef?.key === 'player' && data ? (
+          /* ============ PLAYER INFO STEP ============ */
+          <View style={s.stepContainer}>
+            {/* Multi-child tab bar */}
+            {children.length > 1 && (
+              <View style={s.childTabs}>
+                {children.map((child, idx) => (
+                  <TouchableOpacity
+                    key={idx}
+                    style={[s.childTab, activeChildIndex === idx && { backgroundColor: accentColor }]}
+                    onPress={() => setActiveChildIndex(idx)}
+                  >
+                    <Text style={[s.childTabText, activeChildIndex === idx && { color: '#FFF' }]}>
+                      {child.first_name || `Child ${idx + 1}`}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            {/* Dynamic fields for active child */}
+            {children[activeChildIndex] && (
+              <View style={s.fieldsContainer}>
+                {FIELD_ORDER.player_fields
+                  .filter(key => data.config.player_fields[key]?.enabled)
+                  .map(key => {
+                    const fieldCfg = data.config.player_fields[key];
+                    const child = children[activeChildIndex];
+                    const value = child[key] || '';
+
+                    // Date field
+                    if (key === 'birth_date') {
+                      return (
+                        <View key={key} style={s.fieldBlock}>
+                          <Text style={s.fieldLabel}>
+                            {fieldCfg.label}
+                            {fieldCfg.required && <Text style={s.required}> *</Text>}
+                          </Text>
+                          <TouchableOpacity
+                            style={s.pickerButton}
+                            onPress={() => setShowDatePicker(true)}
+                          >
+                            <Text style={[s.pickerButtonText, !value && { color: colors.textMuted }]}>
+                              {value ? formatDate(value) : 'Select date'}
+                            </Text>
+                            <Ionicons name="calendar-outline" size={18} color={colors.textMuted} />
+                          </TouchableOpacity>
+                          {showDatePicker && (
+                            <View>
+                              <DateTimePicker
+                                value={value ? new Date(value) : new Date(2012, 0, 1)}
+                                mode="date"
+                                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                                maximumDate={new Date()}
+                                minimumDate={new Date(2000, 0, 1)}
+                                onChange={(_, selectedDate) => {
+                                  if (Platform.OS === 'android') setShowDatePicker(false);
+                                  if (selectedDate) {
+                                    updateChild(activeChildIndex, 'birth_date', selectedDate.toISOString().split('T')[0]);
+                                  }
+                                }}
+                              />
+                              {Platform.OS === 'ios' && (
+                                <TouchableOpacity
+                                  style={[s.datePickerDone, { backgroundColor: accentColor }]}
+                                  onPress={() => setShowDatePicker(false)}
+                                >
+                                  <Text style={s.datePickerDoneText}>Done</Text>
+                                </TouchableOpacity>
+                              )}
+                            </View>
+                          )}
+                        </View>
+                      );
+                    }
+
+                    // Picker fields (grade, gender, sizes, experience)
+                    if (PICKER_FIELDS.has(key)) {
+                      return (
+                        <View key={key} style={s.fieldBlock}>
+                          <Text style={s.fieldLabel}>
+                            {fieldCfg.label}
+                            {fieldCfg.required && <Text style={s.required}> *</Text>}
+                          </Text>
+                          <TouchableOpacity
+                            style={s.pickerButton}
+                            onPress={() => openPicker(key, fieldCfg.label)}
+                          >
+                            <Text style={[s.pickerButtonText, !value && { color: colors.textMuted }]}>
+                              {value ? getPickerDisplay(key, value) : `Select ${fieldCfg.label.toLowerCase()}`}
+                            </Text>
+                            <Ionicons name="chevron-down" size={18} color={colors.textMuted} />
+                          </TouchableOpacity>
+                        </View>
+                      );
+                    }
+
+                    // Numeric fields
+                    if (NUMERIC_FIELDS.has(key)) {
+                      return (
+                        <View key={key} style={s.fieldBlock}>
+                          <Text style={s.fieldLabel}>
+                            {fieldCfg.label}
+                            {fieldCfg.required && <Text style={s.required}> *</Text>}
+                          </Text>
+                          <TextInput
+                            style={s.input}
+                            value={value}
+                            onChangeText={v => updateChild(activeChildIndex, key, v)}
+                            placeholder={fieldCfg.label}
+                            placeholderTextColor={colors.textMuted}
+                            keyboardType="number-pad"
+                            maxLength={key === 'preferred_number' ? 2 : 4}
+                          />
+                        </View>
+                      );
+                    }
+
+                    // Default text field
+                    return (
+                      <View key={key} style={s.fieldBlock}>
+                        <Text style={s.fieldLabel}>
+                          {fieldCfg.label}
+                          {fieldCfg.required && <Text style={s.required}> *</Text>}
+                        </Text>
+                        <TextInput
+                          style={s.input}
+                          value={value}
+                          onChangeText={v => updateChild(activeChildIndex, key, v)}
+                          placeholder={fieldCfg.label}
+                          placeholderTextColor={colors.textMuted}
+                          autoCapitalize={key.includes('name') ? 'words' : 'sentences'}
+                          multiline={key === 'previous_teams'}
+                        />
+                      </View>
+                    );
+                  })}
+              </View>
+            )}
+          </View>
         ) : (
           /* ============ PLACEHOLDER FOR OTHER STEPS ============ */
           <View style={s.stepPlaceholder}>
             <Ionicons name="construct-outline" size={36} color={colors.textMuted} />
             <Text style={s.placeholderTitle}>{currentStepDef?.label}</Text>
             <Text style={s.placeholderText}>This step will be built in Phase {
-              currentStepDef?.key === 'player' ? '3' :
               currentStepDef?.key === 'parent' ? '4' :
               currentStepDef?.key === 'emergency' ? '4' :
               currentStepDef?.key === 'waivers' ? '5' :
@@ -575,6 +822,51 @@ export default function RegistrationWizardScreen() {
           <Text style={s.poweredByText}>Powered by Lynx</Text>
         </View>
       </View>
+
+      {/* ============ PICKER MODAL ============ */}
+      <Modal
+        visible={pickerModal.visible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setPickerModal(prev => ({ ...prev, visible: false }))}
+      >
+        <TouchableOpacity
+          style={s.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setPickerModal(prev => ({ ...prev, visible: false }))}
+        >
+          <View style={s.modalSheet}>
+            <View style={s.modalHeader}>
+              <Text style={s.modalTitle}>{pickerModal.title}</Text>
+              <TouchableOpacity onPress={() => setPickerModal(prev => ({ ...prev, visible: false }))}>
+                <Ionicons name="close" size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={pickerModal.options}
+              keyExtractor={item => item.value}
+              style={s.modalList}
+              renderItem={({ item }) => {
+                const isSelected = children[activeChildIndex]?.[pickerModal.field] === item.value;
+                return (
+                  <TouchableOpacity
+                    style={[s.modalOption, isSelected && { backgroundColor: accentColor + '15' }]}
+                    onPress={() => {
+                      updateChild(activeChildIndex, pickerModal.field, item.value);
+                      setPickerModal(prev => ({ ...prev, visible: false }));
+                    }}
+                  >
+                    <Text style={[s.modalOptionText, isSelected && { color: accentColor, fontWeight: '700' }]}>
+                      {item.label}
+                    </Text>
+                    {isSelected && <Ionicons name="checkmark" size={20} color={accentColor} />}
+                  </TouchableOpacity>
+                );
+              }}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -909,6 +1201,103 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: colors.textSecondary,
+  },
+
+  // Player info — child tabs
+  childTabs: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  childTab: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  childTabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+  },
+
+  // Player info — fields
+  fieldsContainer: {
+    gap: 14,
+  },
+  fieldBlock: {
+    gap: 4,
+  },
+  pickerButton: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.card,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  pickerButtonText: {
+    fontSize: 15,
+    color: colors.text,
+    flex: 1,
+  },
+  datePickerDone: {
+    alignSelf: 'flex-end',
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginTop: 4,
+  },
+  datePickerDoneText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#000',
+  },
+
+  // Picker modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: colors.card,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '60%',
+    paddingBottom: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  modalTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  modalList: {
+    paddingHorizontal: 8,
+  },
+  modalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+  },
+  modalOptionText: {
+    fontSize: 16,
+    color: colors.text,
   },
 
   // Placeholder (for remaining steps)
