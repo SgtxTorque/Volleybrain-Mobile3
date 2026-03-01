@@ -62,6 +62,11 @@ type Registration = {
   denial_reason?: string;
   admin_notes?: string;
   registration_source: string;
+  registration_data?: any;
+  waivers_accepted?: Record<string, boolean>;
+  custom_answers?: Record<string, string>;
+  signature_name?: string;
+  signature_date?: string;
   player: {
     id: string;
     first_name: string;
@@ -1019,11 +1024,14 @@ export default function RegistrationHubScreen() {
     const hasMedical = hasMedicalInfo(player);
     const isSelected = selectedIds.has(registration.id);
 
+    const siblingCount = registration.siblings?.length || 0;
+
     // Compact inline flags
     const flags: { icon: string; color: string }[] = [];
     if (hasMedical) flags.push({ icon: 'medkit', color: '#FF3B30' });
     if (!player.waiver_liability) flags.push({ icon: 'document', color: '#FF3B30' });
     if (player.placement_preferences) flags.push({ icon: 'flag', color: '#5AC8FA' });
+    if (siblingCount > 0) flags.push({ icon: 'people', color: '#AF52DE' });
 
     return (
       <TouchableOpacity
@@ -1055,6 +1063,10 @@ export default function RegistrationHubScreen() {
         )}
         {/* Sport icon */}
         {sport && <Text style={{ fontSize: 16, marginRight: 6 }}>{sport.icon}</Text>}
+        {/* Source indicator */}
+        {registration.registration_source === 'mobile' && (
+          <Text style={{ fontSize: 10, marginRight: 4 }}>{'\ud83d\udcf1'}</Text>
+        )}
         {/* Name */}
         <Text numberOfLines={1} style={{ flex: 1, fontSize: 14, fontWeight: '600', color: colors.text }}>
           {player.first_name} {player.last_name}
@@ -1132,12 +1144,20 @@ export default function RegistrationHubScreen() {
               </View>
             )}
 
-            {/* Status Badge */}
-            <View style={{ alignItems: 'center', marginBottom: 16 }}>
+            {/* Status Badge + Source */}
+            <View style={{ alignItems: 'center', marginBottom: 16, gap: 8 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: `${config.color}20`, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 }}>
                 <Ionicons name={config.icon as any} size={20} color={config.color} />
                 <Text style={{ fontSize: 16, color: config.color, marginLeft: 8, fontWeight: '600' }}>{config.label}</Text>
               </View>
+              {selectedRegistration.registration_source && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: colors.border }}>
+                  <Text style={{ fontSize: 13, marginRight: 4 }}>{selectedRegistration.registration_source === 'mobile' ? '\ud83d\udcf1' : '\ud83c\udf10'}</Text>
+                  <Text style={{ fontSize: 12, color: colors.textSecondary, fontWeight: '500' }}>
+                    {selectedRegistration.registration_source === 'mobile' ? 'Mobile App' : 'Web Form'}
+                  </Text>
+                </View>
+              )}
             </View>
 
             {/* Placement Preferences */}
@@ -1263,6 +1283,20 @@ export default function RegistrationHubScreen() {
                   <Text style={{ color: colors.text, marginLeft: 8 }}>Code of Conduct</Text>
                 </View>
               </View>
+              {/* Signature info */}
+              {(selectedRegistration.signature_name || player.waiver_signed_by) && (
+                <View style={{ marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.06)' }}>
+                  <Text style={{ fontSize: 12, color: colors.textSecondary }}>Signed by</Text>
+                  <Text style={{ fontSize: 14, color: colors.text, fontStyle: 'italic', fontWeight: '500' }}>
+                    {selectedRegistration.signature_name || player.waiver_signed_by}
+                  </Text>
+                  {(selectedRegistration.signature_date || player.waiver_signed_date) && (
+                    <Text style={{ fontSize: 12, color: colors.textMuted, marginTop: 2 }}>
+                      {new Date(selectedRegistration.signature_date || player.waiver_signed_date!).toLocaleDateString()}
+                    </Text>
+                  )}
+                </View>
+              )}
             </View>
 
             {/* Payment Info */}
