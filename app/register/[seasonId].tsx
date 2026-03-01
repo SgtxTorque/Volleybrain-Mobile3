@@ -159,6 +159,10 @@ export default function RegistrationWizardScreen() {
   // Emergency/Medical (Phase 4)
   const [showMedicalFields, setShowMedicalFields] = useState(false);
 
+  // Submit (Phase 6)
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
   // Load config on mount
   useEffect(() => {
     if (!seasonId) return;
@@ -387,6 +391,172 @@ export default function RegistrationWizardScreen() {
     setCustomAnswers(prev => ({ ...prev, [String(index)]: value }));
   }, []);
 
+  // Jump to a specific step (for review "Edit" links)
+  const jumpToStep = useCallback((stepKey: string) => {
+    const idx = steps.findIndex(s => s.key === stepKey);
+    if (idx >= 0) setCurrentStep(idx);
+  }, [steps]);
+
+  // SUBMIT — write to database with rollback on failure
+  const handleSubmit = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    const signatureDate = new Date().toISOString();
+    const createdPlayerIds: string[] = [];
+    const createdRegistrationIds: string[] = [];
+
+    try {
+      // 1. Get or create family
+      let familyId = existingFamilyId;
+      if (!familyId) {
+        const { data: newFamily } = await supabase.from('families').insert({
+          primary_contact_name: sharedInfo.parent1_name,
+          primary_contact_email: sharedInfo.parent1_email,
+          primary_contact_phone: sharedInfo.parent1_phone,
+          primary_email: sharedInfo.parent1_email,
+          primary_phone: sharedInfo.parent1_phone,
+          secondary_contact_name: sharedInfo.parent2_name || null,
+          secondary_contact_email: sharedInfo.parent2_email || null,
+          secondary_contact_phone: sharedInfo.parent2_phone || null,
+          emergency_contact_name: sharedInfo.emergency_name || null,
+          emergency_contact_phone: sharedInfo.emergency_phone || null,
+          emergency_contact_relation: sharedInfo.emergency_relation || null,
+          address: [sharedInfo.address, sharedInfo.city, sharedInfo.state, sharedInfo.zip].filter(Boolean).join(', ') || null,
+          account_id: user!.id,
+        }).select().single();
+        familyId = newFamily?.id || null;
+      } else {
+        await supabase.from('families').update({
+          primary_contact_name: sharedInfo.parent1_name,
+          primary_contact_email: sharedInfo.parent1_email,
+          primary_contact_phone: sharedInfo.parent1_phone,
+          secondary_contact_name: sharedInfo.parent2_name || null,
+          secondary_contact_email: sharedInfo.parent2_email || null,
+          secondary_contact_phone: sharedInfo.parent2_phone || null,
+          emergency_contact_name: sharedInfo.emergency_name || null,
+          emergency_contact_phone: sharedInfo.emergency_phone || null,
+          emergency_contact_relation: sharedInfo.emergency_relation || null,
+          address: [sharedInfo.address, sharedInfo.city, sharedInfo.state, sharedInfo.zip].filter(Boolean).join(', ') || null,
+          updated_at: new Date().toISOString(),
+        }).eq('id', familyId);
+      }
+
+      // 2. For each child, create player + registration + player_parents
+      for (const child of children) {
+        const gradeValue = child.grade ? (child.grade === '0' || child.grade === 'K' ? 0 : parseInt(child.grade)) : null;
+
+        const { data: player, error: playerError } = await supabase
+          .from('players')
+          .insert({
+            first_name: child.first_name,
+            last_name: child.last_name,
+            birth_date: child.birth_date || null,
+            grade: gradeValue,
+            gender: child.gender || null,
+            school: child.school || null,
+            position: child.position_preference || null,
+            experience_level: child.experience_level || null,
+            experience_details: child.previous_teams || null,
+            uniform_size_jersey: child.jersey_size || child.shirt_size || child.uniform_size_jersey || null,
+            uniform_size_shorts: child.shorts_size || child.uniform_size_shorts || null,
+            jersey_pref_1: child.preferred_number ? parseInt(child.preferred_number) : (child.jersey_pref_1 ? parseInt(child.jersey_pref_1) : null),
+            parent_name: sharedInfo.parent1_name || null,
+            parent_email: sharedInfo.parent1_email || null,
+            parent_phone: sharedInfo.parent1_phone || null,
+            parent_2_name: sharedInfo.parent2_name || null,
+            parent_2_email: sharedInfo.parent2_email || null,
+            parent_2_phone: sharedInfo.parent2_phone || null,
+            emergency_contact_name: sharedInfo.emergency_name || null,
+            emergency_contact_phone: sharedInfo.emergency_phone || null,
+            emergency_contact_relation: sharedInfo.emergency_relation || null,
+            medical_conditions: sharedInfo.medical_conditions || null,
+            allergies: sharedInfo.allergies || null,
+            medications: sharedInfo.medications || null,
+            address: sharedInfo.address || null,
+            city: sharedInfo.city || null,
+            state: sharedInfo.state || null,
+            zip: sharedInfo.zip || null,
+            waiver_liability: waiverState.liability || false,
+            waiver_photo: waiverState.photo_release || false,
+            waiver_conduct: waiverState.code_of_conduct || false,
+            waiver_signed_by: signature || null,
+            waiver_signed_date: signatureDate,
+            family_id: familyId || null,
+            season_id: seasonId,
+            sport_id: data!.season.sport_id || null,
+            status: 'new',
+            registration_source: 'mobile',
+            registration_date: new Date().toISOString(),
+            returning_player: child._isReturning === 'true',
+            prefilled_from_player_id: child._returningPlayerId || null,
+            parent_account_id: user!.id,
+          }).select().single();
+
+        if (playerError) {
+          if (playerError.code === '23505') {
+            throw new Error(`${child.first_name} ${child.last_name} may already be registered.`);
+          }
+          throw new Error(`Failed to register ${child.first_name}: ${playerError.message}`);
+        }
+        createdPlayerIds.push(player.id);
+
+        // Create registration record
+        const { data: registration, error: regError } = await supabase
+          .from('registrations')
+          .insert({
+            player_id: player.id,
+            season_id: seasonId,
+            family_id: familyId || null,
+            status: 'new',
+            submitted_at: new Date().toISOString(),
+            registration_source: 'mobile',
+            waivers_accepted: waiverState,
+            custom_answers: Object.keys(customAnswers).length > 0 ? customAnswers : null,
+            signature_name: signature || null,
+            signature_date: signatureDate,
+            registration_data: {
+              player: child,
+              shared: sharedInfo,
+              waivers: waiverState,
+              custom_questions: customAnswers,
+              signature: { name: signature, date: signatureDate },
+              source: 'mobile_app',
+              app_version: '1.0.0',
+              submitted_by_user_id: user!.id,
+            },
+          }).select().single();
+
+        if (regError && regError.code !== '23505') {
+          throw new Error(`Failed to create registration for ${child.first_name}`);
+        }
+        if (registration) createdRegistrationIds.push(registration.id);
+
+        // Link player to parent
+        await supabase.from('player_parents').upsert({
+          player_id: player.id,
+          parent_id: profile!.id,
+          relationship: 'parent',
+          is_primary: true,
+          can_pickup: true,
+          receives_notifications: true,
+        }, { onConflict: 'player_id,parent_id' });
+      }
+
+      setSubmitted(true);
+    } catch (err: any) {
+      // ROLLBACK
+      if (createdRegistrationIds.length > 0) {
+        await supabase.from('registrations').delete().in('id', createdRegistrationIds);
+      }
+      if (createdPlayerIds.length > 0) {
+        await supabase.from('players').delete().in('id', createdPlayerIds);
+      }
+      Alert.alert('Registration Failed', err.message || 'Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleBack = () => {
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
@@ -515,6 +685,54 @@ export default function RegistrationWizardScreen() {
   const { organization, sport, season } = data;
   const currentStepDef = steps[currentStep];
   const isLastStep = currentStep === steps.length - 1;
+
+  // ---- Success screen ----
+  if (submitted) {
+    return (
+      <SafeAreaView style={s.container} edges={['top', 'bottom']}>
+        <ScrollView contentContainerStyle={s.successContainer}>
+          <Image
+            source={require('@/assets/images/lynx-mascot.png')}
+            style={s.successMascot}
+            resizeMode="contain"
+          />
+          <Text style={s.successTitle}>Registration Submitted!</Text>
+          <Text style={s.successSubtitle}>
+            {children.length} child{children.length !== 1 ? 'ren' : ''} registered for{'\n'}
+            {season.name}{sport?.name ? ` ${sport.name}` : ''}{'\n'}
+            at {organization?.name || 'your organization'}
+          </Text>
+          <Text style={s.successHint}>
+            The admin will review your registration shortly.
+          </Text>
+
+          <View style={s.successButtons}>
+            <TouchableOpacity
+              style={[s.nextButton, { backgroundColor: accentColor }]}
+              onPress={() => router.replace('/parent-registration-hub' as any)}
+            >
+              <Text style={s.nextButtonText}>View My Registrations</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={s.backButton}
+              onPress={() => router.replace('/(tabs)' as any)}
+            >
+              <Text style={s.backButtonText}>Back to Home</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={s.poweredByRow}>
+            <Image
+              source={require('@/assets/images/lynx-icon.png')}
+              style={s.poweredByIcon}
+              resizeMode="contain"
+            />
+            <Text style={s.poweredByText}>Powered by Lynx</Text>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={s.container} edges={['top', 'bottom']}>
@@ -1040,33 +1258,145 @@ export default function RegistrationWizardScreen() {
               />
             </View>
           </View>
-        ) : (
-          /* ============ PLACEHOLDER (review step built in Phase 6) ============ */
-          <View style={s.stepPlaceholder}>
-            <Ionicons name="construct-outline" size={36} color={colors.textMuted} />
-            <Text style={s.placeholderTitle}>{currentStepDef?.label}</Text>
-            <Text style={s.placeholderText}>This step will be built in Phase 6.</Text>
+        ) : currentStepDef?.key === 'review' && data ? (
+          /* ============ REVIEW & SUBMIT STEP ============ */
+          <View style={s.stepContainer}>
+            {/* Children summary */}
+            <View style={s.reviewSection}>
+              <View style={s.reviewSectionHeader}>
+                <Text style={s.reviewSectionTitle}>Children ({children.length})</Text>
+                <TouchableOpacity onPress={() => jumpToStep('children')}>
+                  <Text style={[s.editLink, { color: accentColor }]}>Edit</Text>
+                </TouchableOpacity>
+              </View>
+              {children.map((child, idx) => (
+                <Text key={idx} style={s.reviewItem}>
+                  {child.first_name} {child.last_name}
+                  {child.grade ? ` — Grade ${child.grade === '0' ? 'K' : child.grade}` : ''}
+                  {child._isReturning === 'true' ? ' (Returning)' : ''}
+                </Text>
+              ))}
+            </View>
+
+            {/* Parent summary */}
+            <View style={s.reviewSection}>
+              <View style={s.reviewSectionHeader}>
+                <Text style={s.reviewSectionTitle}>Parent/Guardian</Text>
+                <TouchableOpacity onPress={() => jumpToStep('parent')}>
+                  <Text style={[s.editLink, { color: accentColor }]}>Edit</Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={s.reviewItem}>{sharedInfo.parent1_name}</Text>
+              <Text style={s.reviewDetail}>
+                {[sharedInfo.parent1_email, sharedInfo.parent1_phone].filter(Boolean).join(' · ')}
+              </Text>
+              {sharedInfo.parent2_name ? (
+                <>
+                  <Text style={[s.reviewItem, { marginTop: 4 }]}>{sharedInfo.parent2_name}</Text>
+                  <Text style={s.reviewDetail}>
+                    {[sharedInfo.parent2_email, sharedInfo.parent2_phone].filter(Boolean).join(' · ')}
+                  </Text>
+                </>
+              ) : null}
+            </View>
+
+            {/* Emergency summary */}
+            {(sharedInfo.emergency_name || sharedInfo.emergency_phone) && (
+              <View style={s.reviewSection}>
+                <View style={s.reviewSectionHeader}>
+                  <Text style={s.reviewSectionTitle}>Emergency Contact</Text>
+                  <TouchableOpacity onPress={() => jumpToStep('emergency')}>
+                    <Text style={[s.editLink, { color: accentColor }]}>Edit</Text>
+                  </TouchableOpacity>
+                </View>
+                <Text style={s.reviewItem}>
+                  {[sharedInfo.emergency_name, sharedInfo.emergency_phone, sharedInfo.emergency_relation].filter(Boolean).join(' · ')}
+                </Text>
+              </View>
+            )}
+
+            {/* Medical summary */}
+            {showMedicalFields && (
+              <View style={s.reviewSection}>
+                <Text style={s.reviewSectionTitle}>Medical</Text>
+                {sharedInfo.medical_conditions && <Text style={s.reviewDetail}>Conditions: {sharedInfo.medical_conditions}</Text>}
+                {sharedInfo.allergies && <Text style={s.reviewDetail}>Allergies: {sharedInfo.allergies}</Text>}
+                {sharedInfo.medications && <Text style={s.reviewDetail}>Medications: {sharedInfo.medications}</Text>}
+                {!sharedInfo.medical_conditions && !sharedInfo.allergies && !sharedInfo.medications && (
+                  <Text style={s.reviewDetail}>No medical conditions reported</Text>
+                )}
+              </View>
+            )}
+
+            {/* Waivers summary */}
+            {Object.values(data.config.waivers).some(w => w.enabled) && (
+              <View style={s.reviewSection}>
+                <View style={s.reviewSectionHeader}>
+                  <Text style={s.reviewSectionTitle}>Waivers</Text>
+                  <TouchableOpacity onPress={() => jumpToStep('waivers')}>
+                    <Text style={[s.editLink, { color: accentColor }]}>Edit</Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={s.waiverSummaryRow}>
+                  {Object.entries(data.config.waivers)
+                    .filter(([_, w]) => w.enabled)
+                    .map(([key, w]) => (
+                      <Text key={key} style={s.reviewDetail}>
+                        {waiverState[key] ? '\u2713' : '\u2717'} {w.title}
+                      </Text>
+                    ))}
+                </View>
+                <Text style={s.reviewDetail}>Signed by: {signature}</Text>
+              </View>
+            )}
+
+            {/* Fee summary */}
+            {feeBreakdown && feeBreakdown.lines.length > 0 && (
+              <View style={s.feeCard}>
+                <Text style={s.feeTitle}>Fees</Text>
+                {feeBreakdown.lines.map((line, idx) => (
+                  <View key={idx} style={s.feeLine}>
+                    <Text style={s.feeLabel}>{line.label}</Text>
+                    <Text style={s.feeAmount}>{line.detail} = ${line.amount}</Text>
+                  </View>
+                ))}
+                <View style={s.feeDivider} />
+                <View style={s.feeLine}>
+                  <Text style={s.feeTotalLabel}>Total Due</Text>
+                  <Text style={s.feeTotalAmount}>${feeBreakdown.total}</Text>
+                </View>
+              </View>
+            )}
           </View>
-        )}
+        ) : null}
       </ScrollView>
 
       {/* ============ FOOTER ============ */}
       <View style={s.footer}>
         <View style={s.footerButtons}>
-          {currentStep > 0 && (
+          {currentStep > 0 && !submitted && (
             <TouchableOpacity style={s.backButton} onPress={handleBack}>
               <Ionicons name="arrow-back" size={18} color={colors.text} />
               <Text style={s.backButtonText}>Back</Text>
             </TouchableOpacity>
           )}
           <View style={{ flex: 1 }} />
-          <TouchableOpacity
-            style={[s.nextButton, { backgroundColor: accentColor }]}
-            onPress={handleNext}
-          >
-            <Text style={s.nextButtonText}>{isLastStep ? 'Submit' : 'Next'}</Text>
-            <Ionicons name={isLastStep ? 'checkmark-circle' : 'arrow-forward'} size={18} color="#000" />
-          </TouchableOpacity>
+          {!submitted && (
+            <TouchableOpacity
+              style={[s.nextButton, { backgroundColor: accentColor }, submitting && { opacity: 0.6 }]}
+              onPress={isLastStep ? handleSubmit : handleNext}
+              disabled={submitting}
+            >
+              {submitting ? (
+                <ActivityIndicator size="small" color="#000" />
+              ) : (
+                <>
+                  <Text style={s.nextButtonText}>{isLastStep ? 'Submit Registration' : 'Next'}</Text>
+                  <Ionicons name={isLastStep ? 'checkmark-circle' : 'arrow-forward'} size={18} color="#000" />
+                </>
+              )}
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Powered by Lynx */}
@@ -1458,6 +1788,84 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: colors.textSecondary,
+  },
+
+  // Review step
+  reviewSection: {
+    backgroundColor: colors.card,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 14,
+    gap: 4,
+    ...shadows.card,
+  },
+  reviewSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  reviewSectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  editLink: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  reviewItem: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  reviewDetail: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    lineHeight: 18,
+  },
+  waiverSummaryRow: {
+    gap: 2,
+  },
+
+  // Success screen
+  successContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+    gap: 12,
+  },
+  successMascot: {
+    width: 120,
+    height: 172,
+    marginBottom: 8,
+  },
+  successTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: colors.text,
+    textAlign: 'center',
+  },
+  successSubtitle: {
+    fontSize: 16,
+    color: colors.text,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  successHint: {
+    fontSize: 14,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  successButtons: {
+    gap: 12,
+    alignItems: 'center',
+    width: '100%',
   },
 
   // Waiver cards
