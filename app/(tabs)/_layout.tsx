@@ -22,8 +22,8 @@ export default function TabLayout() {
 
   // Tab 2 slot: Admin > Coach > Parent > Player priority
   const showManageTab = isAdmin;
-  // Parent (non-admin) gets "Schedule" label on gameday tab; Coach/Player get "Game Day"
-  const isParentOnly = isParent && !isAdmin;
+  // Pure parent (not admin, not coach) gets the parent-schedule tab
+  const isParentOnly = isParent && !isAdmin && !isCoach;
   const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [unreadAlertCount, setUnreadAlertCount] = useState(0);
   // Drawer badge counts for More tab
@@ -184,18 +184,31 @@ export default function TabLayout() {
         }}
       />
 
-      {/* ====== TAB 2b: GAME DAY / SCHEDULE (non-Admin) ====== */}
+      {/* ====== TAB 2b: GAME DAY (Coach / Player — not admin, not parent-only) ====== */}
       <Tabs.Screen
         name="gameday"
         options={{
-          href: showManageTab ? null : undefined,
-          title: isParentOnly ? 'Schedule' : 'Game Day',
+          href: (!showManageTab && !isParentOnly) ? undefined : null,
+          title: 'Game Day',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
-              name={isParentOnly
-                ? (focused ? 'calendar' : 'calendar-outline')
-                : (focused ? 'flash' : 'flash-outline')
-              }
+              name={focused ? 'flash' : 'flash-outline'}
+              size={24}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      {/* ====== TAB 2c: SCHEDULE (Parent only — not admin, not coach) ====== */}
+      <Tabs.Screen
+        name="parent-schedule"
+        options={{
+          href: isParentOnly ? undefined : null,
+          title: 'Schedule',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'calendar' : 'calendar-outline'}
               size={24}
               color={color}
             />
@@ -223,7 +236,6 @@ export default function TabLayout() {
       {/* ====== HIDDEN TABS (accessible via drawer / deep links) ====== */}
       <Tabs.Screen name="connect" options={{ href: null }} />
       <Tabs.Screen name="me" options={{ href: null }} />
-      <Tabs.Screen name="parent-schedule" options={{ href: null }} />
       <Tabs.Screen name="parent-chat" options={{ href: null }} />
       <Tabs.Screen name="parent-team-hub" options={{ href: null }} />
       <Tabs.Screen name="parent-my-stuff" options={{ href: null }} />
