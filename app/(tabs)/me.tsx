@@ -515,7 +515,7 @@ export default function MeScreen() {
         </TouchableOpacity>
 
         {/* Version footer */}
-        <Text style={s.versionText}>VolleyBrain v1.0.0</Text>
+        <Text style={s.versionText}>Lynx v1.0.0</Text>
 
         <View style={{ height: 40 }} />
       </ScrollView>

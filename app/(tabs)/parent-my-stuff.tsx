@@ -584,7 +584,7 @@ export default function ParentMyStuffScreen() {
           <Text style={s.signOutText}>Sign Out</Text>
         </TouchableOpacity>
 
-        <Text style={s.versionText}>VolleyBrain v1.0.0</Text>
+        <Text style={s.versionText}>Lynx v1.0.0</Text>
 
         <View style={{ height: 80 }} />
       </ScrollView>

@@ -55,7 +55,7 @@ export default function HelpScreen() {
   };
 
   const handleContactSupport = () => {
-    Linking.openURL('mailto:support@volleybrain.com');
+    Linking.openURL('mailto:support@thelynxapp.com');
   };
 
   const s = createStyles(colors);
@@ -110,14 +110,14 @@ export default function HelpScreen() {
             </Text>
             <TouchableOpacity style={s.emailRow} onPress={handleContactSupport}>
               <Ionicons name="mail-outline" size={20} color={colors.primary} />
-              <Text style={s.emailText}>support@volleybrain.com</Text>
+              <Text style={s.emailText}>support@thelynxapp.com</Text>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* App Version */}
         <View style={s.versionContainer}>
-          <Text style={s.versionText}>VolleyBrain v{appVersion}</Text>
+          <Text style={s.versionText}>Lynx v{appVersion}</Text>
         </View>
 
         <View style={{ height: 40 }} />

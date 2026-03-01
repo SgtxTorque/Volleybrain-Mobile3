@@ -257,7 +257,7 @@ export default function AppDrawer({ visible, onClose }: AppDrawerProps) {
 
           {/* App Version */}
           <View style={s.footer}>
-            <Text style={s.version}>VolleyBrain v1.0.0</Text>
+            <Text style={s.version}>Lynx v1.0.0</Text>
           </View>
         </View>
       </View>

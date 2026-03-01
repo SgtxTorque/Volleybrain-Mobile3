@@ -20,7 +20,7 @@ type TermsSection = {
 const TERMS_SECTIONS: TermsSection[] = [
   {
     title: '1. Acceptance of Terms',
-    content: 'By creating an account or using VolleyBrain, you agree to these terms. If you do not agree, do not use the service. Parents/guardians accepting on behalf of minor children are bound by these terms.',
+    content: 'By creating an account or using Lynx, you agree to these terms. If you do not agree, do not use the service. Parents/guardians accepting on behalf of minor children are bound by these terms.',
   },
   {
     title: '2. Account Responsibilities',
@@ -49,7 +49,7 @@ const TERMS_SECTIONS: TermsSection[] = [
     content: '',
     bullets: [
       'You retain ownership of content you upload (photos, messages, etc.)',
-      'You grant VolleyBrain a license to display and store your content for app functionality',
+      'You grant Lynx a license to display and store your content for app functionality',
       'Organization administrators may moderate or remove inappropriate content',
       'Chat messages may be visible to team members, coaches, and administrators',
     ],
@@ -58,10 +58,10 @@ const TERMS_SECTIONS: TermsSection[] = [
     title: '5. Payment Terms',
     content: '',
     bullets: [
-      'Registration fees and payments are set by your organization, not VolleyBrain',
+      'Registration fees and payments are set by your organization, not Lynx',
       'Payment processing is handled through the organization\'s chosen method',
       'Refund policies are determined by your organization',
-      'VolleyBrain is not responsible for disputes between users and organizations',
+      'Lynx is not responsible for disputes between users and organizations',
     ],
   },
   {
@@ -78,7 +78,7 @@ const TERMS_SECTIONS: TermsSection[] = [
     title: '7. Disclaimers',
     content: '',
     bullets: [
-      'VolleyBrain is provided "as is" without warranty of any kind',
+      'Lynx is provided "as is" without warranty of any kind',
       'We do not guarantee uninterrupted service availability',
       'We are not responsible for the actions of organizations, coaches, or users',
       'Medical information in the app does not constitute medical advice',
@@ -88,7 +88,7 @@ const TERMS_SECTIONS: TermsSection[] = [
     title: '8. Limitation of Liability',
     content: '',
     bullets: [
-      'VolleyBrain\'s liability is limited to the amount paid for the service',
+      'Lynx\'s liability is limited to the amount paid for the service',
       'We are not liable for injuries, losses, or damages arising from sports participation',
       'We are not liable for data loss beyond our reasonable control',
     ],
@@ -99,7 +99,7 @@ const TERMS_SECTIONS: TermsSection[] = [
     bullets: [
       'You may delete your account at any time through profile settings',
       'Organizations may remove users who violate their policies',
-      'VolleyBrain may suspend accounts that violate these terms',
+      'Lynx may suspend accounts that violate these terms',
       'Upon termination, your data will be handled per our Privacy Policy',
     ],
   },

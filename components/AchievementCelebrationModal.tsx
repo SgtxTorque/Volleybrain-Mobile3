@@ -188,7 +188,7 @@ export default function AchievementCelebrationModal({
   const handleShare = async () => {
     if (!current?.achievements) return;
     const ach = current.achievements;
-    const msg = `I just unlocked "${ach.name}" on VolleyBrain! ${ach.icon || '\uD83C\uDFC6'} #VolleyBrain`;
+    const msg = `I just unlocked "${ach.name}" on Lynx! ${ach.icon || '\uD83C\uDFC6'} #Lynx #LynxSports`;
     try {
       await Share.share({ message: msg });
     } catch {

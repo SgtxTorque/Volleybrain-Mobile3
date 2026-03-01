@@ -24,7 +24,7 @@ export function useFirstTimeWelcome(role: string | null | undefined) {
 
       const messages: Record<string, { title: string; body: string }> = {
         parent: {
-          title: 'Welcome to VolleyBrain!',
+          title: 'Welcome to Lynx!',
           body: "You're all set! Check the Home tab for your child's schedule, stats, and team updates.",
         },
         coach: {

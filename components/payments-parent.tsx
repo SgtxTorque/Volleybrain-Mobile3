@@ -432,7 +432,7 @@ export default function ParentPaymentsScreen({ hideHeader = false }: Props) {
       `${p.player_name} - ${p.fee_name}`
     ).join(', ');
 
-    const description = `${organization?.name || 'VolleyBrain'}: ${itemsList}`;
+    const description = `${organization?.name || 'Lynx'}: ${itemsList}`;
 
     // Get payment IDs (filter out placeholder new- IDs)
     const paymentIds = selectedPayments
@@ -452,8 +452,8 @@ export default function ParentPaymentsScreen({ hideHeader = false }: Props) {
           customer_email: parentEmail,
           customer_name: parentName,
           description,
-          success_url: 'volleybrain://payment-success',
-          cancel_url: 'volleybrain://payment-cancel',
+          success_url: 'lynx://payment-success',
+          cancel_url: 'lynx://payment-cancel',
           metadata: {
             source: 'mobile',
             organization_id: organization?.id || '',

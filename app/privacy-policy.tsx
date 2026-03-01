@@ -59,7 +59,7 @@ const POLICY_SECTIONS: PolicySection[] = [
     title: '4. Children\'s Privacy',
     content: '',
     bullets: [
-      'VolleyBrain collects information about children under 13 only with verified parental consent',
+      'Lynx collects information about children under 13 only with verified parental consent',
       'Parents must provide consent during registration before any child data is collected',
       'Parents can review, modify, or request deletion of their child\'s data at any time',
       'Parents can revoke consent, which will remove their child from active rosters',
@@ -101,7 +101,7 @@ const POLICY_SECTIONS: PolicySection[] = [
     title: '8. Contact Us',
     content: 'For privacy-related questions or requests:',
     bullets: [
-      'Email: privacy@volleybrain.com',
+      'Email: privacy@thelynxapp.com',
       'Through the app: Settings \u2192 Help & Support',
       'Your organization administrator can also assist with data requests',
     ],

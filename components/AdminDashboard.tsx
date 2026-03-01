@@ -552,7 +552,7 @@ export default function AdminDashboard() {
           {
             text: 'Copy & Share',
             onPress: () => {
-              const msg = 'You have been invited to join ' + (organization?.name || 'our organization') + ' on VolleyBrain!\n\nYour invite code: ' + inviteCode + '\n\nOpen directly: volleybrain://redeem-code?code=' + inviteCode + '\n\nOr download the app and enter the code manually.' + (inviteMessage ? '\n\nMessage: ' + inviteMessage : '');
+              const msg = 'You have been invited to join ' + (organization?.name || 'our organization') + ' on Lynx!\n\nYour invite code: ' + inviteCode + '\n\nOpen directly: lynx://redeem-code?code=' + inviteCode + '\n\nOr download the app and enter the code manually.' + (inviteMessage ? '\n\nMessage: ' + inviteMessage : '');
               Share.share({ message: msg });
             }
           },
@@ -601,7 +601,7 @@ export default function AdminDashboard() {
             text: 'Copy & Share',
             onPress: () => {
               Share.share({
-                message: 'Join ' + selectedTeam?.name + ' on ' + (organization?.name || 'VolleyBrain') + '!\n\nUse code: ' + inviteCode + '\n\nOpen directly: volleybrain://redeem-code?code=' + inviteCode + '\n\nOr enter the code when signing up on VolleyBrain.',
+                message: 'Join ' + selectedTeam?.name + ' on ' + (organization?.name || 'Lynx') + '!\n\nUse code: ' + inviteCode + '\n\nOpen directly: lynx://redeem-code?code=' + inviteCode + '\n\nOr enter the code when signing up on Lynx.',
               });
             }
           },
@@ -622,7 +622,7 @@ export default function AdminDashboard() {
 
   const resendInvite = async (invite: PendingInvite) => {
     Share.share({
-      message: 'Reminder: You have been invited to join ' + (organization?.name || 'our organization') + '!\n\nYour invite code: ' + invite.invite_code + '\n\nOpen directly: volleybrain://redeem-code?code=' + invite.invite_code + '\n\nOr download VolleyBrain and enter the code to sign up.',
+      message: 'Reminder: You have been invited to join ' + (organization?.name || 'our organization') + '!\n\nYour invite code: ' + invite.invite_code + '\n\nOpen directly: lynx://redeem-code?code=' + invite.invite_code + '\n\nOr download Lynx and enter the code to sign up.',
     });
   };
 

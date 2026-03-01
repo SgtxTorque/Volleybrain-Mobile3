@@ -2,6 +2,7 @@ import { getSportDisplay, getPositionInfo } from '@/constants/sport-display';
 import { useAuth } from '@/lib/auth';
 import { getTrackedProgress, getUnseenAchievements, markAchievementsSeen } from '@/lib/achievement-engine';
 import type { AchievementProgress, UnseenAchievement } from '@/lib/achievement-types';
+import { fetchShoutoutStats } from '@/lib/shoutout-service';
 import { pickImage, takePhoto, uploadMedia } from '@/lib/media-utils';
 import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
@@ -298,6 +299,22 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
   const [unseenAchievements, setUnseenAchievements] = useState<UnseenAchievement[]>([]);
   const [showCelebration, setShowCelebration] = useState(false);
   const [trackedProgress, setTrackedProgress] = useState<AchievementProgress[]>([]);
+
+  // Shoutout stats
+  const [shoutoutStats, setShoutoutStats] = useState<{
+    received: number;
+    given: number;
+    categoryBreakdown: Array<{ category: string; emoji: string; color: string; count: number }>;
+  } | null>(null);
+  const [recentShoutouts, setRecentShoutouts] = useState<Array<{
+    id: string;
+    category: string;
+    giver_name: string;
+    emoji: string;
+    color: string;
+    message: string | null;
+    created_at: string;
+  }>>([]);
   const [lineupPositions, setLineupPositions] = useState<Record<string, { position: string | null; is_starter: boolean }>>({});
 
   // Animation refs
@@ -574,6 +591,34 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
             setShowCelebration(true);
           }
         })
+      );
+
+      // Shoutout stats + recent shoutouts
+      promises.push(
+        fetchShoutoutStats(playerId).then((stats) => setShoutoutStats(stats)).catch(() => {})
+      );
+      promises.push(
+        (async () => {
+          try {
+            const { data } = await supabase
+              .from('shoutouts')
+              .select('id, category, message, created_at, giver_id, shoutout_categories(emoji, color), profiles:giver_id(full_name)')
+              .eq('receiver_id', playerId)
+              .order('created_at', { ascending: false })
+              .limit(5);
+            if (data) {
+              setRecentShoutouts(data.map((s: any) => ({
+                id: s.id,
+                category: s.category,
+                giver_name: (s.profiles as any)?.full_name || 'Someone',
+                emoji: (s.shoutout_categories as any)?.emoji || '⭐',
+                color: (s.shoutout_categories as any)?.color || '#64748B',
+                message: s.message,
+                created_at: s.created_at,
+              })));
+            }
+          } catch {}
+        })()
       );
 
       await Promise.all(promises);
@@ -1173,16 +1218,76 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
     );
   };
 
+  // Shoutouts received section
+  const renderShoutoutsReceived = () => {
+    if (!shoutoutStats || (shoutoutStats.received === 0 && recentShoutouts.length === 0)) return null;
+
+    return (
+      <View style={s.section}>
+        <View style={s.sectionHeaderRow}>
+          <Text style={[s.sectionHeader, { color: P.gold }]}>SHOUTOUTS</Text>
+          <Ionicons name="megaphone" size={14} color={P.gold} />
+        </View>
+
+        {/* Summary pills */}
+        <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
+          <View style={[s.shoutoutPill, { backgroundColor: P.card, borderColor: P.border }]}>
+            <Text style={{ fontSize: 22, fontWeight: '900', color: '#10B981' }}>{shoutoutStats.received}</Text>
+            <Text style={{ fontSize: 10, color: P.textMuted, fontWeight: '600' }}>RECEIVED</Text>
+          </View>
+          <View style={[s.shoutoutPill, { backgroundColor: P.card, borderColor: P.border }]}>
+            <Text style={{ fontSize: 22, fontWeight: '900', color: '#3B82F6' }}>{shoutoutStats.given}</Text>
+            <Text style={{ fontSize: 10, color: P.textMuted, fontWeight: '600' }}>GIVEN</Text>
+          </View>
+          {shoutoutStats.categoryBreakdown.length > 0 && (
+            <View style={[s.shoutoutPill, { backgroundColor: P.card, borderColor: P.border, flex: 1 }]}>
+              <View style={{ flexDirection: 'row', gap: 4 }}>
+                {shoutoutStats.categoryBreakdown.slice(0, 3).map((c, i) => (
+                  <Text key={i} style={{ fontSize: 16 }}>{c.emoji}</Text>
+                ))}
+              </View>
+              <Text style={{ fontSize: 10, color: P.textMuted, fontWeight: '600' }}>TOP TYPES</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Recent shoutouts feed */}
+        {recentShoutouts.map((shout) => (
+          <View
+            key={shout.id}
+            style={[s.shoutoutCard, { backgroundColor: P.card, borderColor: shout.color + '40' }]}
+          >
+            <Text style={{ fontSize: 28 }}>{shout.emoji}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: P.text, fontSize: 14, fontWeight: '600' }}>
+                {shout.category}
+              </Text>
+              <Text style={{ color: P.textMuted, fontSize: 12 }}>
+                From {shout.giver_name}
+              </Text>
+              {shout.message ? (
+                <Text style={{ color: P.textSecondary, fontSize: 12, fontStyle: 'italic', marginTop: 4 }} numberOfLines={2}>
+                  &ldquo;{shout.message}&rdquo;
+                </Text>
+              ) : null}
+            </View>
+          </View>
+        ))}
+      </View>
+    );
+  };
+
   // Section ordering
   const SECTION_ORDER: Record<LayoutPreference, string[]> = {
-    default: ['stats', 'trophies', 'tracked', 'squadcomms', 'battle', 'upcoming'],
-    stats_first: ['stats', 'battle', 'trophies', 'tracked', 'squadcomms', 'upcoming'],
-    games_first: ['battle', 'stats', 'trophies', 'tracked', 'squadcomms', 'upcoming'],
+    default: ['stats', 'trophies', 'shoutouts', 'tracked', 'squadcomms', 'battle', 'upcoming'],
+    stats_first: ['stats', 'battle', 'trophies', 'shoutouts', 'tracked', 'squadcomms', 'upcoming'],
+    games_first: ['battle', 'stats', 'trophies', 'shoutouts', 'tracked', 'squadcomms', 'upcoming'],
   };
 
   const sectionMap: Record<string, () => React.ReactNode> = {
     stats: renderStatHud,
     trophies: renderTrophyCase,
+    shoutouts: renderShoutoutsReceived,
     tracked: renderTrackedNudges,
     squadcomms: () => <SquadComms teamId={team?.id} playerId={player?.id} themeColors={P} />,
     battle: renderBattleLog,
@@ -1390,7 +1495,7 @@ export default function PlayerDashboard({ playerId: propPlayerId, playerName: pr
         <View style={s.section}>
           <View style={[s.welcomeCard, { backgroundColor: P.card, borderColor: playerAccent + '40' }]}>
             <Text style={{ fontSize: 32, textAlign: 'center' }}>{sportDisplay.icon}</Text>
-            <Text style={[s.welcomeTitle, { color: P.text }]}>Welcome to VolleyBrain!</Text>
+            <Text style={[s.welcomeTitle, { color: P.text }]}>Welcome to Lynx!</Text>
             <Text style={[s.welcomeSubtext, { color: P.textMuted }]}>
               This is your player dashboard. As you play games and earn stats, this space will fill up with your achievements, rankings, and highlights. Let's go!
             </Text>
@@ -2220,5 +2325,29 @@ const createStyles = (colors: any) =>
       paddingHorizontal: 16,
       paddingVertical: 10,
       borderRadius: 12,
+    },
+
+    // ========================
+    // SHOUTOUTS
+    // ========================
+    shoutoutPill: {
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      borderRadius: 12,
+      borderWidth: 1,
+      gap: 4,
+      minWidth: 70,
+    },
+    shoutoutCard: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: 12,
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      borderRadius: 12,
+      borderWidth: 1,
+      marginBottom: 8,
     },
   });

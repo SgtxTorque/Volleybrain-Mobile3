@@ -1,5 +1,6 @@
 import EmojiPicker from '@/components/EmojiPicker';
 import ChallengeCard, { parseChallengeMetadata } from '@/components/ChallengeCard';
+import ChallengeDetailModal from '@/components/ChallengeDetailModal';
 import CreateChallengeModal from '@/components/CreateChallengeModal';
 import GiveShoutoutModal from '@/components/GiveShoutoutModal';
 import PhotoViewer, { GalleryItem } from '@/components/PhotoViewer';
@@ -7,6 +8,7 @@ import ShoutoutCard, { parseShoutoutMetadata } from '@/components/ShoutoutCard';
 import ImagePreviewModal from '@/components/ui/ImagePreviewModal';
 import { getPositionInfo } from '@/constants/sport-display';
 import { useAuth } from '@/lib/auth';
+import { optInToChallenge, fetchActiveChallenges } from '@/lib/challenge-service';
 import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { usePermissions } from '@/lib/permissions-context';
 import { compressImage, pickImage, takePhoto, uploadMedia, MediaResult } from '@/lib/media-utils';
@@ -329,6 +331,10 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
 
   // Challenge modal
   const [showChallengeModal, setShowChallengeModal] = useState(false);
+  // Challenge detail/opt-in
+  const [challengeDetailId, setChallengeDetailId] = useState<string | null>(null);
+  const [showChallengeDetail, setShowChallengeDetail] = useState(false);
+  const [challengeParticipation, setChallengeParticipation] = useState<Record<string, { isOptedIn: boolean; userProgress: number; participantCount: number }>>({});
 
   // Roster state
   const [roster, setRoster] = useState<RosterPlayer[]>([]);
@@ -611,6 +617,12 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
       const postsData = (data as Post[]) || [];
       setPosts(postsData);
 
+      // Load challenge participation data for challenge posts
+      const challengePosts = postsData.filter((p) => p.post_type === 'challenge');
+      if (challengePosts.length > 0) {
+        loadChallengeParticipation(challengePosts).catch(() => {});
+      }
+
       // Load reactions for these posts (user's + all)
       if (postsData.length > 0) {
         const postIds = postsData.map((p) => p.id);
@@ -651,6 +663,31 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
       setLoadingPosts(false);
     }
   };
+
+  // Load challenge participation data for all challenge posts
+  const loadChallengeParticipation = useCallback(async (challengePosts: Post[]) => {
+    if (!teamId || !user?.id || challengePosts.length === 0) return;
+    try {
+      const challenges = await fetchActiveChallenges(teamId);
+      const partMap: Record<string, { isOptedIn: boolean; userProgress: number; participantCount: number }> = {};
+      for (const ch of challenges) {
+        const myPart = ch.participants?.find((p: any) => p.player_id === user.id);
+        partMap[ch.id] = {
+          isOptedIn: !!myPart,
+          userProgress: myPart?.current_value ?? 0,
+          participantCount: ch.participants?.length ?? 0,
+        };
+        // Also map by post_id for matching in the feed
+        if (ch.post_id) {
+          partMap[ch.post_id] = partMap[ch.id];
+          // Store challengeId keyed by postId for detail modal
+          partMap[`postToChallenge:${ch.post_id}`] = { isOptedIn: false, userProgress: 0, participantCount: 0 };
+          (partMap as any)[`cid:${ch.post_id}`] = ch.id;
+        }
+      }
+      setChallengeParticipation(partMap);
+    } catch {}
+  }, [teamId, user?.id]);
 
   const handleRefreshFeed = useCallback(async () => {
     setRefreshingFeed(true);
@@ -992,7 +1029,7 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
         async (idx: number) => {
           if (idx === 0) {
             const { status } = await MediaLibrary.requestPermissionsAsync();
-            if (status !== 'granted') { Alert.alert('Permission Required', 'VolleyBrain needs permission to save photos.'); return; }
+            if (status !== 'granted') { Alert.alert('Permission Required', 'Lynx needs permission to save photos.'); return; }
             const localUri = `${LegacyFileSystem.cacheDirectory}vb_save_${Date.now()}.jpg`;
             const dl = await LegacyFileSystem.downloadAsync(url, localUri);
             await MediaLibrary.saveToLibraryAsync(dl.uri);
@@ -1010,7 +1047,7 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
           text: 'Save Photo',
           onPress: async () => {
             const { status } = await MediaLibrary.requestPermissionsAsync();
-            if (status !== 'granted') { Alert.alert('Permission Required', 'VolleyBrain needs permission to save photos.'); return; }
+            if (status !== 'granted') { Alert.alert('Permission Required', 'Lynx needs permission to save photos.'); return; }
             const localUri = `${LegacyFileSystem.cacheDirectory}vb_save_${Date.now()}.jpg`;
             const dl = await LegacyFileSystem.downloadAsync(url, localUri);
             await MediaLibrary.saveToLibraryAsync(dl.uri);
@@ -1118,7 +1155,7 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
     try {
       const authorName = post.profiles?.full_name || 'A teammate';
       const teamName = team?.name || 'the team';
-      const message = `${authorName} posted on ${teamName}:\n\n${post.content}\n\nShared from VolleyBrain`;
+      const message = `${authorName} posted on ${teamName}:\n\n${post.content}\n\nShared from Lynx`;
       const result = await Share.share({ message });
 
       // Track share on success
@@ -1388,6 +1425,22 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
             metadataJson={post.title}
             coachName={authorName}
             createdAt={post.created_at}
+            isOptedIn={challengeParticipation[post.id]?.isOptedIn}
+            userProgress={challengeParticipation[post.id]?.userProgress}
+            participantCount={challengeParticipation[post.id]?.participantCount}
+            onOptIn={async () => {
+              const cid = (challengeParticipation as any)[`cid:${post.id}`];
+              if (!cid || !user?.id) return;
+              const ok = await optInToChallenge(cid, user.id);
+              if (ok) loadChallengeParticipation(posts.filter((p) => p.post_type === 'challenge'));
+            }}
+            onViewDetails={() => {
+              const cid = (challengeParticipation as any)[`cid:${post.id}`];
+              if (cid) {
+                setChallengeDetailId(cid);
+                setShowChallengeDetail(true);
+              }
+            }}
           />
         ) : (
           <>
@@ -2348,6 +2401,14 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
           onSuccess={() => loadPosts()}
         />
       )}
+
+      {/* Challenge Detail Modal (opt-in + leaderboard) */}
+      <ChallengeDetailModal
+        visible={showChallengeDetail}
+        challengeId={challengeDetailId}
+        onClose={() => { setShowChallengeDetail(false); setChallengeDetailId(null); }}
+        onOptInSuccess={() => loadChallengeParticipation(posts.filter((p) => p.post_type === 'challenge'))}
+      />
     </Wrapper>
   );
 }

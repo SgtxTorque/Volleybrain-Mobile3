@@ -680,7 +680,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
 
     const orgName = profile?.full_name ? `- ${profile.full_name}` : '';
     setReminderMessage(
-      `Hi,\n\nThis is a friendly reminder about your outstanding balance for the current season. Please log in to the VolleyBrain app to view your balance and make a payment.\n\nThank you for your support!\n\n${orgName}`
+      `Hi,\n\nThis is a friendly reminder about your outstanding balance for the current season. Please log in to the Lynx app to view your balance and make a payment.\n\nThank you for your support!\n\n${orgName}`
     );
     setShowReminderModal(true);
   };

@@ -59,7 +59,7 @@ export default function CoppaConsentModal() {
 
   const handleSubmit = async () => {
     if (!consent) {
-      Alert.alert('Consent Required', 'You must provide parental consent under COPPA to continue using VolleyBrain.');
+      Alert.alert('Consent Required', 'You must provide parental consent under COPPA to continue using Lynx.');
       return;
     }
 
@@ -122,7 +122,7 @@ export default function CoppaConsentModal() {
               />
               <Text style={s.consentText}>
                 As the parent or legal guardian, I consent to the collection and use of my child's
-                personal information (name, date of birth, and team participation data) by VolleyBrain
+                personal information (name, date of birth, and team participation data) by Lynx
                 for the purpose of league registration and team management. I understand I can request
                 deletion of this data at any time by contacting support. *
               </Text>
@@ -132,7 +132,7 @@ export default function CoppaConsentModal() {
           <View style={s.infoBox}>
             <Ionicons name="information-circle" size={20} color={colors.info} />
             <Text style={s.infoText}>
-              VolleyBrain complies with COPPA. We never sell children's data and only collect
+              Lynx complies with COPPA. We never sell children's data and only collect
               what's necessary for league operations. You can manage your data rights in
               Settings {'>'} Privacy & Data.
             </Text>

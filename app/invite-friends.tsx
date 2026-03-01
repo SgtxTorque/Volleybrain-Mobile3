@@ -31,8 +31,8 @@ export default function InviteFriendsScreen() {
   const orgSlug = (organization as any)?.slug || profile?.current_organization_id || '';
   const orgName = (organization as any)?.name || 'our team';
   const registrationUrl = orgSlug
-    ? `https://app.volleybrain.com/register/${orgSlug}`
-    : 'https://app.volleybrain.com/register';
+    ? `https://app.thelynxapp.com/register/${orgSlug}`
+    : 'https://app.thelynxapp.com/register';
 
   // -----------------------------------------------
   // Actions
@@ -51,7 +51,7 @@ export default function InviteFriendsScreen() {
   const handleShare = async () => {
     try {
       await Share.share({
-        message: `Join ${orgName} on VolleyBrain! Register here: ${registrationUrl}`,
+        message: `Join ${orgName} on Lynx! Register here: ${registrationUrl}`,
         url: registrationUrl,
       });
     } catch (e) {
@@ -59,7 +59,7 @@ export default function InviteFriendsScreen() {
     }
   };
 
-  const shareMessage = `Join ${orgName} on VolleyBrain! Register here: ${registrationUrl}`;
+  const shareMessage = `Join ${orgName} on Lynx! Register here: ${registrationUrl}`;
 
   const handleShareSMS = () => {
     const url = Platform.OS === 'ios'
@@ -77,7 +77,7 @@ export default function InviteFriendsScreen() {
   };
 
   const handleShareEmail = () => {
-    const subject = encodeURIComponent(`Join ${orgName} on VolleyBrain!`);
+    const subject = encodeURIComponent(`Join ${orgName} on Lynx!`);
     const body = encodeURIComponent(shareMessage);
     Linking.openURL(`mailto:?subject=${subject}&body=${body}`).catch(() =>
       Alert.alert('Error', 'Could not open email client.')

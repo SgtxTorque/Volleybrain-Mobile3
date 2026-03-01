@@ -31,7 +31,7 @@ import QRCode from 'react-native-qrcode-svg';
 // />
 // =============================================================================
 
-const BASE_REGISTRATION_URL = 'https://app.volleybrain.com/register';
+const BASE_REGISTRATION_URL = 'https://app.thelynxapp.com/register';
 
 type Props = {
   visible: boolean;

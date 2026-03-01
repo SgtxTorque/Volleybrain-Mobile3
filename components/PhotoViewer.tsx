@@ -224,7 +224,7 @@ export default function PhotoViewer({
       setSaving(true);
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Required', 'VolleyBrain needs permission to save photos to your device.');
+        Alert.alert('Permission Required', 'Lynx needs permission to save photos to your device.');
         return;
       }
       const ext = isVideo ? 'mp4' : 'jpg';
