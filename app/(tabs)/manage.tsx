@@ -6,102 +6,71 @@ import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Animated,
-  LayoutAnimation,
-  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  UIManager,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
+// =============================================================================
+// TYPES
+// =============================================================================
 
-type MenuItem = {
-  icon: keyof typeof Ionicons.glyphMap;
+type AttentionCard = {
+  key: string;
   label: string;
+  count: number;
+  icon: keyof typeof Ionicons.glyphMap;
+  color: string;
   route: string;
-  iconColor?: string;
-  iconBg?: string;
-  badge?: number;
-  params?: Record<string, string>;
+};
+
+type ActivityItem = {
+  id: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  text: string;
+  timestamp: string;
+  color: string;
+};
+
+type OrgSnapshot = {
+  players: number;
+  teams: number;
+  coaches: number;
+  revenue: number;
+  regTotal: number;
+  regApproved: number;
 };
 
 // =============================================================================
-// COLLAPSIBLE SECTION
+// HELPERS
 // =============================================================================
 
-function CollapsibleSection({
-  title,
-  children,
-  defaultOpen = true,
-  colors,
-  itemCount,
-}: {
-  title: string;
-  children: React.ReactNode;
-  defaultOpen?: boolean;
-  colors: any;
-  itemCount?: number;
-}) {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
-  const rotateAnim = useRef(new Animated.Value(defaultOpen ? 1 : 0)).current;
+function timeAgo(dateStr: string): string {
+  const now = new Date();
+  const date = new Date(dateStr);
+  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
-  const toggle = useCallback(() => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    Animated.timing(rotateAnim, {
-      toValue: isOpen ? 0 : 1,
-      duration: 250,
-      useNativeDriver: true,
-    }).start();
-    setIsOpen(!isOpen);
-  }, [isOpen, rotateAnim]);
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return 'yesterday';
+  if (days < 7) return `${days}d ago`;
+  const weeks = Math.floor(days / 7);
+  if (weeks < 5) return `${weeks}w ago`;
+  return date.toLocaleDateString();
+}
 
-  const rotation = rotateAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '90deg'],
-  });
-
-  return (
-    <View style={{ marginTop: 28 }}>
-      <TouchableOpacity
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: 12,
-          marginLeft: 4,
-          marginRight: 4,
-        }}
-        onPress={toggle}
-        activeOpacity={0.7}
-      >
-        <Text
-          style={{
-            fontSize: 12,
-            fontWeight: '700',
-            color: colors.textMuted,
-            textTransform: 'uppercase',
-            letterSpacing: 1,
-          }}
-        >
-          {title}{!isOpen && itemCount ? ` (${itemCount})` : ''}
-        </Text>
-        <Animated.View style={{ transform: [{ rotate: rotation }] }}>
-          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-        </Animated.View>
-      </TouchableOpacity>
-      {isOpen && children}
-    </View>
-  );
+function formatCurrency(amount: number): string {
+  return '$' + amount.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
 // =============================================================================
@@ -110,140 +79,210 @@ function CollapsibleSection({
 
 export default function ManageScreen() {
   const { colors } = useTheme();
-  const { isAdmin, isCoach, isParent, viewAs, primaryRole } = usePermissions();
+  const { isAdmin } = usePermissions();
   const { profile } = useAuth();
-  const router = useRouter();
-
   const { workingSeason } = useSeason();
-  const [refreshing, setRefreshing] = useState(false);
-  const [badgeCounts, setBadgeCounts] = useState({ pendingRegs: 0, pendingPay: 0, pendingApprovals: 0, unrostered: 0 });
+  const router = useRouter();
+  const s = createStyles(colors);
 
-  const fetchBadgeCounts = useCallback(async () => {
+  const [refreshing, setRefreshing] = useState(false);
+  const [counts, setCounts] = useState({ pendingRegs: 0, unpaidBalances: 0, unrostered: 0, pendingApprovals: 0 });
+  const [snapshot, setSnapshot] = useState<OrgSnapshot>({ players: 0, teams: 0, coaches: 0, revenue: 0, regTotal: 0, regApproved: 0 });
+  const [activity, setActivity] = useState<ActivityItem[]>([]);
+
+  // ---------------------------------------------------------------------------
+  // DATA FETCHING
+  // ---------------------------------------------------------------------------
+
+  const fetchAll = useCallback(async () => {
     if (!isAdmin) return;
     const orgId = profile?.current_organization_id;
     const seasonId = workingSeason?.id;
-    const [regsRes, payRes, appRes, unrosteredRes] = await Promise.all([
+
+    // --- Attention card counts ---
+    const [regsRes, payRes, unrosteredRes, approvalRes] = await Promise.allSettled([
       seasonId
         ? supabase.from('registrations').select('*', { count: 'exact', head: true }).eq('season_id', seasonId).eq('status', 'new')
         : Promise.resolve({ count: 0 }),
       seasonId
-        ? supabase.from('payments').select('*', { count: 'exact', head: true }).eq('season_id', seasonId).eq('status', 'pending')
+        ? supabase.from('payments').select('*', { count: 'exact', head: true }).eq('season_id', seasonId).eq('paid', false)
+        : Promise.resolve({ count: 0 }),
+      seasonId
+        ? supabase.from('registrations').select('*', { count: 'exact', head: true }).eq('season_id', seasonId).in('status', ['approved', 'active']).is('rostered_at', null)
         : Promise.resolve({ count: 0 }),
       orgId
         ? supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('pending_approval', true).eq('current_organization_id', orgId)
         : Promise.resolve({ count: 0 }),
-      seasonId
-        ? supabase.from('registrations').select('*', { count: 'exact', head: true }).eq('season_id', seasonId).eq('status', 'active')
-        : Promise.resolve({ count: 0 }),
     ]);
-    setBadgeCounts({
-      pendingRegs: (regsRes as any).count || 0,
-      pendingPay: (payRes as any).count || 0,
-      pendingApprovals: (appRes as any).count || 0,
-      unrostered: (unrosteredRes as any).count || 0,
-    });
-  }, [isAdmin, workingSeason?.id, profile?.current_organization_id]);
 
-  useEffect(() => { fetchBadgeCounts(); }, [fetchBadgeCounts]);
+    setCounts({
+      pendingRegs: regsRes.status === 'fulfilled' ? ((regsRes.value as any).count || 0) : 0,
+      unpaidBalances: payRes.status === 'fulfilled' ? ((payRes.value as any).count || 0) : 0,
+      unrostered: unrosteredRes.status === 'fulfilled' ? ((unrosteredRes.value as any).count || 0) : 0,
+      pendingApprovals: approvalRes.status === 'fulfilled' ? ((approvalRes.value as any).count || 0) : 0,
+    });
+
+    // --- Org snapshot ---
+    if (seasonId) {
+      const [playersRes, teamsRes, coachesRes, revenueRes, regTotalRes, regApprovedRes] = await Promise.allSettled([
+        supabase.from('players').select('*', { count: 'exact', head: true }).eq('season_id', seasonId),
+        supabase.from('teams').select('*', { count: 'exact', head: true }).eq('season_id', seasonId),
+        supabase.from('coaches').select('*', { count: 'exact', head: true }).eq('season_id', seasonId),
+        supabase.from('payments').select('amount').eq('season_id', seasonId).eq('paid', true),
+        supabase.from('registrations').select('*', { count: 'exact', head: true }).eq('season_id', seasonId),
+        supabase.from('registrations').select('*', { count: 'exact', head: true }).eq('season_id', seasonId).in('status', ['approved', 'active']),
+      ]);
+
+      const revenue = revenueRes.status === 'fulfilled' && (revenueRes.value as any).data
+        ? (revenueRes.value as any).data.reduce((sum: number, p: any) => sum + (p.amount || 0), 0)
+        : 0;
+
+      setSnapshot({
+        players: playersRes.status === 'fulfilled' ? ((playersRes.value as any).count || 0) : 0,
+        teams: teamsRes.status === 'fulfilled' ? ((teamsRes.value as any).count || 0) : 0,
+        coaches: coachesRes.status === 'fulfilled' ? ((coachesRes.value as any).count || 0) : 0,
+        revenue,
+        regTotal: regTotalRes.status === 'fulfilled' ? ((regTotalRes.value as any).count || 0) : 0,
+        regApproved: regApprovedRes.status === 'fulfilled' ? ((regApprovedRes.value as any).count || 0) : 0,
+      });
+    }
+
+    // --- Recent activity feed ---
+    if (seasonId) {
+      const items: ActivityItem[] = [];
+
+      const [recentRegsRes, recentPayRes] = await Promise.allSettled([
+        supabase
+          .from('registrations')
+          .select('id, status, submitted_at, players(first_name, last_name)')
+          .eq('season_id', seasonId)
+          .order('submitted_at', { ascending: false })
+          .limit(5),
+        supabase
+          .from('payments')
+          .select('id, amount, paid_at, payer_name')
+          .eq('season_id', seasonId)
+          .eq('paid', true)
+          .not('paid_at', 'is', null)
+          .order('paid_at', { ascending: false })
+          .limit(5),
+      ]);
+
+      if (recentRegsRes.status === 'fulfilled' && (recentRegsRes.value as any).data) {
+        for (const reg of (recentRegsRes.value as any).data) {
+          const player = reg.players;
+          const name = player ? `${player.first_name || ''} ${player.last_name || ''}`.trim() : 'Unknown';
+          items.push({
+            id: `reg-${reg.id}`,
+            icon: 'person-add',
+            text: `${name} registered`,
+            timestamp: reg.submitted_at || '',
+            color: colors.primary,
+          });
+        }
+      }
+
+      if (recentPayRes.status === 'fulfilled' && (recentPayRes.value as any).data) {
+        for (const pay of (recentPayRes.value as any).data) {
+          items.push({
+            id: `pay-${pay.id}`,
+            icon: 'card',
+            text: `${formatCurrency(pay.amount || 0)} from ${pay.payer_name || 'Unknown'}`,
+            timestamp: pay.paid_at || '',
+            color: colors.success,
+          });
+        }
+      }
+
+      items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      setActivity(items.slice(0, 10));
+    }
+  }, [isAdmin, workingSeason?.id, profile?.current_organization_id, colors.primary, colors.success]);
+
+  useEffect(() => { fetchAll(); }, [fetchAll]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetchBadgeCounts();
+    await fetchAll();
     setRefreshing(false);
-  }, [fetchBadgeCounts]);
+  }, [fetchAll]);
 
-  const s = createStyles(colors);
+  // ---------------------------------------------------------------------------
+  // ATTENTION CARDS DATA
+  // ---------------------------------------------------------------------------
 
-  // =========================================================================
-  // PARENT SECTION
-  // =========================================================================
-  const parentItems: MenuItem[] = [
-    { icon: 'people', label: 'My Children', route: '/my-kids', iconColor: colors.primary, iconBg: colors.primary + '15' },
-    { icon: 'clipboard', label: 'Registration Hub', route: '/parent-registration-hub', iconColor: '#AF52DE', iconBg: '#AF52DE15' },
-    { icon: 'wallet', label: 'Payments', route: '/family-payments', iconColor: colors.warning, iconBg: colors.warning + '15' },
-    { icon: 'document-text', label: 'Waivers', route: '/my-waivers', iconColor: colors.success, iconBg: colors.success + '15' },
-    { icon: 'share-social', label: 'Invite / Share', route: '/invite', iconColor: colors.info, iconBg: colors.info + '15' },
+  const attentionCards: AttentionCard[] = [
+    {
+      key: 'regs',
+      label: 'Pending\nRegistrations',
+      count: counts.pendingRegs,
+      icon: 'person-add',
+      color: counts.pendingRegs > 0 ? colors.danger : colors.success,
+      route: '/registration-hub',
+    },
+    {
+      key: 'payments',
+      label: 'Unpaid\nBalances',
+      count: counts.unpaidBalances,
+      icon: 'card',
+      color: counts.unpaidBalances > 0 ? colors.warning : colors.success,
+      route: '/(tabs)/payments',
+    },
+    {
+      key: 'unrostered',
+      label: 'Unrostered\nPlayers',
+      count: counts.unrostered,
+      icon: 'people',
+      color: counts.unrostered > 0 ? colors.info : colors.success,
+      route: '/team-management',
+    },
+    {
+      key: 'approvals',
+      label: 'Pending\nApprovals',
+      count: counts.pendingApprovals,
+      icon: 'shield-checkmark',
+      color: counts.pendingApprovals > 0 ? colors.danger : colors.success,
+      route: '/users',
+    },
   ];
 
-  // =========================================================================
-  // COACH SECTION
-  // =========================================================================
-  const coachItems: MenuItem[] = [
-    { icon: 'people', label: 'Roster', route: '/(tabs)/players', iconColor: colors.info, iconBg: colors.info + '15' },
-    { icon: 'checkmark-circle', label: 'Attendance', route: '/attendance', iconColor: colors.success, iconBg: colors.success + '15' },
-    { icon: 'megaphone', label: 'Blast Composer', route: '/blast-composer', iconColor: colors.warning, iconBg: colors.warning + '15' },
-    { icon: 'calendar-outline', label: 'Coach Availability', route: '/coach-availability', iconColor: colors.primary, iconBg: colors.primary + '15' },
-    { icon: 'person-circle', label: 'Coach Profile', route: '/coach-profile', iconColor: colors.textSecondary, iconBg: colors.textMuted + '15' },
-    { icon: 'analytics', label: 'Game Prep', route: '/game-prep', iconColor: '#D94F4F', iconBg: '#D94F4F15' },
-    { icon: 'time', label: 'Blast History', route: '/blast-history', iconColor: '#0EA5E9', iconBg: '#0EA5E915' },
+  // ---------------------------------------------------------------------------
+  // QUICK ACTIONS DATA
+  // ---------------------------------------------------------------------------
+
+  const quickActions = [
+    { icon: 'person-add' as keyof typeof Ionicons.glyphMap, label: 'Approve\nRegs', route: '/registration-hub' },
+    { icon: 'megaphone' as keyof typeof Ionicons.glyphMap, label: 'Send\nBlast', route: '/blast-composer' },
+    { icon: 'card' as keyof typeof Ionicons.glyphMap, label: 'View\nPayments', route: '/(tabs)/payments' },
+    { icon: 'people' as keyof typeof Ionicons.glyphMap, label: 'Manage\nRoster', route: '/team-management' },
   ];
 
-  // =========================================================================
-  // ADMIN SECTION
-  // =========================================================================
-  const adminItems: MenuItem[] = [
-    { icon: 'person-add', label: 'Registration Hub', route: '/registration-hub', iconColor: colors.primary, iconBg: colors.primary + '15', badge: badgeCounts.pendingRegs },
-    { icon: 'people-circle', label: 'User Management', route: '/users', iconColor: colors.warning, iconBg: colors.warning + '15', badge: badgeCounts.pendingApprovals },
-    { icon: 'card', label: 'Payment Admin', route: '/(tabs)/payments', iconColor: colors.danger, iconBg: colors.danger + '15', badge: badgeCounts.pendingPay },
-    { icon: 'shirt', label: 'Team Management', route: '/team-management', iconColor: '#D94F4F', iconBg: '#FF6B6B15', badge: badgeCounts.unrostered },
-    { icon: 'shirt-outline', label: 'Jersey Management', route: '/(tabs)/jersey-management', iconColor: '#D94F4F', iconBg: '#FF6B6B15' },
-    { icon: 'clipboard', label: 'Coach Directory', route: '/coach-directory', iconColor: colors.info, iconBg: colors.info + '15' },
-    { icon: 'calendar', label: 'Season Management', route: '/season-settings', iconColor: colors.success, iconBg: colors.success + '15' },
-    { icon: 'bar-chart', label: 'Reports', route: '/(tabs)/reports-tab', iconColor: '#AF52DE', iconBg: '#AF52DE15' },
-    { icon: 'business', label: 'Org Directory', route: '/org-directory', iconColor: colors.textSecondary, iconBg: colors.textMuted + '15' },
-    { icon: 'archive', label: 'Season Archives', route: '/season-archives', iconColor: '#6B7280', iconBg: '#6B728015' },
-    { icon: 'settings', label: 'Org Settings', route: '/web-features', iconColor: colors.textSecondary, iconBg: colors.textMuted + '15', params: { featureName: 'Organization Settings', description: 'Configure organization name, logo, and details on the web portal.' } },
-    { icon: 'document-text', label: 'Form Builder', route: '/web-features', iconColor: '#5AC8FA', iconBg: '#5AC8FA15', params: { featureName: 'Registration Form Builder', description: 'Build custom registration forms with questions — works best on a larger screen.' } },
-    { icon: 'shield-checkmark', label: 'Waiver Editor', route: '/web-features', iconColor: '#22C55E', iconBg: '#34C75915', params: { featureName: 'Waiver Template Editor', description: 'Create and manage digital waivers for your organization.' } },
-    { icon: 'card', label: 'Payment Gateway', route: '/web-features', iconColor: '#635BFF', iconBg: '#635BFF15', params: { featureName: 'Payment Gateway Setup', description: 'Connect your Stripe account to accept online payments.' } },
-  ];
+  // ---------------------------------------------------------------------------
+  // ORG SNAPSHOT
+  // ---------------------------------------------------------------------------
 
-  const handleNavigate = (item: MenuItem) => {
-    if (item.params) {
-      router.push({ pathname: item.route, params: item.params } as any);
-    } else {
-      router.push(item.route as any);
-    }
-  };
+  const regPct = snapshot.regTotal > 0
+    ? Math.round((snapshot.regApproved / snapshot.regTotal) * 100)
+    : 0;
 
-  const renderMenuItem = (item: MenuItem, index: number) => (
-    <TouchableOpacity
-      key={`${item.route}-${item.label}-${index}`}
-      style={s.menuItem}
-      onPress={() => handleNavigate(item)}
-      activeOpacity={0.7}
-    >
-      <View style={[s.menuItemIcon, { backgroundColor: item.iconBg || colors.glassCard }]}>
-        <Ionicons name={item.icon} size={20} color={item.iconColor || colors.text} />
-      </View>
-      <Text style={s.menuItemLabel}>{item.label}</Text>
-      {item.badge != null && item.badge > 0 && (
-        <View style={s.menuBadge}>
-          <Text style={s.menuBadgeText}>{item.badge > 99 ? '99+' : item.badge}</Text>
+  // ---------------------------------------------------------------------------
+  // NON-ADMIN FALLBACK
+  // ---------------------------------------------------------------------------
+
+  if (!isAdmin) {
+    return (
+      <SafeAreaView style={s.container}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 }}>
+          <Ionicons name="lock-closed" size={48} color={colors.textMuted} />
+          <Text style={[s.sectionTitle, { textAlign: 'center', marginTop: 16 }]}>Admin access required</Text>
         </View>
-      )}
-      <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-    </TouchableOpacity>
-  );
+      </SafeAreaView>
+    );
+  }
 
-  const showParent = isParent || isAdmin;
-  const showCoach = isCoach || isAdmin;
-
-  // Determine active role for section ordering
-  const activeRole: 'admin' | 'coach' | 'parent' = (() => {
-    if (viewAs === 'league_admin') return 'admin';
-    if (viewAs === 'head_coach' || viewAs === 'assistant_coach') return 'coach';
-    if (viewAs === 'parent') return 'parent';
-    if (primaryRole === 'league_admin') return 'admin';
-    if (primaryRole === 'head_coach' || primaryRole === 'assistant_coach') return 'coach';
-    return 'parent';
-  })();
-
-  const sections = [
-    { key: 'parent' as const, title: 'Parent', items: parentItems, show: showParent },
-    { key: 'coach' as const, title: 'Coach', items: coachItems, show: showCoach },
-    { key: 'admin' as const, title: 'Admin Tools', items: adminItems, show: isAdmin },
-  ].sort((a, b) => (a.key === activeRole ? -1 : b.key === activeRole ? 1 : 0));
+  // ---------------------------------------------------------------------------
+  // RENDER
+  // ---------------------------------------------------------------------------
 
   return (
     <SafeAreaView style={s.container}>
@@ -253,24 +292,123 @@ export default function ManageScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
-        {/* Header */}
+        {/* ===== HEADER ===== */}
         <View style={s.header}>
-          <Text style={s.title}>Manage</Text>
+          <Text style={s.title}>Command Center</Text>
+          {workingSeason?.name && (
+            <Text style={s.seasonLabel}>{workingSeason.name}</Text>
+          )}
         </View>
 
-        {sections.filter(sec => sec.show).map(sec => (
-          <CollapsibleSection
-            key={sec.key}
-            title={sec.title}
-            defaultOpen={sec.key === activeRole}
-            colors={colors}
-            itemCount={sec.items.length}
-          >
-            <View style={s.menuCard}>
-              {sec.items.map((item, i) => renderMenuItem(item, i))}
+        {/* ===== ATTENTION CARDS (2x2 grid) ===== */}
+        <View style={s.cardGrid}>
+          {attentionCards.map((card) => (
+            <TouchableOpacity
+              key={card.key}
+              style={[s.attentionCard, { borderLeftColor: card.color }]}
+              onPress={() => router.push(card.route as any)}
+              activeOpacity={0.7}
+            >
+              {card.count > 0 ? (
+                <Text style={[s.attentionCount, { color: card.color }]}>{card.count}</Text>
+              ) : (
+                <Ionicons name="checkmark-circle" size={28} color={card.color} />
+              )}
+              <Text style={s.attentionLabel}>{card.label}</Text>
+              <View style={s.attentionArrow}>
+                <Ionicons name="chevron-forward" size={14} color={colors.textMuted} />
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* ===== QUICK ACTIONS ===== */}
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>Quick Actions</Text>
+          <View style={s.quickRow}>
+            {quickActions.map((action) => (
+              <TouchableOpacity
+                key={action.label}
+                style={s.quickBtn}
+                onPress={() => router.push(action.route as any)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name={action.icon} size={20} color={colors.primary} />
+                <Text style={s.quickLabel}>{action.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* ===== ORG SNAPSHOT ===== */}
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>Org Snapshot</Text>
+          <View style={s.snapshotCard}>
+            <View style={s.snapshotRow}>
+              <View style={s.snapshotStat}>
+                <Text style={s.snapshotNumber}>{snapshot.players}</Text>
+                <Text style={s.snapshotLabel}>Players</Text>
+              </View>
+              <View style={s.snapshotDivider} />
+              <View style={s.snapshotStat}>
+                <Text style={s.snapshotNumber}>{snapshot.teams}</Text>
+                <Text style={s.snapshotLabel}>Teams</Text>
+              </View>
+              <View style={s.snapshotDivider} />
+              <View style={s.snapshotStat}>
+                <Text style={s.snapshotNumber}>{snapshot.coaches}</Text>
+                <Text style={s.snapshotLabel}>Coaches</Text>
+              </View>
             </View>
-          </CollapsibleSection>
-        ))}
+            <View style={s.snapshotFooter}>
+              <View style={s.snapshotFooterItem}>
+                <Ionicons name="cash" size={16} color={colors.success} />
+                <Text style={s.snapshotFooterText}>
+                  {formatCurrency(snapshot.revenue)} collected
+                </Text>
+              </View>
+              <View style={s.snapshotFooterItem}>
+                <Ionicons name="stats-chart" size={16} color={colors.primary} />
+                <Text style={s.snapshotFooterText}>
+                  {regPct}% registration complete
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* ===== RECENT ACTIVITY ===== */}
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>Recent Activity</Text>
+          <View style={s.activityCard}>
+            {activity.length === 0 ? (
+              <View style={s.activityEmpty}>
+                <Ionicons name="time" size={24} color={colors.textMuted} />
+                <Text style={s.activityEmptyText}>No recent activity</Text>
+              </View>
+            ) : (
+              activity.map((item) => (
+                <View key={item.id} style={s.activityItem}>
+                  <View style={[s.activityIcon, { backgroundColor: item.color + '15' }]}>
+                    <Ionicons name={item.icon} size={16} color={item.color} />
+                  </View>
+                  <Text style={s.activityText} numberOfLines={1}>{item.text}</Text>
+                  <Text style={s.activityTime}>{item.timestamp ? timeAgo(item.timestamp) : ''}</Text>
+                </View>
+              ))
+            )}
+            {activity.length > 0 && (
+              <TouchableOpacity
+                style={s.activityViewAll}
+                onPress={() => router.push('/(tabs)/reports-tab' as any)}
+                activeOpacity={0.7}
+              >
+                <Text style={[s.activityViewAllText, { color: colors.primary }]}>View All Activity</Text>
+                <Ionicons name="arrow-forward" size={14} color={colors.primary} />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
 
         <View style={{ height: 120 }} />
       </ScrollView>
@@ -295,7 +433,12 @@ const createStyles = (colors: any) =>
       paddingHorizontal: spacing.screenPadding,
       paddingTop: 8,
     },
+
+    // --- Header ---
     header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'baseline',
       paddingVertical: 12,
       paddingHorizontal: 4,
     },
@@ -304,49 +447,194 @@ const createStyles = (colors: any) =>
       fontSize: 28,
       color: colors.text,
     },
-    menuCard: {
-      backgroundColor: '#FFF',
-      borderWidth: 1,
-      borderColor: 'rgba(0,0,0,0.06)',
+    seasonLabel: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.textMuted,
+    },
+
+    // --- Attention Cards ---
+    cardGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 10,
+      marginTop: 8,
+    },
+    attentionCard: {
+      width: '48%' as any,
+      flexGrow: 1,
+      flexBasis: '45%',
+      backgroundColor: colors.card,
       borderRadius: radii.card,
-      overflow: 'hidden' as const,
+      borderLeftWidth: 4,
+      padding: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
       ...shadows.card,
     },
-    menuItem: {
+    attentionCount: {
+      fontSize: 30,
+      fontWeight: '800',
+      marginBottom: 4,
+    },
+    attentionLabel: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      lineHeight: 16,
+    },
+    attentionArrow: {
+      position: 'absolute',
+      top: 14,
+      right: 12,
+    },
+
+    // --- Section ---
+    section: {
+      marginTop: 24,
+    },
+    sectionTitle: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.textMuted,
+      textTransform: 'uppercase',
+      letterSpacing: 1,
+      marginBottom: 10,
+      marginLeft: 4,
+    },
+
+    // --- Quick Actions ---
+    quickRow: {
+      flexDirection: 'row',
+      gap: 8,
+    },
+    quickBtn: {
+      flex: 1,
+      backgroundColor: colors.glassCard,
+      borderRadius: radii.card,
+      borderTopWidth: 3,
+      borderTopColor: colors.primary,
+      padding: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 4,
+      borderWidth: 1,
+      borderColor: colors.glassBorder,
+      ...shadows.card,
+    },
+    quickLabel: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: colors.text,
+      textAlign: 'center',
+    },
+
+    // --- Org Snapshot ---
+    snapshotCard: {
+      backgroundColor: colors.card,
+      borderRadius: radii.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+      overflow: 'hidden',
+      ...shadows.card,
+    },
+    snapshotRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingVertical: 14,
+      paddingVertical: 16,
+    },
+    snapshotStat: {
+      flex: 1,
+      alignItems: 'center',
+    },
+    snapshotNumber: {
+      fontSize: 26,
+      fontWeight: '800',
+      color: colors.text,
+    },
+    snapshotLabel: {
+      fontSize: 11,
+      fontWeight: '600',
+      color: colors.textMuted,
+      marginTop: 2,
+    },
+    snapshotDivider: {
+      width: 1,
+      height: 32,
+      backgroundColor: colors.border,
+    },
+    snapshotFooter: {
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
       paddingHorizontal: 16,
+      paddingVertical: 12,
+      gap: 8,
+    },
+    snapshotFooterItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+    },
+    snapshotFooterText: {
+      fontSize: 13,
+      fontWeight: '500',
+      color: colors.textSecondary,
+    },
+
+    // --- Activity Feed ---
+    activityCard: {
+      backgroundColor: colors.card,
+      borderRadius: radii.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+      overflow: 'hidden',
+      ...shadows.card,
+    },
+    activityItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 12,
+      paddingHorizontal: 14,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
-    menuItemIcon: {
-      width: 36,
-      height: 36,
-      borderRadius: 10,
+    activityIcon: {
+      width: 30,
+      height: 30,
+      borderRadius: 8,
       justifyContent: 'center',
       alignItems: 'center',
-      marginRight: 12,
+      marginRight: 10,
     },
-    menuItemLabel: {
+    activityText: {
       flex: 1,
-      fontSize: 15,
+      fontSize: 13,
       fontWeight: '500',
       color: colors.text,
     },
-    menuBadge: {
-      backgroundColor: '#D94F4F',
-      borderRadius: 10,
-      minWidth: 20,
-      height: 20,
-      justifyContent: 'center' as const,
-      alignItems: 'center' as const,
-      paddingHorizontal: 6,
-      marginRight: 8,
-    },
-    menuBadgeText: {
-      color: '#fff',
+    activityTime: {
       fontSize: 11,
-      fontWeight: 'bold' as const,
+      color: colors.textMuted,
+      marginLeft: 8,
+    },
+    activityEmpty: {
+      alignItems: 'center',
+      paddingVertical: 24,
+      gap: 8,
+    },
+    activityEmptyText: {
+      fontSize: 13,
+      color: colors.textMuted,
+    },
+    activityViewAll: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 12,
+      gap: 6,
+    },
+    activityViewAllText: {
+      fontSize: 13,
+      fontWeight: '600',
     },
   });
