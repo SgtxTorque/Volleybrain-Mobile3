@@ -6,8 +6,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useEffect } from 'react';
-import { Dimensions, Platform, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Dimensions, Platform, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   interpolate,
@@ -17,6 +18,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { supabase } from '@/lib/supabase';
 import type { UserRole } from '@/lib/permissions';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -39,7 +41,7 @@ export default function GestureDrawer() {
   const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { user, profile, organization } = useAuth();
-  const { actualRoles } = usePermissions();
+  const { actualRoles, isAdmin, isCoach, isParent, isPlayer } = usePermissions();
   const router = useRouter();
 
   // Profile header data
@@ -52,6 +54,92 @@ export default function GestureDrawer() {
   const handleViewProfile = () => {
     closeDrawer();
     setTimeout(() => router.push('/profile'), 150);
+  };
+
+  // ====== SHORTCUT ROW ======
+  type Shortcut = {
+    key: string;
+    icon: keyof typeof Ionicons.glyphMap;
+    label: string;
+    route: string;
+  };
+
+  const shortcuts: Shortcut[] = (() => {
+    const items: Shortcut[] = [
+      { key: 'home', icon: 'home', label: 'Home', route: '/(tabs)' },
+      { key: 'schedule', icon: 'calendar', label: 'Schedule', route: '/(tabs)/schedule' },
+      { key: 'chats', icon: 'chatbubble-ellipses', label: 'Chats', route: '/(tabs)/chats' },
+      { key: 'blasts', icon: 'megaphone', label: 'Blasts', route: '/(tabs)/messages' },
+    ];
+
+    if (isAdmin) {
+      items.push(
+        { key: 'registration', icon: 'person-add', label: 'Registration', route: '/registration-hub' },
+        { key: 'reports', icon: 'bar-chart', label: 'Reports', route: '/(tabs)/reports-tab' },
+      );
+    }
+    if (isCoach) {
+      items.push(
+        { key: 'gameprep', icon: 'clipboard', label: 'Game Prep', route: '/game-prep' },
+        { key: 'lineup', icon: 'list', label: 'Lineup', route: '/lineup-builder' },
+      );
+    }
+    if (isParent) {
+      items.push(
+        { key: 'mykids', icon: 'people-circle', label: 'My Kids', route: '/my-kids' },
+        { key: 'payments', icon: 'card', label: 'Payments', route: '/(tabs)/payments' },
+      );
+    }
+    if (isPlayer) {
+      items.push(
+        { key: 'mystats', icon: 'stats-chart', label: 'My Stats', route: '/my-stats' },
+        { key: 'achievements', icon: 'trophy', label: 'Achieve', route: '/achievements' },
+      );
+    }
+    return items;
+  })();
+
+  // Badge counts for shortcut dots
+  const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
+
+  const fetchBadgeCounts = useCallback(async () => {
+    const counts: Record<string, number> = {};
+    try {
+      if (isAdmin && profile?.current_organization_id) {
+        // Pending registrations
+        const { count: pendingRegs } = await supabase
+          .from('registrations')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'new');
+        if (pendingRegs) counts.registration = pendingRegs;
+      }
+
+      if (isParent && profile?.id) {
+        // Unpaid fees — payments where paid = false for this family
+        const { count: unpaid } = await supabase
+          .from('payments')
+          .select('*', { count: 'exact', head: true })
+          .eq('paid', false)
+          .eq('family_email', user?.email || '');
+        if (unpaid) counts.payments = unpaid;
+      }
+    } catch {
+      // Silently fail — badges are non-critical
+    }
+    setBadgeCounts(counts);
+  }, [isAdmin, isParent, profile?.current_organization_id, profile?.id, user?.email]);
+
+  // Fetch badges when drawer opens
+  useEffect(() => {
+    if (isOpen) {
+      fetchBadgeCounts();
+    }
+  }, [isOpen, fetchBadgeCounts]);
+
+  const handleShortcutPress = (route: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    closeDrawer();
+    setTimeout(() => router.push(route as never), 150);
   };
 
   // 0 = closed, 1 = open
@@ -248,10 +336,42 @@ export default function GestureDrawer() {
             </TouchableOpacity>
           </LinearGradient>
 
-          {/* ====== MENU BODY (Phase 2-3) ====== */}
+          {/* ====== SHORTCUT ROW ====== */}
+          <View style={[styles.shortcutSection, { borderBottomColor: colors.border }]}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.shortcutScroll}
+              bounces
+            >
+              {shortcuts.map((s) => (
+                <TouchableOpacity
+                  key={s.key}
+                  style={[styles.shortcutPill, { backgroundColor: isDark ? colors.background : colors.border + '40' }]}
+                  onPress={() => handleShortcutPress(s.route)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.shortcutIconWrap}>
+                    <Ionicons name={s.icon} size={22} color={colors.primary} />
+                    {(badgeCounts[s.key] ?? 0) > 0 && (
+                      <View style={[styles.badgeDot, { backgroundColor: colors.danger }]} />
+                    )}
+                  </View>
+                  <Text
+                    style={[styles.shortcutLabel, { color: colors.textSecondary }]}
+                    numberOfLines={1}
+                  >
+                    {s.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
+          {/* ====== MENU BODY (Phase 3) ====== */}
           <View style={styles.menuBody}>
             <Text style={[styles.menuPlaceholder, { color: colors.textMuted }]}>
-              Menu items coming in Phase 2-3
+              Menu sections coming in Phase 3
             </Text>
           </View>
         </Animated.View>
@@ -354,6 +474,40 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     marginRight: 4,
+  },
+  // Shortcut row
+  shortcutSection: {
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  shortcutScroll: {
+    paddingHorizontal: 16,
+    gap: 10,
+  },
+  shortcutPill: {
+    width: 66,
+    paddingVertical: 10,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shortcutIconWrap: {
+    position: 'relative',
+    marginBottom: 4,
+  },
+  badgeDot: {
+    position: 'absolute',
+    top: -2,
+    right: -4,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  shortcutLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    textAlign: 'center',
+    lineHeight: 13,
   },
   // Menu body
   menuBody: {
