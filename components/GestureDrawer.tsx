@@ -1,7 +1,13 @@
+import { useAuth } from '@/lib/auth';
 import { useDrawer } from '@/lib/drawer-context';
+import { usePermissions } from '@/lib/permissions-context';
 import { useTheme } from '@/lib/theme';
+import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import React, { useEffect } from 'react';
-import { Dimensions, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, Platform, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   interpolate,
@@ -11,6 +17,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import type { UserRole } from '@/lib/permissions';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const DRAWER_WIDTH = Math.min(SCREEN_WIDTH * 0.82, 340);
@@ -19,10 +26,33 @@ const VELOCITY_THRESHOLD = 500;
 const SNAP_THRESHOLD = DRAWER_WIDTH * 0.35;
 const SPRING_CONFIG = { damping: 22, stiffness: 200, mass: 0.8 };
 
+const ROLE_DISPLAY: Record<UserRole, string> = {
+  league_admin: 'Admin',
+  head_coach: 'Head Coach',
+  assistant_coach: 'Asst. Coach',
+  parent: 'Parent',
+  player: 'Player',
+};
+
 export default function GestureDrawer() {
   const { isOpen, closeDrawer, openDrawer } = useDrawer();
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
+  const { user, profile, organization } = useAuth();
+  const { actualRoles } = usePermissions();
+  const router = useRouter();
+
+  // Profile header data
+  const avatarUrl = profile?.avatar_url || null;
+  const displayName = profile?.full_name || user?.email?.split('@')[0] || 'User';
+  const firstInitial = displayName.charAt(0).toUpperCase();
+  const roleLabels = actualRoles.map((r) => ROLE_DISPLAY[r] || r).join(' · ');
+  const orgName = organization?.name || 'Lynx Sports';
+
+  const handleViewProfile = () => {
+    closeDrawer();
+    setTimeout(() => router.push('/profile'), 150);
+  };
 
   // 0 = closed, 1 = open
   const progress = useSharedValue(0);
@@ -141,13 +171,87 @@ export default function GestureDrawer() {
             },
           ]}
         >
-          {/* Placeholder content — will be replaced in Phase 1-5 */}
-          <View style={styles.placeholder}>
-            <Text style={[styles.placeholderText, { color: colors.text }]}>
-              Drawer Ready
-            </Text>
-            <Text style={[styles.placeholderSubtext, { color: colors.textMuted }]}>
-              Content coming in Phase 1
+          {/* ====== PROFILE HEADER ====== */}
+          <LinearGradient
+            colors={
+              isDark
+                ? [colors.primary + '30', colors.card, colors.card]
+                : [colors.primary + '18', colors.card, colors.card]
+            }
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={styles.profileHeader}
+          >
+            {/* Close button */}
+            <Pressable
+              style={styles.closeButton}
+              onPress={closeDrawer}
+              hitSlop={12}
+            >
+              <Ionicons name="close" size={22} color={colors.textMuted} />
+            </Pressable>
+
+            {/* Avatar + Info row */}
+            <View style={styles.profileRow}>
+              {/* Avatar */}
+              {avatarUrl ? (
+                <Image
+                  source={{ uri: avatarUrl }}
+                  style={styles.avatar}
+                  contentFit="cover"
+                  transition={200}
+                />
+              ) : (
+                <LinearGradient
+                  colors={[colors.primary, colors.primary + 'CC']}
+                  style={styles.avatar}
+                >
+                  <Text style={styles.avatarInitial}>{firstInitial}</Text>
+                </LinearGradient>
+              )}
+
+              {/* Name / Roles / Org */}
+              <View style={styles.profileInfo}>
+                <Text
+                  style={[styles.profileName, { color: colors.text }]}
+                  numberOfLines={1}
+                >
+                  {displayName}
+                </Text>
+                {roleLabels.length > 0 && (
+                  <Text
+                    style={[styles.profileRoles, { color: colors.textSecondary }]}
+                    numberOfLines={1}
+                  >
+                    {roleLabels}
+                  </Text>
+                )}
+                <Text
+                  style={[styles.profileOrg, { color: colors.textMuted }]}
+                  numberOfLines={1}
+                >
+                  {orgName}
+                </Text>
+              </View>
+            </View>
+
+            {/* View Profile link */}
+            <TouchableOpacity
+              style={[styles.viewProfileButton, { borderColor: colors.border }]}
+              onPress={handleViewProfile}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.viewProfileText, { color: colors.primary }]}>
+                View Profile
+              </Text>
+              <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+            </TouchableOpacity>
+          </LinearGradient>
+
+          {/* ====== MENU BODY (Phase 2-3) ====== */}
+          <View style={styles.menuBody}>
+            <Text style={[styles.menuPlaceholder, { color: colors.textMuted }]}>
+              Menu items coming in Phase 2-3
             </Text>
           </View>
         </Animated.View>
@@ -179,17 +283,86 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
     borderBottomRightRadius: 20,
   },
-  placeholder: {
+  // Profile header
+  profileHeader: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 16,
+    borderTopRightRadius: 20,
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  profileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  avatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  avatarInitial: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  profileInfo: {
+    flex: 1,
+    marginLeft: 14,
+    marginRight: 36,
+  },
+  profileName: {
+    fontSize: 18,
+    fontWeight: '700',
+    lineHeight: 22,
+  },
+  profileRoles: {
+    fontSize: 13,
+    fontWeight: '500',
+    marginTop: 2,
+    lineHeight: 18,
+  },
+  profileOrg: {
+    fontSize: 12,
+    marginTop: 1,
+    lineHeight: 16,
+  },
+  viewProfileButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 14,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignSelf: 'flex-start',
+  },
+  viewProfileText: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginRight: 4,
+  },
+  // Menu body
+  menuBody: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 20,
   },
-  placeholderText: {
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  placeholderSubtext: {
+  menuPlaceholder: {
     fontSize: 14,
-    marginTop: 8,
   },
 });
