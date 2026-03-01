@@ -10,6 +10,7 @@ import {
     KeyboardAvoidingView,
     Modal,
     Platform,
+    ScrollView,
     StyleSheet,
     Text,
     TextInput,
@@ -75,7 +76,12 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={s.container}
     >
-      <View style={s.content}>
+      <ScrollView
+        contentContainerStyle={s.content}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+      >
         {/* Logo */}
         <View style={s.logoContainer}>
           <Text style={s.logoEmoji}>🏐</Text>
@@ -133,7 +139,7 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </Link>
         </View>
-      </View>
+      </ScrollView>
 
       {/* Forgot Password Modal */}
       <Modal visible={showForgotPassword} animationType="fade" transparent>
@@ -192,7 +198,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     backgroundColor: 'transparent',
   },
   content: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
     padding: 24,
   },
