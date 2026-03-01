@@ -235,7 +235,7 @@ export default function GestureDrawer() {
     if (isParent) {
       items.push(
         { key: 'mykids', icon: 'people-circle', label: 'My Kids', route: '/my-kids' },
-        { key: 'payments', icon: 'card', label: 'Payments', route: '/(tabs)/payments' },
+        { key: 'payments', icon: 'card', label: 'Payments', route: '/family-payments' },
       );
     }
     if (isPlayer) {
