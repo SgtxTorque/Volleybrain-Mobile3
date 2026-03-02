@@ -142,13 +142,10 @@ export function useCoachHomeData() {
         }
       }
 
-      // Filter to current season
-      const seasonTeams = merged.filter(t => {
-        const team = t.teams as any;
-        return team?.season_id === workingSeason.id;
-      });
-
-      const teamIds = seasonTeams.map(t => (t.teams as any)?.id).filter(Boolean);
+      // Show ALL assigned teams (some may be in different seasons)
+      // Current season teams sort first, then other seasons
+      const allTeamEntries = merged.filter(t => (t.teams as any)?.id);
+      const teamIds = allTeamEntries.map(t => (t.teams as any)?.id).filter(Boolean);
 
       // Batch fetch player counts and game results
       let playerCountMap = new Map<string, number>();
@@ -176,7 +173,7 @@ export function useCoachHomeData() {
         }
       }
 
-      const result: CoachTeam[] = seasonTeams.map(t => {
+      const result: CoachTeam[] = allTeamEntries.map(t => {
         const team = t.teams as any;
         return {
           id: team.id,
@@ -188,15 +185,37 @@ export function useCoachHomeData() {
         };
       });
 
+      // Sort: current season first, then head_coach first, then alphabetical
       result.sort((a, b) => {
+        const aTeam = allTeamEntries.find(t => (t.teams as any)?.id === a.id)?.teams as any;
+        const bTeam = allTeamEntries.find(t => (t.teams as any)?.id === b.id)?.teams as any;
+        const aCurrentSeason = aTeam?.season_id === workingSeason.id ? 0 : 1;
+        const bCurrentSeason = bTeam?.season_id === workingSeason.id ? 0 : 1;
+        if (aCurrentSeason !== bCurrentSeason) return aCurrentSeason - bCurrentSeason;
         if (a.role === 'head_coach' && b.role !== 'head_coach') return -1;
         if (a.role !== 'head_coach' && b.role === 'head_coach') return 1;
         return a.name.localeCompare(b.name);
       });
 
       setTeams(result);
+
+      // Default to team with soonest upcoming event
       if (result.length > 0 && !selectedTeamId) {
-        setSelectedTeamId(result[0].id);
+        if (result.length === 1) {
+          setSelectedTeamId(result[0].id);
+        } else {
+          const today = localToday();
+          const { data: soonestEvent } = await supabase
+            .from('schedule_events')
+            .select('team_id')
+            .in('team_id', result.map(t => t.id))
+            .gte('event_date', today)
+            .order('event_date', { ascending: true })
+            .limit(1)
+            .maybeSingle();
+
+          setSelectedTeamId(soonestEvent?.team_id || result[0].id);
+        }
       }
     } catch (err) {
       if (__DEV__) console.error('[useCoachHomeData] fetchTeams error:', err);
