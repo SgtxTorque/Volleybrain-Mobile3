@@ -151,8 +151,8 @@ const styles = StyleSheet.create({
   },
   sectionHeader: {
     fontFamily: FONTS.bodyBold,
-    fontSize: 11,
-    letterSpacing: 1.1,
+    fontSize: 10,
+    letterSpacing: 1.2,
     color: BRAND.textFaint,
     textTransform: 'uppercase',
     paddingHorizontal: 24,
