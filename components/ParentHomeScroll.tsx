@@ -1,10 +1,11 @@
 /**
  * ParentHomeScroll — scroll-driven parent home dashboard.
- * Phase 3: Day-strip calendar + event hero card + attention banner.
+ * Phase 4: Velocity-sensitive athlete card.
  */
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Dimensions,
   RefreshControl,
   StyleSheet,
   Text,
@@ -35,6 +36,9 @@ import { FONTS } from '@/theme/fonts';
 import DayStripCalendar from './parent-scroll/DayStripCalendar';
 import EventHeroCard from './parent-scroll/EventHeroCard';
 import AttentionBanner from './parent-scroll/AttentionBanner';
+import AthleteCard from './parent-scroll/AthleteCard';
+
+const SCREEN_HEIGHT = Dimensions.get('window').height;
 
 // ─── Mascot messages ─────────────────────────────────────────────
 type MascotMessage = {
@@ -55,7 +59,7 @@ export default function ParentHomeScroll() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { profile } = useAuth();
-  const { scrollY, scrollHandler } = useScrollAnimations();
+  const { scrollY, isSlowScroll, scrollHandler } = useScrollAnimations();
   const data = useParentHomeData();
 
   // Message cycling
@@ -258,8 +262,26 @@ export default function ParentHomeScroll() {
           onPress={() => router.push('/(tabs)/parent-schedule' as any)}
         />
 
-        {/* ─── PLACEHOLDER SECTIONS (Phases 4-5) ─────────────── */}
-        <PlaceholderSection label="MY ATHLETE" color={BRAND.offWhite} height={160} />
+        {/* ─── MY ATHLETE SECTION ─────────────────────────────── */}
+        {data.children.length > 0 && (
+          <View style={styles.athleteSection}>
+            <Text style={styles.sectionHeader}>MY ATHLETE</Text>
+            {data.children.map((child, i) => (
+              <View key={child.id + '-' + (child.team_id || i)} style={{ marginBottom: 10 }}>
+                <AthleteCard
+                  child={child}
+                  stats={i === 0 ? data.childStats : null}
+                  xp={i === 0 ? data.childXp : null}
+                  scrollY={scrollY}
+                  isSlowScroll={isSlowScroll}
+                  screenHeight={SCREEN_HEIGHT}
+                />
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* ─── PLACEHOLDER SECTIONS (Phase 5) ─────────────────── */}
         <PlaceholderSection label="METRIC GRID" color={BRAND.warmGray} height={200} />
         <PlaceholderSection label="TEAM HUB" color={BRAND.white} height={140} />
         <PlaceholderSection label="SEASON SNAPSHOT" color={BRAND.offWhite} height={120} />
@@ -429,6 +451,20 @@ const styles = StyleSheet.create({
     backgroundColor: BRAND.skyBlue,
     width: 18,
     borderRadius: 3,
+  },
+
+  // Athlete section
+  athleteSection: {
+    marginHorizontal: SPACING.pagePadding,
+    marginBottom: SPACING.sectionGap,
+  },
+  sectionHeader: {
+    fontFamily: FONTS.bodyBold,
+    fontSize: 11,
+    letterSpacing: 1.1,
+    color: BRAND.textFaint,
+    textTransform: 'uppercase',
+    marginBottom: 10,
   },
 
   // Placeholder sections
