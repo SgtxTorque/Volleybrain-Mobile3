@@ -1,6 +1,6 @@
 /**
  * SeasonScoreboard — Tier 2 flat with big Bebas Neue numbers.
- * Shows wins/losses, win rate bar, and scouting context for next opponent.
+ * C6: Added "Last game" context line below win rate.
  */
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -13,9 +13,10 @@ type Props = {
   record: SeasonRecord | null;
   nextEvent: CoachEvent | null;
   previousMatchup: string | null;
+  lastGameLine: string | null;
 };
 
-export default function SeasonScoreboard({ record, nextEvent, previousMatchup }: Props) {
+export default function SeasonScoreboard({ record, nextEvent, previousMatchup, lastGameLine }: Props) {
   const router = useRouter();
 
   if (!record) return null;
@@ -24,7 +25,6 @@ export default function SeasonScoreboard({ record, nextEvent, previousMatchup }:
     ? Math.round((record.wins / record.games_played) * 100)
     : 0;
 
-  // Next opponent scouting line
   const scoutLine = (() => {
     if (!nextEvent || nextEvent.event_type !== 'game' || !nextEvent.opponent_name) return null;
     const dayName = (() => {
@@ -45,7 +45,6 @@ export default function SeasonScoreboard({ record, nextEvent, previousMatchup }:
     >
       <Text style={styles.sectionHeader}>SEASON</Text>
 
-      {/* Big numbers */}
       <View style={styles.numbersRow}>
         <View style={styles.numberBlock}>
           <Text style={[styles.bigNumber, { color: BRAND.success }]}>{record.wins}</Text>
@@ -58,13 +57,15 @@ export default function SeasonScoreboard({ record, nextEvent, previousMatchup }:
         </View>
       </View>
 
-      {/* Win rate bar */}
       <View style={styles.barTrack}>
         <View style={[styles.barFill, { width: `${winRate}%` }]} />
       </View>
       <Text style={styles.winRateText}>{winRate}% win rate</Text>
 
-      {/* Scouting context */}
+      {lastGameLine && (
+        <Text style={styles.lastGameLine}>{lastGameLine}</Text>
+      )}
+
       {scoutLine && (
         <Text style={styles.scoutLine}>{scoutLine}</Text>
       )}
@@ -131,7 +132,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: BRAND.textMuted,
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
+  },
+  lastGameLine: {
+    fontFamily: FONTS.bodyMedium,
+    fontSize: 13,
+    color: BRAND.textMuted,
+    paddingHorizontal: 24,
+    marginBottom: 4,
   },
   scoutLine: {
     fontFamily: FONTS.bodySemiBold,

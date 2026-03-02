@@ -1,6 +1,6 @@
 /**
- * TopPerformers — Tier 2 flat rows showing top 3 players by total points.
- * Only renders when player season stats exist.
+ * TopPerformers — Tier 2 flat rows with stat pills and alternating backgrounds.
+ * C7: Name semibold, stats muted right-aligned, alternating row backgrounds.
  */
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -26,26 +26,23 @@ export default function TopPerformers({ performers }: Props) {
 
       {performers.map((p, i) => {
         const icon = PERFORMER_ICONS[i] || '\u{1F3C6}';
-        // Pick the two most prominent stats
         const statParts: string[] = [];
         if (p.total_kills > 0) statParts.push(`${p.total_kills} kills`);
         if (p.total_aces > 0) statParts.push(`${p.total_aces} aces`);
         if (p.total_digs > 0) statParts.push(`${p.total_digs} digs`);
         if (p.total_assists > 0) statParts.push(`${p.total_assists} assists`);
-        const statLine = statParts.slice(0, 2).join(', ');
+        const statLine = statParts.slice(0, 2).join(' \u00B7 ');
 
         return (
           <TouchableOpacity
             key={p.player_id}
-            style={styles.row}
+            style={[styles.row, i % 2 === 0 && styles.rowAlt]}
             activeOpacity={0.7}
             onPress={() => router.push('/(tabs)/coach-roster' as any)}
           >
             <Text style={styles.icon}>{icon}</Text>
-            <Text style={styles.label} numberOfLines={1}>
-              {p.player_name}
-              {statLine ? ` \u00B7 ${statLine}` : ''}
-            </Text>
+            <Text style={styles.name} numberOfLines={1}>{p.player_name}</Text>
+            <Text style={styles.stats} numberOfLines={1}>{statLine}</Text>
             <Text style={styles.arrow}>{'\u2192'}</Text>
           </TouchableOpacity>
         );
@@ -73,15 +70,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 10,
   },
+  rowAlt: {
+    backgroundColor: BRAND.offWhite,
+  },
   icon: {
     fontSize: 16,
     marginRight: 8,
   },
-  label: {
-    flex: 1,
-    fontFamily: FONTS.bodyMedium,
+  name: {
+    fontFamily: FONTS.bodySemiBold,
     fontSize: 14,
     color: BRAND.textPrimary,
+    flexShrink: 1,
+    marginRight: 8,
+  },
+  stats: {
+    flex: 1,
+    fontFamily: FONTS.bodyMedium,
+    fontSize: 12,
+    color: BRAND.textMuted,
+    textAlign: 'right',
+    marginRight: 8,
   },
   arrow: {
     fontFamily: FONTS.bodyMedium,

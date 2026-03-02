@@ -1,6 +1,6 @@
 /**
- * TeamPulse — Tier 2 flat data rows showing attendance, RSVPs, messages.
- * Includes ambient moment after the data rows.
+ * TeamPulse — Tier 2 flat data rows with number emphasis.
+ * C8: Values in bold 18px skyBlue/success, labels in bodyMedium.
  */
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -30,14 +30,12 @@ export default function TeamPulse({ attendanceRate, rsvpSummary, unreadMessages,
   const router = useRouter();
   const dayLabel = getDayLabel(heroEventDate);
 
-  // Missing names text
   const missingText = rsvpSummary && rsvpSummary.missing.length > 0
     ? rsvpSummary.missing.length <= 2
       ? `${rsvpSummary.missing.join(' and ')} hasn't responded`
       : `${rsvpSummary.missing[0]} and ${rsvpSummary.missing.length - 1} others haven't responded`
     : null;
 
-  // Ambient moment
   const ambientMessage = (() => {
     if (attendanceRate !== null && attendanceRate >= 90) {
       return { text: `${attendanceRate}% attendance. This team shows up.`, color: BRAND.textMuted };
@@ -51,11 +49,19 @@ export default function TeamPulse({ attendanceRate, rsvpSummary, unreadMessages,
     return null;
   })();
 
+  // Value color helper
+  const getValueColor = (type: 'attendance' | 'rsvp' | 'messages') => {
+    if (type === 'attendance' && attendanceRate !== null) {
+      return attendanceRate >= 90 ? BRAND.success : BRAND.skyBlue;
+    }
+    if (type === 'messages' && unreadMessages > 0) return BRAND.skyBlue;
+    return BRAND.skyBlue;
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.sectionHeader}>TEAM PULSE</Text>
 
-      {/* Attendance */}
       {attendanceRate !== null && (
         <TouchableOpacity
           style={styles.row}
@@ -66,11 +72,15 @@ export default function TeamPulse({ attendanceRate, rsvpSummary, unreadMessages,
             <Text style={styles.rowLabel}>Attendance</Text>
             <Text style={styles.rowSubtitle}>Average over last 3 events</Text>
           </View>
-          <Text style={styles.rowValue}>{attendanceRate}% {'\u2192'}</Text>
+          <View style={styles.rowRight}>
+            <Text style={[styles.rowValue, { color: getValueColor('attendance') }]}>
+              {attendanceRate}%
+            </Text>
+            <Text style={styles.rowArrow}>{'\u2192'}</Text>
+          </View>
         </TouchableOpacity>
       )}
 
-      {/* RSVPs */}
       {rsvpSummary && (
         <TouchableOpacity
           style={styles.row}
@@ -81,13 +91,15 @@ export default function TeamPulse({ attendanceRate, rsvpSummary, unreadMessages,
             <Text style={styles.rowLabel}>RSVPs for {dayLabel}</Text>
             {missingText && <Text style={styles.rowSubtitle}>{missingText}</Text>}
           </View>
-          <Text style={styles.rowValue}>
-            {rsvpSummary.confirmed}/{rsvpSummary.total} {'\u2192'}
-          </Text>
+          <View style={styles.rowRight}>
+            <Text style={[styles.rowValue, { color: getValueColor('rsvp') }]}>
+              {rsvpSummary.confirmed}/{rsvpSummary.total}
+            </Text>
+            <Text style={styles.rowArrow}>{'\u2192'}</Text>
+          </View>
         </TouchableOpacity>
       )}
 
-      {/* Unread Messages */}
       <TouchableOpacity
         style={styles.row}
         activeOpacity={0.7}
@@ -96,12 +108,14 @@ export default function TeamPulse({ attendanceRate, rsvpSummary, unreadMessages,
         <View style={styles.rowLeft}>
           <Text style={styles.rowLabel}>Unread Parent Messages</Text>
         </View>
-        <Text style={[styles.rowValue, unreadMessages > 0 && { color: BRAND.skyBlue }]}>
-          {unreadMessages} {'\u2192'}
-        </Text>
+        <View style={styles.rowRight}>
+          <Text style={[styles.rowValue, { color: getValueColor('messages') }]}>
+            {unreadMessages}
+          </Text>
+          <Text style={styles.rowArrow}>{'\u2192'}</Text>
+        </View>
       </TouchableOpacity>
 
-      {/* Ambient moment */}
       {ambientMessage && (
         <Text style={[styles.ambient, { color: ambientMessage.color }]}>
           {ambientMessage.text}
@@ -138,7 +152,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   rowLabel: {
-    fontFamily: FONTS.bodySemiBold,
+    fontFamily: FONTS.bodyMedium,
     fontSize: 15,
     color: BRAND.textPrimary,
   },
@@ -148,10 +162,19 @@ const styles = StyleSheet.create({
     color: BRAND.textMuted,
     marginTop: 2,
   },
+  rowRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   rowValue: {
-    fontFamily: FONTS.bodySemiBold,
-    fontSize: 15,
-    color: BRAND.textPrimary,
+    fontFamily: FONTS.bodyBold,
+    fontSize: 18,
+  },
+  rowArrow: {
+    fontFamily: FONTS.bodyMedium,
+    fontSize: 14,
+    color: BRAND.textFaint,
   },
   ambient: {
     fontFamily: FONTS.bodyMedium,

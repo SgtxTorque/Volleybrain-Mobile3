@@ -44,8 +44,7 @@ import QuickActions from './coach-scroll/QuickActions';
 import EngagementSection from './coach-scroll/EngagementSection';
 import TeamPulse from './coach-scroll/TeamPulse';
 import RosterAlerts from './coach-scroll/RosterAlerts';
-import DevelopmentHint from './coach-scroll/DevelopmentHint';
-import PendingStatsNudge from './coach-scroll/PendingStatsNudge';
+import ActionItems from './coach-scroll/ActionItems';
 import ActivityFeed from './coach-scroll/ActivityFeed';
 import SeasonScoreboard from './coach-scroll/SeasonScoreboard';
 import TopPerformers from './coach-scroll/TopPerformers';
@@ -402,34 +401,38 @@ export default function CoachHomeScroll() {
           />
         </View>
 
-        {/* ─── GAME PLAN CARD (Tier 1) ── ↕ 8px below ───────── */}
-        <GamePlanCard event={data.heroEvent} rsvpSummary={data.rsvpSummary} />
-
-        {/* ─── SCOUTING CONTEXT (Tier 2) ── ↕ 20px below ─────── */}
+        {/* ─── GAME PLAN CARD (Tier 1) ── ↕ 20px below ──────── */}
         <View style={{ marginBottom: 20 }}>
+          <GamePlanCard event={data.heroEvent} rsvpSummary={data.rsvpSummary} />
+        </View>
+
+        {/* ─── SCOUTING CONTEXT (Tier 2) ── ↕ 16px below ─────── */}
+        <View style={{ marginBottom: 16 }}>
           <ScoutingContext previousMatchup={data.previousMatchup} />
         </View>
 
-        {/* ─── QUICK ACTIONS (Tier 2) ── ↕ 16px below ──────────── */}
+        {/* ─── QUICK ACTIONS (Tier 2 panel) ── ↕ 16px below ───── */}
         <View style={{ marginBottom: 16 }}>
           <QuickActions isEventDay={data.heroEvent !== null} />
         </View>
 
-        {/* ─── ENGAGEMENT (Tier 2/3) ── ↕ 12px below ──────────── */}
-        <View style={{ marginBottom: 24 }}>
+        {/* ─── ENGAGEMENT (Tier 3 single nudge) ── ↕ 28px below ── */}
+        <View style={{ marginBottom: 28 }}>
           <EngagementSection />
         </View>
 
-        {/* ─── TEAM PULSE (Tier 2) ── ↕ 12px ambient, ↕ 20px below */}
-        <TeamPulse
-          attendanceRate={data.attendanceRate}
-          rsvpSummary={data.rsvpSummary}
-          unreadMessages={data.unreadMessages}
-          heroEventDate={data.heroEvent?.event_date ?? null}
-        />
+        {/* ─── TEAM PULSE (Tier 2) ── ↕ 24px below ──────────────── */}
+        <View style={{ marginBottom: 24 }}>
+          <TeamPulse
+            attendanceRate={data.attendanceRate}
+            rsvpSummary={data.rsvpSummary}
+            unreadMessages={data.unreadMessages}
+            heroEventDate={data.heroEvent?.event_date ?? null}
+          />
+        </View>
 
-        {/* ─── ROSTER ALERTS (Tier 1.5) ── ↕ 12px below ─────── */}
-        <View style={{ marginBottom: 12 }}>
+        {/* ─── ROSTER ALERTS ── ↕ 24px below ───────────────────── */}
+        <View style={{ marginBottom: 24 }}>
           <RosterAlerts
             teamId={data.selectedTeamId}
             rosterSize={data.teams.find(t => t.id === data.selectedTeamId)?.player_count ?? 0}
@@ -437,22 +440,25 @@ export default function CoachHomeScroll() {
           />
         </View>
 
-        {/* ─── DEVELOPMENT HINT (Tier 2) ─────────────────────── */}
-        <DevelopmentHint teamId={data.selectedTeamId} />
-
-        {/* ─── PENDING STATS NUDGE (Tier 2) ── ↕ 16px below ─── */}
-        <View style={{ marginBottom: 16 }}>
-          <PendingStatsNudge count={data.pendingStatsCount} />
+        {/* ─── ACTION ITEMS (merged eval + stats) ── ↕ 24px below ─ */}
+        <View style={{ marginBottom: 24 }}>
+          <ActionItems
+            teamId={data.selectedTeamId}
+            pendingStatsCount={data.pendingStatsCount}
+          />
         </View>
 
-        {/* ─── ACTIVITY FEED (Tier 2) ── ↕ 24px below ──────────── */}
-        <ActivityFeed teamId={data.selectedTeamId} />
+        {/* ─── ACTIVITY FEED (Tier 2) ── ↕ 28px below ──────────── */}
+        <View style={{ marginBottom: 28 }}>
+          <ActivityFeed teamId={data.selectedTeamId} />
+        </View>
 
         {/* ─── SEASON SCOREBOARD (Tier 2) ── ↕ 16px below ──────── */}
         <SeasonScoreboard
           record={data.seasonRecord}
           nextEvent={data.heroEvent}
           previousMatchup={data.previousMatchup}
+          lastGameLine={data.lastGameLine}
         />
 
         {/* ─── TOP PERFORMERS (Tier 2) ─────────────────────────── */}

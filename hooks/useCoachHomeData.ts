@@ -84,6 +84,7 @@ export function useCoachHomeData() {
   const [topPerformers, setTopPerformers] = useState<TopPerformer[]>([]);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [previousMatchup, setPreviousMatchup] = useState<string | null>(null);
+  const [lastGameLine, setLastGameLine] = useState<string | null>(null);
 
   // ─── Fetch teams ──
   const fetchTeams = useCallback(async () => {
@@ -249,6 +250,28 @@ export function useCoachHomeData() {
         setSeasonRecord({ wins: w, losses: l, games_played: gameResults.length });
       } else {
         setSeasonRecord(null);
+      }
+
+      // Last completed game (for Season Scoreboard context line)
+      const { data: lastGame } = await supabase
+        .from('schedule_events')
+        .select('game_result, opponent_name, our_score, opponent_score')
+        .eq('team_id', teamId)
+        .eq('event_type', 'game')
+        .eq('game_status', 'completed')
+        .not('game_result', 'is', null)
+        .order('event_date', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (lastGame && lastGame.opponent_name) {
+        const result = lastGame.game_result === 'win' ? 'Won' : lastGame.game_result === 'loss' ? 'Lost' : 'Tied';
+        const score = lastGame.our_score != null && lastGame.opponent_score != null
+          ? ` ${lastGame.our_score}-${lastGame.opponent_score}`
+          : '';
+        setLastGameLine(`Last game: ${result} vs ${lastGame.opponent_name}${score}`);
+      } else {
+        setLastGameLine(null);
       }
 
       // Pending stats count
@@ -481,5 +504,6 @@ export function useCoachHomeData() {
     topPerformers,
     unreadMessages,
     previousMatchup,
+    lastGameLine,
   };
 }

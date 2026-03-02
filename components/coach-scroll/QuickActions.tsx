@@ -1,6 +1,6 @@
 /**
- * QuickActions — Tier 2 flat action rows.
- * Adapts based on whether it's an event day (game plan card is showing).
+ * QuickActions — Tier 2 flat action rows with subtle panel background.
+ * C5: Added offWhite container background, larger emoji icons.
  */
 import React from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -19,11 +19,9 @@ type ActionItem = {
 const ALL_ACTIONS: ActionItem[] = [
   { icon: '\u{1F4E3}', label: 'Send a Blast', route: '/(tabs)/coach-chat' },
   { icon: '\u{1F4DD}', label: 'Build a Lineup', route: '/(tabs)/coach-roster', offDayOnly: true },
-  // TODO: shoutouts table not found — navigate to toast for now
   { icon: '\u{1F31F}', label: 'Give a Shoutout', route: null },
   { icon: '\u{1F4CA}', label: 'Review Stats', route: '/(tabs)/coach-schedule' },
   { icon: '\u{1F465}', label: 'Manage Roster', route: '/(tabs)/coach-roster', offDayOnly: true },
-  // TODO: coach_challenges table not found — navigate to toast for now
   { icon: '\u{1F3AF}', label: 'Create a Challenge', route: null },
 ];
 
@@ -41,7 +39,7 @@ export default function QuickActions({ isEventDay }: Props) {
   });
 
   return (
-    <View style={styles.container}>
+    <View style={styles.panel}>
       {actions.map((action, i) => (
         <TouchableOpacity
           key={i}
@@ -65,21 +63,25 @@ export default function QuickActions({ isEventDay }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: {
+  panel: {
+    backgroundColor: BRAND.offWhite,
+    borderRadius: 16,
+    marginHorizontal: 20,
+    paddingVertical: 4,
     marginBottom: 16,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   rowBorder: {
     borderBottomWidth: 1,
     borderBottomColor: BRAND.border,
   },
   icon: {
-    fontSize: 20,
+    fontSize: 22,
   },
   label: {
     flex: 1,

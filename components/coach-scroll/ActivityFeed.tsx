@@ -1,7 +1,6 @@
 /**
- * ActivityFeed — Tier 2 flat recent activity feed.
- * Shows player achievements/level-ups for the team.
- * NOTE: shoutouts table not found — only shows achievement activity.
+ * ActivityFeed — Tier 2 compact recent activity feed.
+ * C1: Capped at 2 items, inline format with emoji + text + timestamp.
  */
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -14,6 +13,7 @@ type ActivityItem = {
   id: string;
   text: string;
   timestamp: string;
+  icon: string;
 };
 
 type Props = {
@@ -40,6 +40,7 @@ function relativeTime(dateStr: string): string {
 export default function ActivityFeed({ teamId }: Props) {
   const router = useRouter();
   const [items, setItems] = useState<ActivityItem[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -47,7 +48,6 @@ export default function ActivityFeed({ teamId }: Props) {
 
     (async () => {
       try {
-        // Get roster player IDs
         const { data: roster } = await supabase
           .from('team_players')
           .select('player_id, players(id, first_name, last_name)')
@@ -65,7 +65,6 @@ export default function ActivityFeed({ teamId }: Props) {
           if (p) nameMap.set(r.player_id, `${p.first_name} ${p.last_name}`);
         }
 
-        // Recent achievements (last 14 days)
         const twoWeeksAgo = new Date();
         twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
         const cutoff = twoWeeksAgo.toISOString();
@@ -86,11 +85,13 @@ export default function ActivityFeed({ teamId }: Props) {
           const icon = achData?.icon || '\u{1F3C5}';
           feed.push({
             id: ach.id,
-            text: `${playerName} earned ${icon} ${achName}`,
+            text: `${playerName} earned ${achName}`,
             timestamp: relativeTime(ach.earned_at),
+            icon,
           });
         }
 
+        setTotalCount(feed.length);
         setItems(feed);
       } catch (err) {
         if (__DEV__) console.error('[ActivityFeed] Error:', err);
@@ -109,10 +110,7 @@ export default function ActivityFeed({ teamId }: Props) {
       {items.length === 0 ? (
         <TouchableOpacity
           activeOpacity={0.7}
-          onPress={() => {
-            // Scroll to quick actions conceptually; navigate to schedule
-            router.push('/(tabs)/coach-schedule' as any);
-          }}
+          onPress={() => router.push('/(tabs)/coach-schedule' as any)}
         >
           <Text style={styles.emptyText}>
             Quiet week. Time to stir things up? {'\u2192'}
@@ -120,17 +118,27 @@ export default function ActivityFeed({ teamId }: Props) {
         </TouchableOpacity>
       ) : (
         <View style={styles.feedList}>
-          {items.map(item => (
+          {items.slice(0, 2).map(item => (
             <TouchableOpacity
               key={item.id}
               style={styles.feedItem}
               activeOpacity={0.7}
               onPress={() => router.push('/(tabs)/coach-roster' as any)}
             >
-              <Text style={styles.feedText}>{item.text}</Text>
-              <Text style={styles.feedTimestamp}>{item.timestamp}</Text>
+              <Text style={styles.feedText} numberOfLines={1}>
+                {item.icon} {item.text} {'\u00B7'}{' '}
+                <Text style={styles.feedTimestamp}>{item.timestamp}</Text>
+              </Text>
             </TouchableOpacity>
           ))}
+          {totalCount > 2 && (
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => router.push('/(tabs)/coach-roster' as any)}
+            >
+              <Text style={styles.viewAll}>View all {'\u2192'}</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
     </View>
@@ -152,25 +160,31 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontFamily: FONTS.bodyMedium,
-    fontSize: 14,
+    fontSize: 13,
     color: BRAND.textMuted,
     paddingHorizontal: 24,
   },
   feedList: {
     paddingHorizontal: 24,
-    gap: 12,
+    gap: 6,
   },
   feedItem: {},
   feedText: {
     fontFamily: FONTS.bodyMedium,
-    fontSize: 14,
+    fontSize: 13,
     color: BRAND.textPrimary,
-    lineHeight: 20,
+    lineHeight: 18,
   },
   feedTimestamp: {
     fontFamily: FONTS.bodyMedium,
-    fontSize: 12,
+    fontSize: 13,
     color: BRAND.textMuted,
-    marginTop: 2,
+  },
+  viewAll: {
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 12,
+    color: BRAND.skyBlue,
+    textAlign: 'right',
+    marginTop: 4,
   },
 });
