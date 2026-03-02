@@ -13,6 +13,7 @@ import ChildPickerScreen, { type ChildPlayer } from './ChildPickerScreen';
 import CoachDashboard from './CoachDashboard';
 import CoachParentDashboard from './CoachParentDashboard';
 import ParentDashboard from './ParentDashboard';
+import ParentHomeScroll from './ParentHomeScroll';
 import PlayerDashboard from './PlayerDashboard';
 
 const LAST_CHILD_KEY = 'vb_player_last_child_id';
@@ -253,7 +254,7 @@ export default function DashboardRouter() {
     case 'coach':
       return <CoachDashboard />;
     case 'parent':
-      return <ParentDashboard />;
+      return <ParentHomeScroll />;
     case 'coach_parent':
       return <CoachParentDashboard />;
     case 'player': {
@@ -296,7 +297,7 @@ export default function DashboardRouter() {
       );
     }
     default:
-      return <ParentDashboard />;
+      return <ParentHomeScroll />;
   }
 }
 

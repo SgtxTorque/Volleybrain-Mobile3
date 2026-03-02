@@ -8,6 +8,16 @@ import { SportProvider } from '@/lib/sport';
 import { ThemeProvider, useTheme } from '@/lib/theme';
 import { DarkTheme, DefaultTheme, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
+import {
+  BebasNeue_400Regular,
+} from '@expo-google-fonts/bebas-neue';
+import {
+  PlusJakartaSans_400Regular,
+  PlusJakartaSans_500Medium,
+  PlusJakartaSans_600SemiBold,
+  PlusJakartaSans_700Bold,
+  PlusJakartaSans_800ExtraBold,
+} from '@expo-google-fonts/plus-jakarta-sans';
 import * as Notifications from 'expo-notifications';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -136,6 +146,12 @@ function RootLayoutNav() {
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     'Oswald-Bold': require('../assets/fonts/Oswald-Bold.ttf'),
+    BebasNeue_400Regular,
+    PlusJakartaSans_400Regular,
+    PlusJakartaSans_500Medium,
+    PlusJakartaSans_600SemiBold,
+    PlusJakartaSans_700Bold,
+    PlusJakartaSans_800ExtraBold,
   });
 
   useEffect(() => {
