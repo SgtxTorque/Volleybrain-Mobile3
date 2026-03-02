@@ -50,6 +50,10 @@ const SCREEN_HEIGHT = Dimensions.get('window').height;
 type MascotMessage = {
   text: string;
   animation: 'wiggle' | 'bounce' | 'float';
+  type: 'rsvp' | 'payment' | 'celebration' | 'chat' | 'clear';
+  textColor: string;
+  hint: string;
+  route: string | null;
 };
 
 /** Build contextual messages based on the parent's actual state */
@@ -72,33 +76,64 @@ function buildDynamicMessages(
         return 'this weekend';
       }
     })();
+    const rsvpMessages = [
+      `Coach is building the roster for ${dayStr}. Is ${childName} in?`,
+      `${childName} hasn't been marked for ${dayStr}'s event yet.`,
+      `Quick RSVP check \u{2014} ${childName} playing ${dayStr}?`,
+    ];
     msgs.push({
-      text: `Coach needs a headcount. Is ${childName} playing ${dayStr}?`,
+      text: rsvpMessages[Math.floor(Date.now() / 86400000) % rsvpMessages.length],
       animation: 'wiggle',
+      type: 'rsvp',
+      textColor: BRAND.navy,
+      hint: 'Tap to RSVP \u{2192}',
+      route: '/(tabs)/parent-schedule',
     });
   }
 
   // Unpaid balance
   if (balance > 0) {
+    const payMessages = [
+      `$${balance.toFixed(0)} is due. Tap to handle it.`,
+      `Heads up \u{2014} $${balance.toFixed(0)} balance for ${childName}.`,
+      `${childName}'s spot isn't locked in. $${balance.toFixed(0)} outstanding.`,
+    ];
     msgs.push({
-      text: `Final buzzer for registration fees! Secure ${childName}'s spot.`,
+      text: payMessages[Math.floor(Date.now() / 86400000) % payMessages.length],
       animation: 'bounce',
+      type: 'payment',
+      textColor: '#F59E0B', // amberWarm
+      hint: 'Tap to pay \u{2192}',
+      route: '/family-payments',
     });
   }
 
   // Unread chat messages
   if (unreadChat > 0) {
     msgs.push({
-      text: `You have ${unreadChat} unread message${unreadChat > 1 ? 's' : ''} from the team.`,
+      text: `${unreadChat} unread message${unreadChat > 1 ? 's' : ''} from the team.`,
       animation: 'wiggle',
+      type: 'chat',
+      textColor: BRAND.navy,
+      hint: 'Tap to read \u{2192}',
+      route: '/(tabs)/parent-chat',
     });
   }
 
-  // If no pending items, show encouraging message
+  // If no pending items, show encouraging messages
   if (msgs.length === 0) {
+    const clearMessages = [
+      `Everyone's set for the week. You're on top of it.`,
+      `No action items right now. Enjoy the calm before game day.`,
+      `All RSVPs confirmed, payments current. Coach's dream parent.`,
+    ];
     msgs.push({
-      text: `Looking good! ${childName}'s all set for the week. \u{1F4AA}`,
+      text: clearMessages[Math.floor(Date.now() / 86400000) % clearMessages.length],
       animation: 'float',
+      type: 'clear',
+      textColor: BRAND.textPrimary,
+      hint: '',
+      route: null,
     });
   }
 
@@ -316,20 +351,48 @@ export default function ParentHomeScroll() {
             <Text style={styles.welcomeGreeting}>Welcome back, {firstName}</Text>
           </View>
 
-          <View style={styles.speechBubble}>
-            <Animated.Text style={[styles.speechText, messageAnimStyle]}>
-              {currentMessage?.text}
-            </Animated.Text>
-          </View>
+          {currentMessage?.route ? (
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => router.push(currentMessage.route as any)}
+            >
+              <Animated.Text
+                style={[
+                  styles.flatMessageText,
+                  { color: currentMessage.textColor },
+                  messageAnimStyle,
+                ]}
+              >
+                {currentMessage.text}
+              </Animated.Text>
+              {currentMessage.hint ? (
+                <Text style={styles.flatMessageHint}>{currentMessage.hint}</Text>
+              ) : null}
+            </TouchableOpacity>
+          ) : (
+            <View>
+              <Animated.Text
+                style={[
+                  styles.flatMessageText,
+                  { color: currentMessage?.textColor ?? BRAND.textPrimary },
+                  messageAnimStyle,
+                ]}
+              >
+                {currentMessage?.text}
+              </Animated.Text>
+            </View>
+          )}
 
-          <View style={styles.dotRow}>
-            {messages.map((_, i) => (
-              <View
-                key={i}
-                style={[styles.dot, i === activeMessageIndex && styles.dotActive]}
-              />
-            ))}
-          </View>
+          {messages.length > 1 && (
+            <View style={styles.dotRow}>
+              {messages.map((_, i) => (
+                <View
+                  key={i}
+                  style={[styles.dot, i === activeMessageIndex && styles.dotActive]}
+                />
+              ))}
+            </View>
+          )}
         </Animated.View>
 
         {/* ─── EVENT HERO CARD ────────────────────────────────── */}
@@ -510,33 +573,33 @@ const styles = StyleSheet.create({
     color: BRAND.navy,
     textAlign: 'center',
   },
-  speechBubble: {
-    backgroundColor: BRAND.white,
-    borderRadius: 16,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    minHeight: 56,
-    justifyContent: 'center',
-    ...SHADOWS.light,
-  },
-  speechText: {
+  flatMessageText: {
     fontFamily: FONTS.bodySemiBold,
-    fontSize: 14,
+    fontSize: 17,
     color: BRAND.textPrimary,
-    lineHeight: 20,
     textAlign: 'center',
+    lineHeight: 26,
+    paddingHorizontal: 32,
+    marginTop: 8,
+  },
+  flatMessageHint: {
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 11,
+    color: BRAND.textFaint,
+    textAlign: 'center',
+    marginTop: 6,
   },
   dotRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 6,
+    gap: 8,
     marginTop: 12,
   },
   dot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: BRAND.border,
+    backgroundColor: BRAND.textFaint,
   },
   dotActive: {
     backgroundColor: BRAND.skyBlue,
