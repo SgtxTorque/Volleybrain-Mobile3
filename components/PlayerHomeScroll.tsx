@@ -29,6 +29,9 @@ import { usePlayerHomeData } from '@/hooks/usePlayerHomeData';
 import HeroIdentityCard from './player-scroll/HeroIdentityCard';
 import StreakBanner from './player-scroll/StreakBanner';
 import TheDrop from './player-scroll/TheDrop';
+import PhotoStrip from './player-scroll/PhotoStrip';
+import NextUpCard from './player-scroll/NextUpCard';
+import ChatPeek from './player-scroll/ChatPeek';
 
 // ─── Player Dark Theme ──────────────────────────────────────────
 export const PLAYER_THEME = {
@@ -173,6 +176,20 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           nextEvent={data.nextEvent}
           attendanceStreak={data.attendanceStreak}
         />
+
+        {/* ─── 4. PHOTO STRIP (if photos exist) ───────────────── */}
+        <PhotoStrip photos={data.recentPhotos} />
+
+        {/* ─── 5. NEXT UP — event + RSVP ──────────────────────── */}
+        <NextUpCard
+          event={data.nextEvent}
+          rsvpStatus={data.rsvpStatus}
+          attendanceStreak={data.attendanceStreak}
+          onRsvp={data.sendRsvp}
+        />
+
+        {/* ─── 6. CHAT PEEK ───────────────────────────────────── */}
+        <ChatPeek />
       </Animated.ScrollView>
     </View>
   );
