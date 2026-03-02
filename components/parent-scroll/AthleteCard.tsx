@@ -80,7 +80,8 @@ export default function AthleteCard({
   }));
 
   const fullName = `${child.first_name} ${child.last_name}`;
-  const sportColor = child.sport_color || '#DC2626'; // fallback crimson
+  // Prefer team color, then sport color, then gold fallback
+  const sportColor = child.team_color || child.sport_color || '#D4A017';
   const hasPhoto = Boolean(child.photo_url);
 
   return (

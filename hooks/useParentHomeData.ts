@@ -18,6 +18,7 @@ export type ChildPlayer = {
   photo_url: string | null;
   team_id: string | null;
   team_name: string | null;
+  team_color: string | null;
   season_id: string;
   jersey_number: string | null;
   position: string | null;
@@ -128,7 +129,7 @@ export function useParentHomeData() {
         .from('players')
         .select(`
           id, first_name, last_name, photo_url, sport_id, season_id, jersey_number, position,
-          team_players ( team_id, teams (id, name) )
+          team_players ( team_id, teams (id, name, color) )
         `)
         .in('id', playerIds)
         .order('created_at', { ascending: false });
@@ -148,6 +149,7 @@ export function useParentHomeData() {
             photo_url: (player as any).photo_url || null,
             team_id: null,
             team_name: null,
+            team_color: null,
             season_id: player.season_id,
             jersey_number: String((player as any).jersey_number || ''),
             position: (player as any).position || null,
@@ -164,6 +166,7 @@ export function useParentHomeData() {
               photo_url: (player as any).photo_url || null,
               team_id: team?.id || null,
               team_name: team?.name || null,
+              team_color: team?.color || null,
               season_id: player.season_id,
               jersey_number: String(tp.jersey_number || (player as any).jersey_number || ''),
               position: (player as any).position || null,
