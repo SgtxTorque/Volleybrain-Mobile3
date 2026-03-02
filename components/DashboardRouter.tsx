@@ -11,6 +11,7 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import AdminDashboard from './AdminDashboard';
 import ChildPickerScreen, { type ChildPlayer } from './ChildPickerScreen';
 import CoachDashboard from './CoachDashboard';
+import CoachHomeScroll from './CoachHomeScroll';
 import CoachParentDashboard from './CoachParentDashboard';
 import ParentDashboard from './ParentDashboard';
 import ParentHomeScroll from './ParentHomeScroll';
@@ -252,11 +253,11 @@ export default function DashboardRouter() {
     case 'admin':
       return <AdminDashboard />;
     case 'coach':
-      return <CoachDashboard />;
+      return <CoachHomeScroll />;
     case 'parent':
       return <ParentHomeScroll />;
     case 'coach_parent':
-      return <CoachParentDashboard />;
+      return <CoachHomeScroll />;
     case 'player': {
       // Still loading children
       if (!playerChildrenLoaded) {
