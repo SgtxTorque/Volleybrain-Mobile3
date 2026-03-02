@@ -34,6 +34,8 @@ import NextUpCard from './player-scroll/NextUpCard';
 import ChatPeek from './player-scroll/ChatPeek';
 import QuickPropsRow from './player-scroll/QuickPropsRow';
 import ActiveChallengeCard from './player-scroll/ActiveChallengeCard';
+import LastGameStats from './player-scroll/LastGameStats';
+import ClosingMascot from './player-scroll/ClosingMascot';
 
 // ─── Player Dark Theme ──────────────────────────────────────────
 export const PLAYER_THEME = {
@@ -198,6 +200,20 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
 
         {/* ─── 8. ACTIVE CHALLENGE (if exists) ────────────────── */}
         <ActiveChallengeCard available={data.challengesAvailable} />
+
+        {/* ─── 9. LAST GAME STATS ─────────────────────────────── */}
+        <LastGameStats
+          lastGame={data.lastGame}
+          position={data.position}
+          seasonStats={data.seasonStats}
+        />
+
+        {/* ─── 10. CLOSING MASCOT + XP CALLBACK ──────────────── */}
+        <ClosingMascot
+          xpToNext={data.xpToNext}
+          level={data.level}
+          nextEvent={data.nextEvent}
+        />
       </Animated.ScrollView>
     </View>
   );
