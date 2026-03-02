@@ -73,7 +73,7 @@ export default function MetricGrid({ record, payment, xp, chat }: Props) {
       title: xp ? `${xp.totalXp} XP` : '\u{2014}',
       subtitle: xp ? `Level ${xp.level}` : 'No XP yet',
       progress: xp?.progress ?? 0,
-      onPress: () => {},
+      onPress: () => router.push('/achievements' as any),
     },
     // Bottom-right: Chat
     {

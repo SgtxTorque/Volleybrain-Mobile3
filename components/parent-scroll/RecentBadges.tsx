@@ -4,6 +4,7 @@
  */
 import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
@@ -20,6 +21,7 @@ type Props = {
 };
 
 export default function RecentBadges({ playerIds }: Props) {
+  const router = useRouter();
   const [badges, setBadges] = useState<BadgeItem[]>([]);
 
   useEffect(() => {
@@ -68,7 +70,12 @@ export default function RecentBadges({ playerIds }: Props) {
         contentContainerStyle={styles.scrollContent}
       >
         {badges.map((badge) => (
-          <TouchableOpacity key={badge.id} style={styles.pill} activeOpacity={0.7}>
+          <TouchableOpacity
+            key={badge.id}
+            style={styles.pill}
+            activeOpacity={0.7}
+            onPress={() => router.push('/achievements' as any)}
+          >
             <Text style={styles.pillIcon}>{badge.icon}</Text>
             <Text style={styles.pillText} numberOfLines={1}>
               {badge.name}
