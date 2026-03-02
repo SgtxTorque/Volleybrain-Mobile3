@@ -454,8 +454,6 @@ export default function ParentHomeScroll() {
           payment={data.paymentStatus}
           xp={data.childXp}
           chat={data.lastChat}
-          scrollY={scrollY}
-          isSlowScroll={isSlowScroll}
         />
 
         {/* ─── TEAM HUB PREVIEW ──────────────────────────────── */}
