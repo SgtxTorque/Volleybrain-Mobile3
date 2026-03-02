@@ -45,6 +45,7 @@ import SeasonSnapshot from './parent-scroll/SeasonSnapshot';
 import RecentBadges from './parent-scroll/RecentBadges';
 import SecondaryEvents from './parent-scroll/SecondaryEvents';
 import AmbientCelebration from './parent-scroll/AmbientCelebration';
+import FlatChatPreview from './parent-scroll/FlatChatPreview';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
@@ -456,10 +457,13 @@ export default function ParentHomeScroll() {
           chat={data.lastChat}
         />
 
-        {/* ─── TEAM HUB PREVIEW ──────────────────────────────── */}
+        {/* ─── TEAM HUB PREVIEW (flat) ──────────────────────── */}
         <TeamHubPreview post={data.latestPost} />
 
-        {/* ─── SEASON SNAPSHOT ───────────────────────────────── */}
+        {/* ─── CHAT PREVIEW (flat) ─────────────────────────── */}
+        <FlatChatPreview chat={data.lastChat} />
+
+        {/* ─── SEASON SCOREBOARD (flat) ────────────────────── */}
         <SeasonSnapshot record={data.seasonRecord} />
 
         {/* ─── RECENT BADGES ─────────────────────────────────── */}

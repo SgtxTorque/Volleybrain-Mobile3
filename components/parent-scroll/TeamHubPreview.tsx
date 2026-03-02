@@ -1,12 +1,12 @@
 /**
- * TeamHubPreview — latest team post preview for the parent home scroll.
+ * TeamHubPreview — flat Tier 2 social feed for the parent home scroll.
+ * No card wrapper — content sits directly on the page background.
  */
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
-import { SPACING, SHADOWS } from '@/theme/spacing';
 import type { LatestPost } from '@/hooks/useParentHomeData';
 
 type Props = {
@@ -35,29 +35,25 @@ export default function TeamHubPreview({ post }: Props) {
       <View style={styles.headerRow}>
         <Text style={styles.sectionHeader}>TEAM HUB</Text>
         <TouchableOpacity onPress={() => router.push('/(tabs)/parent-team-hub' as any)}>
-          <Text style={styles.viewAll}>View All</Text>
+          <Text style={styles.viewAll}>View All {'\u{2192}'}</Text>
         </TouchableOpacity>
       </View>
 
       <TouchableOpacity
-        style={styles.card}
-        activeOpacity={0.85}
+        style={styles.postRow}
+        activeOpacity={0.7}
         onPress={() => router.push('/(tabs)/parent-team-hub' as any)}
       >
-        {/* Avatar circle */}
         <View style={styles.avatarCircle}>
           <Text style={styles.avatarText}>
             {post.author_name[0]?.toUpperCase() || '?'}
           </Text>
         </View>
-
         <View style={styles.postContent}>
           <Text style={styles.postText} numberOfLines={2}>
             {post.content}
           </Text>
-          <Text style={styles.postMeta}>
-            {post.author_name} \u{00B7} {timeAgo(post.created_at)}
-          </Text>
+          <Text style={styles.postMeta}>{timeAgo(post.created_at)}</Text>
         </View>
       </TouchableOpacity>
     </View>
@@ -66,14 +62,14 @@ export default function TeamHubPreview({ post }: Props) {
 
 const styles = StyleSheet.create({
   container: {
-    marginHorizontal: SPACING.pagePadding,
-    marginBottom: SPACING.sectionGap,
+    marginBottom: 20,
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    paddingHorizontal: 24,
+    marginBottom: 8,
   },
   sectionHeader: {
     fontFamily: FONTS.bodyBold,
@@ -84,43 +80,43 @@ const styles = StyleSheet.create({
   },
   viewAll: {
     fontFamily: FONTS.bodySemiBold,
-    fontSize: 13,
+    fontSize: 12,
     color: BRAND.skyBlue,
   },
-  card: {
-    backgroundColor: BRAND.white,
-    borderRadius: SPACING.cardRadius,
-    padding: 14,
+  postRow: {
     flexDirection: 'row',
-    gap: 12,
-    ...SHADOWS.light,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F2F5',
   },
   avatarCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: BRAND.skyBlue,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarText: {
     fontFamily: FONTS.bodyBold,
-    fontSize: 16,
+    fontSize: 13,
     color: BRAND.white,
   },
   postContent: {
     flex: 1,
+    marginLeft: 12,
   },
   postText: {
     fontFamily: FONTS.bodyMedium,
-    fontSize: 14,
+    fontSize: 13,
     color: BRAND.textPrimary,
-    lineHeight: 20,
+    lineHeight: 19,
   },
   postMeta: {
-    fontFamily: FONTS.bodyMedium,
-    fontSize: 12,
+    fontFamily: FONTS.bodyLight,
+    fontSize: 11,
     color: BRAND.textMuted,
-    marginTop: 4,
+    marginTop: 2,
   },
 });
