@@ -1,6 +1,6 @@
 /**
  * CoachHomeScroll — scroll-driven coach home dashboard.
- * Phase 4: Team pulse, roster alerts, development hint.
+ * Phase 5: Pending stats, activity feed, season scoreboard, top performers.
  * Three-tier visual system mirroring the Parent Home Scroll.
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -43,6 +43,10 @@ import EngagementSection from './coach-scroll/EngagementSection';
 import TeamPulse from './coach-scroll/TeamPulse';
 import RosterAlerts from './coach-scroll/RosterAlerts';
 import DevelopmentHint from './coach-scroll/DevelopmentHint';
+import PendingStatsNudge from './coach-scroll/PendingStatsNudge';
+import ActivityFeed from './coach-scroll/ActivityFeed';
+import SeasonScoreboard from './coach-scroll/SeasonScoreboard';
+import TopPerformers from './coach-scroll/TopPerformers';
 
 // ─── Welcome briefing logic ─────────────────────────────────────
 
@@ -382,11 +386,21 @@ export default function CoachHomeScroll() {
         {/* ─── DEVELOPMENT HINT (Tier 2 — conditional) ────────── */}
         <DevelopmentHint teamId={data.selectedTeamId} />
 
-        {/* ──────────────────────────────────────────────────────
-            Sections below will be added in Phases 5-6:
-            - Phase 5: Pending Stats, Activity Feed, Season Scoreboard, Top Performers
-            - Phase 6: Closing, Animations, Spacing
-        ────────────────────────────────────────────────────── */}
+        {/* ─── PENDING STATS NUDGE (Tier 2 — conditional) ───── */}
+        <PendingStatsNudge count={data.pendingStatsCount} />
+
+        {/* ─── ACTIVITY FEED (Tier 2 — flat feed) ──────────────── */}
+        <ActivityFeed teamId={data.selectedTeamId} />
+
+        {/* ─── SEASON SCOREBOARD (Tier 2 — big numbers) ────────── */}
+        <SeasonScoreboard
+          record={data.seasonRecord}
+          nextEvent={data.heroEvent}
+          previousMatchup={data.previousMatchup}
+        />
+
+        {/* ─── TOP PERFORMERS (Tier 2 — flat rows) ──────────────── */}
+        <TopPerformers performers={data.topPerformers} />
 
         {/* ─── END OF SCROLL (placeholder, replaced in Phase 6) ── */}
         <View style={styles.endSection}>
