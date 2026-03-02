@@ -34,6 +34,7 @@ import { BRAND } from '@/theme/colors';
 import { SPACING, SHADOWS } from '@/theme/spacing';
 import { FONTS } from '@/theme/fonts';
 
+import RoleSelector from './RoleSelector';
 import DayStripCalendar from './parent-scroll/DayStripCalendar';
 import EventHeroCard from './parent-scroll/EventHeroCard';
 import AttentionBanner from './parent-scroll/AttentionBanner';
@@ -234,7 +235,11 @@ export default function ParentHomeScroll() {
             <Text style={styles.compactBrand}>LYNX</Text>
           </View>
           <View style={styles.compactRight}>
-            <TouchableOpacity style={styles.bellBtn} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.bellBtn}
+              activeOpacity={0.7}
+              onPress={() => router.push('/notification' as any)}
+            >
               <Ionicons name="notifications-outline" size={20} color={BRAND.navy} />
               {data.attentionCount > 0 && (
                 <View style={styles.bellBadge}>
@@ -244,6 +249,9 @@ export default function ParentHomeScroll() {
                 </View>
               )}
             </TouchableOpacity>
+            <View style={styles.roleSelectorWrap}>
+              <RoleSelector />
+            </View>
             <View style={styles.compactAvatar}>
               <Text style={styles.compactAvatarText}>{userInitials}</Text>
             </View>
@@ -282,7 +290,14 @@ export default function ParentHomeScroll() {
         >
           <View style={styles.welcomeTopRow}>
             <View style={{ flex: 1 }} />
-            <TouchableOpacity style={styles.bellBtn} activeOpacity={0.7}>
+            <View style={styles.roleSelectorWrap}>
+              <RoleSelector />
+            </View>
+            <TouchableOpacity
+              style={styles.bellBtn}
+              activeOpacity={0.7}
+              onPress={() => router.push('/notification' as any)}
+            >
               <Ionicons name="notifications-outline" size={22} color={BRAND.navy} />
               {data.attentionCount > 0 && (
                 <View style={styles.bellBadge}>
@@ -426,6 +441,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+  },
+  roleSelectorWrap: {
+    backgroundColor: BRAND.navy,
+    borderRadius: 20,
   },
   compactAvatar: {
     width: 32,
