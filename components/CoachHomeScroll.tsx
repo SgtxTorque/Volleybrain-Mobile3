@@ -1,9 +1,9 @@
 /**
  * CoachHomeScroll — scroll-driven coach home dashboard.
- * Phase 5: Pending stats, activity feed, season scoreboard, top performers.
+ * Phase 6: Closing, animations, spacing rhythm.
  * Three-tier visual system mirroring the Parent Home Scroll.
  */
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -28,7 +28,7 @@ import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 
 import { useAuth } from '@/lib/auth';
-import { useScrollAnimations, SCROLL_THRESHOLDS } from '@/hooks/useScrollAnimations';
+import { useScrollAnimations } from '@/hooks/useScrollAnimations';
 import { useCoachHomeData } from '@/hooks/useCoachHomeData';
 import { BRAND } from '@/theme/colors';
 import { SPACING } from '@/theme/spacing';
@@ -108,6 +108,38 @@ function buildBriefingMessage(
   }
 
   return 'Welcome to your coaching hub.';
+}
+
+/** Build contextual closing message based on team situation. */
+function buildClosingMessage(
+  heroEvent: { event_type: string; event_date: string } | null,
+  seasonRecord: { wins: number; losses: number } | null,
+): string {
+  const today = new Date().toISOString().split('T')[0];
+  const yesterday = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().split('T')[0];
+  })();
+
+  // 1. Game today
+  if (heroEvent?.event_date === today && heroEvent.event_type === 'game') {
+    return 'Trust the preparation. Your team is ready.';
+  }
+  // 2. Practice today
+  if (heroEvent?.event_date === today && heroEvent.event_type === 'practice') {
+    return 'Good practice makes good habits. Set the tone today.';
+  }
+  // 3-4. Recent result (simplified — check if we have record context)
+  if (seasonRecord && seasonRecord.wins > seasonRecord.losses) {
+    return 'Momentum is on your side. Keep building.';
+  }
+  // 5. Off day
+  if (!heroEvent || heroEvent.event_date !== today) {
+    return 'Recovery matters too. Let them rest.';
+  }
+  // 7. Fallback
+  return 'Go make them better today.';
 }
 
 function formatTime(timeStr: string | null): string {
@@ -321,8 +353,9 @@ export default function CoachHomeScroll() {
           <Text style={styles.briefingText}>{briefingMessage}</Text>
         </Animated.View>
 
-        {/* ─── TEAM SELECTOR PILLS (in-scroll, visible before compact sticky appears) */}
-        <View style={styles.teamPillsInline}>
+        {/* ─── TEAM SELECTOR PILLS (in-scroll) ────────────────── */}
+        {/* ↕ 4px gap from welcome briefing (via welcomeSection paddingBottom: 4) */}
+        <View style={{ marginBottom: 16 }}>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -346,66 +379,76 @@ export default function CoachHomeScroll() {
           </ScrollView>
         </View>
 
-        {/* ─── PREP CHECKLIST (Tier 2 — conditional) ────────── */}
-        <PrepChecklist
-          checklist={data.prepChecklist}
-          eventDate={data.heroEvent?.event_date ?? null}
-        />
-
-        {/* ─── GAME PLAN CARD (Tier 1 — conditional) ─────────── */}
-        <GamePlanCard event={data.heroEvent} rsvpSummary={data.rsvpSummary} />
-
-        {/* ─── SCOUTING CONTEXT (Tier 2 — conditional) ────────── */}
-        <ScoutingContext previousMatchup={data.previousMatchup} />
-
-        {/* ─── QUICK ACTIONS (Tier 2 — flat rows) ──────────────── */}
-        <View style={{ marginTop: 20 }}>
-          <QuickActions isEventDay={data.heroEvent !== null} />
-        </View>
-
-        {/* ─── ENGAGEMENT (Tier 2/3 — challenge + shoutout) ──── */}
-        <EngagementSection />
-
-        {/* ─── TEAM PULSE (Tier 2 — flat data rows) ────────────── */}
-        <View style={{ marginTop: 24 }}>
-          <TeamPulse
-            attendanceRate={data.attendanceRate}
-            rsvpSummary={data.rsvpSummary}
-            unreadMessages={data.unreadMessages}
-            heroEventDate={data.heroEvent?.event_date ?? null}
+        {/* ─── PREP CHECKLIST (Tier 2) ── ↕ 8px below ─────────── */}
+        <View style={{ marginBottom: 8 }}>
+          <PrepChecklist
+            checklist={data.prepChecklist}
+            eventDate={data.heroEvent?.event_date ?? null}
           />
         </View>
 
-        {/* ─── ROSTER ALERTS (Tier 1.5 — conditional) ────────── */}
-        <RosterAlerts
-          teamId={data.selectedTeamId}
-          rosterSize={data.teams.find(t => t.id === data.selectedTeamId)?.player_count ?? 0}
-          missingRsvpNames={data.rsvpSummary?.missing ?? []}
+        {/* ─── GAME PLAN CARD (Tier 1) ── ↕ 8px below ───────── */}
+        <GamePlanCard event={data.heroEvent} rsvpSummary={data.rsvpSummary} />
+
+        {/* ─── SCOUTING CONTEXT (Tier 2) ── ↕ 20px below ─────── */}
+        <View style={{ marginBottom: 20 }}>
+          <ScoutingContext previousMatchup={data.previousMatchup} />
+        </View>
+
+        {/* ─── QUICK ACTIONS (Tier 2) ── ↕ 16px below ──────────── */}
+        <View style={{ marginBottom: 16 }}>
+          <QuickActions isEventDay={data.heroEvent !== null} />
+        </View>
+
+        {/* ─── ENGAGEMENT (Tier 2/3) ── ↕ 12px below ──────────── */}
+        <View style={{ marginBottom: 24 }}>
+          <EngagementSection />
+        </View>
+
+        {/* ─── TEAM PULSE (Tier 2) ── ↕ 12px ambient, ↕ 20px below */}
+        <TeamPulse
+          attendanceRate={data.attendanceRate}
+          rsvpSummary={data.rsvpSummary}
+          unreadMessages={data.unreadMessages}
+          heroEventDate={data.heroEvent?.event_date ?? null}
         />
 
-        {/* ─── DEVELOPMENT HINT (Tier 2 — conditional) ────────── */}
+        {/* ─── ROSTER ALERTS (Tier 1.5) ── ↕ 12px below ─────── */}
+        <View style={{ marginBottom: 12 }}>
+          <RosterAlerts
+            teamId={data.selectedTeamId}
+            rosterSize={data.teams.find(t => t.id === data.selectedTeamId)?.player_count ?? 0}
+            missingRsvpNames={data.rsvpSummary?.missing ?? []}
+          />
+        </View>
+
+        {/* ─── DEVELOPMENT HINT (Tier 2) ─────────────────────── */}
         <DevelopmentHint teamId={data.selectedTeamId} />
 
-        {/* ─── PENDING STATS NUDGE (Tier 2 — conditional) ───── */}
-        <PendingStatsNudge count={data.pendingStatsCount} />
+        {/* ─── PENDING STATS NUDGE (Tier 2) ── ↕ 16px below ─── */}
+        <View style={{ marginBottom: 16 }}>
+          <PendingStatsNudge count={data.pendingStatsCount} />
+        </View>
 
-        {/* ─── ACTIVITY FEED (Tier 2 — flat feed) ──────────────── */}
+        {/* ─── ACTIVITY FEED (Tier 2) ── ↕ 24px below ──────────── */}
         <ActivityFeed teamId={data.selectedTeamId} />
 
-        {/* ─── SEASON SCOREBOARD (Tier 2 — big numbers) ────────── */}
+        {/* ─── SEASON SCOREBOARD (Tier 2) ── ↕ 16px below ──────── */}
         <SeasonScoreboard
           record={data.seasonRecord}
           nextEvent={data.heroEvent}
           previousMatchup={data.previousMatchup}
         />
 
-        {/* ─── TOP PERFORMERS (Tier 2 — flat rows) ──────────────── */}
+        {/* ─── TOP PERFORMERS (Tier 2) ─────────────────────────── */}
         <TopPerformers performers={data.topPerformers} />
 
-        {/* ─── END OF SCROLL (placeholder, replaced in Phase 6) ── */}
+        {/* ─── CONTEXTUAL CLOSING (Tier 3) ── ↕ 140px bottom ──── */}
         <View style={styles.endSection}>
           <Text style={styles.endEmoji}>{'\u{1F431}'}</Text>
-          <Text style={styles.endText}>Go make them better today.</Text>
+          <Text style={styles.endText}>
+            {buildClosingMessage(data.heroEvent, data.seasonRecord)}
+          </Text>
         </View>
       </Animated.ScrollView>
     </View>
@@ -505,11 +548,6 @@ const styles = StyleSheet.create({
   },
   teamPillTextActive: {
     color: BRAND.white,
-  },
-
-  // In-scroll team pills (before compact header appears)
-  teamPillsInline: {
-    marginBottom: 16,
   },
 
   // Welcome section
