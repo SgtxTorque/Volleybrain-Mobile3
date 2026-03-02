@@ -1,6 +1,6 @@
 /**
  * CoachHomeScroll — scroll-driven coach home dashboard.
- * Phase 2: Game plan card, prep checklist, scouting context.
+ * Phase 3: Quick actions, engagement section.
  * Three-tier visual system mirroring the Parent Home Scroll.
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -38,6 +38,8 @@ import RoleSelector from './RoleSelector';
 import PrepChecklist from './coach-scroll/PrepChecklist';
 import GamePlanCard from './coach-scroll/GamePlanCard';
 import ScoutingContext from './coach-scroll/ScoutingContext';
+import QuickActions from './coach-scroll/QuickActions';
+import EngagementSection from './coach-scroll/EngagementSection';
 
 // ─── Welcome briefing logic ─────────────────────────────────────
 
@@ -349,9 +351,16 @@ export default function CoachHomeScroll() {
         {/* ─── SCOUTING CONTEXT (Tier 2 — conditional) ────────── */}
         <ScoutingContext previousMatchup={data.previousMatchup} />
 
+        {/* ─── QUICK ACTIONS (Tier 2 — flat rows) ──────────────── */}
+        <View style={{ marginTop: 20 }}>
+          <QuickActions isEventDay={data.heroEvent !== null} />
+        </View>
+
+        {/* ─── ENGAGEMENT (Tier 2/3 — challenge + shoutout) ──── */}
+        <EngagementSection />
+
         {/* ──────────────────────────────────────────────────────
-            Sections below will be added in Phases 3-6:
-            - Phase 3: Quick Actions, Challenge, Shoutout Nudge
+            Sections below will be added in Phases 4-6:
             - Phase 4: Team Pulse, Roster Alerts, Development Hint
             - Phase 5: Pending Stats, Activity Feed, Season Scoreboard, Top Performers
             - Phase 6: Closing, Animations, Spacing
