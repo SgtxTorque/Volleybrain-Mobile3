@@ -1,7 +1,18 @@
 /**
  * PlayerHomeScroll — scroll-driven player home dashboard.
  * Dark mode (#0D1B3E) — game-menu feel, not admin tool.
- * Phase 1: Scaffold with loading state and sections placeholders.
+ *
+ * Section order:
+ *   1. Hero Identity Card (always)
+ *   2. Streak Banner (if streak ≥ 2)
+ *   3. The Drop (1-3 items or contextual message)
+ *   4. Photo Strip (if photos exist)
+ *   5. Next Up — event + RSVP (if event exists, otherwise ambient text)
+ *   6. Chat Peek (flat row)
+ *   7. Quick Props row
+ *   8. Active Challenge (if exists)
+ *   9. Last Game Stats (if game stats exist)
+ *  10. Closing Mascot + XP callback
  */
 import React, { useCallback, useMemo } from 'react';
 import {
@@ -78,7 +89,7 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
     return '?';
   }, [displayName]);
 
-  // Header interactivity
+  // Header interactivity — toggle pointer events when hero scrolls offscreen
   const [headerVisible, setHeaderVisible] = React.useState(false);
   const prevState = useSharedValue(false);
   useDerivedValue(() => {
@@ -95,9 +106,14 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
     await data.refresh();
   }, [data.refresh]);
 
-  // Compact header fade
+  // ─── Scroll Animations ────────────────────────────────────────
+
+  // Compact header: fade + slide down
   const compactHeaderStyle = useAnimatedStyle(() => ({
     opacity: interpolate(scrollY.value, [100, 180], [0, 1], Extrapolation.CLAMP),
+    transform: [{
+      translateY: interpolate(scrollY.value, [100, 180], [-8, 0], Extrapolation.CLAMP),
+    }],
   }));
 
   if (data.loading) {
@@ -128,6 +144,13 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
         <View style={styles.compactInner}>
           <Text style={styles.compactBrand}>lynx</Text>
           <View style={styles.compactRight}>
+            {data.attendanceStreak >= 2 && (
+              <View style={styles.streakPill}>
+                <Text style={styles.streakPillText}>
+                  {'\u{1F525}'} {data.attendanceStreak}
+                </Text>
+              </View>
+            )}
             <View style={styles.levelPill}>
               <Text style={styles.levelPillText}>LVL {data.level}</Text>
             </View>
@@ -263,6 +286,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  streakPill: {
+    backgroundColor: 'rgba(255,215,0,0.10)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,215,0,0.20)',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  streakPillText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: PLAYER_THEME.gold,
   },
   levelPill: {
     backgroundColor: 'rgba(255,215,0,0.10)',
