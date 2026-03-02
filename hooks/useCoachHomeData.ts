@@ -90,26 +90,48 @@ export function useCoachHomeData() {
     if (!user?.id || !workingSeason?.id) return;
 
     try {
-      // Primary: team_staff
+      // Primary: team_staff (user_id = auth user id)
       const { data: staffTeams } = await supabase
         .from('team_staff')
         .select('team_id, staff_role, teams ( id, name, season_id )')
         .eq('user_id', user.id);
 
-      // Fallback: team_coaches
-      const { data: coachTeams } = await supabase
-        .from('team_coaches')
-        .select('team_id, role, teams ( id, name, season_id )')
-        .eq('coach_id', user.id);
+      // Secondary: coaches → team_coaches (coach_id references coaches.id, NOT auth user id)
+      // This matches the web admin pattern: coaches.profile_id → team_coaches.coach_id
+      const { data: coachRecord } = await supabase
+        .from('coaches')
+        .select('id, team_coaches ( team_id, role, teams ( id, name, season_id ) )')
+        .eq('profile_id', user.id)
+        .maybeSingle();
 
       // Merge, dedup
       const merged: any[] = [...(staffTeams || [])];
       const existingIds = new Set(merged.map(t => (t.teams as any)?.id).filter(Boolean));
-      for (const ct of (coachTeams || [])) {
-        const tid = (ct.teams as any)?.id;
-        if (tid && !existingIds.has(tid)) {
-          merged.push({ ...ct, staff_role: ct.role });
-          existingIds.add(tid);
+
+      // Add teams from coaches → team_coaches chain
+      if (coachRecord?.team_coaches) {
+        const tcList = Array.isArray(coachRecord.team_coaches)
+          ? coachRecord.team_coaches
+          : [coachRecord.team_coaches];
+        for (const ct of tcList) {
+          const tid = (ct.teams as any)?.id;
+          if (tid && !existingIds.has(tid)) {
+            merged.push({ teams: ct.teams, staff_role: ct.role || 'head_coach' });
+            existingIds.add(tid);
+          }
+        }
+      }
+
+      // Last resort fallback: if coach record exists but has no team_coaches,
+      // load all teams for current season (matches old CoachDashboard behavior)
+      if (merged.length === 0 && coachRecord) {
+        const { data: allTeams } = await supabase
+          .from('teams')
+          .select('id, name, season_id')
+          .eq('season_id', workingSeason.id)
+          .order('name');
+        for (const team of (allTeams || [])) {
+          merged.push({ teams: team, staff_role: 'head_coach' });
         }
       }
 
