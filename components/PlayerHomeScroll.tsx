@@ -26,6 +26,8 @@ import * as Haptics from 'expo-haptics';
 import { useScrollAnimations } from '@/hooks/useScrollAnimations';
 import { usePlayerHomeData } from '@/hooks/usePlayerHomeData';
 
+import HeroIdentityCard from './player-scroll/HeroIdentityCard';
+
 // ─── Player Dark Theme ──────────────────────────────────────────
 export const PLAYER_THEME = {
   bg: '#0D1B3E',
@@ -142,18 +144,22 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           />
         }
       >
-        {/* Sections will be added in subsequent phases */}
         <View style={{ height: insets.top + 16 }} />
 
-        {/* Placeholder — will be replaced by hero card */}
-        <View style={styles.placeholderSection}>
-          <Text style={styles.placeholderText}>
-            {data.firstName || 'Player'}'s Home
-          </Text>
-          <Text style={styles.placeholderSub}>
-            LVL {data.level} {'\u00B7'} {data.xp} XP {'\u00B7'} OVR {data.ovr}
-          </Text>
-        </View>
+        {/* ─── 1. HERO IDENTITY CARD ─────────────────────────── */}
+        <HeroIdentityCard
+          firstName={data.firstName}
+          lastName={data.lastName}
+          teamName={data.primaryTeam?.name || ''}
+          position={data.position}
+          jerseyNumber={data.jerseyNumber}
+          ovr={data.ovr}
+          level={data.level}
+          xpProgress={data.xpProgress}
+          xpCurrent={data.xp}
+          xpMax={(data.level) * 1000}
+          scrollY={scrollY}
+        />
       </Animated.ScrollView>
     </View>
   );
@@ -230,20 +236,5 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: PLAYER_THEME.textPrimary,
-  },
-  placeholderSection: {
-    alignItems: 'center',
-    paddingTop: 60,
-    paddingBottom: 40,
-  },
-  placeholderText: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: PLAYER_THEME.textPrimary,
-    marginBottom: 8,
-  },
-  placeholderSub: {
-    fontSize: 14,
-    color: PLAYER_THEME.textMuted,
   },
 });
