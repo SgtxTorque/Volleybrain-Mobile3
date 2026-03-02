@@ -69,11 +69,11 @@ function getEventLabel(event: HeroEvent): string {
 }
 
 export default function EventHeroCard({ event, scrollY, onPress, onRsvp, onDirections }: Props) {
-  // Pulse animation for "TODAY" green dot
+  // Pulse animation for "TODAY" green dot (0.4–1.0 on 2s cycle)
   const pulseOpacity = useSharedValue(1);
   useEffect(() => {
     pulseOpacity.value = withRepeat(
-      withTiming(0.3, { duration: 1000 }),
+      withTiming(0.4, { duration: 2000 }),
       -1,
       true,
     );
@@ -134,6 +134,15 @@ export default function EventHeroCard({ event, scrollY, onPress, onRsvp, onDirec
           style={StyleSheet.absoluteFillObject}
         />
       </Animated.View>
+
+      {/* Inner glow — subtle lighter navy at top 20% */}
+      <LinearGradient
+        colors={['rgba(26,53,96,0.4)', 'transparent']}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 0.25 }}
+        style={StyleSheet.absoluteFillObject}
+        pointerEvents="none"
+      />
 
       {/* Volleyball decoration */}
       <Text style={styles.volleyballDecor}>{'\u{1F3D0}'}</Text>
@@ -213,7 +222,7 @@ const styles = StyleSheet.create({
     top: 16,
     right: 16,
     fontSize: 40,
-    opacity: 0.08,
+    opacity: 0.15,
   },
   content: {
     padding: 20,

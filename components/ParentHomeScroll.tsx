@@ -43,6 +43,7 @@ import MetricGrid from './parent-scroll/MetricGrid';
 import TeamHubPreview from './parent-scroll/TeamHubPreview';
 import SeasonSnapshot from './parent-scroll/SeasonSnapshot';
 import RecentBadges from './parent-scroll/RecentBadges';
+import SecondaryEvents from './parent-scroll/SecondaryEvents';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
@@ -410,7 +411,10 @@ export default function ParentHomeScroll() {
           }}
         />
 
-        {/* ─── ATTENTION BANNER ───────────────────────────────── */}
+        {/* ─── SECONDARY EVENTS (flat lines) ───────────────────── */}
+        <SecondaryEvents events={data.upcomingEvents} />
+
+        {/* ─── ATTENTION NUDGE ──────────────────────────────────── */}
         <AttentionBanner
           count={data.attentionCount}
           onPress={() => router.push('/(tabs)/parent-schedule' as any)}
