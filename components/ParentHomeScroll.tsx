@@ -1,8 +1,8 @@
 /**
  * ParentHomeScroll — scroll-driven parent home dashboard.
- * Phase 5: Metric grid, Team Hub, Season Snapshot, badges, end-of-scroll.
+ * Phase 7: Dynamic data wiring + contextual messages.
  */
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -51,12 +51,58 @@ type MascotMessage = {
   animation: 'wiggle' | 'bounce' | 'float';
 };
 
-const PLACEHOLDER_MESSAGES: MascotMessage[] = [
-  { text: 'Coach needs a headcount. Is your athlete playing Saturday?', animation: 'wiggle' },
-  { text: 'Registration fees are due soon. Secure your spot!', animation: 'bounce' },
-  { text: 'Your athlete earned a new badge yesterday! On a roll \u{1F525}', animation: 'float' },
-  { text: 'Looking good! All set for the week. \u{1F4AA}', animation: 'float' },
-];
+/** Build contextual messages based on the parent's actual state */
+function buildDynamicMessages(
+  childName: string,
+  attentionCount: number,
+  balance: number,
+  heroEvent: any | null,
+  unreadChat: number,
+): MascotMessage[] {
+  const msgs: MascotMessage[] = [];
+
+  // Unconfirmed RSVP / attention items
+  if (attentionCount > 0 && heroEvent) {
+    const dayStr = (() => {
+      try {
+        const d = new Date(heroEvent.event_date + 'T00:00:00');
+        return d.toLocaleDateString('en-US', { weekday: 'long' });
+      } catch {
+        return 'this weekend';
+      }
+    })();
+    msgs.push({
+      text: `Coach needs a headcount. Is ${childName} playing ${dayStr}?`,
+      animation: 'wiggle',
+    });
+  }
+
+  // Unpaid balance
+  if (balance > 0) {
+    msgs.push({
+      text: `Final buzzer for registration fees! Secure ${childName}'s spot.`,
+      animation: 'bounce',
+    });
+  }
+
+  // Unread chat messages
+  if (unreadChat > 0) {
+    msgs.push({
+      text: `You have ${unreadChat} unread message${unreadChat > 1 ? 's' : ''} from the team.`,
+      animation: 'wiggle',
+    });
+  }
+
+  // If no pending items, show encouraging message
+  if (msgs.length === 0) {
+    msgs.push({
+      text: `Looking good! ${childName}'s all set for the week. \u{1F4AA}`,
+      animation: 'float',
+    });
+  }
+
+  return msgs;
+}
 
 // ─── Main Component ──────────────────────────────────────────────
 
@@ -79,9 +125,16 @@ export default function ParentHomeScroll() {
     };
   }, []);
 
-  // Message cycling
+  // Dynamic contextual messages
+  const childName = data.children.length > 0
+    ? data.children[0].first_name
+    : 'your athlete';
+  const unreadChatCount = data.lastChat?.unread_count ?? 0;
+  const messages = useMemo(
+    () => buildDynamicMessages(childName, data.attentionCount, data.paymentStatus.balance, data.heroEvent, unreadChatCount),
+    [childName, data.attentionCount, data.paymentStatus.balance, data.heroEvent, unreadChatCount],
+  );
   const [activeMessageIndex, setActiveMessageIndex] = useState(0);
-  const [messages] = useState<MascotMessage[]>(PLACEHOLDER_MESSAGES);
   const messageFade = useSharedValue(1);
   const mascotFloat = useSharedValue(0);
 
@@ -270,6 +323,10 @@ export default function ParentHomeScroll() {
             if (data.heroEvent) {
               router.push('/(tabs)/parent-schedule' as any);
             }
+          }}
+          onRsvp={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            data.rsvpHeroEvent('yes');
           }}
         />
 

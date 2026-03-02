@@ -414,6 +414,28 @@ export function useParentHomeData() {
     setRefreshing(false);
   }, [fetchAll]);
 
+  /** RSVP for the hero event with the first child */
+  const rsvpHeroEvent = useCallback(async (status: 'yes' | 'no' | 'maybe') => {
+    if (!user?.id || !heroEvent || children.length === 0) return;
+    const child = children.find((c) => c.team_name === heroEvent.team_name) || children[0];
+    try {
+      await supabase.from('event_rsvps').upsert(
+        {
+          event_id: heroEvent.id,
+          player_id: child.id,
+          status,
+          responded_by: user.id,
+          responded_at: new Date().toISOString(),
+        },
+        { onConflict: 'event_id,player_id' },
+      );
+      // Refresh attention count after RSVP
+      await fetchAll();
+    } catch (err) {
+      if (__DEV__) console.error('[useParentHomeData] RSVP error:', err);
+    }
+  }, [user?.id, heroEvent, children, fetchAll]);
+
   return {
     loading,
     refreshing,
@@ -429,5 +451,6 @@ export function useParentHomeData() {
     lastChat,
     childStats,
     childXp,
+    rsvpHeroEvent,
   };
 }
