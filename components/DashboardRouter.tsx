@@ -16,6 +16,7 @@ import CoachParentDashboard from './CoachParentDashboard';
 import ParentDashboard from './ParentDashboard';
 import ParentHomeScroll from './ParentHomeScroll';
 import PlayerDashboard from './PlayerDashboard';
+import PlayerHomeScroll from './PlayerHomeScroll';
 
 const LAST_CHILD_KEY = 'vb_player_last_child_id';
 
@@ -290,7 +291,7 @@ export default function DashboardRouter() {
         : undefined;
 
       return (
-        <PlayerDashboard
+        <PlayerHomeScroll
           playerId={selectedChildId}
           playerName={selectedChildName}
           onSwitchChild={handleSwitchChild}
