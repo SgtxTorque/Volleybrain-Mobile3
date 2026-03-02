@@ -1,0 +1,58 @@
+app/chat/[id].tsx(553,68): error TS2561: Object literal may only specify known properties, but 'playsInSilentModeIOS' does not exist in type 'Partial<AudioMode>'. Did you mean to write 'playsInSilentMode'?
+design-reference/v0-components/bottom-nav.tsx(1,71): error TS2307: Cannot find module 'lucide-react' or its corresponding type declarations.
+design-reference/v0-components/full-schedule.tsx(3,90): error TS2307: Cannot find module 'lucide-react' or its corresponding type declarations.
+design-reference/v0-components/full-schedule.tsx(6,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+design-reference/v0-components/match-card.tsx(1,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+design-reference/v0-components/parent-dashboard.tsx(1,19): error TS2307: Cannot find module 'next/image' or its corresponding type declarations.
+design-reference/v0-components/parent-dashboard.tsx(2,30): error TS2307: Cannot find module 'lucide-react' or its corresponding type declarations.
+design-reference/v0-components/pill-tabs.tsx(3,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+design-reference/v0-components/team-wall.tsx(1,19): error TS2307: Cannot find module 'next/image' or its corresponding type declarations.
+design-reference/v0-components/team-wall.tsx(2,44): error TS2307: Cannot find module 'lucide-react' or its corresponding type declarations.
+design-reference/v0-components/team-wall.tsx(5,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+lib/email-queue.ts(47,12): error TS7053: Element implicitly has an 'any' type because expression of type 'PrefKey' can't be used to index type '{ event_updates: any; } | { game_reminders: any; }'.
+  Property 'event_updates' does not exist on type '{ event_updates: any; } | { game_reminders: any; }'.
+reference/web-admin/volleybrain-admin/supabase/functions/notification-cron/index.ts(15,30): error TS2307: Cannot find module 'https://esm.sh/@supabase/supabase-js@2' or its corresponding type declarations.
+reference/web-admin/volleybrain-admin/supabase/functions/notification-cron/index.ts(18,3): error TS2304: Cannot find name 'Deno'.
+reference/web-admin/volleybrain-admin/supabase/functions/notification-cron/index.ts(19,3): error TS2304: Cannot find name 'Deno'.
+reference/web-admin/volleybrain-admin/supabase/functions/notification-cron/index.ts(22,1): error TS2304: Cannot find name 'Deno'.
+reference/web-admin/volleybrain-admin/supabase/functions/notification-cron/index.ts(22,19): error TS7006: Parameter 'req' implicitly has an 'any' type.
+reference/web-admin/volleybrain-admin/supabase/functions/notification-cron/index.ts(80,31): error TS18046: 'error' is of type 'unknown'.
+reference/web-admin/volleybrain-admin/supabase/functions/push/index.ts(14,30): error TS2307: Cannot find module 'https://esm.sh/@supabase/supabase-js@2' or its corresponding type declarations.
+reference/web-admin/volleybrain-admin/supabase/functions/push/index.ts(16,27): error TS2304: Cannot find name 'Deno'.
+reference/web-admin/volleybrain-admin/supabase/functions/push/index.ts(39,3): error TS2304: Cannot find name 'Deno'.
+reference/web-admin/volleybrain-admin/supabase/functions/push/index.ts(40,3): error TS2304: Cannot find name 'Deno'.
+reference/web-admin/volleybrain-admin/supabase/functions/push/index.ts(43,1): error TS2304: Cannot find name 'Deno'.
+reference/web-admin/volleybrain-admin/supabase/functions/push/index.ts(43,19): error TS7006: Parameter 'req' implicitly has an 'any' type.
+reference/web-admin/volleybrain-admin/supabase/functions/push/index.ts(88,34): error TS7006: Parameter 't' implicitly has an 'any' type.
+reference/web-admin/volleybrain-admin/supabase/functions/push/index.ts(139,43): error TS7006: Parameter '_' implicitly has an 'any' type.
+reference/web-admin/volleybrain-admin/supabase/functions/push/index.ts(139,46): error TS7006: Parameter 'i' implicitly has an 'any' type.
+reference/web-admin/volleybrain-admin/supabase/functions/push/index.ts(172,31): error TS18046: 'error' is of type 'unknown'.
+reference/web-admin/volleybrain-admin/supabase/functions/send-payment-reminder/index.ts(11,23): error TS2307: Cannot find module 'https://deno.land/std@0.168.0/http/server.ts' or its corresponding type declarations.
+reference/web-admin/volleybrain-admin/supabase/functions/send-payment-reminder/index.ts(12,30): error TS2307: Cannot find module 'https://esm.sh/@supabase/supabase-js@2' or its corresponding type declarations.
+reference/web-admin/volleybrain-admin/supabase/functions/send-payment-reminder/index.ts(14,24): error TS2304: Cannot find name 'Deno'.
+reference/web-admin/volleybrain-admin/supabase/functions/send-payment-reminder/index.ts(15,20): error TS2304: Cannot find name 'Deno'.
+reference/web-admin/volleybrain-admin/supabase/functions/send-payment-reminder/index.ts(234,14): error TS7006: Parameter 'req' implicitly has an 'any' type.
+reference/web-admin/volleybrain-admin/supabase/functions/send-payment-reminder/index.ts(237,25): error TS2304: Cannot find name 'Deno'.
+reference/web-admin/volleybrain-admin/supabase/functions/send-payment-reminder/index.ts(238,25): error TS2304: Cannot find name 'Deno'.
+reference/web-admin/volleybrain-admin/supabase/functions/stripe-create-checkout/index.ts(1,23): error TS2307: Cannot find module 'https://deno.land/std@0.168.0/http/server.ts' or its corresponding type declarations.
+reference/web-admin/volleybrain-admin/supabase/functions/stripe-create-checkout/index.ts(2,20): error TS2307: Cannot find module 'https://esm.sh/stripe@13.10.0?target=deno' or its corresponding type declarations.
+reference/web-admin/volleybrain-admin/supabase/functions/stripe-create-checkout/index.ts(4,27): error TS2304: Cannot find name 'Deno'.
+reference/web-admin/volleybrain-admin/supabase/functions/stripe-create-checkout/index.ts(14,14): error TS7006: Parameter 'req' implicitly has an 'any' type.
+reference/web-admin/volleybrain-admin/supabase/functions/stripe-create-checkout/index.ts(58,31): error TS18046: 'error' is of type 'unknown'.
+reference/web-admin/volleybrain-admin/supabase/functions/stripe-create-payment-intent/index.ts(1,23): error TS2307: Cannot find module 'https://deno.land/std@0.168.0/http/server.ts' or its corresponding type declarations.
+reference/web-admin/volleybrain-admin/supabase/functions/stripe-create-payment-intent/index.ts(2,20): error TS2307: Cannot find module 'https://esm.sh/stripe@13.10.0?target=deno' or its corresponding type declarations.
+reference/web-admin/volleybrain-admin/supabase/functions/stripe-create-payment-intent/index.ts(4,27): error TS2304: Cannot find name 'Deno'.
+reference/web-admin/volleybrain-admin/supabase/functions/stripe-create-payment-intent/index.ts(14,14): error TS7006: Parameter 'req' implicitly has an 'any' type.
+reference/web-admin/volleybrain-admin/supabase/functions/stripe-create-payment-intent/index.ts(49,31): error TS18046: 'error' is of type 'unknown'.
+reference/web-admin/volleybrain-admin/supabase/functions/stripe-test-connection/index.ts(1,23): error TS2307: Cannot find module 'https://deno.land/std@0.168.0/http/server.ts' or its corresponding type declarations.
+reference/web-admin/volleybrain-admin/supabase/functions/stripe-test-connection/index.ts(8,14): error TS7006: Parameter 'req' implicitly has an 'any' type.
+reference/web-admin/volleybrain-admin/supabase/functions/stripe-test-connection/index.ts(14,23): error TS2304: Cannot find name 'Deno'.
+reference/web-admin/volleybrain-admin/supabase/functions/stripe-test-connection/index.ts(60,49): error TS18046: 'error' is of type 'unknown'.
+reference/web-admin/volleybrain-admin/supabase/functions/stripe-webhook/index.ts(1,23): error TS2307: Cannot find module 'https://deno.land/std@0.168.0/http/server.ts' or its corresponding type declarations.
+reference/web-admin/volleybrain-admin/supabase/functions/stripe-webhook/index.ts(2,20): error TS2307: Cannot find module 'https://esm.sh/stripe@13.10.0?target=deno' or its corresponding type declarations.
+reference/web-admin/volleybrain-admin/supabase/functions/stripe-webhook/index.ts(3,30): error TS2307: Cannot find module 'https://esm.sh/@supabase/supabase-js@2' or its corresponding type declarations.
+reference/web-admin/volleybrain-admin/supabase/functions/stripe-webhook/index.ts(5,27): error TS2304: Cannot find name 'Deno'.
+reference/web-admin/volleybrain-admin/supabase/functions/stripe-webhook/index.ts(10,21): error TS2304: Cannot find name 'Deno'.
+reference/web-admin/volleybrain-admin/supabase/functions/stripe-webhook/index.ts(11,28): error TS2304: Cannot find name 'Deno'.
+reference/web-admin/volleybrain-admin/supabase/functions/stripe-webhook/index.ts(12,23): error TS2304: Cannot find name 'Deno'.
+reference/web-admin/volleybrain-admin/supabase/functions/stripe-webhook/index.ts(14,14): error TS7006: Parameter 'req' implicitly has an 'any' type.

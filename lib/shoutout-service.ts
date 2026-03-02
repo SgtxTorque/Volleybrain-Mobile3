@@ -154,25 +154,53 @@ async function awardShoutoutXP(
   if (__DEV__ && ledgerError) console.error('[ShoutoutService] XP ledger error:', ledgerError);
 
   // Update total_xp and player_level on profiles
-  for (const { player_id, xp_amount } of [
-    { player_id: giverId, xp_amount: giverXP },
-    { player_id: receiverId, xp_amount: receiverXP },
+  // Note: giverId is always a profiles.id, receiverId may be a players.id
+  for (const { userId, xp_amount } of [
+    { userId: giverId, xp_amount: giverXP },
+    { userId: receiverId, xp_amount: receiverXP },
   ]) {
-    const { data: profile } = await supabase
+    const profId = await resolveProfileId(userId);
+    if (!profId) continue; // Skip if no profile found
+
+    const { data: prof } = await supabase
       .from('profiles')
       .select('total_xp')
-      .eq('id', player_id)
+      .eq('id', profId)
       .single();
 
-    const currentXP = profile?.total_xp || 0;
+    const currentXP = prof?.total_xp || 0;
     const newXP = currentXP + xp_amount;
     const { level } = getLevelFromXP(newXP);
 
     await supabase
       .from('profiles')
       .update({ total_xp: newXP, player_level: level })
-      .eq('id', player_id);
+      .eq('id', profId);
   }
+}
+
+// =============================================================================
+// ID Resolution — profiles.id ↔ players.id
+// =============================================================================
+
+/** Resolve any user ID to a players.id (for player_achievements FK). Returns null if no player record. */
+async function resolvePlayerId(id: string): Promise<string | null> {
+  // Check if id is directly a players.id
+  const { data: direct } = await supabase.from('players').select('id').eq('id', id).maybeSingle();
+  if (direct) return direct.id;
+  // Check if id is a profiles.id linked to a player via parent_account_id
+  const { data: linked } = await supabase.from('players').select('id').eq('parent_account_id', id).limit(1).maybeSingle();
+  return linked?.id || null;
+}
+
+/** Resolve any user ID to a profiles.id (for XP updates on profiles table). Returns null if no profile. */
+async function resolveProfileId(id: string): Promise<string | null> {
+  // Check if id is directly a profiles.id
+  const { data: direct } = await supabase.from('profiles').select('id').eq('id', id).maybeSingle();
+  if (direct) return direct.id;
+  // Check if id is a players.id with a linked profile via parent_account_id
+  const { data: player } = await supabase.from('players').select('parent_account_id').eq('id', id).maybeSingle();
+  return player?.parent_account_id || null;
 }
 
 // =============================================================================
@@ -204,10 +232,14 @@ async function checkShoutoutAchievements(giverId: string, receiverId: string) {
 }
 
 async function checkAndAwardShoutoutBadges(
-  profileId: string,
+  userId: string,
   statKey: string,
   currentValue: number,
 ) {
+  // Resolve to players.id — only players can earn achievements
+  const playerId = await resolvePlayerId(userId);
+  if (!playerId) return; // Coaches/parents without a player record skip achievements
+
   // Fetch relevant achievements
   const { data: achievements } = await supabase
     .from('achievements')
@@ -222,7 +254,7 @@ async function checkAndAwardShoutoutBadges(
   const { data: earned } = await supabase
     .from('player_achievements')
     .select('achievement_id')
-    .eq('player_id', profileId)
+    .eq('player_id', playerId)
     .in('achievement_id', achIds);
 
   const earnedSet = new Set((earned || []).map((e) => e.achievement_id));
@@ -240,7 +272,7 @@ async function checkAndAwardShoutoutBadges(
     if (earnedSet.has(ach.id)) continue;
     if (ach.threshold != null && currentValue >= ach.threshold) {
       newUnlocks.push({
-        player_id: profileId,
+        player_id: playerId,
         achievement_id: ach.id,
         earned_at: now,
         stat_value_at_unlock: currentValue,
@@ -257,7 +289,7 @@ async function checkAndAwardShoutoutBadges(
 
   // Update progress for all shoutout achievements
   const progressRows = achievements.map((ach) => ({
-    player_id: profileId,
+    player_id: playerId,
     achievement_id: ach.id,
     current_value: currentValue,
     target_value: ach.threshold ?? 0,
