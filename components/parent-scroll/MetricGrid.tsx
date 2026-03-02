@@ -156,6 +156,7 @@ const styles = StyleSheet.create({
     backgroundColor: BRAND.white,
     borderRadius: SPACING.cardRadius,
     padding: 14,
+    minHeight: 110,
     ...SHADOWS.light,
   },
   emoji: {
@@ -163,8 +164,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   cardTitle: {
-    fontFamily: FONTS.bodyExtraBold,
-    fontSize: 18,
+    fontFamily: FONTS.display,
+    fontSize: 22,
     color: BRAND.textPrimary,
   },
   cardSubtitle: {

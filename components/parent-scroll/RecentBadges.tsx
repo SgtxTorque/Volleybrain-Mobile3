@@ -101,7 +101,8 @@ const styles = StyleSheet.create({
     marginHorizontal: SPACING.pagePadding,
   },
   scrollContent: {
-    paddingHorizontal: SPACING.pagePadding,
+    paddingLeft: SPACING.pagePadding,
+    paddingRight: SPACING.pagePadding + 8,
     gap: 8,
   },
   pill: {
@@ -122,5 +123,6 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bodySemiBold,
     fontSize: 12,
     color: BRAND.textPrimary,
+    maxWidth: 120,
   },
 });

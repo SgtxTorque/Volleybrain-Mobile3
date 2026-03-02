@@ -2,13 +2,16 @@
  * EventHeroCard — dark navy hero card for the next upcoming event.
  * Features parallax gradient reveal on scroll approach.
  */
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
   Extrapolation,
   interpolate,
   SharedValue,
   useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -66,6 +69,19 @@ function getEventLabel(event: HeroEvent): string {
 }
 
 export default function EventHeroCard({ event, scrollY, onPress, onRsvp, onDirections }: Props) {
+  // Pulse animation for "TODAY" green dot
+  const pulseOpacity = useSharedValue(1);
+  useEffect(() => {
+    pulseOpacity.value = withRepeat(
+      withTiming(0.3, { duration: 1000 }),
+      -1,
+      true,
+    );
+  }, []);
+  const pulseDotAnimStyle = useAnimatedStyle(() => ({
+    opacity: pulseOpacity.value,
+  }));
+
   // Parallax gradient reveal
   const gradientAnimStyle = useAnimatedStyle(() => ({
     opacity: interpolate(
@@ -126,7 +142,7 @@ export default function EventHeroCard({ event, scrollY, onPress, onRsvp, onDirec
       <View style={styles.content}>
         {/* Live indicator + time */}
         <View style={styles.tagRow}>
-          {todayEvent && <View style={styles.pulseDot} />}
+          {todayEvent && <Animated.View style={[styles.pulseDot, pulseDotAnimStyle]} />}
           <Text style={styles.tagText}>
             {label}{timeStr ? ` \u{00B7} ${timeStr}` : ''}
           </Text>
@@ -197,7 +213,7 @@ const styles = StyleSheet.create({
     top: 16,
     right: 16,
     fontSize: 40,
-    opacity: 0.15,
+    opacity: 0.08,
   },
   content: {
     padding: 20,

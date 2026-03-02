@@ -471,7 +471,7 @@ const styles = StyleSheet.create({
   // Welcome section
   welcomeSection: {
     paddingHorizontal: SPACING.pagePadding,
-    paddingBottom: 20,
+    paddingBottom: 12,
   },
   welcomeTopRow: {
     flexDirection: 'row',
@@ -501,9 +501,9 @@ const styles = StyleSheet.create({
   },
   welcomeContent: {
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
-  mascotEmoji: { fontSize: 60, marginBottom: 8 },
+  mascotEmoji: { fontSize: 48, marginBottom: 6 },
   welcomeGreeting: {
     fontFamily: FONTS.bodyBold,
     fontSize: 22,
