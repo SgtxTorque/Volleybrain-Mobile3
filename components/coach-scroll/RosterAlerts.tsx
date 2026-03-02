@@ -9,6 +9,11 @@ import { supabase } from '@/lib/supabase';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 
+function localToday(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 type AlertPlayer = {
   id: string;
   name: string;
@@ -43,7 +48,7 @@ export default function RosterAlerts({ teamId, rosterSize, missingRsvpNames }: P
           });
         }
 
-        const today = new Date().toISOString().split('T')[0];
+        const today = localToday();
         const { data: recentEvents } = await supabase
           .from('schedule_events')
           .select('id')

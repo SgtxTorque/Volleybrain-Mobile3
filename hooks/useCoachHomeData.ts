@@ -8,6 +8,12 @@ import { useAuth } from '@/lib/auth';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 
+/** Local date string (YYYY-MM-DD) to avoid UTC timezone shift issues */
+function localToday(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 // ─── Types ─────────────────────────────────────────────────────
 
 export type CoachTeam = {
@@ -202,7 +208,7 @@ export function useCoachHomeData() {
   // ─── Fetch team-specific data ──
   const fetchTeamData = useCallback(async (teamId: string) => {
     if (!user?.id || !teamId) return;
-    const today = new Date().toISOString().split('T')[0];
+    const today = localToday();
 
     try {
       // Upcoming events

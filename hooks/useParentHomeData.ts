@@ -9,6 +9,12 @@ import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import type { HeroEvent } from '@/components/parent-scroll/EventHeroCard';
 
+/** Local date string (YYYY-MM-DD) to avoid UTC timezone shift issues */
+function localToday(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 // ─── Types ─────────────────────────────────────────────────────
 
 export type ChildPlayer = {
@@ -180,7 +186,7 @@ export function useParentHomeData() {
 
       // ── Step 3: Upcoming events + hero event ──
       if (teamIds.length > 0) {
-        const today = new Date().toISOString().split('T')[0];
+        const today = localToday();
         const { data: events } = await supabase
           .from('schedule_events')
           .select('id, team_id, season_id, title, event_type, event_date, event_time, start_time, location, venue_name, venue_address, opponent_name')
@@ -270,8 +276,8 @@ export function useParentHomeData() {
         try {
           const fiveDaysOut = new Date();
           fiveDaysOut.setDate(fiveDaysOut.getDate() + 5);
-          const today = new Date().toISOString().split('T')[0];
-          const fiveDays = fiveDaysOut.toISOString().split('T')[0];
+          const today = localToday();
+          const fiveDays = `${fiveDaysOut.getFullYear()}-${String(fiveDaysOut.getMonth() + 1).padStart(2, '0')}-${String(fiveDaysOut.getDate()).padStart(2, '0')}`;
 
           const { data: nextEvents } = await supabase
             .from('schedule_events')
