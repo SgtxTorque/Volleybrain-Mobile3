@@ -1,6 +1,6 @@
 /**
  * ParentHomeScroll — scroll-driven parent home dashboard.
- * Phase 4: Velocity-sensitive athlete card.
+ * Phase 5: Metric grid, Team Hub, Season Snapshot, badges, end-of-scroll.
  */
 import React, { useCallback, useEffect, useState } from 'react';
 import {
@@ -37,6 +37,10 @@ import DayStripCalendar from './parent-scroll/DayStripCalendar';
 import EventHeroCard from './parent-scroll/EventHeroCard';
 import AttentionBanner from './parent-scroll/AttentionBanner';
 import AthleteCard from './parent-scroll/AthleteCard';
+import MetricGrid from './parent-scroll/MetricGrid';
+import TeamHubPreview from './parent-scroll/TeamHubPreview';
+import SeasonSnapshot from './parent-scroll/SeasonSnapshot';
+import RecentBadges from './parent-scroll/RecentBadges';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
@@ -281,11 +285,24 @@ export default function ParentHomeScroll() {
           </View>
         )}
 
-        {/* ─── PLACEHOLDER SECTIONS (Phase 5) ─────────────────── */}
-        <PlaceholderSection label="METRIC GRID" color={BRAND.warmGray} height={200} />
-        <PlaceholderSection label="TEAM HUB" color={BRAND.white} height={140} />
-        <PlaceholderSection label="SEASON SNAPSHOT" color={BRAND.offWhite} height={120} />
-        <PlaceholderSection label="BADGES" color={BRAND.warmGray} height={80} />
+        {/* ─── METRIC GRID ─────────────────────────────────────── */}
+        <MetricGrid
+          record={data.seasonRecord}
+          payment={data.paymentStatus}
+          xp={data.childXp}
+          chat={data.lastChat}
+          scrollY={scrollY}
+          isSlowScroll={isSlowScroll}
+        />
+
+        {/* ─── TEAM HUB PREVIEW ──────────────────────────────── */}
+        <TeamHubPreview post={data.latestPost} />
+
+        {/* ─── SEASON SNAPSHOT ───────────────────────────────── */}
+        <SeasonSnapshot record={data.seasonRecord} />
+
+        {/* ─── RECENT BADGES ─────────────────────────────────── */}
+        <RecentBadges playerIds={data.children.map((c) => c.id)} />
 
         {/* ─── END OF SCROLL ──────────────────────────────────── */}
         <View style={styles.endSection}>
@@ -293,23 +310,6 @@ export default function ParentHomeScroll() {
           <Text style={styles.endText}>That's everything for now!</Text>
         </View>
       </Animated.ScrollView>
-    </View>
-  );
-}
-
-// ─── Placeholder ─────────────────────────────────────────────────
-function PlaceholderSection({
-  label,
-  color,
-  height,
-}: {
-  label: string;
-  color: string;
-  height: number;
-}) {
-  return (
-    <View style={[styles.sectionBlock, { backgroundColor: color, height }]}>
-      <Text style={[styles.sectionLabel, { color: BRAND.textMuted }]}>{label}</Text>
     </View>
   );
 }
@@ -465,21 +465,6 @@ const styles = StyleSheet.create({
     color: BRAND.textFaint,
     textTransform: 'uppercase',
     marginBottom: 10,
-  },
-
-  // Placeholder sections
-  sectionBlock: {
-    marginHorizontal: SPACING.pagePadding,
-    marginBottom: SPACING.cardGap,
-    borderRadius: SPACING.cardRadius,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sectionLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 2,
-    textTransform: 'uppercase',
   },
 
   // End of scroll
