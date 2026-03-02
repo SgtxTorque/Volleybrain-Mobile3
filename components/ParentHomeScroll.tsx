@@ -15,7 +15,9 @@ import {
 import Animated, {
   Extrapolation,
   interpolate,
+  runOnJS,
   useAnimatedStyle,
+  useDerivedValue,
   useSharedValue,
   withRepeat,
   withSequence,
@@ -198,6 +200,18 @@ export default function ParentHomeScroll() {
     );
   }, []);
 
+  // Header interactivity — pointerEvents must be a View prop, not animated style
+  const [headerInteractive, setHeaderInteractive] = useState(false);
+  const prevHeaderState = useSharedValue(false);
+  useDerivedValue(() => {
+    const interactive = scrollY.value > 80;
+    if (interactive !== prevHeaderState.value) {
+      prevHeaderState.value = interactive;
+      runOnJS(setHeaderInteractive)(interactive);
+    }
+    return interactive;
+  });
+
   // ─── Message cycling ──
   useEffect(() => {
     if (messages.length <= 1) return;
@@ -228,7 +242,6 @@ export default function ParentHomeScroll() {
 
   const compactHeaderAnimStyle = useAnimatedStyle(() => ({
     opacity: interpolate(scrollY.value, [60, 140], [0, 1], Extrapolation.CLAMP),
-    pointerEvents: scrollY.value > 80 ? ('auto' as const) : ('none' as const),
   }));
 
   const mascotAnimStyle = useAnimatedStyle(() => ({
@@ -261,6 +274,7 @@ export default function ParentHomeScroll() {
     <View style={[styles.root, { backgroundColor: BRAND.offWhite }]}>
       {/* ─── COMPACT HEADER ──────────────────────────────────── */}
       <Animated.View
+        pointerEvents={headerInteractive ? 'auto' : 'none'}
         style={[
           styles.compactHeader,
           { paddingTop: insets.top, height: 56 + insets.top },
@@ -299,6 +313,7 @@ export default function ParentHomeScroll() {
 
       {/* ─── DAY-STRIP CALENDAR (sticky below header) ────────── */}
       <Animated.View
+        pointerEvents={headerInteractive ? 'auto' : 'none'}
         style={[
           styles.calendarSticky,
           { top: 56 + insets.top },

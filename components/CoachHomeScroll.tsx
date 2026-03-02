@@ -3,7 +3,7 @@
  * Phase 6: Closing, animations, spacing rhythm.
  * Three-tier visual system mirroring the Parent Home Scroll.
  */
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -16,7 +16,9 @@ import {
 import Animated, {
   Extrapolation,
   interpolate,
+  runOnJS,
   useAnimatedStyle,
+  useDerivedValue,
   useSharedValue,
   withRepeat,
   withSequence,
@@ -185,6 +187,18 @@ export default function CoachHomeScroll() {
     );
   }, []);
 
+  // Header interactivity — pointerEvents must be a View prop, not animated style
+  const [headerInteractive, setHeaderInteractive] = useState(false);
+  const prevHeaderState = useSharedValue(false);
+  useDerivedValue(() => {
+    const interactive = scrollY.value > 80;
+    if (interactive !== prevHeaderState.value) {
+      prevHeaderState.value = interactive;
+      runOnJS(setHeaderInteractive)(interactive);
+    }
+    return interactive;
+  });
+
   // Briefing message across all teams
   const briefingMessage = useMemo(() => {
     // Gather events from all teams (upcomingEvents is filtered by selected team)
@@ -208,7 +222,6 @@ export default function CoachHomeScroll() {
 
   const compactHeaderAnimStyle = useAnimatedStyle(() => ({
     opacity: interpolate(scrollY.value, [60, 140], [0, 1], Extrapolation.CLAMP),
-    pointerEvents: scrollY.value > 80 ? ('auto' as const) : ('none' as const),
   }));
 
   const mascotAnimStyle = useAnimatedStyle(() => ({
@@ -235,6 +248,7 @@ export default function CoachHomeScroll() {
     <View style={[styles.root, { backgroundColor: BRAND.offWhite }]}>
       {/* ─── COMPACT HEADER ──────────────────────────────────── */}
       <Animated.View
+        pointerEvents={headerInteractive ? 'auto' : 'none'}
         style={[
           styles.compactHeader,
           { paddingTop: insets.top, height: 56 + insets.top },
@@ -273,6 +287,7 @@ export default function CoachHomeScroll() {
 
       {/* ─── TEAM PILLS (sticky below compact header) ─────────── */}
       <Animated.View
+        pointerEvents={headerInteractive ? 'auto' : 'none'}
         style={[
           styles.teamPillsSticky,
           { top: 56 + insets.top },
