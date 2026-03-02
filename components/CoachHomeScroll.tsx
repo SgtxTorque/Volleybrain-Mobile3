@@ -1,6 +1,7 @@
 /**
  * CoachHomeScroll — scroll-driven coach home dashboard.
- * Phase 6: Closing, animations, spacing rhythm.
+ * Phase 10.5: Scroll animations — parallax, card breathing, bar cascade, stagger.
+ * Phase 10.6: Final layout, removed old sections, streamlined.
  * Three-tier visual system mirroring the Parent Home Scroll.
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -42,12 +43,12 @@ import GamePlanCard from './coach-scroll/GamePlanCard';
 import ScoutingContext from './coach-scroll/ScoutingContext';
 import QuickActions from './coach-scroll/QuickActions';
 import EngagementSection from './coach-scroll/EngagementSection';
-import TeamPulse from './coach-scroll/TeamPulse';
-import RosterAlerts from './coach-scroll/RosterAlerts';
+import TeamHealthCard from './coach-scroll/TeamHealthCard';
+import SeasonLeaderboardCard from './coach-scroll/SeasonLeaderboardCard';
 import ActionItems from './coach-scroll/ActionItems';
+import TeamHubPreviewCard from './coach-scroll/TeamHubPreviewCard';
 import ActivityFeed from './coach-scroll/ActivityFeed';
-import SeasonScoreboard from './coach-scroll/SeasonScoreboard';
-import TopPerformers from './coach-scroll/TopPerformers';
+import SeasonSetupCard from './coach-scroll/SeasonSetupCard';
 
 // ─── Welcome briefing logic ─────────────────────────────────────
 
@@ -65,11 +66,9 @@ function buildBriefingMessage(
 ): string {
   const today = new Date().toISOString().split('T')[0];
 
-  // Events today across ALL teams
   const todayEvents = allEvents.filter(e => e.event_date === today);
 
   if (todayEvents.length > 1) {
-    // Multiple events today
     const lines = todayEvents.slice(0, 2).map(e => {
       const time = formatTime(e.event_time || e.start_time);
       const type = e.event_type === 'game' ? 'game' : e.event_type === 'practice' ? 'practice' : 'event';
@@ -90,7 +89,6 @@ function buildBriefingMessage(
     return `${e.team_name} has an event${time ? ` at ${time}` : ''} today.`;
   }
 
-  // No events today — show record + next event
   if (teams.length > 0) {
     const team = teams[0];
     const nextEvent = allEvents.find(e => e.event_date > today);
@@ -117,29 +115,19 @@ function buildClosingMessage(
   seasonRecord: { wins: number; losses: number } | null,
 ): string {
   const today = new Date().toISOString().split('T')[0];
-  const yesterday = (() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 1);
-    return d.toISOString().split('T')[0];
-  })();
 
-  // 1. Game today
   if (heroEvent?.event_date === today && heroEvent.event_type === 'game') {
     return 'Trust the preparation. Your team is ready.';
   }
-  // 2. Practice today
   if (heroEvent?.event_date === today && heroEvent.event_type === 'practice') {
     return 'Good practice makes good habits. Set the tone today.';
   }
-  // 3-4. Recent result (simplified — check if we have record context)
   if (seasonRecord && seasonRecord.wins > seasonRecord.losses) {
     return 'Momentum is on your side. Keep building.';
   }
-  // 5. Off day
   if (!heroEvent || heroEvent.event_date !== today) {
     return 'Recovery matters too. Let them rest.';
   }
-  // 7. Fallback
   return 'Go make them better today.';
 }
 
@@ -200,10 +188,14 @@ export default function CoachHomeScroll() {
 
   // Briefing message across all teams
   const briefingMessage = useMemo(() => {
-    // Gather events from all teams (upcomingEvents is filtered by selected team)
-    // For the global briefing we use the data available
     return buildBriefingMessage(data.teams, data.upcomingEvents);
   }, [data.teams, data.upcomingEvents]);
+
+  // Check if roster has issues (for QuickActions badge)
+  const hasRosterIssues = useMemo(() => {
+    const missing = data.rsvpSummary?.missing ?? [];
+    return missing.length > 0;
+  }, [data.rsvpSummary]);
 
   // ─── Refresh ──
   const onRefresh = useCallback(async () => {
@@ -212,6 +204,8 @@ export default function CoachHomeScroll() {
   }, [data.refresh]);
 
   // ─── Animated styles ──
+
+  // 5A: Welcome parallax — mascot translates up at 0.3x, text fades
   const welcomeAnimStyle = useAnimatedStyle(() => ({
     opacity: interpolate(scrollY.value, [0, 100], [1, 0], Extrapolation.CLAMP),
     transform: [
@@ -219,12 +213,14 @@ export default function CoachHomeScroll() {
     ],
   }));
 
-  const compactHeaderAnimStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(scrollY.value, [60, 140], [0, 1], Extrapolation.CLAMP),
+  const mascotParallaxStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: mascotFloat.value + interpolate(scrollY.value, [0, 200], [0, -60], Extrapolation.CLAMP) },
+    ],
   }));
 
-  const mascotAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: mascotFloat.value }],
+  const compactHeaderAnimStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(scrollY.value, [60, 140], [0, 1], Extrapolation.CLAMP),
   }));
 
   const teamPillsStickyAnimStyle = useAnimatedStyle(() => ({
@@ -234,6 +230,36 @@ export default function CoachHomeScroll() {
     ],
   }));
 
+  // 5B: Event hero card emphasis — scale + shadow when centered
+  const heroCardAnimStyle = useAnimatedStyle(() => {
+    const cardCenter = 350; // approximate Y of hero card
+    const scale = interpolate(
+      scrollY.value,
+      [cardCenter - 200, cardCenter - 50, cardCenter, cardCenter + 50, cardCenter + 200],
+      [1.0, 1.02, 1.02, 1.02, 1.0],
+      Extrapolation.CLAMP,
+    );
+    return { transform: [{ scale }] };
+  });
+
+  // 5G: Quick actions stagger — handled per-row is complex, use simple fade-slide
+  const quickActionsAnimStyle = useAnimatedStyle(() => {
+    const cardCenter = 450;
+    const opacity = interpolate(
+      scrollY.value,
+      [cardCenter - 350, cardCenter - 150],
+      [0, 1],
+      Extrapolation.CLAMP,
+    );
+    const translateX = interpolate(
+      scrollY.value,
+      [cardCenter - 350, cardCenter - 150],
+      [-20, 0],
+      Extrapolation.CLAMP,
+    );
+    return { opacity, transform: [{ translateX }] };
+  });
+
   // ─── Loading state ──
   if (data.loading) {
     return (
@@ -242,6 +268,9 @@ export default function CoachHomeScroll() {
       </View>
     );
   }
+
+  const selectedTeam = data.teams.find(t => t.id === data.selectedTeamId);
+  const teamName = selectedTeam?.name ?? '';
 
   return (
     <View style={[styles.root, { backgroundColor: BRAND.offWhite }]}>
@@ -321,7 +350,7 @@ export default function CoachHomeScroll() {
         onScroll={scrollHandler}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={{ paddingBottom: 140 }}
         refreshControl={
           <RefreshControl
             refreshing={data.refreshing}
@@ -330,7 +359,7 @@ export default function CoachHomeScroll() {
           />
         }
       >
-        {/* ─── WELCOME SECTION ────────────────────────────────── */}
+        {/* ─── 1. WELCOME SECTION (Tier 3 ambient) ──────────── */}
         <Animated.View
           style={[styles.welcomeSection, { paddingTop: insets.top + 16 }, welcomeAnimStyle]}
         >
@@ -356,7 +385,7 @@ export default function CoachHomeScroll() {
           </View>
 
           <View style={styles.welcomeContent}>
-            <Animated.Text style={[styles.mascotEmoji, mascotAnimStyle]}>
+            <Animated.Text style={[styles.mascotEmoji, mascotParallaxStyle]}>
               {'\u{1F431}'}
             </Animated.Text>
             <Text style={styles.welcomeGreeting}>
@@ -367,9 +396,8 @@ export default function CoachHomeScroll() {
           <Text style={styles.briefingText}>{briefingMessage}</Text>
         </Animated.View>
 
-        {/* ─── TEAM SELECTOR PILLS (in-scroll) ────────────────── */}
-        {/* ↕ 4px gap from welcome briefing (via welcomeSection paddingBottom: 4) */}
-        <View style={{ marginBottom: 16 }}>
+        {/* ─── 2. TEAM SELECTOR PILLS (in-scroll) ── ↕ 4px ──── */}
+        <View style={{ marginBottom: 12 }}>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -393,7 +421,7 @@ export default function CoachHomeScroll() {
           </ScrollView>
         </View>
 
-        {/* ─── PREP CHECKLIST (Tier 2) ── ↕ 8px below ─────────── */}
+        {/* ─── 3. PREP CHECKLIST (Tier 2 flat — event days only) ── ↕ 8px ── */}
         <View style={{ marginBottom: 8 }}>
           <PrepChecklist
             checklist={data.prepChecklist}
@@ -401,70 +429,86 @@ export default function CoachHomeScroll() {
           />
         </View>
 
-        {/* ─── GAME PLAN CARD (Tier 1) ── ↕ 20px below ──────── */}
-        <View style={{ marginBottom: 20 }}>
+        {/* ─── 4. EVENT HERO CARD (Tier 1 — event days only) ── ↕ 20px ── */}
+        <Animated.View style={[{ marginBottom: 20 }, heroCardAnimStyle]}>
           <GamePlanCard event={data.heroEvent} rsvpSummary={data.rsvpSummary} />
-        </View>
+        </Animated.View>
 
-        {/* ─── SCOUTING CONTEXT (Tier 2) ── ↕ 16px below ─────── */}
-        <View style={{ marginBottom: 16 }}>
+        {/* ─── Scouting Context ── */}
+        <View style={{ marginBottom: 12 }}>
           <ScoutingContext previousMatchup={data.previousMatchup} />
         </View>
 
-        {/* ─── QUICK ACTIONS (Tier 2 panel) ── ↕ 16px below ───── */}
-        <View style={{ marginBottom: 16 }}>
-          <QuickActions isEventDay={data.heroEvent !== null} />
-        </View>
+        {/* ─── 5. QUICK ACTIONS (subtle container) ── ↕ 12px ── */}
+        <Animated.View style={[{ marginBottom: 12 }, quickActionsAnimStyle]}>
+          <QuickActions
+            isEventDay={data.heroEvent !== null}
+            pendingStatsCount={data.pendingStatsCount}
+            hasRosterIssues={hasRosterIssues}
+          />
+        </Animated.View>
 
-        {/* ─── ENGAGEMENT (Tier 3 single nudge) ── ↕ 28px below ── */}
-        <View style={{ marginBottom: 28 }}>
+        {/* ─── 6. ENGAGEMENT NUDGE (Tier 3 — 1 line max) ── ↕ 24px ── */}
+        <View style={{ marginBottom: 24 }}>
           <EngagementSection />
         </View>
 
-        {/* ─── TEAM PULSE (Tier 2) ── ↕ 24px below ──────────────── */}
-        <View style={{ marginBottom: 24 }}>
-          <TeamPulse
+        {/* ─── 7. TEAM HEALTH CARD (Tier 1.5 — dots + bars) ── ↕ 20px ── */}
+        <View style={{ marginBottom: 20 }}>
+          <TeamHealthCard
+            teamId={data.selectedTeamId}
             attendanceRate={data.attendanceRate}
             rsvpSummary={data.rsvpSummary}
-            unreadMessages={data.unreadMessages}
-            heroEventDate={data.heroEvent?.event_date ?? null}
+            rosterSize={selectedTeam?.player_count ?? 0}
+            scrollY={scrollY}
+            cardY={600}
           />
         </View>
 
-        {/* ─── ROSTER ALERTS ── ↕ 24px below ───────────────────── */}
-        <View style={{ marginBottom: 24 }}>
-          <RosterAlerts
-            teamId={data.selectedTeamId}
-            rosterSize={data.teams.find(t => t.id === data.selectedTeamId)?.player_count ?? 0}
-            missingRsvpNames={data.rsvpSummary?.missing ?? []}
+        {/* ─── 8. SEASON & LEADERBOARD CARD (Tier 1.5 — bars + charts) ── ↕ 20px ── */}
+        <View style={{ marginBottom: 20 }}>
+          <SeasonLeaderboardCard
+            record={data.seasonRecord}
+            performers={data.topPerformers}
+            teamName={teamName}
+            lastGameLine={data.lastGameLine}
+            scrollY={scrollY}
+            cardY={900}
           />
         </View>
 
-        {/* ─── ACTION ITEMS (merged eval + stats) ── ↕ 24px below ─ */}
-        <View style={{ marginBottom: 24 }}>
+        {/* ─── 9. ACTION ITEMS (Tier 2 — compact lines) ── ↕ 16px ── */}
+        <View style={{ marginBottom: 16 }}>
           <ActionItems
             teamId={data.selectedTeamId}
             pendingStatsCount={data.pendingStatsCount}
           />
         </View>
 
-        {/* ─── ACTIVITY FEED (Tier 2) ── ↕ 28px below ──────────── */}
-        <View style={{ marginBottom: 28 }}>
+        {/* ─── 10. TEAM HUB PREVIEW (Tier 1.5 — social feed) ── ↕ 16px ── */}
+        <View style={{ marginBottom: 16 }}>
+          <TeamHubPreviewCard
+            teamId={data.selectedTeamId}
+            scrollY={scrollY}
+            cardY={1100}
+          />
+        </View>
+
+        {/* ─── 11. RECENT ACTIVITY (Tier 2 — 2 items max) ── ↕ 20px ── */}
+        <View style={{ marginBottom: 20 }}>
           <ActivityFeed teamId={data.selectedTeamId} />
         </View>
 
-        {/* ─── SEASON SCOREBOARD (Tier 2) ── ↕ 16px below ──────── */}
-        <SeasonScoreboard
-          record={data.seasonRecord}
-          nextEvent={data.heroEvent}
-          previousMatchup={data.previousMatchup}
-          lastGameLine={data.lastGameLine}
-        />
+        {/* ─── 12. SEASON SETUP (conditional — early season only) ── ↕ 24px ── */}
+        <View style={{ marginBottom: 24 }}>
+          <SeasonSetupCard
+            teamId={data.selectedTeamId}
+            scrollY={scrollY}
+            cardY={1300}
+          />
+        </View>
 
-        {/* ─── TOP PERFORMERS (Tier 2) ─────────────────────────── */}
-        <TopPerformers performers={data.topPerformers} />
-
-        {/* ─── CONTEXTUAL CLOSING (Tier 3) ── ↕ 140px bottom ──── */}
+        {/* ─── 13. CLOSING (Tier 3) ── ↕ 140px bottom ──────── */}
         <View style={styles.endSection}>
           <Text style={styles.endEmoji}>{'\u{1F431}'}</Text>
           <Text style={styles.endText}>
@@ -623,21 +667,10 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
 
-  // Section header (reusable)
-  sectionHeader: {
-    fontFamily: FONTS.bodyBold,
-    fontSize: 11,
-    letterSpacing: 1.1,
-    color: BRAND.textFaint,
-    textTransform: 'uppercase',
-    paddingHorizontal: 24,
-  },
-
   // End of scroll
   endSection: {
     alignItems: 'center',
     paddingTop: 24,
-    paddingBottom: 140,
   },
   endEmoji: {
     fontSize: 40,
