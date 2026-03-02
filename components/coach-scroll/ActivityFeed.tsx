@@ -121,10 +121,15 @@ export default function ActivityFeed({ teamId }: Props) {
       ) : (
         <View style={styles.feedList}>
           {items.map(item => (
-            <View key={item.id} style={styles.feedItem}>
+            <TouchableOpacity
+              key={item.id}
+              style={styles.feedItem}
+              activeOpacity={0.7}
+              onPress={() => router.push('/(tabs)/coach-roster' as any)}
+            >
               <Text style={styles.feedText}>{item.text}</Text>
               <Text style={styles.feedTimestamp}>{item.timestamp}</Text>
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
       )}
