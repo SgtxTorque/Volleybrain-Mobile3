@@ -2,6 +2,7 @@ import CoppaConsentModal from '@/components/CoppaConsentModal';
 import GestureDrawer from '@/components/GestureDrawer';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { DrawerProvider } from '@/lib/drawer-context';
+import { ParentScrollProvider } from '@/lib/parent-scroll-context';
 import { PermissionsProvider } from '@/lib/permissions-context';
 import { SeasonProvider } from '@/lib/season';
 import { SportProvider } from '@/lib/sport';
@@ -169,9 +170,11 @@ export default function RootLayout() {
           <SportProvider>
             <SeasonProvider>
               <PermissionsProvider>
-                <DrawerProvider>
-                  <RootLayoutNav />
-                </DrawerProvider>
+                <ParentScrollProvider>
+                  <DrawerProvider>
+                    <RootLayoutNav />
+                  </DrawerProvider>
+                </ParentScrollProvider>
               </PermissionsProvider>
             </SeasonProvider>
           </SportProvider>

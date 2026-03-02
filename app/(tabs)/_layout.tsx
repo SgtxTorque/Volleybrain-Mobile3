@@ -1,14 +1,15 @@
 import { useAuth } from '@/lib/auth';
 import { useDrawer } from '@/lib/drawer-context';
 import { useFirstTimeWelcome } from '@/lib/first-time-welcome';
+import { useParentScroll } from '@/lib/parent-scroll-context';
 import { usePermissions } from '@/lib/permissions-context';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { useDrawerBadges } from '@/hooks/useDrawerBadges';
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Animated, Platform, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TabLayout() {
@@ -19,6 +20,18 @@ export default function TabLayout() {
   const { openDrawer } = useDrawer();
   const primaryRole = isCoach ? 'coach' : isParent ? 'parent' : null;
   useFirstTimeWelcome(primaryRole);
+  const { isScrolling, isParentScrollActive } = useParentScroll();
+
+  // Auto-hide tab bar animation (parent home only)
+  const tabBarTranslateY = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const shouldHide = isParentScrollActive && isScrolling;
+    Animated.timing(tabBarTranslateY, {
+      toValue: shouldHide ? 100 : 0,
+      duration: 350,
+      useNativeDriver: true,
+    }).start();
+  }, [isScrolling, isParentScrollActive]);
 
   // Tab 2 slot: Admin > Coach > Parent > Player priority
   const showManageTab = isAdmin;
@@ -126,12 +139,13 @@ export default function TabLayout() {
         headerShown: false,
         sceneStyle: { backgroundColor: colors.background },
         tabBarStyle: {
-          backgroundColor: colors.card,
+          backgroundColor: isParentScrollActive ? 'rgba(255,255,255,0.95)' : colors.card,
           borderTopWidth: 1,
-          borderTopColor: colors.border,
+          borderTopColor: isParentScrollActive ? '#E8ECF2' : colors.border,
           height: 56 + insets.bottom,
           paddingBottom: insets.bottom,
           paddingTop: 8,
+          transform: [{ translateY: tabBarTranslateY as any }],
           ...Platform.select({
             ios: {
               shadowColor: '#000',

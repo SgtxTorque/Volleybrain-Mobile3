@@ -4,6 +4,7 @@
  */
 import { useMemo } from 'react';
 import {
+  runOnJS,
   useSharedValue,
   useAnimatedScrollHandler,
   useDerivedValue,
@@ -22,7 +23,12 @@ export const SCROLL_THRESHOLDS = {
 
 const VELOCITY_SAMPLE_COUNT = 6;
 
-export function useScrollAnimations() {
+type Options = {
+  /** Optional JS callback called on each scroll event (for nav-hide idle timer) */
+  onScrollJS?: () => void;
+};
+
+export function useScrollAnimations(options?: Options) {
   const scrollY = useSharedValue(0);
   const scrollVelocity = useSharedValue(0);
 
@@ -38,6 +44,11 @@ export function useScrollAnimations() {
       scrollY.value = event.contentOffset.y;
 
       const dy = event.contentOffset.y - prevY;
+      // Only notify if scroll moved more than 2px (threshold for nav hide)
+      if (options?.onScrollJS && Math.abs(dy) > 2) {
+        runOnJS(options.onScrollJS)();
+      }
+
       // Store sample
       const idx = sampleIndex.value % VELOCITY_SAMPLE_COUNT;
       const samples = [...velocitySamples.value];

@@ -27,6 +27,7 @@ import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 
 import { useAuth } from '@/lib/auth';
+import { useParentScroll } from '@/lib/parent-scroll-context';
 import { useScrollAnimations, SCROLL_THRESHOLDS } from '@/hooks/useScrollAnimations';
 import { useParentHomeData } from '@/hooks/useParentHomeData';
 import { BRAND } from '@/theme/colors';
@@ -63,8 +64,20 @@ export default function ParentHomeScroll() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { profile } = useAuth();
-  const { scrollY, isSlowScroll, scrollHandler } = useScrollAnimations();
+  const parentScroll = useParentScroll();
+  const { scrollY, isSlowScroll, scrollHandler } = useScrollAnimations({
+    onScrollJS: parentScroll.notifyScroll,
+  });
   const data = useParentHomeData();
+
+  // Signal to tab bar that parent scroll is active
+  useEffect(() => {
+    parentScroll.setParentScrollActive(true);
+    return () => {
+      parentScroll.setParentScrollActive(false);
+      parentScroll.setScrolling(false);
+    };
+  }, []);
 
   // Message cycling
   const [activeMessageIndex, setActiveMessageIndex] = useState(0);
