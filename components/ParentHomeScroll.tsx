@@ -31,7 +31,7 @@ import { useParentScroll } from '@/lib/parent-scroll-context';
 import { useScrollAnimations, SCROLL_THRESHOLDS } from '@/hooks/useScrollAnimations';
 import { useParentHomeData } from '@/hooks/useParentHomeData';
 import { BRAND } from '@/theme/colors';
-import { SPACING, SHADOWS } from '@/theme/spacing';
+import { SPACING } from '@/theme/spacing';
 import { FONTS } from '@/theme/fonts';
 
 import RoleSelector from './RoleSelector';
@@ -469,10 +469,38 @@ export default function ParentHomeScroll() {
         {/* ─── RECENT BADGES ─────────────────────────────────── */}
         <RecentBadges playerIds={data.children.map((c) => c.id)} />
 
-        {/* ─── END OF SCROLL ──────────────────────────────────── */}
+        {/* ─── END OF SCROLL (contextual closing) ────────────── */}
         <View style={styles.endSection}>
           <Text style={styles.endEmoji}>{'\u{1F431}'}</Text>
-          <Text style={styles.endText}>That's everything for now!</Text>
+          <Text style={styles.endText}>
+            {(() => {
+              const he = data.heroEvent;
+              if (he) {
+                const isToday = (() => {
+                  const today = new Date().toDateString();
+                  const evtDate = new Date(he.event_date + 'T00:00:00').toDateString();
+                  return today === evtDate;
+                })();
+                if (isToday) {
+                  const timeStr = he.event_time
+                    ? (() => { const [h,m] = he.event_time.split(':'); const hr = parseInt(h); return `${hr % 12 || 12}:${m} ${hr >= 12 ? 'PM' : 'AM'}`; })()
+                    : '';
+                  return `See you at ${(he.event_type || 'the event').toLowerCase()}${timeStr ? ` at ${timeStr}` : ''}. \u{1F3D0}`;
+                }
+                const isTomorrow = (() => {
+                  const tmrw = new Date();
+                  tmrw.setDate(tmrw.getDate() + 1);
+                  return tmrw.toDateString() === new Date(he.event_date + 'T00:00:00').toDateString();
+                })();
+                if (isTomorrow) {
+                  return `${(he.event_type || 'Event')} tomorrow. Get some rest.`;
+                }
+                const dayName = new Date(he.event_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' });
+                return `Next up: ${dayName}'s ${(he.event_type || 'event').toLowerCase()}. ${childName} is ready.`;
+              }
+              return 'That\'s everything for now. Go be great.';
+            })()}
+          </Text>
         </View>
       </Animated.ScrollView>
     </View>
@@ -546,10 +574,10 @@ const styles = StyleSheet.create({
     zIndex: 99,
   },
 
-  // Welcome section
+  // Welcome section (Tier 3 greeting — tight gap to nudge below)
   welcomeSection: {
     paddingHorizontal: SPACING.pagePadding,
-    paddingBottom: 12,
+    paddingBottom: 4,
   },
   welcomeTopRow: {
     flexDirection: 'row',
@@ -625,7 +653,7 @@ const styles = StyleSheet.create({
   // Athlete section
   athleteSection: {
     marginHorizontal: SPACING.pagePadding,
-    marginBottom: SPACING.sectionGap,
+    marginBottom: 12,
   },
   sectionHeader: {
     fontFamily: FONTS.bodyBold,
@@ -636,20 +664,22 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
 
-  // End of scroll
+  // End of scroll (contextual closing)
   endSection: {
     alignItems: 'center',
-    paddingVertical: 40,
-    paddingBottom: 120,
+    paddingTop: 24,
+    paddingBottom: 140,
   },
   endEmoji: {
-    fontSize: 35,
-    opacity: 0.35,
+    fontSize: 40,
+    opacity: 0.3,
     marginBottom: 8,
   },
   endText: {
     fontFamily: FONTS.bodyMedium,
     fontSize: 14,
-    color: BRAND.textMuted,
+    color: BRAND.textFaint,
+    textAlign: 'center',
+    paddingHorizontal: 40,
   },
 });

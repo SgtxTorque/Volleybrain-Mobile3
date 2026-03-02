@@ -1,5 +1,6 @@
 /**
  * RecentBadges — horizontal scrollable row of badge pills.
+ * No card container — pills sit directly on the page background.
  * Queries player_achievements + achievements table.
  */
 import React, { useEffect, useState } from 'react';
@@ -8,7 +9,6 @@ import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
-import { SPACING } from '@/theme/spacing';
 
 type BadgeItem = {
   id: string;
@@ -63,7 +63,12 @@ export default function RecentBadges({ playerIds }: Props) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionHeader}>RECENT BADGES</Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.sectionHeader}>RECENT BADGES</Text>
+        <TouchableOpacity onPress={() => router.push('/achievements' as any)}>
+          <Text style={styles.seeAll}>See All {'\u{2192}'}</Text>
+        </TouchableOpacity>
+      </View>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -89,7 +94,14 @@ export default function RecentBadges({ playerIds }: Props) {
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: SPACING.sectionGap,
+    marginBottom: 24,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    marginBottom: 10,
   },
   sectionHeader: {
     fontFamily: FONTS.bodyBold,
@@ -97,27 +109,30 @@ const styles = StyleSheet.create({
     letterSpacing: 1.1,
     color: BRAND.textFaint,
     textTransform: 'uppercase',
-    marginBottom: 10,
-    marginHorizontal: SPACING.pagePadding,
+  },
+  seeAll: {
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 12,
+    color: BRAND.skyBlue,
   },
   scrollContent: {
-    paddingLeft: SPACING.pagePadding,
-    paddingRight: SPACING.pagePadding + 8,
-    gap: 8,
+    paddingLeft: 24,
+    paddingRight: 32,
+    gap: 10,
   },
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    backgroundColor: BRAND.offWhite,
+    backgroundColor: BRAND.white,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: BRAND.border,
-    borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
   pillIcon: {
     fontSize: 14,
+    marginRight: 6,
   },
   pillText: {
     fontFamily: FONTS.bodySemiBold,
