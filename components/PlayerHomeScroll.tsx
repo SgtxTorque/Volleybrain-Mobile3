@@ -27,6 +27,8 @@ import { useScrollAnimations } from '@/hooks/useScrollAnimations';
 import { usePlayerHomeData } from '@/hooks/usePlayerHomeData';
 
 import HeroIdentityCard from './player-scroll/HeroIdentityCard';
+import StreakBanner from './player-scroll/StreakBanner';
+import TheDrop from './player-scroll/TheDrop';
 
 // ─── Player Dark Theme ──────────────────────────────────────────
 export const PLAYER_THEME = {
@@ -159,6 +161,17 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           xpCurrent={data.xp}
           xpMax={(data.level) * 1000}
           scrollY={scrollY}
+        />
+
+        {/* ─── 2. STREAK BANNER (if streak ≥ 2) ──────────────── */}
+        <StreakBanner streak={data.attendanceStreak} />
+
+        {/* ─── 3. THE DROP ─────────────────────────────────────── */}
+        <TheDrop
+          badges={data.badges}
+          lastGame={data.lastGame}
+          nextEvent={data.nextEvent}
+          attendanceStreak={data.attendanceStreak}
         />
       </Animated.ScrollView>
     </View>
