@@ -1,6 +1,6 @@
 /**
  * CoachHomeScroll — scroll-driven coach home dashboard.
- * Phase 3: Quick actions, engagement section.
+ * Phase 4: Team pulse, roster alerts, development hint.
  * Three-tier visual system mirroring the Parent Home Scroll.
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -40,6 +40,9 @@ import GamePlanCard from './coach-scroll/GamePlanCard';
 import ScoutingContext from './coach-scroll/ScoutingContext';
 import QuickActions from './coach-scroll/QuickActions';
 import EngagementSection from './coach-scroll/EngagementSection';
+import TeamPulse from './coach-scroll/TeamPulse';
+import RosterAlerts from './coach-scroll/RosterAlerts';
+import DevelopmentHint from './coach-scroll/DevelopmentHint';
 
 // ─── Welcome briefing logic ─────────────────────────────────────
 
@@ -359,9 +362,28 @@ export default function CoachHomeScroll() {
         {/* ─── ENGAGEMENT (Tier 2/3 — challenge + shoutout) ──── */}
         <EngagementSection />
 
+        {/* ─── TEAM PULSE (Tier 2 — flat data rows) ────────────── */}
+        <View style={{ marginTop: 24 }}>
+          <TeamPulse
+            attendanceRate={data.attendanceRate}
+            rsvpSummary={data.rsvpSummary}
+            unreadMessages={data.unreadMessages}
+            heroEventDate={data.heroEvent?.event_date ?? null}
+          />
+        </View>
+
+        {/* ─── ROSTER ALERTS (Tier 1.5 — conditional) ────────── */}
+        <RosterAlerts
+          teamId={data.selectedTeamId}
+          rosterSize={data.teams.find(t => t.id === data.selectedTeamId)?.player_count ?? 0}
+          missingRsvpNames={data.rsvpSummary?.missing ?? []}
+        />
+
+        {/* ─── DEVELOPMENT HINT (Tier 2 — conditional) ────────── */}
+        <DevelopmentHint teamId={data.selectedTeamId} />
+
         {/* ──────────────────────────────────────────────────────
-            Sections below will be added in Phases 4-6:
-            - Phase 4: Team Pulse, Roster Alerts, Development Hint
+            Sections below will be added in Phases 5-6:
             - Phase 5: Pending Stats, Activity Feed, Season Scoreboard, Top Performers
             - Phase 6: Closing, Animations, Spacing
         ────────────────────────────────────────────────────── */}
