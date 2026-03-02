@@ -32,6 +32,8 @@ import TheDrop from './player-scroll/TheDrop';
 import PhotoStrip from './player-scroll/PhotoStrip';
 import NextUpCard from './player-scroll/NextUpCard';
 import ChatPeek from './player-scroll/ChatPeek';
+import QuickPropsRow from './player-scroll/QuickPropsRow';
+import ActiveChallengeCard from './player-scroll/ActiveChallengeCard';
 
 // ─── Player Dark Theme ──────────────────────────────────────────
 export const PLAYER_THEME = {
@@ -190,6 +192,12 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
 
         {/* ─── 6. CHAT PEEK ───────────────────────────────────── */}
         <ChatPeek />
+
+        {/* ─── 7. QUICK PROPS ─────────────────────────────────── */}
+        <QuickPropsRow />
+
+        {/* ─── 8. ACTIVE CHALLENGE (if exists) ────────────────── */}
+        <ActiveChallengeCard available={data.challengesAvailable} />
       </Animated.ScrollView>
     </View>
   );
