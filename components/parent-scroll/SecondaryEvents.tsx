@@ -1,6 +1,6 @@
 /**
- * SecondaryEvents — flat Tier 2 lines for upcoming events after the hero card.
- * Shows events 2-5 (skipping the hero event which is already displayed).
+ * SecondaryEvents — compact Tier 2 hint for upcoming events after the hero card.
+ * Shows at most 1 secondary event line + a "+N more" hint if more exist.
  */
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -24,121 +24,64 @@ type Props = {
   events: EventItem[];
 };
 
-function formatDate(dateStr: string): string {
+function getDayName(dateStr: string): string {
   try {
     const d = new Date(dateStr + 'T00:00:00');
-    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    return d.toLocaleDateString('en-US', { weekday: 'long' });
   } catch {
-    return dateStr;
+    return '';
   }
 }
 
-function formatTime(event: EventItem): string {
-  if (event.start_time) {
-    const d = new Date(event.start_time);
-    if (!isNaN(d.getTime())) {
-      return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-    }
-  }
-  if (event.event_time) {
-    const [h, m] = event.event_time.split(':');
-    const hour = parseInt(h);
-    const ampm = hour >= 12 ? 'PM' : 'AM';
-    return `${hour % 12 || 12}:${m} ${ampm}`;
-  }
-  return '';
-}
-
-function buildDetail(event: EventItem): string {
-  const parts: string[] = [];
-  const typeLabel = (event.event_type || event.title || 'Event');
-  if (event.opponent_name) {
-    parts.push(`${typeLabel} vs ${event.opponent_name}`);
-  } else {
-    parts.push(typeLabel);
-  }
-  const loc = event.venue_name || event.location;
-  if (loc) parts.push(loc);
-  return parts.join(' \u{00B7} ');
+function buildShortLabel(event: EventItem): string {
+  const day = getDayName(event.event_date);
+  const type = event.event_type === 'game'
+    ? (event.opponent_name ? `Game vs ${event.opponent_name}` : 'Game')
+    : event.event_type === 'practice'
+      ? 'Practice'
+      : (event.title || 'Event');
+  return day ? `${day} \u{00B7} ${type}` : type;
 }
 
 export default function SecondaryEvents({ events }: Props) {
   const router = useRouter();
 
-  // Skip the first event (already shown as hero) and take next 4
-  const secondary = events.slice(1, 5);
+  // Skip the first event (already shown as hero)
+  const secondary = events.slice(1);
   if (secondary.length === 0) return null;
 
-  return (
-    <View style={styles.container}>
-      <Text style={styles.sectionHeader}>ALSO THIS WEEK</Text>
-      {secondary.map((event) => {
-        const dateStr = formatDate(event.event_date);
-        const timeStr = formatTime(event);
-        const detail = buildDetail(event);
+  const goToSchedule = () => router.push('/(tabs)/parent-schedule' as any);
 
-        return (
-          <TouchableOpacity
-            key={event.id}
-            style={styles.eventRow}
-            activeOpacity={0.7}
-            onPress={() => router.push('/(tabs)/parent-schedule' as any)}
-          >
-            <View style={styles.eventContent}>
-              <Text style={styles.dateTime}>
-                {dateStr}{timeStr ? ` \u{00B7} ${timeStr}` : ''}
-              </Text>
-              <Text style={styles.detail} numberOfLines={1}>
-                {detail}
-              </Text>
-            </View>
-            <Text style={styles.arrow}>{'\u{2192}'}</Text>
-          </TouchableOpacity>
-        );
-      })}
-    </View>
+  // 1 extra event: show single flat line
+  if (secondary.length === 1) {
+    return (
+      <TouchableOpacity style={styles.container} activeOpacity={0.7} onPress={goToSchedule}>
+        <Text style={styles.lineText}>
+          Also this week: {buildShortLabel(secondary[0])} {'\u2192'}
+        </Text>
+      </TouchableOpacity>
+    );
+  }
+
+  // 2+ extra events: show "+N more" line
+  return (
+    <TouchableOpacity style={styles.container} activeOpacity={0.7} onPress={goToSchedule}>
+      <Text style={styles.lineText}>
+        +{secondary.length} more events this week {'\u2192'}
+      </Text>
+    </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 8,
-  },
-  sectionHeader: {
-    fontFamily: FONTS.bodyBold,
-    fontSize: 11,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: BRAND.textFaint,
-    marginTop: 16,
-    marginBottom: 8,
     paddingHorizontal: 24,
+    paddingVertical: 8,
+    marginBottom: 4,
   },
-  eventRow: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F2F5',
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  eventContent: {
-    flex: 1,
-  },
-  dateTime: {
-    fontFamily: FONTS.bodySemiBold,
-    fontSize: 13,
-    color: BRAND.textPrimary,
-  },
-  detail: {
+  lineText: {
     fontFamily: FONTS.bodyMedium,
-    fontSize: 12,
+    fontSize: 13,
     color: BRAND.textMuted,
-    marginTop: 2,
-  },
-  arrow: {
-    color: BRAND.textFaint,
-    fontSize: 16,
-    marginLeft: 8,
   },
 });
