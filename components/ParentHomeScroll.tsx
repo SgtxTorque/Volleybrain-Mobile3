@@ -44,6 +44,7 @@ import TeamHubPreview from './parent-scroll/TeamHubPreview';
 import SeasonSnapshot from './parent-scroll/SeasonSnapshot';
 import RecentBadges from './parent-scroll/RecentBadges';
 import SecondaryEvents from './parent-scroll/SecondaryEvents';
+import AmbientCelebration from './parent-scroll/AmbientCelebration';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
@@ -437,6 +438,14 @@ export default function ParentHomeScroll() {
               </View>
             ))}
           </View>
+        )}
+
+        {/* ─── AMBIENT CELEBRATION (Tier 3) ─────────────────────── */}
+        {data.children.length > 0 && (
+          <AmbientCelebration
+            playerIds={data.children.map((c) => c.id)}
+            childNames={Object.fromEntries(data.children.map((c) => [c.id, c.first_name]))}
+          />
         )}
 
         {/* ─── METRIC GRID ─────────────────────────────────────── */}
