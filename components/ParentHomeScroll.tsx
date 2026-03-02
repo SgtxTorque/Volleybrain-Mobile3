@@ -200,6 +200,13 @@ export default function ParentHomeScroll() {
     opacity: messageFade.value,
   }));
 
+  const calendarStickyAnimStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(scrollY.value, [30, 110], [0, 1], Extrapolation.CLAMP),
+    transform: [
+      { translateY: interpolate(scrollY.value, [30, 110], [-50, 0], Extrapolation.CLAMP) },
+    ],
+  }));
+
   const currentMessage = messages[activeMessageIndex];
 
   // ─── Loading state ──
@@ -249,12 +256,7 @@ export default function ParentHomeScroll() {
         style={[
           styles.calendarSticky,
           { top: 56 + insets.top },
-          useAnimatedStyle(() => ({
-            opacity: interpolate(scrollY.value, [30, 110], [0, 1], Extrapolation.CLAMP),
-            transform: [
-              { translateY: interpolate(scrollY.value, [30, 110], [-50, 0], Extrapolation.CLAMP) },
-            ],
-          })),
+          calendarStickyAnimStyle,
         ]}
       >
         <DayStripCalendar scrollY={scrollY} eventDates={data.eventDates} />
