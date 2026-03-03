@@ -17,9 +17,11 @@ import {
     fetchWaiverStatus,
     shareCSV,
 } from '@/lib/reports';
+import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -845,7 +847,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   activeFilterText: {
     fontSize: 13,
     color: colors.text,
-    fontWeight: '500',
+    fontFamily: FONTS.bodySemiBold,
   },
   content: {
     flex: 1,
@@ -863,6 +865,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     marginTop: 12,
     fontSize: 14,
     color: colors.textMuted,
+    fontFamily: FONTS.bodyMedium,
   },
   errorContainer: {
     flex: 1,
@@ -885,7 +888,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   retryBtnText: {
     color: '#000',
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
   },
   emptyContainer: {
     flex: 1,
@@ -897,11 +900,13 @@ const createStyles = (colors: any) => StyleSheet.create({
     marginTop: 12,
     fontSize: 16,
     color: colors.textMuted,
+    fontFamily: FONTS.bodySemiBold,
   },
   emptySubtext: {
     marginTop: 4,
     fontSize: 13,
     color: colors.textMuted,
+    fontFamily: FONTS.bodyMedium,
   },
 
   // Chart styles
@@ -912,7 +917,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   chartSectionTitle: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
     color: colors.text,
     marginBottom: 12,
   },
@@ -937,10 +942,11 @@ const createStyles = (colors: any) => StyleSheet.create({
   pieLabel: {
     fontSize: 14,
     color: colors.text,
+    fontFamily: FONTS.bodyMedium,
   },
   pieValue: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
     color: colors.text,
   },
   totalRow: {
@@ -953,12 +959,12 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   totalLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
     color: colors.text,
   },
   totalValue: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontFamily: FONTS.bodyBold,
     color: colors.primary,
   },
   barItem: {
@@ -972,10 +978,11 @@ const createStyles = (colors: any) => StyleSheet.create({
   barLabel: {
     fontSize: 13,
     color: colors.text,
+    fontFamily: FONTS.bodyMedium,
   },
   barValue: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
     color: colors.text,
   },
   barTrack: {
@@ -1009,7 +1016,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   calendarDate: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
     color: colors.text,
   },
   calendarEventCount: {
@@ -1029,7 +1036,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   calendarEventTitle: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
     color: colors.text,
     flex: 1,
   },
@@ -1040,7 +1047,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   eventTypeBadgeText: {
     fontSize: 10,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
   },
   calendarEventTeam: {
     fontSize: 12,
@@ -1080,7 +1087,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   conflictTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
     color: colors.danger,
   },
   conflictTeam: {
@@ -1117,7 +1124,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   tableHeaderText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
     color: colors.textMuted,
     textTransform: 'uppercase',
   },
@@ -1141,6 +1148,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   tableCellText: {
     fontSize: 13,
     color: colors.text,
+    fontFamily: FONTS.bodyMedium,
     flex: 1,
   },
 
@@ -1157,6 +1165,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   footerText: {
     fontSize: 13,
     color: colors.textMuted,
+    fontFamily: FONTS.bodyMedium,
   },
   exportBtn: {
     flexDirection: 'row',
@@ -1169,7 +1178,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   exportBtnText: {
     color: '#000',
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
     fontSize: 14,
   },
 
@@ -1194,8 +1203,8 @@ const createStyles = (colors: any) => StyleSheet.create({
     borderBottomColor: colors.border,
   },
   filterTitle: {
+    ...displayTextStyle,
     fontSize: 18,
-    fontWeight: '600',
     color: colors.text,
   },
   filterContent: {
@@ -1206,7 +1215,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   filterLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
     color: colors.text,
     marginBottom: 10,
   },
@@ -1226,10 +1235,11 @@ const createStyles = (colors: any) => StyleSheet.create({
   filterOptionText: {
     fontSize: 13,
     color: colors.text,
+    fontFamily: FONTS.bodyMedium,
   },
   filterOptionTextActive: {
     color: '#000',
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
   },
   filterActions: {
     flexDirection: 'row',
@@ -1249,6 +1259,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   clearFiltersBtnText: {
     fontSize: 15,
     color: colors.text,
+    fontFamily: FONTS.bodyMedium,
   },
   applyFiltersBtn: {
     flex: 1,
@@ -1259,7 +1270,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   applyFiltersBtnText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
     color: '#000',
   },
 });

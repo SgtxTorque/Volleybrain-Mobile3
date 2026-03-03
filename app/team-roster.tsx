@@ -3,6 +3,7 @@ import { getPlayerImage } from '@/lib/default-images';
 import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -172,7 +173,7 @@ const createStyles = (colors: any) =>
     countLabel: {
       fontSize: 12,
       color: colors.textMuted,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
       paddingHorizontal: spacing.screenPadding,
       marginBottom: 8,
     },
@@ -204,13 +205,13 @@ const createStyles = (colors: any) =>
     },
     avatarInitials: {
       fontSize: 14,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
       color: colors.textMuted,
     },
     playerInfo: { flex: 1 },
     playerName: {
       fontSize: 14,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
       color: colors.text,
     },
     positionPill: {
@@ -223,7 +224,7 @@ const createStyles = (colors: any) =>
     },
     positionText: {
       fontSize: 10,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
       color: '#14B8A6',
     },
     jerseyBadge: {
@@ -234,8 +235,8 @@ const createStyles = (colors: any) =>
     },
     jerseyText: {
       fontSize: 13,
-      fontWeight: '800',
+      fontFamily: FONTS.bodyExtraBold,
       color: colors.text,
     },
-    emptyText: { fontSize: 14 },
+    emptyText: { fontSize: 14, fontFamily: FONTS.bodyMedium, color: colors.textMuted },
   });
