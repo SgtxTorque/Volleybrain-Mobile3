@@ -1,6 +1,8 @@
 import { useAuth } from '@/lib/auth';
+import { displayTextStyle, radii, shadows } from '@/lib/design-tokens';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -447,10 +449,10 @@ export default function DataRightsScreen() {
               disabled={revokingConsent}
             >
               {revokingConsent ? (
-                <ActivityIndicator color="#fff" size="small" />
+                <ActivityIndicator color={colors.background} size="small" />
               ) : (
                 <>
-                  <Ionicons name="close-circle" size={18} color="#fff" />
+                  <Ionicons name="close-circle" size={18} color={colors.background} />
                   <Text style={s.revokeBtnText}>Revoke Consent</Text>
                 </>
               )}
@@ -485,8 +487,8 @@ const createStyles = (colors: any) =>
       alignItems: 'center',
     },
     headerTitle: {
+      ...displayTextStyle,
       fontSize: 18,
-      fontWeight: '600',
       color: colors.text,
     },
     scroll: {
@@ -505,16 +507,12 @@ const createStyles = (colors: any) =>
       alignItems: 'flex-start',
       gap: 12,
       backgroundColor: colors.glassCard,
-      borderRadius: 16,
+      borderRadius: radii.card,
       padding: 16,
       marginBottom: 20,
       borderWidth: 1,
       borderColor: colors.info + '40',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.15,
-      shadowRadius: 12,
-      elevation: 6,
+      ...shadows.card,
     },
     infoText: {
       flex: 1,
@@ -536,22 +534,18 @@ const createStyles = (colors: any) =>
     revokedText: {
       flex: 1,
       fontSize: 14,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
       color: colors.danger,
       lineHeight: 20,
     },
     emptyCard: {
       backgroundColor: colors.glassCard,
-      borderRadius: 16,
+      borderRadius: radii.card,
       padding: 40,
       alignItems: 'center',
       borderWidth: 1,
       borderColor: colors.glassBorder,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.15,
-      shadowRadius: 12,
-      elevation: 6,
+      ...shadows.card,
     },
     emptyText: {
       fontSize: 14,
@@ -560,16 +554,12 @@ const createStyles = (colors: any) =>
     },
     childCard: {
       backgroundColor: colors.glassCard,
-      borderRadius: 16,
+      borderRadius: radii.card,
       padding: 16,
       marginBottom: 16,
       borderWidth: 1,
       borderColor: colors.glassBorder,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.15,
-      shadowRadius: 12,
-      elevation: 6,
+      ...shadows.card,
     },
     childHeader: {
       flexDirection: 'row',
@@ -587,7 +577,7 @@ const createStyles = (colors: any) =>
     },
     childAvatarText: {
       fontSize: 16,
-      fontWeight: 'bold',
+      fontFamily: FONTS.bodyBold,
       color: colors.primary,
     },
     childNameWrap: {
@@ -595,7 +585,7 @@ const createStyles = (colors: any) =>
     },
     childName: {
       fontSize: 17,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
       color: colors.text,
     },
     childTeam: {
@@ -615,7 +605,7 @@ const createStyles = (colors: any) =>
     },
     actionBtnText: {
       fontSize: 14,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
       color: colors.info,
     },
     dataSection: {
@@ -641,7 +631,7 @@ const createStyles = (colors: any) =>
     },
     dataValue: {
       fontSize: 13,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
       color: colors.text,
       flex: 1,
       textAlign: 'right',
@@ -664,7 +654,7 @@ const createStyles = (colors: any) =>
     },
     exportBtnText: {
       fontSize: 12,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
       color: colors.primary,
     },
     deleteDataBtn: {
@@ -681,12 +671,12 @@ const createStyles = (colors: any) =>
     },
     deleteDataBtnText: {
       fontSize: 12,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
       color: colors.danger,
     },
     revokeSection: {
       backgroundColor: colors.danger + '08',
-      borderRadius: 16,
+      borderRadius: radii.card,
       padding: 20,
       marginTop: 8,
       borderWidth: 1,
@@ -694,7 +684,7 @@ const createStyles = (colors: any) =>
     },
     revokeSectionTitle: {
       fontSize: 16,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
       color: colors.danger,
       marginBottom: 8,
     },
@@ -715,7 +705,7 @@ const createStyles = (colors: any) =>
     },
     revokeBtnText: {
       fontSize: 15,
-      fontWeight: '700',
-      color: '#fff',
+      fontFamily: FONTS.bodyBold,
+      color: colors.background,
     },
   });

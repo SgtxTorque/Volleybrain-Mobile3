@@ -1,6 +1,8 @@
 import { useAuth } from '@/lib/auth';
+import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -10,6 +12,7 @@ import {
     Modal,
     RefreshControl,
     ScrollView,
+    StyleSheet,
     Text,
     TouchableOpacity,
     View,
@@ -68,9 +71,11 @@ export default function ParentMyTeamsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [teams, setTeams] = useState<Team[]>([]);
   const [expandedTeams, setExpandedTeams] = useState<Set<string>>(new Set());
-  
+
   const [selectedContact, setSelectedContact] = useState<{ name: string; phone: string; email: string } | null>(null);
   const [contactModalVisible, setContactModalVisible] = useState(false);
+
+  const s = createStyles(colors);
 
   // =============================================================================
   // DATA FETCHING
@@ -81,14 +86,14 @@ export default function ParentMyTeamsScreen() {
 
     try {
       const parentEmail = profile?.email || user?.email;
-      
+
       let playerIds: string[] = [];
 
       const { data: guardianLinks } = await supabase
         .from('player_guardians')
         .select('player_id')
         .eq('guardian_id', user.id);
-      
+
       if (guardianLinks) {
         playerIds.push(...guardianLinks.map(g => g.player_id));
       }
@@ -97,7 +102,7 @@ export default function ParentMyTeamsScreen() {
         .from('players')
         .select('id')
         .eq('parent_account_id', user.id);
-      
+
       if (directPlayers) {
         playerIds.push(...directPlayers.map(p => p.id));
       }
@@ -107,7 +112,7 @@ export default function ParentMyTeamsScreen() {
           .from('players')
           .select('id')
           .ilike('parent_email', parentEmail);
-        
+
         if (emailPlayers) {
           playerIds.push(...emailPlayers.map(p => p.id));
         }
@@ -154,7 +159,7 @@ export default function ParentMyTeamsScreen() {
         .from('sports')
         .select('id, name, icon, color_primary');
 
-      const sportsMap = new Map((sports || []).map(s => [s.id, s]));
+      const sportsMap = new Map((sports || []).map(sp => [sp.id, sp]));
 
       const teamsData: Team[] = [];
 
@@ -162,7 +167,7 @@ export default function ParentMyTeamsScreen() {
         const teamAssignment = teamAssignments.find(ta => ta.team_id === teamId);
         const team = teamAssignment?.teams as any;
         const season = team?.seasons as any;
-        
+
         if (!team || !season) continue;
 
         const sport = sportsMap.get(season.sport_id);
@@ -243,7 +248,7 @@ export default function ParentMyTeamsScreen() {
           season_name: season.name,
           sport_id: season.sport_id,
           sport_name: sport?.name || '',
-          sport_icon: sport?.icon || '🏆',
+          sport_icon: sport?.icon || '\uD83C\uDFC6',
           sport_color: sport?.color_primary || '#FFD700',
           my_children: myChildrenOnTeam,
           teammates,
@@ -315,108 +320,63 @@ export default function ParentMyTeamsScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent', justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color={colors.primary} />
+      <SafeAreaView style={s.container}>
+        <View style={s.loadingWrap}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }}>
+    <SafeAreaView style={s.container}>
       {/* Header */}
-      <View style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.border,
-      }}>
+      <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={{ fontSize: 18, fontWeight: '800', color: colors.text }}>My Teams</Text>
+        <Text style={s.headerTitle}>My Teams</Text>
         <View style={{ width: 24 }} />
       </View>
 
       <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 16 }}
+        style={s.scroll}
+        contentContainerStyle={s.scrollContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         {teams.length === 0 ? (
-          <View style={{
-            backgroundColor: colors.glassCard,
-            borderRadius: 16,
-            padding: 32,
-            alignItems: 'center',
-            borderWidth: 1,
-            borderColor: colors.glassBorder,
-          }}>
+          <View style={s.emptyCard}>
             <Ionicons name="people-outline" size={48} color={colors.textSecondary} />
-            <Text style={{ color: colors.textSecondary, marginTop: 12, fontSize: 16, textAlign: 'center' }}>
-              No team assignments yet
-            </Text>
-            <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 13, textAlign: 'center' }}>
+            <Text style={s.emptyTitle}>No team assignments yet</Text>
+            <Text style={s.emptySubtext}>
               Once your child is assigned to a team, you'll see the roster here.
             </Text>
           </View>
         ) : (
           teams.map(team => {
             const isExpanded = expandedTeams.has(team.id);
-            
+
             return (
-              <View
-                key={team.id}
-                style={{
-                  backgroundColor: colors.glassCard,
-                  borderRadius: 16,
-                  marginBottom: 12,
-                  overflow: 'hidden',
-                  borderWidth: 1,
-                  borderColor: colors.glassBorder,
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.15,
-                  shadowRadius: 12,
-                  elevation: 6,
-                }}
-              >
+              <View key={team.id} style={s.teamCard}>
                 {/* Team Header */}
                 <TouchableOpacity
                   onPress={() => toggleTeam(team.id)}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    padding: 16,
-                    borderBottomWidth: isExpanded ? 1 : 0,
-                    borderBottomColor: colors.border,
-                  }}
+                  style={[s.teamHeader, isExpanded && s.teamHeaderExpanded]}
                 >
-                  <View style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 24,
-                    backgroundColor: team.sport_color + '20',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    marginRight: 12,
-                  }}>
-                    <Text style={{ fontSize: 24 }}>{team.sport_icon}</Text>
+                  <View style={[s.sportBadge, { backgroundColor: team.sport_color + '20' }]}>
+                    <Text style={s.sportIcon}>{team.sport_icon}</Text>
                   </View>
-                  
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>
-                      {team.name}
-                    </Text>
-                    <Text style={{ fontSize: 13, color: team.sport_color, marginTop: 2 }}>
+
+                  <View style={s.teamInfo}>
+                    <Text style={s.teamName}>{team.name}</Text>
+                    <Text style={[s.teamSport, { color: team.sport_color }]}>
                       {team.sport_name} • {team.season_name}
                     </Text>
-                    <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>
+                    <Text style={s.teamDetail}>
                       {team.my_children.join(', ')}'s team • {team.teammates.length} players
                     </Text>
                   </View>
-                  
+
                   <Ionicons
                     name={isExpanded ? 'chevron-up' : 'chevron-down'}
                     size={24}
@@ -426,50 +386,24 @@ export default function ParentMyTeamsScreen() {
 
                 {/* Expanded Content */}
                 {isExpanded && (
-                  <View style={{ padding: 16 }}>
+                  <View style={s.expandedContent}>
                     {/* Coaches Section */}
                     {team.coaches.length > 0 && (
-                      <View style={{ marginBottom: 16 }}>
-                        <Text style={{
-                          fontSize: 12,
-                          fontWeight: '700',
-                          color: colors.textSecondary,
-                          marginBottom: 8,
-                          textTransform: 'uppercase',
-                          letterSpacing: 1.5,
-                        }}>
-                          Coaches
-                        </Text>
+                      <View style={s.sectionWrap}>
+                        <Text style={s.sectionLabel}>Coaches</Text>
                         {team.coaches.map(coach => (
                           <TouchableOpacity
                             key={coach.id}
                             onPress={() => handleContact(coach.full_name, coach.phone || '', coach.email)}
-                            style={{
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                              backgroundColor: colors.background,
-                              borderRadius: 8,
-                              padding: 12,
-                              marginBottom: 8,
-                            }}
+                            style={s.coachRow}
                           >
-                            <View style={{
-                              width: 40,
-                              height: 40,
-                              borderRadius: 20,
-                              backgroundColor: colors.primary + '20',
-                              justifyContent: 'center',
-                              alignItems: 'center',
-                              marginRight: 12,
-                            }}>
+                            <View style={s.coachAvatar}>
                               <Ionicons name="person" size={20} color={colors.primary} />
                             </View>
-                            <View style={{ flex: 1 }}>
-                              <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text }}>
-                                {coach.full_name}
-                              </Text>
-                              <Text style={{ fontSize: 12, color: colors.primary, marginTop: 1 }}>
-                                {coach.role === 'head_coach' ? 'Head Coach' : 
+                            <View style={s.coachInfo}>
+                              <Text style={s.coachName}>{coach.full_name}</Text>
+                              <Text style={s.coachRole}>
+                                {coach.role === 'head_coach' ? 'Head Coach' :
                                  coach.role === 'assistant_coach' ? 'Assistant Coach' : 'Coach'}
                               </Text>
                             </View>
@@ -480,17 +414,8 @@ export default function ParentMyTeamsScreen() {
                     )}
 
                     {/* Roster Section */}
-                    <Text style={{
-                      fontSize: 12,
-                      fontWeight: '700',
-                      color: colors.textSecondary,
-                      marginBottom: 8,
-                      textTransform: 'uppercase',
-                      letterSpacing: 1.5,
-                    }}>
-                      Roster ({team.teammates.length})
-                    </Text>
-                    
+                    <Text style={s.sectionLabel}>Roster ({team.teammates.length})</Text>
+
                     {team.teammates.map((player, index) => (
                       <TouchableOpacity
                         key={player.id}
@@ -500,65 +425,44 @@ export default function ParentMyTeamsScreen() {
                           player.parent_email
                         )}
                         disabled={player.is_my_child}
-                        style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          paddingVertical: 10,
-                          borderBottomWidth: index < team.teammates.length - 1 ? 1 : 0,
-                          borderBottomColor: colors.border,
-                        }}
+                        style={[
+                          s.playerRow,
+                          index < team.teammates.length - 1 && s.playerRowBorder,
+                        ]}
                       >
                         {/* Jersey Number */}
-                        <View style={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: 8,
-                          backgroundColor: player.is_my_child ? team.sport_color + '30' : colors.background,
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                          marginRight: 12,
-                          borderWidth: player.is_my_child ? 2 : 0,
-                          borderColor: team.sport_color,
-                        }}>
-                          <Text style={{
-                            fontSize: 14,
-                            fontWeight: '700',
-                            color: player.is_my_child ? team.sport_color : colors.text,
-                          }}>
+                        <View style={[
+                          s.jerseyBadge,
+                          player.is_my_child
+                            ? { backgroundColor: team.sport_color + '30', borderWidth: 2, borderColor: team.sport_color }
+                            : {},
+                        ]}>
+                          <Text style={[
+                            s.jerseyText,
+                            player.is_my_child && { color: team.sport_color },
+                          ]}>
                             {player.jersey_number || '—'}
                           </Text>
                         </View>
-                        
+
                         {/* Player Info */}
-                        <View style={{ flex: 1 }}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <Text style={{
-                              fontSize: 15,
-                              fontWeight: player.is_my_child ? '600' : '500',
-                              color: colors.text,
-                            }}>
+                        <View style={s.playerInfo}>
+                          <View style={s.playerNameRow}>
+                            <Text style={s.playerName}>
                               {player.first_name} {player.last_name}
                             </Text>
                             {player.is_my_child && (
-                              <View style={{
-                                backgroundColor: team.sport_color,
-                                paddingHorizontal: 6,
-                                paddingVertical: 2,
-                                borderRadius: 4,
-                                marginLeft: 8,
-                              }}>
-                                <Text style={{ fontSize: 9, fontWeight: '700', color: '#fff' }}>
-                                  MY CHILD
-                                </Text>
+                              <View style={[s.myChildBadge, { backgroundColor: team.sport_color }]}>
+                                <Text style={s.myChildText}>MY CHILD</Text>
                               </View>
                             )}
                           </View>
-                          <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 1 }}>
+                          <Text style={s.playerMeta}>
                             Grade {player.grade}
                             {player.position ? ` • ${player.position}` : ''}
                           </Text>
                         </View>
-                        
+
                         {/* Contact Icon (for other players) */}
                         {!player.is_my_child && player.parent_phone && (
                           <Ionicons name="chatbubble-outline" size={18} color={colors.textSecondary} />
@@ -580,27 +484,11 @@ export default function ParentMyTeamsScreen() {
         transparent={true}
         onRequestClose={() => setContactModalVisible(false)}
       >
-        <View style={{
-          flex: 1,
-          backgroundColor: 'rgba(0,0,0,0.6)',
-          justifyContent: 'flex-end',
-        }}>
-          <View style={{
-            backgroundColor: colors.card,
-            borderTopLeftRadius: 24,
-            borderTopRightRadius: 24,
-            padding: 24,
-            paddingBottom: 40,
-          }}>
-            <View style={{ alignItems: 'center', marginBottom: 20 }}>
-              <View style={{
-                width: 40,
-                height: 4,
-                backgroundColor: colors.border,
-                borderRadius: 2,
-                marginBottom: 16,
-              }} />
-              <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text }}>
+        <View style={s.modalOverlay}>
+          <View style={s.modalSheet}>
+            <View style={s.modalTop}>
+              <View style={s.modalHandle} />
+              <Text style={s.modalTitle}>
                 Contact {selectedContact?.name}
               </Text>
             </View>
@@ -609,39 +497,19 @@ export default function ParentMyTeamsScreen() {
               <>
                 <TouchableOpacity
                   onPress={() => handleCall(selectedContact.phone)}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    backgroundColor: colors.background,
-                    padding: 16,
-                    borderRadius: 12,
-                    marginBottom: 10,
-                  }}
+                  style={s.contactAction}
                 >
-                  <Ionicons name="call" size={22} color="#34C759" />
-                  <Text style={{ flex: 1, marginLeft: 12, fontSize: 16, color: colors.text }}>
-                    Call
-                  </Text>
-                  <Text style={{ fontSize: 14, color: colors.textSecondary }}>
-                    {selectedContact.phone}
-                  </Text>
+                  <Ionicons name="call" size={22} color={colors.success} />
+                  <Text style={s.contactActionLabel}>Call</Text>
+                  <Text style={s.contactActionDetail}>{selectedContact.phone}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   onPress={() => handleText(selectedContact.phone)}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    backgroundColor: colors.background,
-                    padding: 16,
-                    borderRadius: 12,
-                    marginBottom: 10,
-                  }}
+                  style={s.contactAction}
                 >
-                  <Ionicons name="chatbubble" size={22} color="#5AC8FA" />
-                  <Text style={{ flex: 1, marginLeft: 12, fontSize: 16, color: colors.text }}>
-                    Text Message
-                  </Text>
+                  <Ionicons name="chatbubble" size={22} color={colors.info} />
+                  <Text style={s.contactActionLabel}>Text Message</Text>
                 </TouchableOpacity>
               </>
             )}
@@ -649,20 +517,11 @@ export default function ParentMyTeamsScreen() {
             {selectedContact?.email && (
               <TouchableOpacity
                 onPress={() => handleEmail(selectedContact.email)}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  backgroundColor: colors.background,
-                  padding: 16,
-                  borderRadius: 12,
-                  marginBottom: 10,
-                }}
+                style={s.contactAction}
               >
-                <Ionicons name="mail" size={22} color="#FF9500" />
-                <Text style={{ flex: 1, marginLeft: 12, fontSize: 16, color: colors.text }}>
-                  Email
-                </Text>
-                <Text style={{ fontSize: 12, color: colors.textSecondary }} numberOfLines={1}>
+                <Ionicons name="mail" size={22} color={colors.warning} />
+                <Text style={s.contactActionLabel}>Email</Text>
+                <Text style={s.contactActionDetailSmall} numberOfLines={1}>
                   {selectedContact.email}
                 </Text>
               </TouchableOpacity>
@@ -670,15 +529,9 @@ export default function ParentMyTeamsScreen() {
 
             <TouchableOpacity
               onPress={() => setContactModalVisible(false)}
-              style={{
-                backgroundColor: colors.border,
-                padding: 16,
-                borderRadius: 12,
-                alignItems: 'center',
-                marginTop: 10,
-              }}
+              style={s.cancelBtn}
             >
-              <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>Cancel</Text>
+              <Text style={s.cancelBtnText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -686,3 +539,278 @@ export default function ParentMyTeamsScreen() {
     </SafeAreaView>
   );
 }
+
+// =============================================================================
+// STYLES
+// =============================================================================
+
+const createStyles = (colors: any) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: 'transparent',
+    },
+    loadingWrap: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: spacing.screenPadding,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    headerTitle: {
+      ...displayTextStyle,
+      fontSize: 18,
+      color: colors.text,
+    },
+    scroll: {
+      flex: 1,
+    },
+    scrollContent: {
+      padding: spacing.screenPadding,
+    },
+
+    // Empty state
+    emptyCard: {
+      backgroundColor: colors.glassCard,
+      borderRadius: radii.card,
+      padding: 32,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.glassBorder,
+    },
+    emptyTitle: {
+      color: colors.textSecondary,
+      marginTop: 12,
+      fontSize: 16,
+      textAlign: 'center',
+      fontFamily: FONTS.bodySemiBold,
+    },
+    emptySubtext: {
+      color: colors.textSecondary,
+      marginTop: 4,
+      fontSize: 13,
+      textAlign: 'center',
+    },
+
+    // Team card
+    teamCard: {
+      backgroundColor: colors.glassCard,
+      borderRadius: radii.card,
+      marginBottom: 12,
+      overflow: 'hidden',
+      borderWidth: 1,
+      borderColor: colors.glassBorder,
+      ...shadows.card,
+    },
+    teamHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      padding: spacing.screenPadding,
+    },
+    teamHeaderExpanded: {
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    sportBadge: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: 12,
+    },
+    sportIcon: {
+      fontSize: 24,
+    },
+    teamInfo: {
+      flex: 1,
+    },
+    teamName: {
+      fontSize: 16,
+      fontFamily: FONTS.bodySemiBold,
+      color: colors.text,
+    },
+    teamSport: {
+      fontSize: 13,
+      marginTop: 2,
+    },
+    teamDetail: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+
+    // Expanded content
+    expandedContent: {
+      padding: spacing.screenPadding,
+    },
+    sectionWrap: {
+      marginBottom: 16,
+    },
+    sectionLabel: {
+      fontSize: 12,
+      fontFamily: FONTS.bodyBold,
+      color: colors.textSecondary,
+      marginBottom: 8,
+      textTransform: 'uppercase',
+      letterSpacing: 1.5,
+    },
+
+    // Coach rows
+    coachRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+      borderRadius: 8,
+      padding: 12,
+      marginBottom: 8,
+    },
+    coachAvatar: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: colors.primary + '20',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: 12,
+    },
+    coachInfo: {
+      flex: 1,
+    },
+    coachName: {
+      fontSize: 15,
+      fontFamily: FONTS.bodySemiBold,
+      color: colors.text,
+    },
+    coachRole: {
+      fontSize: 12,
+      color: colors.primary,
+      marginTop: 1,
+    },
+
+    // Player rows
+    playerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 10,
+    },
+    playerRowBorder: {
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    jerseyBadge: {
+      width: 36,
+      height: 36,
+      borderRadius: 8,
+      backgroundColor: colors.background,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: 12,
+    },
+    jerseyText: {
+      fontSize: 14,
+      fontFamily: FONTS.bodyBold,
+      color: colors.text,
+    },
+    playerInfo: {
+      flex: 1,
+    },
+    playerNameRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    playerName: {
+      fontSize: 15,
+      fontFamily: FONTS.bodySemiBold,
+      color: colors.text,
+    },
+    myChildBadge: {
+      paddingHorizontal: 6,
+      paddingVertical: 2,
+      borderRadius: 4,
+      marginLeft: 8,
+    },
+    myChildText: {
+      fontSize: 9,
+      fontFamily: FONTS.bodyBold,
+      color: colors.background,
+    },
+    playerMeta: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      marginTop: 1,
+    },
+
+    // Contact modal
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.6)',
+      justifyContent: 'flex-end',
+    },
+    modalSheet: {
+      backgroundColor: colors.card,
+      borderTopLeftRadius: 24,
+      borderTopRightRadius: 24,
+      padding: 24,
+      paddingBottom: 40,
+    },
+    modalTop: {
+      alignItems: 'center',
+      marginBottom: 20,
+    },
+    modalHandle: {
+      width: 40,
+      height: 4,
+      backgroundColor: colors.textMuted + '40',
+      borderRadius: 2,
+      marginBottom: 16,
+    },
+    modalTitle: {
+      ...displayTextStyle,
+      fontSize: 18,
+      color: colors.text,
+    },
+    contactAction: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+      padding: 16,
+      borderRadius: 12,
+      marginBottom: 10,
+    },
+    contactActionLabel: {
+      flex: 1,
+      marginLeft: 12,
+      fontSize: 16,
+      color: colors.text,
+      fontFamily: FONTS.bodySemiBold,
+    },
+    contactActionDetail: {
+      fontSize: 14,
+      color: colors.textSecondary,
+    },
+    contactActionDetailSmall: {
+      fontSize: 12,
+      color: colors.textSecondary,
+    },
+    cancelBtn: {
+      backgroundColor: colors.glassCard,
+      padding: 16,
+      borderRadius: 12,
+      alignItems: 'center',
+      marginTop: 10,
+      borderWidth: 1,
+      borderColor: colors.glassBorder,
+    },
+    cancelBtnText: {
+      fontSize: 16,
+      fontFamily: FONTS.bodySemiBold,
+      color: colors.text,
+    },
+  });

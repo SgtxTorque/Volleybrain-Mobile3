@@ -1,11 +1,15 @@
+import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { useTheme } from '@/lib/theme';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
 import {
   Alert,
+  Image,
   Linking,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -13,9 +17,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-// ================================================================
-// COMPONENT
-// ================================================================
+const WEB_FEATURES = [
+  { icon: 'bar-chart-outline' as const, label: 'Advanced reporting & data export' },
+  { icon: 'settings-outline' as const, label: 'Organization settings' },
+  { icon: 'layers-outline' as const, label: 'Bulk data management' },
+  { icon: 'card-outline' as const, label: 'Stripe payment configuration' },
+];
 
 export default function WebFeaturesScreen() {
   const { colors } = useTheme();
@@ -26,119 +33,162 @@ export default function WebFeaturesScreen() {
     webUrl?: string;
   }>();
 
-  const styles = createStyles(colors);
+  const s = createStyles(colors);
   const title = featureName || 'Web Feature';
 
   const handleOpenWeb = () => {
-    if (webUrl) {
-      Linking.openURL(webUrl);
-    } else {
-      Alert.alert(
-        'Web Portal',
-        'Open your web browser to access this feature.',
-      );
-    }
+    const url = webUrl || 'https://thelynxapp.com';
+    Linking.openURL(url).catch(() => {
+      Alert.alert('Web Portal', 'Open your web browser to access this feature.');
+    });
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={s.container} edges={['top']}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+      <View style={s.header}>
+        <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>
-          {title}
-        </Text>
+        <Text style={s.headerTitle} numberOfLines={1}>{title}</Text>
+        <View style={s.backBtn} />
       </View>
 
-      {/* Centered content */}
-      <View style={styles.content}>
-        <View style={styles.iconCircle}>
-          <Ionicons name="globe-outline" size={40} color={colors.primary} />
+      <ScrollView style={s.scroll} contentContainerStyle={s.scrollContent}>
+        {/* Mascot */}
+        <View style={s.mascotWrap}>
+          <Image
+            source={require('@/assets/images/mascot/laptoplynx.png')}
+            style={s.mascot}
+            resizeMode="contain"
+          />
         </View>
 
-        <Text style={styles.featureName}>{title}</Text>
+        <Text style={s.headline}>Some features work best on the big screen!</Text>
 
         {description ? (
-          <Text style={styles.description}>{description}</Text>
+          <Text style={s.description}>{description}</Text>
         ) : (
-          <Text style={styles.description}>
-            This feature is available on the web portal.
+          <Text style={s.description}>
+            This feature is available on the web portal for the best experience.
           </Text>
         )}
 
-        <TouchableOpacity style={styles.primaryBtn} onPress={handleOpenWeb}>
-          <Ionicons name="open-outline" size={20} color="#fff" />
-          <Text style={styles.primaryBtnText}>Open Web Portal</Text>
+        {/* Web-only features list */}
+        <View style={s.featureCard}>
+          {WEB_FEATURES.map((feature, index) => (
+            <View key={index} style={[s.featureRow, index < WEB_FEATURES.length - 1 && s.featureRowBorder]}>
+              <View style={s.featureIconWrap}>
+                <Ionicons name={feature.icon} size={20} color={colors.primary} />
+              </View>
+              <Text style={s.featureLabel}>{feature.label}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* CTA buttons */}
+        <TouchableOpacity style={s.primaryBtn} onPress={handleOpenWeb}>
+          <Ionicons name="open-outline" size={20} color={colors.background} />
+          <Text style={s.primaryBtnText}>Open Web Dashboard</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.secondaryBtn}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.secondaryBtnText}>Go Back</Text>
+        <TouchableOpacity style={s.secondaryBtn} onPress={() => router.back()}>
+          <Text style={s.secondaryBtnText}>Go Back</Text>
         </TouchableOpacity>
-      </View>
+
+        <View style={{ height: 40 }} />
+      </ScrollView>
     </SafeAreaView>
   );
 }
-
-// ================================================================
-// STYLES
-// ================================================================
 
 const createStyles = (colors: any) =>
   StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: 'transparent',
     },
     header: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      gap: 12,
+      justifyContent: 'space-between',
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
     },
     backBtn: {
-      padding: 4,
+      width: 40,
+      height: 40,
+      justifyContent: 'center',
+      alignItems: 'center',
     },
     headerTitle: {
+      ...displayTextStyle,
       fontSize: 18,
-      fontWeight: '700',
       color: colors.text,
+    },
+    scroll: {
       flex: 1,
     },
-    content: {
-      flex: 1,
+    scrollContent: {
+      padding: spacing.screenPadding,
       alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: 32,
-      paddingBottom: 60,
     },
-    iconCircle: {
-      width: 80,
-      height: 80,
-      borderRadius: 40,
-      backgroundColor: colors.primary + '33',
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginBottom: 24,
+    mascotWrap: {
+      marginTop: 16,
+      marginBottom: 20,
     },
-    featureName: {
-      fontSize: 24,
-      fontWeight: '800',
+    mascot: {
+      width: 160,
+      height: 160,
+    },
+    headline: {
+      ...displayTextStyle,
+      fontSize: 22,
       color: colors.text,
       textAlign: 'center',
       marginBottom: 12,
     },
     description: {
-      fontSize: 16,
+      fontSize: 15,
       color: colors.textSecondary,
       textAlign: 'center',
-      lineHeight: 24,
-      marginBottom: 32,
+      lineHeight: 22,
+      marginBottom: 24,
+    },
+    featureCard: {
+      width: '100%',
+      backgroundColor: colors.glassCard,
+      borderRadius: radii.card,
+      borderWidth: 1,
+      borderColor: colors.glassBorder,
+      marginBottom: 28,
+      ...shadows.card,
+    },
+    featureRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+    },
+    featureRowBorder: {
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    featureIconWrap: {
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      backgroundColor: colors.primary + '15',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: 12,
+    },
+    featureLabel: {
+      flex: 1,
+      fontSize: 15,
+      color: colors.text,
+      fontFamily: FONTS.bodySemiBold,
     },
     primaryBtn: {
       flexDirection: 'row',
@@ -163,14 +213,14 @@ const createStyles = (colors: any) =>
     },
     primaryBtnText: {
       fontSize: 16,
-      fontWeight: '700',
-      color: '#fff',
+      fontFamily: FONTS.bodyBold,
+      color: colors.background,
     },
     secondaryBtn: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: colors.card,
+      backgroundColor: colors.glassCard,
       borderRadius: 14,
       paddingVertical: 14,
       paddingHorizontal: 24,
@@ -180,7 +230,7 @@ const createStyles = (colors: any) =>
     },
     secondaryBtnText: {
       fontSize: 16,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
       color: colors.text,
     },
   });

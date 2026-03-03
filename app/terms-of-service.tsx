@@ -1,4 +1,6 @@
+import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { useTheme } from '@/lib/theme';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
@@ -190,8 +192,8 @@ const createStyles = (colors: any) =>
       alignItems: 'center',
     },
     headerTitle: {
+      ...displayTextStyle,
       fontSize: 18,
-      fontWeight: '600',
       color: colors.text,
     },
     scroll: {
@@ -214,24 +216,20 @@ const createStyles = (colors: any) =>
     updatedText: {
       fontSize: 14,
       color: colors.textMuted,
-      fontWeight: '500',
+      fontFamily: FONTS.bodySemiBold,
     },
     sectionCard: {
       backgroundColor: colors.glassCard,
-      borderRadius: 16,
-      padding: 16,
+      borderRadius: radii.card,
+      padding: spacing.screenPadding,
       marginBottom: 12,
       borderWidth: 1,
       borderColor: colors.glassBorder,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.15,
-      shadowRadius: 12,
-      elevation: 6,
+      ...shadows.card,
     },
     sectionTitle: {
       fontSize: 16,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
       color: colors.text,
       marginBottom: 10,
     },
@@ -239,7 +237,7 @@ const createStyles = (colors: any) =>
       fontSize: 14,
       color: colors.textSecondary,
       lineHeight: 22,
-      marginBottom: 4,
+      marginBottom: 10,
     },
     bulletRow: {
       flexDirection: 'row',
@@ -268,7 +266,7 @@ const createStyles = (colors: any) =>
     },
     understandBtnText: {
       fontSize: 16,
-      fontWeight: '600',
-      color: '#000',
+      fontFamily: FONTS.bodySemiBold,
+      color: colors.background,
     },
   });

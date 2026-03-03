@@ -1,10 +1,12 @@
 import PlayerCard from '@/components/PlayerCard';
 import PlayerCardExpanded, { PlayerCardPlayer } from '@/components/PlayerCardExpanded';
 import PlayerStatBar from '@/components/PlayerStatBar';
+import { displayTextStyle, spacing } from '@/lib/design-tokens';
 import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import {
@@ -58,12 +60,9 @@ export default function PlayersScreen() {
 
   const fetchData = async () => {
     if (!workingSeason) {
-      if (__DEV__) console.log('No working season');
       setLoading(false);
       return;
     }
-
-    if (__DEV__) console.log('Fetching data for season:', workingSeason.id, workingSeason.name);
 
     try {
       // Fetch teams
@@ -73,9 +72,7 @@ export default function PlayersScreen() {
         .eq('season_id', workingSeason.id)
         .order('name');
 
-      if (teamsError) {
-        if (__DEV__) console.error('Teams fetch error:', teamsError);
-      }
+      if (teamsError && __DEV__) console.error('Teams fetch error:', teamsError);
 
       const formattedTeams: Team[] = (teamsData || []).map(t => ({
         id: t.id,
@@ -84,7 +81,6 @@ export default function PlayersScreen() {
         age_group_name: null,
       }));
       setTeams(formattedTeams);
-      if (__DEV__) console.log('Teams loaded:', formattedTeams.length);
 
       // Fetch players - simpler query first
       const { data: playersData, error: playersError } = await supabase
@@ -98,8 +94,6 @@ export default function PlayersScreen() {
         setLoading(false);
         return;
       }
-
-      if (__DEV__) console.log('Players raw data:', playersData?.length);
 
       // Fetch team_players separately
       const { data: teamPlayersData } = await supabase
@@ -143,7 +137,6 @@ export default function PlayersScreen() {
         };
       });
       
-      if (__DEV__) console.log('Formatted players:', formattedPlayers.length);
       setPlayers(formattedPlayers);
 
     } catch (error) {
@@ -440,47 +433,47 @@ const createStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16 },
-  title: { fontSize: 28, fontWeight: '800', color: colors.text },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: spacing.screenPadding, paddingTop: 8, paddingBottom: 16 },
+  title: { fontSize: 28, ...displayTextStyle, color: colors.text },
   subtitle: { fontSize: 14, color: colors.primary, marginTop: 2 },
   addBtn: { backgroundColor: colors.primary, width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
 
-  filterBar: { paddingHorizontal: 16, marginBottom: 12 },
+  filterBar: { paddingHorizontal: spacing.screenPadding, marginBottom: 12 },
   searchBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.glassCard, borderRadius: 12, paddingHorizontal: 12, height: 44, borderWidth: 1, borderColor: colors.glassBorder },
   searchInput: { flex: 1, marginLeft: 8, fontSize: 16, color: colors.text },
 
-  teamFilter: { paddingHorizontal: 16, marginBottom: 12, maxHeight: 40 },
+  teamFilter: { paddingHorizontal: spacing.screenPadding, marginBottom: 12, maxHeight: 40 },
   teamChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, marginRight: 8, borderWidth: 1, borderColor: colors.border },
   teamChipActive: { backgroundColor: colors.primary + '20', borderColor: colors.primary },
   teamChipText: { fontSize: 13, color: colors.textMuted },
-  teamChipTextActive: { color: colors.primary, fontWeight: '600' },
+  teamChipTextActive: { color: colors.primary, fontFamily: FONTS.bodySemiBold },
   teamDot: { width: 8, height: 8, borderRadius: 4, marginRight: 6 },
 
-  viewToggle: { flexDirection: 'row', justifyContent: 'center', gap: 4, marginBottom: 12, paddingHorizontal: 16 },
+  viewToggle: { flexDirection: 'row', justifyContent: 'center', gap: 4, marginBottom: 12, paddingHorizontal: spacing.screenPadding },
   viewBtn: { width: 44, height: 36, borderRadius: 8, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.card },
   viewBtnActive: { backgroundColor: colors.primary + '20' },
 
-  gridRow: { justifyContent: 'space-between', paddingHorizontal: 16, marginBottom: 12 },
+  gridRow: { justifyContent: 'space-between', paddingHorizontal: spacing.screenPadding, marginBottom: 12 },
   listContent: { paddingBottom: 100 },
 
-  lineupScroll: { flex: 1, paddingHorizontal: 16 },
+  lineupScroll: { flex: 1, paddingHorizontal: spacing.screenPadding },
   lineupTeam: { marginBottom: 24 },
-  lineupHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12, marginBottom: 12 },
-  lineupTeamName: { fontSize: 18, fontWeight: 'bold', color: '#fff' },
-  lineupCount: { fontSize: 13, color: 'rgba(255,255,255,0.8)' },
+  lineupHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: spacing.screenPadding, paddingVertical: 12, borderRadius: 12, marginBottom: 12 },
+  lineupTeamName: { fontSize: 18, ...displayTextStyle, color: colors.background },
+  lineupCount: { fontSize: 13, color: colors.background, opacity: 0.8 },
   lineupGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
 
   empty: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
   emptyText: { fontSize: 16, color: colors.textMuted, marginTop: 12 },
   emptyBtn: { backgroundColor: colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, marginTop: 16 },
-  emptyBtnText: { fontSize: 16, fontWeight: '600', color: colors.background },
+  emptyBtnText: { fontSize: 16, fontFamily: FONTS.bodySemiBold, color: colors.background },
 
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   modal: { backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  modalTitle: { fontSize: 20, fontWeight: 'bold', color: colors.text },
+  modalTitle: { fontSize: 20, ...displayTextStyle, color: colors.text },
   modalContent: { alignItems: 'center', paddingVertical: 20 },
   modalText: { fontSize: 15, color: colors.textMuted, textAlign: 'center', marginBottom: 20 },
   modalBtn: { backgroundColor: colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
-  modalBtnText: { fontSize: 16, fontWeight: '600', color: colors.background },
+  modalBtnText: { fontSize: 16, fontFamily: FONTS.bodySemiBold, color: colors.background },
 });

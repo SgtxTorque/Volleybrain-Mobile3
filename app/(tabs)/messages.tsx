@@ -1,5 +1,6 @@
 import { useAuth } from '@/lib/auth';
 import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
+import { FONTS } from '@/theme/fonts';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
@@ -111,7 +112,10 @@ export default function MessagesScreen() {
         </View>
 
         {messages.length === 0 ? (
-          <View style={s.empty}><Text style={s.emptyText}>No messages sent yet</Text></View>
+          <View style={s.empty}>
+            <Ionicons name="mail-outline" size={48} color={colors.textMuted} style={s.emptyIcon} />
+            <Text style={s.emptyText}>No messages sent yet</Text>
+          </View>
         ) : (
           messages.map(message => (
             <TouchableOpacity key={message.id} style={s.messageCard}>
@@ -186,7 +190,7 @@ export default function MessagesScreen() {
                       <Text style={[s.priorityTxt, priority === 'normal' && s.priorityTxtSel]}>Normal</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={[s.priorityBtn, priority === 'urgent' && s.priorityUrgent]} onPress={() => setPriority('urgent')}>
-                      <Text style={[s.priorityTxt, priority === 'urgent' && { color: '#fff' }]}>Urgent</Text>
+                      <Text style={[s.priorityTxt, priority === 'urgent' && { color: colors.background }]}>Urgent</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -223,7 +227,7 @@ export default function MessagesScreen() {
             ) : (
               <TouchableOpacity style={[s.sendBtn, sending && s.disabled]} onPress={sendMessage} disabled={sending}>
                 <Text style={s.sendTxt}>{sending ? 'Sending...' : 'Send'}</Text>
-                <Ionicons name="send" size={18} color="#fff" />
+                <Ionicons name="send" size={18} color={colors.background} />
               </TouchableOpacity>
             )}
           </View>
@@ -234,45 +238,46 @@ export default function MessagesScreen() {
 }
 
 const createStyles = (colors: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: { flex: 1, backgroundColor: 'transparent' },
   scroll: { flex: 1, padding: spacing.screenPadding },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   title: { ...displayTextStyle, fontSize: 28, color: colors.text },
   subtitle: { fontSize: 14, color: colors.primary, marginTop: 2 },
   addBtn: { backgroundColor: colors.primary, width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
   statsRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  statBox: { flex: 1, backgroundColor: '#FFF', borderRadius: 16, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
-  statNum: { fontSize: 24, fontWeight: 'bold', color: colors.text },
-  statLabel: { fontSize: 11, color: colors.textMuted, marginTop: 4, fontWeight: '700', textTransform: 'uppercase' as const, letterSpacing: 0.5 },
+  statBox: { flex: 1, backgroundColor: colors.glassCard, borderRadius: radii.card, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.glassBorder, ...shadows.card },
+  statNum: { fontSize: 24, fontFamily: FONTS.bodyBold, color: colors.text },
+  statLabel: { fontSize: 11, color: colors.textMuted, marginTop: 4, fontFamily: FONTS.bodyBold, textTransform: 'uppercase' as const, letterSpacing: 0.5 },
   empty: { alignItems: 'center', padding: 60 },
+  emptyIcon: { marginBottom: 12 },
   emptyText: { color: colors.textMuted, fontSize: 16 },
-  messageCard: { backgroundColor: '#FFF', borderRadius: 16, padding: 16, flexDirection: 'row', marginBottom: 12, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
+  messageCard: { backgroundColor: colors.glassCard, borderRadius: radii.card, padding: 16, flexDirection: 'row', marginBottom: 12, borderWidth: 1, borderColor: colors.glassBorder, ...shadows.card },
   typeIcon: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   messageInfo: { flex: 1 },
   messageHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-  messageSubject: { fontSize: 16, fontWeight: '600', color: colors.text, flex: 1 },
+  messageSubject: { fontSize: 16, fontFamily: FONTS.bodySemiBold, color: colors.text, flex: 1 },
   urgentBadge: { backgroundColor: colors.danger, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-  urgentText: { fontSize: 9, color: '#fff', fontWeight: 'bold' },
+  urgentText: { fontSize: 9, color: colors.background, fontFamily: FONTS.bodyBold },
   messagePreview: { fontSize: 14, color: colors.textMuted, marginBottom: 4 },
   messageDate: { fontSize: 12, color: colors.textMuted },
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   modal: { backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, height: '85%' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: colors.border },
-  modalTitle: { fontSize: 18, fontWeight: 'bold', color: colors.text },
-  stepText: { fontSize: 16, color: colors.primary, fontWeight: 'bold' },
+  modalTitle: { ...displayTextStyle, fontSize: 18, color: colors.text },
+  stepText: { fontSize: 16, color: colors.primary, fontFamily: FONTS.bodyBold },
   progressBar: { height: 3, backgroundColor: colors.border },
   progressFill: { height: '100%', backgroundColor: colors.primary },
   formContent: { flex: 1, padding: 20 },
-  stepTitle: { fontSize: 20, fontWeight: 'bold', color: colors.text, marginBottom: 16 },
-  label: { fontSize: 12, color: colors.textMuted, fontWeight: '700', marginTop: 16, marginBottom: 8, textTransform: 'uppercase' as const, letterSpacing: 1 },
+  stepTitle: { ...displayTextStyle, fontSize: 20, color: colors.text, marginBottom: 16 },
+  label: { fontSize: 12, color: colors.textMuted, fontFamily: FONTS.bodyBold, marginTop: 16, marginBottom: 8, textTransform: 'uppercase' as const, letterSpacing: 1 },
   optionBtn: { backgroundColor: colors.background, borderRadius: 12, padding: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, borderWidth: 1, borderColor: colors.border },
   optionSel: { borderColor: colors.primary, backgroundColor: colors.primary + '15' },
   optionTxt: { fontSize: 16, color: colors.text },
-  optionSelTxt: { color: colors.primary, fontWeight: '600' },
+  optionSelTxt: { color: colors.primary, fontFamily: FONTS.bodySemiBold },
   teamBtn: { backgroundColor: colors.background, borderRadius: 12, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: colors.border },
   teamBtnSel: { borderColor: colors.primary, backgroundColor: colors.primary + '15' },
   teamBtnTxt: { fontSize: 14, color: colors.text, textAlign: 'center' },
-  teamBtnTxtSel: { color: colors.primary, fontWeight: '600' },
+  teamBtnTxtSel: { color: colors.primary, fontFamily: FONTS.bodySemiBold },
   optionRow: { marginTop: 16 },
   optionLabel: { fontSize: 14, color: colors.textMuted, marginBottom: 8 },
   priorityRow: { flexDirection: 'row', gap: 12 },
@@ -280,7 +285,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   priorityNormal: { borderColor: colors.primary, backgroundColor: colors.primary + '15' },
   priorityUrgent: { borderColor: colors.danger, backgroundColor: colors.danger },
   priorityTxt: { fontSize: 14, color: colors.text },
-  priorityTxtSel: { color: colors.primary, fontWeight: '600' },
+  priorityTxtSel: { color: colors.primary, fontFamily: FONTS.bodySemiBold },
   switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 20, backgroundColor: colors.background, padding: 16, borderRadius: 12 },
   switchLabel: { fontSize: 14, color: colors.text },
   input: { backgroundColor: colors.background, borderRadius: 12, padding: 16, fontSize: 16, color: colors.text, borderWidth: 1, borderColor: colors.border, marginBottom: 12 },
@@ -289,8 +294,8 @@ const createStyles = (colors: any) => StyleSheet.create({
   backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   backTxt: { color: colors.text, fontSize: 16 },
   nextBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.primary, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12 },
-  nextTxt: { color: colors.background, fontSize: 16, fontWeight: 'bold' },
-  sendBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.success, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12 },
-  sendTxt: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
+  nextTxt: { color: colors.background, fontSize: 16, fontFamily: FONTS.bodyBold },
+  sendBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.primary, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12 },
+  sendTxt: { color: colors.background, fontSize: 16, fontFamily: FONTS.bodyBold },
   disabled: { opacity: 0.5 },
 });

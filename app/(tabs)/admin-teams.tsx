@@ -2,10 +2,11 @@ import AppHeaderBar from '@/components/ui/AppHeaderBar';
 import PillTabs from '@/components/ui/PillTabs';
 import { useAuth } from '@/lib/auth';
 import { addAdminToTeamChats, createTeamChats } from '@/lib/chat-utils';
-import { radii, shadows, spacing } from '@/lib/design-tokens';
+import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -358,7 +359,7 @@ export default function AdminTeamsScreen() {
         >
           <Ionicons name="people" size={22} color={colors.primary} />
           <View style={{ flex: 1, marginLeft: 12 }}>
-            <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>All Players</Text>
+            <Text style={{ fontSize: 15, fontFamily: FONTS.bodyBold, color: colors.text }}>All Players</Text>
             <Text style={{ fontSize: 12, color: colors.textMuted }}>{totalRostered + unrosteredPlayers.length} players across {teams.length} teams</Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
@@ -375,7 +376,7 @@ export default function AdminTeamsScreen() {
             <Text style={[s.statLabel, { color: colors.textMuted }]}>Rostered</Text>
           </View>
           <View style={[s.statBox, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}>
-            <Text style={[s.statValue, { color: unrosteredPlayers.length > 0 ? '#E8913A' : colors.success }]}>{unrosteredPlayers.length}</Text>
+            <Text style={[s.statValue, { color: unrosteredPlayers.length > 0 ? colors.warning : colors.success }]}>{unrosteredPlayers.length}</Text>
             <Text style={[s.statLabel, { color: colors.textMuted }]}>Unrostered</Text>
           </View>
         </View>
@@ -466,16 +467,16 @@ export default function AdminTeamsScreen() {
                   {waiver && waiver.total > 0 && (
                     <View style={s.healthRow}>
                       <View style={[s.healthPill, {
-                        backgroundColor: waiver.compliant === waiver.total ? '#22C55E15' : '#E8913A15',
+                        backgroundColor: (waiver.compliant === waiver.total ? colors.success : colors.warning) + '15',
                       }]}>
                         <Ionicons
                           name={waiver.compliant === waiver.total ? 'shield-checkmark' : 'alert-circle'}
                           size={12}
-                          color={waiver.compliant === waiver.total ? '#22C55E' : '#E8913A'}
+                          color={waiver.compliant === waiver.total ? colors.success : colors.warning}
                         />
                         <Text style={{
-                          fontSize: 11, marginLeft: 3,
-                          color: waiver.compliant === waiver.total ? '#22C55E' : '#E8913A',
+                          fontSize: 11, marginLeft: 3, fontFamily: FONTS.bodySemiBold,
+                          color: waiver.compliant === waiver.total ? colors.success : colors.warning,
                         }}>
                           {waiver.compliant}/{waiver.total} waivers
                         </Text>
@@ -539,7 +540,7 @@ export default function AdminTeamsScreen() {
         onPress={() => { resetForm(); setShowCreateModal(true); }}
         activeOpacity={0.8}
       >
-        <Ionicons name="add" size={26} color="#FFFFFF" />
+        <Ionicons name="add" size={26} color={colors.background} />
       </TouchableOpacity>
 
       {/* Create Team Modal */}
@@ -578,7 +579,7 @@ export default function AdminTeamsScreen() {
                       onPress={() => setSelectedAgeGroup(ag.id)}
                     >
                       <Text style={[s.optionBtnText, { color: colors.textSecondary },
-                        selectedAgeGroup === ag.id && { color: '#FFF' }]}>
+                        selectedAgeGroup === ag.id && { color: colors.background }]}>
                         {ag.name}
                       </Text>
                     </TouchableOpacity>
@@ -595,7 +596,7 @@ export default function AdminTeamsScreen() {
                       onPress={() => setTeamType(tt)}
                     >
                       <Text style={[s.optionBtnText, { color: colors.textSecondary },
-                        teamType === tt && { color: '#FFF' }]}>
+                        teamType === tt && { color: colors.background }]}>
                         {tt.charAt(0).toUpperCase() + tt.slice(1)}
                       </Text>
                     </TouchableOpacity>
@@ -610,7 +611,7 @@ export default function AdminTeamsScreen() {
                       style={[s.colorBtn, { backgroundColor: c }, teamColor === c && s.colorBtnSelected]}
                       onPress={() => setTeamColor(c)}
                     >
-                      {teamColor === c && <Ionicons name="checkmark" size={16} color="#FFF" />}
+                      {teamColor === c && <Ionicons name="checkmark" size={16} color={colors.background} />}
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -633,7 +634,7 @@ export default function AdminTeamsScreen() {
                     onPress={() => setSelectedCoachId(null)}
                   >
                     <Text style={[s.optionBtnText, { color: colors.textSecondary },
-                      !selectedCoachId && { color: '#FFF' }]}>None</Text>
+                      !selectedCoachId && { color: colors.background }]}>None</Text>
                   </TouchableOpacity>
                   {coaches.map(c => (
                     <TouchableOpacity
@@ -643,7 +644,7 @@ export default function AdminTeamsScreen() {
                       onPress={() => setSelectedCoachId(c.id)}
                     >
                       <Text style={[s.optionBtnText, { color: colors.textSecondary },
-                        selectedCoachId === c.id && { color: '#FFF' }]}>
+                        selectedCoachId === c.id && { color: colors.background }]}>
                         {c.first_name} {c.last_name}
                       </Text>
                     </TouchableOpacity>
@@ -691,8 +692,8 @@ const createStyles = (colors: any) =>
       flex: 1, alignItems: 'center', paddingVertical: 12,
       borderRadius: radii.card, borderWidth: 1, ...shadows.card,
     },
-    statValue: { fontSize: 22, fontWeight: '800' },
-    statLabel: { fontSize: 11, fontWeight: '600', marginTop: 2, textTransform: 'uppercase', letterSpacing: 0.5 },
+    statValue: { fontSize: 22, fontFamily: FONTS.bodyBold },
+    statLabel: { fontSize: 11, fontFamily: FONTS.bodySemiBold, marginTop: 2, textTransform: 'uppercase', letterSpacing: 0.5 },
 
     // Search
     searchBar: {
@@ -714,9 +715,9 @@ const createStyles = (colors: any) =>
     teamStripe: { width: 4, alignSelf: 'stretch' },
     teamBody: { flex: 1, paddingVertical: 12, paddingHorizontal: 14 },
     teamRow1: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    teamName: { fontSize: 16, fontWeight: '700', flex: 1 },
+    teamName: { fontSize: 16, fontFamily: FONTS.bodyBold, flex: 1 },
     wlBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
-    wlText: { fontSize: 12, fontWeight: '700' },
+    wlText: { fontSize: 12, fontFamily: FONTS.bodyBold },
     teamMeta: { fontSize: 13, marginTop: 3 },
     nextEventRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 5 },
     nextEventText: { fontSize: 12 },
@@ -733,18 +734,18 @@ const createStyles = (colors: any) =>
       alignItems: 'center', paddingVertical: 48,
       borderRadius: radii.card, borderWidth: 1, ...shadows.card,
     },
-    emptyTitle: { fontSize: 17, fontWeight: '600', marginTop: 12 },
+    emptyTitle: { fontSize: 17, fontFamily: FONTS.bodySemiBold, marginTop: 12 },
     emptySubtext: { fontSize: 13, marginTop: 4 },
 
     // Unrostered section
     unrosteredSection: { marginTop: 16 },
-    sectionTitle: { fontSize: 13, fontWeight: '700', letterSpacing: 0.8, marginBottom: 10 },
+    sectionTitle: { fontSize: 13, fontFamily: FONTS.bodyBold, letterSpacing: 0.8, marginBottom: 10 },
     unrosteredCard: {
       flexDirection: 'row', alignItems: 'center',
       borderRadius: radii.card, borderWidth: 1, padding: 12, marginBottom: 8,
     },
     unrosteredInfo: { minWidth: 100, marginRight: 12 },
-    unrosteredName: { fontSize: 14, fontWeight: '600' },
+    unrosteredName: { fontSize: 14, fontFamily: FONTS.bodySemiBold },
     unrosteredMeta: { fontSize: 12, marginTop: 2 },
     teamPillScroll: { flex: 1 },
     teamPill: {
@@ -753,7 +754,7 @@ const createStyles = (colors: any) =>
       borderWidth: 1.5, marginRight: 6,
     },
     teamPillDot: { width: 8, height: 8, borderRadius: 4, marginRight: 5 },
-    teamPillText: { fontSize: 12, fontWeight: '600' },
+    teamPillText: { fontSize: 12, fontFamily: FONTS.bodySemiBold },
 
     // FAB
     fab: {
@@ -786,10 +787,10 @@ const createStyles = (colors: any) =>
       flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
       marginBottom: 16,
     },
-    modalTitle: { fontSize: 18, fontWeight: '700' },
+    modalTitle: { ...displayTextStyle, fontSize: 18 },
 
     // Form
-    formLabel: { fontSize: 13, fontWeight: '600', marginBottom: 6, marginTop: 14, textTransform: 'uppercase', letterSpacing: 0.5 },
+    formLabel: { fontSize: 13, fontFamily: FONTS.bodySemiBold, marginBottom: 6, marginTop: 14, textTransform: 'uppercase', letterSpacing: 0.5 },
     formInput: {
       borderWidth: 1, borderRadius: radii.card,
       paddingHorizontal: 14, paddingVertical: Platform.OS === 'ios' ? 12 : 10,
@@ -800,14 +801,14 @@ const createStyles = (colors: any) =>
       paddingHorizontal: 14, paddingVertical: 8,
       borderRadius: 16, borderWidth: 1,
     },
-    optionBtnText: { fontSize: 13, fontWeight: '600' },
+    optionBtnText: { fontSize: 13, fontFamily: FONTS.bodySemiBold },
     colorRow: { flexDirection: 'row', gap: 10, flexWrap: 'wrap' },
     colorBtn: {
       width: 34, height: 34, borderRadius: 17,
       alignItems: 'center', justifyContent: 'center',
     },
     colorBtnSelected: {
-      borderWidth: 3, borderColor: '#FFF',
+      borderWidth: 3, borderColor: colors.background,
       ...Platform.select({
         ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4 },
         android: { elevation: 4 },
@@ -818,5 +819,5 @@ const createStyles = (colors: any) =>
       alignItems: 'center', paddingVertical: 14,
       borderRadius: radii.card, marginTop: 20,
     },
-    createBtnText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
+    createBtnText: { color: colors.background, fontSize: 16, fontFamily: FONTS.bodyBold },
   });
