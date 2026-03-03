@@ -1,7 +1,6 @@
 import { useAuth } from '@/lib/auth';
 import { useDrawer } from '@/lib/drawer-context';
 import { usePermissions } from '@/lib/permissions-context';
-import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,6 +20,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { UserRole } from '@/lib/permissions';
 import { useDrawerBadges } from '@/hooks/useDrawerBadges';
 import type { DrawerBadges } from '@/hooks/useDrawerBadges';
+import { BRAND } from '@/theme/colors';
+import { FONTS } from '@/theme/fonts';
+
+const ROLE_COLORS: Record<UserRole, string> = {
+  league_admin: BRAND.coral,
+  head_coach: BRAND.teal,
+  assistant_coach: BRAND.teal,
+  parent: BRAND.skyBlue,
+  player: BRAND.goldBrand,
+};
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const DRAWER_WIDTH = Math.min(SCREEN_WIDTH * 0.82, 340);
@@ -186,7 +195,6 @@ const MENU_SECTIONS: MenuSection[] = [
 
 export default function GestureDrawer() {
   const { isOpen, closeDrawer, openDrawer } = useDrawer();
-  const { colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
   const { user, profile, organization, signOut } = useAuth();
   const { actualRoles, isAdmin, isCoach, isParent, isPlayer } = usePermissions();
@@ -418,15 +426,14 @@ export default function GestureDrawer() {
             drawerStyle,
             {
               width: DRAWER_WIDTH,
-              backgroundColor: colors.card,
               paddingTop: insets.top,
               paddingBottom: insets.bottom,
               ...Platform.select({
                 ios: {
                   shadowColor: '#000',
                   shadowOffset: { width: 4, height: 0 },
-                  shadowOpacity: 0.25,
-                  shadowRadius: 16,
+                  shadowOpacity: 0.35,
+                  shadowRadius: 20,
                 },
                 android: {
                   elevation: 16,
@@ -437,11 +444,7 @@ export default function GestureDrawer() {
         >
           {/* ====== PROFILE HEADER ====== */}
           <LinearGradient
-            colors={
-              isDark
-                ? [colors.primary + '30', colors.card, colors.card]
-                : [colors.primary + '18', colors.card, colors.card]
-            }
+            colors={[BRAND.navy, BRAND.navyDeep]}
             start={{ x: 0, y: 0 }}
             end={{ x: 0, y: 1 }}
             style={styles.profileHeader}
@@ -452,7 +455,7 @@ export default function GestureDrawer() {
               onPress={closeDrawer}
               hitSlop={12}
             >
-              <Ionicons name="close" size={22} color={colors.textMuted} />
+              <Ionicons name="close" size={22} color={BRAND.textSecondary} />
             </Pressable>
 
             {/* Avatar + Info row */}
@@ -467,7 +470,7 @@ export default function GestureDrawer() {
                 />
               ) : (
                 <LinearGradient
-                  colors={[colors.primary, colors.primary + 'CC']}
+                  colors={[BRAND.skyBlue, BRAND.teal]}
                   style={styles.avatar}
                 >
                   <Text style={styles.avatarInitial}>{firstInitial}</Text>
@@ -477,21 +480,24 @@ export default function GestureDrawer() {
               {/* Name / Roles / Org */}
               <View style={styles.profileInfo}>
                 <Text
-                  style={[styles.profileName, { color: colors.text }]}
+                  style={[styles.profileName, { color: BRAND.textLight }]}
                   numberOfLines={1}
                 >
                   {displayName}
                 </Text>
-                {roleLabels.length > 0 && (
-                  <Text
-                    style={[styles.profileRoles, { color: colors.textSecondary }]}
-                    numberOfLines={1}
-                  >
-                    {roleLabels}
-                  </Text>
+                {actualRoles.length > 0 && (
+                  <View style={styles.roleBadgeRow}>
+                    {actualRoles.map((r) => (
+                      <View key={r} style={[styles.roleBadge, { backgroundColor: ROLE_COLORS[r] + '25', borderColor: ROLE_COLORS[r] + '40' }]}>
+                        <Text style={[styles.roleBadgeText, { color: ROLE_COLORS[r] }]}>
+                          {ROLE_DISPLAY[r]}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
                 )}
                 <Text
-                  style={[styles.profileOrg, { color: colors.textMuted }]}
+                  style={[styles.profileOrg, { color: BRAND.textTertiary }]}
                   numberOfLines={1}
                 >
                   {orgName}
@@ -501,19 +507,19 @@ export default function GestureDrawer() {
 
             {/* View Profile link */}
             <TouchableOpacity
-              style={[styles.viewProfileButton, { borderColor: colors.border }]}
+              style={[styles.viewProfileButton, { borderColor: BRAND.cardBorder }]}
               onPress={handleViewProfile}
               activeOpacity={0.7}
             >
-              <Text style={[styles.viewProfileText, { color: colors.primary }]}>
+              <Text style={[styles.viewProfileText, { color: BRAND.skyBlue }]}>
                 View Profile
               </Text>
-              <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+              <Ionicons name="chevron-forward" size={14} color={BRAND.skyBlue} />
             </TouchableOpacity>
           </LinearGradient>
 
           {/* ====== SHORTCUT ROW ====== */}
-          <View style={[styles.shortcutSection, { borderBottomColor: colors.border }]}>
+          <View style={[styles.shortcutSection, { borderBottomColor: BRAND.cardBorder }]}>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -523,18 +529,18 @@ export default function GestureDrawer() {
               {shortcuts.map((s) => (
                 <TouchableOpacity
                   key={s.key}
-                  style={[styles.shortcutPill, { backgroundColor: isDark ? colors.background : colors.border + '40' }]}
+                  style={[styles.shortcutPill, { backgroundColor: BRAND.surfaceCard }]}
                   onPress={() => handleShortcutPress(s.route)}
                   activeOpacity={0.7}
                 >
                   <View style={styles.shortcutIconWrap}>
-                    <Ionicons name={s.icon} size={22} color={colors.primary} />
+                    <Ionicons name={s.icon} size={22} color={BRAND.skyBlue} />
                     {(badges[shortcutBadgeMap[s.key]] ?? 0) > 0 && (
-                      <View style={[styles.badgeDot, { backgroundColor: colors.danger }]} />
+                      <View style={[styles.badgeDot, { backgroundColor: BRAND.coral }]} />
                     )}
                   </View>
                   <Text
-                    style={[styles.shortcutLabel, { color: colors.textSecondary }]}
+                    style={[styles.shortcutLabel, { color: BRAND.textSecondary }]}
                     numberOfLines={1}
                   >
                     {s.label}
@@ -557,7 +563,7 @@ export default function GestureDrawer() {
                 <View key={section.id}>
                   {/* Section divider */}
                   {sectionIdx > 0 && (
-                    <View style={[styles.sectionDivider, { backgroundColor: colors.border }]} />
+                    <View style={[styles.sectionDivider, { backgroundColor: BRAND.cardBorder }]} />
                   )}
 
                   {/* Section header */}
@@ -567,18 +573,18 @@ export default function GestureDrawer() {
                       onPress={() => toggleSection(section.id)}
                       activeOpacity={0.7}
                     >
-                      <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+                      <Text style={styles.sectionTitle}>
                         {section.title}
                       </Text>
                       <Ionicons
                         name={isCollapsed ? 'chevron-down' : 'chevron-up'}
                         size={16}
-                        color={colors.textMuted}
+                        color={BRAND.textTertiary}
                       />
                     </TouchableOpacity>
                   ) : (
                     <View style={styles.sectionHeader}>
-                      <Text style={[styles.sectionTitle, { color: colors.textMuted }]}>
+                      <Text style={styles.sectionTitle}>
                         {section.title}
                       </Text>
                     </View>
@@ -592,31 +598,31 @@ export default function GestureDrawer() {
                       onPress={() => handleMenuItemPress(item.route)}
                       activeOpacity={0.65}
                     >
-                      <View style={[styles.menuItemIcon, { backgroundColor: isDark ? colors.background : colors.border + '50' }]}>
-                        <Ionicons name={item.icon} size={18} color={colors.primary} />
+                      <View style={[styles.menuItemIcon, { backgroundColor: BRAND.surfaceCard }]}>
+                        <Ionicons name={item.icon} size={18} color={BRAND.skyBlue} />
                       </View>
                       <Text
-                        style={[styles.menuItemLabel, { color: colors.text }]}
+                        style={styles.menuItemLabel}
                         numberOfLines={1}
                       >
                         {item.label}
                       </Text>
                       {item.badgeKey && badges[item.badgeKey] > 0 && (
-                        <View style={[styles.menuBadge, { backgroundColor: colors.danger }]}>
+                        <View style={[styles.menuBadge, { backgroundColor: BRAND.coral }]}>
                           <Text style={styles.menuBadgeText}>
                             {badges[item.badgeKey] > 99 ? '99+' : badges[item.badgeKey]}
                           </Text>
                         </View>
                       )}
                       {item.badgeKey && badgesLoading && !badges[item.badgeKey] && (
-                        <View style={[styles.menuBadgeSkeleton, { backgroundColor: colors.border }]} />
+                        <View style={[styles.menuBadgeSkeleton, { backgroundColor: BRAND.surfaceCard }]} />
                       )}
                       {item.webOnly && (
-                        <View style={[styles.webBadge, { backgroundColor: colors.primary + '20' }]}>
-                          <Text style={[styles.webBadgeText, { color: colors.primary }]}>Web</Text>
+                        <View style={[styles.webBadge, { backgroundColor: BRAND.skyBlue + '20' }]}>
+                          <Text style={[styles.webBadgeText, { color: BRAND.skyBlue }]}>Web</Text>
                         </View>
                       )}
-                      <Ionicons name="chevron-forward" size={14} color={colors.textMuted} style={styles.menuItemChevron} />
+                      <Ionicons name="chevron-forward" size={14} color={BRAND.textTertiary} style={styles.menuItemChevron} />
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -626,16 +632,16 @@ export default function GestureDrawer() {
 
           {/* ====== FOOTER ====== */}
           <View style={styles.footer}>
-            <View style={[styles.footerDivider, { backgroundColor: colors.border }]} />
+            <View style={[styles.footerDivider, { backgroundColor: BRAND.cardBorder }]} />
             <TouchableOpacity
               style={styles.signOutButton}
               onPress={handleSignOut}
               activeOpacity={0.7}
             >
-              <Ionicons name="log-out-outline" size={20} color={colors.danger} />
-              <Text style={[styles.signOutText, { color: colors.danger }]}>Sign Out</Text>
+              <Ionicons name="log-out-outline" size={20} color={BRAND.coral} />
+              <Text style={[styles.signOutText, { color: BRAND.coral }]}>Sign Out</Text>
             </TouchableOpacity>
-            <Text style={[styles.versionText, { color: colors.textMuted }]}>
+            <Text style={styles.versionText}>
               Lynx v1.0.0
             </Text>
           </View>
@@ -667,6 +673,7 @@ const styles = StyleSheet.create({
     zIndex: 1000,
     borderTopRightRadius: 20,
     borderBottomRightRadius: 20,
+    backgroundColor: BRAND.surfaceDark,
   },
   // Profile header
   profileHeader: {
@@ -698,10 +705,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: BRAND.skyBlue + '40',
   },
   avatarInitial: {
+    fontFamily: FONTS.bodyBold,
     fontSize: 22,
-    fontWeight: '700',
     color: '#fff',
   },
   profileInfo: {
@@ -710,20 +719,35 @@ const styles = StyleSheet.create({
     marginRight: 36,
   },
   profileName: {
+    fontFamily: FONTS.bodyBold,
     fontSize: 18,
-    fontWeight: '700',
     lineHeight: 22,
+    color: BRAND.textLight,
   },
-  profileRoles: {
-    fontSize: 13,
-    fontWeight: '500',
-    marginTop: 2,
-    lineHeight: 18,
+  roleBadgeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 6,
+  },
+  roleBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  roleBadgeText: {
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 10,
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
   },
   profileOrg: {
+    fontFamily: FONTS.bodyMedium,
     fontSize: 12,
-    marginTop: 1,
+    marginTop: 4,
     lineHeight: 16,
+    color: BRAND.textTertiary,
   },
   viewProfileButton: {
     flexDirection: 'row',
@@ -736,8 +760,8 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   viewProfileText: {
+    fontFamily: FONTS.bodySemiBold,
     fontSize: 13,
-    fontWeight: '600',
     marginRight: 4,
   },
   // Shortcut row
@@ -769,10 +793,11 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   shortcutLabel: {
+    fontFamily: FONTS.bodySemiBold,
     fontSize: 10,
-    fontWeight: '600',
     textAlign: 'center',
     lineHeight: 13,
+    color: BRAND.textSecondary,
   },
   // Menu sections
   menuBody: {
@@ -794,10 +819,11 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   sectionTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.8,
+    fontFamily: FONTS.bodyBold,
+    fontSize: 11,
+    letterSpacing: 1,
     textTransform: 'uppercase',
+    color: BRAND.textTertiary,
   },
   menuItem: {
     flexDirection: 'row',
@@ -811,12 +837,15 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: BRAND.cardBorder,
   },
   menuItemLabel: {
     flex: 1,
+    fontFamily: FONTS.bodyMedium,
     fontSize: 14,
-    fontWeight: '500',
     marginLeft: 12,
+    color: BRAND.textLight,
   },
   webBadge: {
     paddingHorizontal: 6,
@@ -869,14 +898,16 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   signOutText: {
+    fontFamily: FONTS.bodySemiBold,
     fontSize: 15,
-    fontWeight: '600',
     marginLeft: 10,
   },
   versionText: {
+    fontFamily: FONTS.bodyMedium,
     fontSize: 11,
     textAlign: 'center',
     paddingTop: 4,
     paddingBottom: 4,
+    color: BRAND.textTertiary,
   },
 });
