@@ -1,5 +1,3 @@
-import { useSport } from '@/lib/sport';
-import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import {
@@ -8,6 +6,8 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { BRAND } from '@/theme/colors';
+import { FONTS } from '@/theme/fonts';
 
 type Role = 'admin' | 'coach' | 'parent';
 
@@ -17,6 +17,12 @@ type Props = {
   onRoleChange: (role: Role) => void;
 };
 
+const ROLE_COLORS: Record<Role, string> = {
+  admin: BRAND.coral,
+  coach: BRAND.teal,
+  parent: BRAND.skyBlue,
+};
+
 const roleConfig = {
   admin: { icon: 'settings', label: 'Admin' },
   coach: { icon: 'clipboard', label: 'Coach' },
@@ -24,9 +30,6 @@ const roleConfig = {
 };
 
 export default function RoleSelector({ currentRole, availableRoles, onRoleChange }: Props) {
-  const { colors } = useTheme();
-  const { sportColors } = useSport();
-
   if (availableRoles.length <= 1) return null;
 
   return (
@@ -34,27 +37,27 @@ export default function RoleSelector({ currentRole, availableRoles, onRoleChange
       {availableRoles.map(role => {
         const config = roleConfig[role];
         const isActive = role === currentRole;
-        
+        const roleColor = ROLE_COLORS[role];
+
         return (
           <TouchableOpacity
             key={role}
             style={[
               styles.roleTab,
-              { 
-                backgroundColor: isActive ? sportColors.primary : colors.card,
-                borderColor: isActive ? sportColors.primary : colors.border,
-              }
+              isActive
+                ? { backgroundColor: roleColor, borderColor: roleColor }
+                : { backgroundColor: 'transparent', borderColor: roleColor },
             ]}
             onPress={() => onRoleChange(role)}
           >
-            <Ionicons 
-              name={config.icon as any} 
-              size={16} 
-              color={isActive ? colors.background : colors.textMuted} 
+            <Ionicons
+              name={config.icon as any}
+              size={16}
+              color={isActive ? '#FFFFFF' : roleColor}
             />
             <Text style={[
               styles.roleLabel,
-              { color: isActive ? colors.background : colors.textMuted }
+              { color: isActive ? '#FFFFFF' : roleColor }
             ]}>
               {config.label}
             </Text>
@@ -76,11 +79,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
-    borderWidth: 1,
+    borderWidth: 1.5,
     gap: 4,
   },
   roleLabel: {
+    fontFamily: FONTS.bodySemiBold,
     fontSize: 12,
-    fontWeight: '600',
   },
 });

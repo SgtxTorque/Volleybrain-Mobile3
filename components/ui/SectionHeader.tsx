@@ -1,7 +1,8 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useTheme } from '@/lib/theme';
 import { displayTextStyle, fontSizes, spacing } from '@/lib/design-tokens';
+import { BRAND } from '@/theme/colors';
+import { FONTS } from '@/theme/fonts';
 
 type SectionHeaderProps = {
   title: string;
@@ -10,14 +11,12 @@ type SectionHeaderProps = {
 };
 
 export default function SectionHeader({ title, action, onAction }: SectionHeaderProps) {
-  const { colors } = useTheme();
-
   return (
     <View style={styles.container}>
-      <Text style={[styles.title, { color: colors.navy }]}>{title}</Text>
+      <Text style={styles.title}>{title}</Text>
       {action && onAction && (
         <TouchableOpacity onPress={onAction} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Text style={[styles.action, { color: colors.textSecondary }]}>{action}</Text>
+          <Text style={styles.action}>{action}</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -36,9 +35,11 @@ const styles = StyleSheet.create({
   title: {
     ...displayTextStyle,
     fontSize: fontSizes.sectionHeader,
+    color: BRAND.navy,
   },
   action: {
+    fontFamily: FONTS.bodySemiBold,
     fontSize: 12,
-    fontWeight: '400',
+    color: BRAND.teal,
   },
 });

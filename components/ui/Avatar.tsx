@@ -1,5 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { BRAND } from '@/theme/colors';
+import { FONTS } from '@/theme/fonts';
 
 type AvatarProps = {
   name: string;
@@ -16,7 +18,7 @@ function getInitials(name: string): string {
   return (parts[0]?.[0] || '?').toUpperCase();
 }
 
-export default function Avatar({ name, size = 36, color = '#2C5F7C', style }: AvatarProps) {
+export default function Avatar({ name, size = 36, color = BRAND.navy, style }: AvatarProps) {
   const initials = getInitials(name);
   const fontSize = Math.round(size * 0.38);
 
@@ -29,6 +31,8 @@ export default function Avatar({ name, size = 36, color = '#2C5F7C', style }: Av
           height: size,
           borderRadius: size,
           backgroundColor: color,
+          borderWidth: 2,
+          borderColor: BRAND.cardBorder,
         },
         style,
       ]}
@@ -45,6 +49,6 @@ const styles = StyleSheet.create({
   },
   text: {
     color: '#FFFFFF',
-    fontWeight: '700',
+    fontFamily: FONTS.bodyBold,
   },
 });

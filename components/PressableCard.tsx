@@ -23,7 +23,7 @@ export default function PressableCard({
   children,
   disabled = false,
   hapticStyle = 'light',
-  scaleValue = 0.97,
+  scaleValue = 0.98,
 }: Props) {
   const scale = useRef(new Animated.Value(1)).current;
 

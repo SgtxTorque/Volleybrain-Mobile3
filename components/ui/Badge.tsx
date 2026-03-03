@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { fontSizes, radii } from '@/lib/design-tokens';
+import { FONTS } from '@/theme/fonts';
 
 type BadgeProps = {
   label: string;
@@ -25,8 +26,8 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   text: {
+    fontFamily: FONTS.bodyExtraBold,
     fontSize: fontSizes.badge,
-    fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
