@@ -52,6 +52,7 @@ import LastGameStats from './player-scroll/LastGameStats';
 import ClosingMascot from './player-scroll/ClosingMascot';
 import LevelUpCelebrationModal from './LevelUpCelebrationModal';
 import GiveShoutoutModal from './GiveShoutoutModal';
+import RoleSelector from './RoleSelector';
 
 // ─── Player Dark Theme ──────────────────────────────────────────
 export const PLAYER_THEME = {
@@ -178,6 +179,9 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
             <View style={styles.levelPill}>
               <Text style={styles.levelPillText}>LVL {data.level}</Text>
             </View>
+            <View style={styles.roleSelectorWrap}>
+              <RoleSelector />
+            </View>
             <View style={styles.compactAvatar}>
               <Text style={styles.compactAvatarText}>{initials}</Text>
             </View>
@@ -201,6 +205,14 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
         }
       >
         <View style={{ height: insets.top + 16 }} />
+
+        {/* ─── ROLE SELECTOR (in-scroll) ────────────────────── */}
+        <View style={styles.roleRow}>
+          <View style={{ flex: 1 }} />
+          <View style={styles.roleSelectorWrap}>
+            <RoleSelector />
+          </View>
+        </View>
 
         {/* ─── 1. HERO IDENTITY CARD ─────────────────────────── */}
         <HeroIdentityCard
@@ -379,6 +391,16 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: PLAYER_THEME.textPrimary,
+  },
+  roleSelectorWrap: {
+    backgroundColor: PLAYER_THEME.cardBg,
+    borderRadius: 20,
+  },
+  roleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 8,
   },
   leaderboardLink: {
     alignSelf: 'center',

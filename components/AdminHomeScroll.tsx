@@ -31,6 +31,7 @@ import { useAdminHomeData } from '@/hooks/useAdminHomeData';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 
+import RoleSelector from './RoleSelector';
 import WelcomeBriefing from './admin-scroll/WelcomeBriefing';
 import SmartQueueCard from './admin-scroll/SmartQueueCard';
 import TeamHealthTiles from './admin-scroll/TeamHealthTiles';
@@ -105,7 +106,9 @@ export default function AdminHomeScroll() {
                 <Text style={styles.urgencyBadgeText}>{data.overdueQueueCount}</Text>
               </View>
             )}
-            <Text style={styles.compactRole}>Admin</Text>
+            <View style={styles.roleSelectorWrap}>
+              <RoleSelector />
+            </View>
           </View>
         </View>
       </Animated.View>
@@ -125,6 +128,14 @@ export default function AdminHomeScroll() {
         }
       >
         <View style={{ height: insets.top + 16 }} />
+
+        {/* ─── ROLE SELECTOR (in-scroll) ────────────────────── */}
+        <View style={styles.roleRow}>
+          <View style={{ flex: 1 }} />
+          <View style={styles.roleSelectorWrap}>
+            <RoleSelector />
+          </View>
+        </View>
 
         {/* ─── 1. WELCOME BRIEFING ─────────────────────────── */}
         <WelcomeBriefing
@@ -298,10 +309,15 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
   },
-  compactRole: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: BRAND.textMuted,
+  roleSelectorWrap: {
+    backgroundColor: BRAND.navy,
+    borderRadius: 20,
+  },
+  roleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 8,
   },
   searchBar: {
     flexDirection: 'row',
