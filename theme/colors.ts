@@ -20,13 +20,27 @@ export const BRAND = {
   textMuted: 'rgba(16,40,76,0.4)',
   textFaint: 'rgba(16,40,76,0.25)',
 
+  // Extended palette
+  teal: '#2A9D8F',
+  coral: '#E76F51',
+  goldBrand: '#E9C46A',
+
   // Semantic
   success: '#22C55E',
   error: '#EF4444',
-  teal: '#14B8A6',
   warning: '#F59E0B',
 
-  // Surfaces
+  // Dark surfaces (for dark-themed screens like game day, drawer)
+  surfaceDark: '#0A1628',
+  surfaceCard: '#1A2744',
+  cardBorder: 'rgba(75, 185, 236, 0.12)',
+
+  // Dark-theme text
+  textLight: '#E8EDF4',
+  textSecondary: '#8A9AB5',
+  textTertiary: '#556B8A',
+
+  // Light surfaces
   attentionBannerBg: '#FFF8E1',
   cardBg: '#FFFFFF',
 } as const;

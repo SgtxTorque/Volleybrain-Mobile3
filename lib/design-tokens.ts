@@ -5,8 +5,8 @@ import { Platform, TextStyle, ViewStyle } from 'react-native';
 // ============================================
 
 export const fonts = {
-  display: 'Oswald-Bold',
-  body: undefined as string | undefined, // system default
+  display: 'BebasNeue_400Regular',
+  body: 'PlusJakartaSans_500Medium',
 } as const;
 
 export const fontSizes = {
@@ -26,7 +26,7 @@ export const fontSizes = {
 
 /** Condensed bold uppercase style for display headings */
 export const displayTextStyle: TextStyle = {
-  fontFamily: 'Oswald-Bold',
+  fontFamily: 'BebasNeue_400Regular',
   textTransform: 'uppercase',
   letterSpacing: 0.8,
 };
@@ -51,7 +51,7 @@ export const spacing = {
 // ============================================
 
 export const radii = {
-  card: 12,
+  card: 16,
   badge: 20,
   pillTab: 24,
   avatar: 999,
