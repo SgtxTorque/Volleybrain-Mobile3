@@ -106,6 +106,15 @@ export type PhotoPreview = {
   created_at: string;
 };
 
+export type RecentShoutout = {
+  id: string;
+  giverName: string;
+  categoryName: string;
+  categoryEmoji: string;
+  message: string | null;
+  created_at: string;
+};
+
 // ─── Hook ──────────────────────────────────────────────────────
 
 export function usePlayerHomeData(playerId: string | null) {
@@ -142,8 +151,10 @@ export function usePlayerHomeData(playerId: string | null) {
   // Personal best detection
   const [personalBest, setPersonalBest] = useState<string | null>(null);
 
-  // Feature flags for missing tables
-  const [shoutoutsAvailable] = useState(false);
+  // Shoutouts received (last 7 days)
+  const [recentShoutouts, setRecentShoutouts] = useState<RecentShoutout[]>([]);
+
+  // Feature flags
   const [challengesAvailable] = useState(false);
 
   // ─── Fetch all data ──
@@ -386,6 +397,45 @@ export function usePlayerHomeData(playerId: string | null) {
           setRecentPhotos([]);
         }
       }
+
+      // 12. Recent shoutouts received (last 7 days)
+      try {
+        const weekAgo = new Date();
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        // receiver_id in shoutouts references profiles.id
+        // players.parent_account_id links to profiles.id
+        const { data: playerLink } = await supabase
+          .from('players')
+          .select('parent_account_id')
+          .eq('id', playerId)
+          .maybeSingle();
+
+        const profileId = playerLink?.parent_account_id;
+        if (profileId) {
+          const { data: shoutouts } = await supabase
+            .from('shoutouts')
+            .select('id, message, created_at, category')
+            .eq('receiver_id', profileId)
+            .gte('created_at', weekAgo.toISOString())
+            .order('created_at', { ascending: false })
+            .limit(3);
+
+          if (shoutouts && shoutouts.length > 0) {
+            setRecentShoutouts(shoutouts.map((s: any) => ({
+              id: s.id,
+              giverName: 'Coach',
+              categoryName: s.category || 'Shoutout',
+              categoryEmoji: '\u{1F31F}',
+              message: s.message,
+              created_at: s.created_at,
+            })));
+          } else {
+            setRecentShoutouts([]);
+          }
+        }
+      } catch {
+        setRecentShoutouts([]);
+      }
     } catch (err) {
       if (__DEV__) console.error('[usePlayerHomeData] Error:', err);
     } finally {
@@ -463,7 +513,7 @@ export function usePlayerHomeData(playerId: string | null) {
     attendanceStreak,
     // Social
     recentPhotos,
-    shoutoutsAvailable,
+    recentShoutouts,
     challengesAvailable,
   };
 }

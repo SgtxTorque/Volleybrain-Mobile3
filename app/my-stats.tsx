@@ -26,6 +26,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import ShoutoutProfileSection from '@/components/ShoutoutProfileSection';
 
 // =============================================================================
 // TYPES
@@ -867,6 +868,13 @@ export default function MyStatsScreen() {
 
         {/* Skill Ratings */}
         {renderSkillsSection()}
+
+        {/* Shoutout Stats */}
+        {playerId && (
+          <View style={{ marginHorizontal: 20 }}>
+            <ShoutoutProfileSection playerId={playerId} colors={colors} />
+          </View>
+        )}
 
         <View style={{ height: 40 }} />
       </ScrollView>

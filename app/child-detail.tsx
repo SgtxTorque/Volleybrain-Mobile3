@@ -22,6 +22,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import ShoutoutProfileSection from '@/components/ShoutoutProfileSection';
 
 // =============================================================================
 // TYPES
@@ -776,6 +777,11 @@ export default function ChildDetailScreen() {
           <Text style={[s.viewAllBtnText, { color: colors.primary }]}>View All Achievements</Text>
           <Ionicons name="arrow-forward" size={16} color={colors.primary} />
         </TouchableOpacity>
+
+        {/* Shoutout Stats */}
+        {playerId && (
+          <ShoutoutProfileSection playerId={playerId} colors={colors} />
+        )}
       </View>
     </View>
   );

@@ -11,7 +11,7 @@ import Animated, {
   withDelay,
   withTiming,
 } from 'react-native-reanimated';
-import type { PlayerBadge, LastGameStats, NextEvent } from '@/hooks/usePlayerHomeData';
+import type { PlayerBadge, LastGameStats, NextEvent, RecentShoutout } from '@/hooks/usePlayerHomeData';
 
 const PT = {
   cardBg: '#10284C',
@@ -27,7 +27,7 @@ const PT = {
 };
 
 type DropItem = {
-  type: 'badge' | 'stats' | 'contextual';
+  type: 'badge' | 'stats' | 'shoutout' | 'contextual';
   icon: string;
   title: string;
   subtitle: string;
@@ -39,6 +39,7 @@ type Props = {
   lastGame: LastGameStats | null;
   nextEvent: NextEvent | null;
   attendanceStreak: number;
+  recentShoutouts?: RecentShoutout[];
 };
 
 function relativeTime(dateStr: string): string {
@@ -63,8 +64,21 @@ function buildDropItems(
   lastGame: LastGameStats | null,
   nextEvent: NextEvent | null,
   attendanceStreak: number,
+  recentShoutouts?: RecentShoutout[],
 ): DropItem[] {
   const items: DropItem[] = [];
+
+  // Recent shoutouts received (last 7 days)
+  if (recentShoutouts && recentShoutouts.length > 0) {
+    const s = recentShoutouts[0];
+    items.push({
+      type: 'shoutout',
+      icon: s.categoryEmoji || '\u{1F31F}',
+      title: `${s.giverName} gave you a ${s.categoryName} shoutout!`,
+      subtitle: s.message || `${relativeTime(s.created_at)}`,
+      tintColor: '#A855F7',
+    });
+  }
 
   // Recent badges (earned in last 7 days)
   const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
@@ -176,14 +190,18 @@ function DropCard({ item, index }: { item: DropItem; index: number }) {
   const isContextual = item.type === 'contextual';
   const bgColor = item.type === 'badge'
     ? 'rgba(255,215,0,0.06)'
-    : item.type === 'stats'
-      ? PT.cardBg
-      : 'transparent';
+    : item.type === 'shoutout'
+      ? 'rgba(168,85,247,0.08)'
+      : item.type === 'stats'
+        ? PT.cardBg
+        : 'transparent';
   const borderColor = item.type === 'badge'
     ? PT.borderGold
-    : item.type === 'stats'
-      ? PT.border
-      : 'transparent';
+    : item.type === 'shoutout'
+      ? 'rgba(168,85,247,0.15)'
+      : item.type === 'stats'
+        ? PT.border
+        : 'transparent';
 
   if (isContextual) {
     return (
@@ -214,8 +232,8 @@ function DropCard({ item, index }: { item: DropItem; index: number }) {
   );
 }
 
-export default function TheDrop({ badges, lastGame, nextEvent, attendanceStreak }: Props) {
-  const items = buildDropItems(badges, lastGame, nextEvent, attendanceStreak);
+export default function TheDrop({ badges, lastGame, nextEvent, attendanceStreak, recentShoutouts }: Props) {
+  const items = buildDropItems(badges, lastGame, nextEvent, attendanceStreak, recentShoutouts);
 
   return (
     <View style={styles.container}>

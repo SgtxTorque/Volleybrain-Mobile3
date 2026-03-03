@@ -226,6 +226,7 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           lastGame={data.lastGame}
           nextEvent={data.nextEvent}
           attendanceStreak={data.attendanceStreak}
+          recentShoutouts={data.recentShoutouts}
         />
 
         {/* ─── 4. PHOTO STRIP (if photos exist) ───────────────── */}
