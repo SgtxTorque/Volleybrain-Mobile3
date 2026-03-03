@@ -14,7 +14,7 @@
  *   9. Last Game Stats (if game stats exist)
  *  10. Closing Mascot + XP callback
  */
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -23,6 +23,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -47,6 +48,7 @@ import QuickPropsRow from './player-scroll/QuickPropsRow';
 import ActiveChallengeCard from './player-scroll/ActiveChallengeCard';
 import LastGameStats from './player-scroll/LastGameStats';
 import ClosingMascot from './player-scroll/ClosingMascot';
+import LevelUpCelebrationModal from './LevelUpCelebrationModal';
 
 // ─── Player Dark Theme ──────────────────────────────────────────
 export const PLAYER_THEME = {
@@ -80,6 +82,21 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
   const insets = useSafeAreaInsets();
   const { scrollY, scrollHandler } = useScrollAnimations();
   const data = usePlayerHomeData(playerId);
+
+  // ─── Level-up celebration ──
+  const LEVEL_KEY = `lynx_player_level_${playerId}`;
+  const [showLevelUp, setShowLevelUp] = useState(false);
+  useEffect(() => {
+    if (data.loading || !playerId || data.level <= 0) return;
+    AsyncStorage.getItem(LEVEL_KEY).then((stored) => {
+      const prev = stored ? parseInt(stored, 10) : 0;
+      if (prev > 0 && data.level > prev) {
+        setShowLevelUp(true);
+      }
+      // Always persist current level
+      AsyncStorage.setItem(LEVEL_KEY, String(data.level));
+    });
+  }, [data.loading, data.level, playerId]);
 
   const displayName = data.playerName || externalName || 'Player';
   const initials = useMemo(() => {
@@ -238,6 +255,14 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           nextEvent={data.nextEvent}
         />
       </Animated.ScrollView>
+
+      {/* ─── LEVEL-UP CELEBRATION ──────────────────────────────── */}
+      <LevelUpCelebrationModal
+        visible={showLevelUp}
+        newLevel={data.level}
+        totalXp={data.xp}
+        onDismiss={() => setShowLevelUp(false)}
+      />
     </View>
   );
 }

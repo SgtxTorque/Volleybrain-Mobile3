@@ -51,6 +51,7 @@ import SecondaryEvents from './parent-scroll/SecondaryEvents';
 import AmbientCelebration from './parent-scroll/AmbientCelebration';
 import FlatChatPreview from './parent-scroll/FlatChatPreview';
 import ParentOnboardingModal from './ParentOnboardingModal';
+import LevelUpCelebrationModal from './LevelUpCelebrationModal';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
@@ -168,6 +169,25 @@ export default function ParentHomeScroll() {
       if (!done) setShowOnboarding(true);
     });
   }, []);
+
+  // ─── Level-up celebration for child ──
+  const [showLevelUp, setShowLevelUp] = useState(false);
+  const [levelUpLevel, setLevelUpLevel] = useState(0);
+  const [levelUpXp, setLevelUpXp] = useState(0);
+  useEffect(() => {
+    if (data.loading || !data.childXp || data.children.length === 0) return;
+    const childId = data.children[0].id;
+    const key = `lynx_parent_child_level_${childId}`;
+    AsyncStorage.getItem(key).then((stored) => {
+      const prev = stored ? parseInt(stored, 10) : 0;
+      if (prev > 0 && data.childXp!.level > prev) {
+        setLevelUpLevel(data.childXp!.level);
+        setLevelUpXp(data.childXp!.totalXp);
+        setShowLevelUp(true);
+      }
+      AsyncStorage.setItem(key, String(data.childXp!.level));
+    });
+  }, [data.loading, data.childXp?.level, data.children]);
 
   // Signal to tab bar that parent scroll is active
   useEffect(() => {
@@ -538,6 +558,14 @@ export default function ParentHomeScroll() {
           setShowOnboarding(false);
           AsyncStorage.setItem(ONBOARDING_KEY, 'true');
         }}
+      />
+
+      {/* ─── LEVEL-UP CELEBRATION (child) ──────────────────────── */}
+      <LevelUpCelebrationModal
+        visible={showLevelUp}
+        newLevel={levelUpLevel}
+        totalXp={levelUpXp}
+        onDismiss={() => setShowLevelUp(false)}
       />
     </View>
   );
