@@ -8,15 +8,10 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 // Import dashboard components
-import AdminDashboard from './AdminDashboard';
 import AdminHomeScroll from './AdminHomeScroll';
 import ChildPickerScreen, { type ChildPlayer } from './ChildPickerScreen';
-import CoachDashboard from './CoachDashboard';
 import CoachHomeScroll from './CoachHomeScroll';
-import CoachParentDashboard from './CoachParentDashboard';
-import ParentDashboard from './ParentDashboard';
 import ParentHomeScroll from './ParentHomeScroll';
-import PlayerDashboard from './PlayerDashboard';
 import PlayerHomeScroll from './PlayerHomeScroll';
 
 const LAST_CHILD_KEY = 'vb_player_last_child_id';
