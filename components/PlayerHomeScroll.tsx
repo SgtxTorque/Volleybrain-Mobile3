@@ -259,7 +259,7 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
         <QuickPropsRow teamId={data.primaryTeam?.id} onGiveShoutout={() => setShowShoutoutModal(true)} />
 
         {/* ─── 8. ACTIVE CHALLENGE (if exists) ────────────────── */}
-        <ActiveChallengeCard available={data.challengesAvailable} />
+        <ActiveChallengeCard available={data.challengesAvailable} teamId={data.primaryTeam?.id} />
 
         {/* ─── 9. LAST GAME STATS ─────────────────────────────── */}
         <LastGameStats

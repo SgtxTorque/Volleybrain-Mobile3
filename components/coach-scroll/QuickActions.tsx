@@ -3,7 +3,7 @@
  * Phase 10.3: Upgraded quick actions panel with attention badges.
  */
 import React from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
@@ -67,7 +67,7 @@ export default function QuickActions({ isEventDay, pendingStatsCount = 0, hasRos
               } else if (action.route) {
                 router.push(action.route as any);
               } else {
-                Alert.alert('Challenges', 'The challenge system is coming in the next update.');
+                router.push('/challenges' as any);
               }
             }}
           >

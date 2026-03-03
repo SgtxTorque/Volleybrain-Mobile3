@@ -155,7 +155,7 @@ export function usePlayerHomeData(playerId: string | null) {
   const [recentShoutouts, setRecentShoutouts] = useState<RecentShoutout[]>([]);
 
   // Feature flags
-  const [challengesAvailable] = useState(false);
+  const [challengesAvailable, setChallengesAvailable] = useState(false);
 
   // ─── Fetch all data ──
   const fetchAll = useCallback(async () => {
@@ -435,6 +435,19 @@ export function usePlayerHomeData(playerId: string | null) {
         }
       } catch {
         setRecentShoutouts([]);
+      }
+      // Check if challenges exist for the player's team
+      if (teamIds.length > 0) {
+        try {
+          const { count } = await supabase
+            .from('coach_challenges')
+            .select('id', { count: 'exact', head: true })
+            .eq('team_id', teamIds[0])
+            .eq('status', 'active');
+          setChallengesAvailable((count ?? 0) > 0);
+        } catch {
+          setChallengesAvailable(false);
+        }
       }
     } catch (err) {
       if (__DEV__) console.error('[usePlayerHomeData] Error:', err);
