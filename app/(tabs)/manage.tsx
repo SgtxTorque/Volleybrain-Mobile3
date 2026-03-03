@@ -242,14 +242,54 @@ export default function ManageScreen() {
   ];
 
   // ---------------------------------------------------------------------------
-  // QUICK ACTIONS DATA
+  // ACTION GRID DATA (grouped sections)
   // ---------------------------------------------------------------------------
 
-  const quickActions = [
-    { icon: 'person-add' as keyof typeof Ionicons.glyphMap, label: 'Approve\nRegs', route: '/registration-hub' },
-    { icon: 'megaphone' as keyof typeof Ionicons.glyphMap, label: 'Send\nBlast', route: '/blast-composer' },
-    { icon: 'card' as keyof typeof Ionicons.glyphMap, label: 'View\nPayments', route: '/(tabs)/payments' },
-    { icon: 'people' as keyof typeof Ionicons.glyphMap, label: 'Manage\nRoster', route: '/team-management' },
+  type ActionTile = { icon: keyof typeof Ionicons.glyphMap; label: string; route: string; color: string };
+  type ActionSection = { title: string; tiles: ActionTile[] };
+
+  const actionSections: ActionSection[] = [
+    {
+      title: 'People',
+      tiles: [
+        { icon: 'people', label: 'Players', route: '/(tabs)/players', color: colors.primary },
+        { icon: 'school', label: 'Coaches', route: '/(tabs)/coaches', color: '#8B5CF6' },
+        { icon: 'person-circle', label: 'Users', route: '/users', color: '#0EA5E9' },
+        { icon: 'book', label: 'Directory', route: '/org-directory', color: '#6366F1' },
+      ],
+    },
+    {
+      title: 'Teams & Seasons',
+      tiles: [
+        { icon: 'shirt', label: 'Teams', route: '/team-management', color: '#14B8A6' },
+        { icon: 'settings', label: 'Seasons', route: '/season-settings', color: '#F59E0B' },
+        { icon: 'archive', label: 'Archives', route: '/season-archives', color: '#64748B' },
+        { icon: 'rocket', label: 'Setup Wizard', route: '/season-setup-wizard', color: '#EC4899' },
+      ],
+    },
+    {
+      title: 'Money',
+      tiles: [
+        { icon: 'card', label: 'Payments', route: '/(tabs)/payments', color: '#22C55E' },
+        { icon: 'clipboard', label: 'Registration', route: '/registration-hub', color: '#E8913A' },
+        { icon: 'notifications', label: 'Reminders', route: '/payment-reminders', color: '#EF4444' },
+      ],
+    },
+    {
+      title: 'Communication',
+      tiles: [
+        { icon: 'megaphone', label: 'Blasts', route: '/blast-composer', color: '#8B5CF6' },
+        { icon: 'time', label: 'Blast History', route: '/blast-history', color: '#64748B' },
+      ],
+    },
+    {
+      title: 'Data',
+      tiles: [
+        { icon: 'bar-chart', label: 'Reports', route: '/(tabs)/reports-tab', color: '#0EA5E9' },
+        { icon: 'shirt-outline', label: 'Jerseys', route: '/(tabs)/jersey-management', color: '#F59E0B' },
+        { icon: 'search', label: 'Search', route: '/admin-search', color: '#14B8A6' },
+      ],
+    },
   ];
 
   // ---------------------------------------------------------------------------
@@ -317,23 +357,27 @@ export default function ManageScreen() {
           ))}
         </View>
 
-        {/* ===== QUICK ACTIONS ===== */}
-        <View style={s.section}>
-          <Text style={s.sectionTitle}>Quick Actions</Text>
-          <View style={s.quickRow}>
-            {quickActions.map((action) => (
-              <TouchableOpacity
-                key={action.label}
-                style={s.quickBtn}
-                onPress={() => router.push(action.route as any)}
-                activeOpacity={0.7}
-              >
-                <Ionicons name={action.icon} size={20} color={colors.primary} />
-                <Text style={s.quickLabel}>{action.label}</Text>
-              </TouchableOpacity>
-            ))}
+        {/* ===== ACTION GRID (grouped sections) ===== */}
+        {actionSections.map((section) => (
+          <View key={section.title} style={s.section}>
+            <Text style={s.sectionTitle}>{section.title}</Text>
+            <View style={s.tileGrid}>
+              {section.tiles.map((tile) => (
+                <TouchableOpacity
+                  key={tile.label}
+                  style={s.tile}
+                  onPress={() => router.push(tile.route as any)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[s.tileIcon, { backgroundColor: tile.color + '15' }]}>
+                    <Ionicons name={tile.icon} size={26} color={tile.color} />
+                  </View>
+                  <Text style={s.tileLabel}>{tile.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-        </View>
+        ))}
 
         {/* ===== ORG SNAPSHOT ===== */}
         <View style={s.section}>
@@ -498,27 +542,35 @@ const createStyles = (colors: any) =>
       marginLeft: 4,
     },
 
-    // --- Quick Actions ---
-    quickRow: {
+    // --- Tile Grid ---
+    tileGrid: {
       flexDirection: 'row',
-      gap: 8,
+      flexWrap: 'wrap',
+      gap: 10,
     },
-    quickBtn: {
-      flex: 1,
-      backgroundColor: colors.glassCard,
+    tile: {
+      width: '30%' as any,
+      flexGrow: 1,
+      flexBasis: '28%',
+      backgroundColor: colors.card,
       borderRadius: radii.card,
-      borderTopWidth: 3,
-      borderTopColor: colors.primary,
-      padding: 10,
+      padding: 14,
       alignItems: 'center',
       justifyContent: 'center',
-      gap: 4,
+      gap: 8,
       borderWidth: 1,
-      borderColor: colors.glassBorder,
+      borderColor: colors.border,
       ...shadows.card,
     },
-    quickLabel: {
-      fontSize: 10,
+    tileIcon: {
+      width: 48,
+      height: 48,
+      borderRadius: 14,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    tileLabel: {
+      fontSize: 11,
       fontWeight: '700',
       color: colors.text,
       textAlign: 'center',
