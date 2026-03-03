@@ -9,6 +9,7 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 // Import dashboard components
 import AdminDashboard from './AdminDashboard';
+import AdminHomeScroll from './AdminHomeScroll';
 import ChildPickerScreen, { type ChildPlayer } from './ChildPickerScreen';
 import CoachDashboard from './CoachDashboard';
 import CoachHomeScroll from './CoachHomeScroll';
@@ -252,7 +253,7 @@ export default function DashboardRouter() {
 
   switch (dashboardType) {
     case 'admin':
-      return <AdminDashboard />;
+      return <AdminHomeScroll />;
     case 'coach':
       return <CoachHomeScroll />;
     case 'parent':

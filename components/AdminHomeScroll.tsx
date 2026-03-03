@@ -1,0 +1,360 @@
+/**
+ * AdminHomeScroll — scroll-driven admin home dashboard.
+ * Smart Queue design: see what's urgent, act on it, watch the counter drop.
+ * Light theme, three-tier visual system.
+ */
+import React, { useCallback } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  RefreshControl,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import Animated, {
+  Extrapolation,
+  interpolate,
+  runOnJS,
+  useAnimatedStyle,
+  useDerivedValue,
+  useSharedValue,
+} from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
+
+import { useScrollAnimations } from '@/hooks/useScrollAnimations';
+import { useAdminHomeData } from '@/hooks/useAdminHomeData';
+import { BRAND } from '@/theme/colors';
+import { FONTS } from '@/theme/fonts';
+
+import WelcomeBriefing from './admin-scroll/WelcomeBriefing';
+import SmartQueueCard from './admin-scroll/SmartQueueCard';
+import TeamHealthTiles from './admin-scroll/TeamHealthTiles';
+import PaymentSnapshot from './admin-scroll/PaymentSnapshot';
+import QuickActionsGrid from './admin-scroll/QuickActionsGrid';
+import CoachSection from './admin-scroll/CoachSection';
+import UpcomingEvents from './admin-scroll/UpcomingEvents';
+import ClosingMotivation from './admin-scroll/ClosingMotivation';
+
+export default function AdminHomeScroll() {
+  const insets = useSafeAreaInsets();
+  const { scrollY, scrollHandler } = useScrollAnimations();
+  const data = useAdminHomeData();
+
+  // Header interactivity
+  const [headerVisible, setHeaderVisible] = React.useState(false);
+  const prevState = useSharedValue(false);
+  useDerivedValue(() => {
+    const show = scrollY.value > 120;
+    if (show !== prevState.value) {
+      prevState.value = show;
+      runOnJS(setHeaderVisible)(show);
+    }
+    return show;
+  });
+
+  const onRefresh = useCallback(async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    await data.refresh();
+  }, [data.refresh]);
+
+  // Compact header fade + slide
+  const compactHeaderStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(scrollY.value, [80, 140], [0, 1], Extrapolation.CLAMP),
+    transform: [{
+      translateY: interpolate(scrollY.value, [80, 140], [-8, 0], Extrapolation.CLAMP),
+    }],
+  }));
+
+  if (data.loading) {
+    return (
+      <View style={[styles.root, { paddingTop: insets.top }]}>
+        <StatusBar barStyle="dark-content" />
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="large" color={BRAND.skyBlue} />
+        </View>
+      </View>
+    );
+  }
+
+  const showPaymentCard = data.expected > 0;
+
+  return (
+    <View style={styles.root}>
+      <StatusBar barStyle="dark-content" />
+
+      {/* ─── COMPACT HEADER ────────────────────────────────── */}
+      <Animated.View
+        pointerEvents={headerVisible ? 'auto' : 'none'}
+        style={[
+          styles.compactHeader,
+          { paddingTop: insets.top, height: 44 + insets.top },
+          compactHeaderStyle,
+        ]}
+      >
+        <View style={styles.compactInner}>
+          <Text style={styles.compactBrand}>lynx</Text>
+          <View style={styles.compactRight}>
+            {data.overdueQueueCount > 0 && (
+              <View style={styles.urgencyBadge}>
+                <Text style={styles.urgencyBadgeText}>{data.overdueQueueCount}</Text>
+              </View>
+            )}
+            <Text style={styles.compactRole}>Admin</Text>
+          </View>
+        </View>
+      </Animated.View>
+
+      {/* ─── SCROLLABLE CONTENT ────────────────────────────── */}
+      <Animated.ScrollView
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 140 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={data.refreshing}
+            onRefresh={onRefresh}
+            tintColor={BRAND.skyBlue}
+          />
+        }
+      >
+        <View style={{ height: insets.top + 16 }} />
+
+        {/* ─── 1. WELCOME BRIEFING ─────────────────────────── */}
+        <WelcomeBriefing
+          greeting={data.greeting}
+          adminName={data.adminName}
+          teamCount={data.teams.length}
+          playerCount={data.totalPlayers}
+          overdueCount={data.overdueQueueCount}
+          thisWeekCount={data.thisWeekQueueCount}
+        />
+
+        {/* ─── 2. SEARCH BAR ──────────────────────────────── */}
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => Alert.alert('Coming Soon', 'Search is coming in a future update!')}
+          style={styles.searchBar}
+        >
+          <Text style={styles.searchIcon}>{'\u{1F50D}'}</Text>
+          <Text style={styles.searchPlaceholder}>Search players, families, teams...</Text>
+        </TouchableOpacity>
+
+        {/* ─── 3. SMART QUEUE ─────────────────────────────── */}
+        {data.queueItems.length > 0 ? (
+          <View style={styles.queueSection}>
+            {data.queueItems.slice(0, 4).map((item) => (
+              <SmartQueueCard key={item.id} item={item} />
+            ))}
+            {data.queueItems.length > 4 && (
+              <TouchableOpacity style={styles.viewMoreRow}>
+                <Text style={styles.viewMoreText}>
+                  View {data.queueItems.length - 4} more {'\u203A'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        ) : (
+          <View style={styles.allClearWrap}>
+            <Text style={styles.allClearIcon}>{'\u2705'}</Text>
+            <Text style={styles.allClearTitle}>All clear!</Text>
+            <Text style={styles.allClearSub}>Nothing needs your attention right now.</Text>
+          </View>
+        )}
+
+        {/* ─── 4. SEASON + TEAM TILES ─────────────────────── */}
+        {data.teams.length > 0 && (
+          <View style={styles.sectionWrap}>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionHeader}>{data.seasonName.toUpperCase() || 'SEASON'}</Text>
+              <View style={styles.activePill}>
+                <View style={styles.activeDot} />
+                <Text style={styles.activeText}>Active</Text>
+              </View>
+            </View>
+            <TeamHealthTiles teams={data.teams} />
+          </View>
+        )}
+
+        {/* ─── 5. PAYMENT SNAPSHOT ────────────────────────── */}
+        {showPaymentCard && (
+          <PaymentSnapshot
+            collected={data.collected}
+            expected={data.expected}
+            overdueAmount={data.overdueAmount}
+            overdueCount={data.overdueCount}
+            paymentPct={data.paymentPct}
+            seasonName={data.seasonName}
+          />
+        )}
+
+        {/* ─── 6. QUICK ACTIONS ──────────────────────────── */}
+        <QuickActionsGrid />
+
+        {/* ─── 7. COACHES ────────────────────────────────── */}
+        {data.coaches.length > 0 && (
+          <CoachSection coaches={data.coaches} />
+        )}
+
+        {/* ─── 8. UPCOMING EVENTS ────────────────────────── */}
+        <UpcomingEvents events={data.upcomingEvents} />
+
+        {/* ─── 9. CLOSING ────────────────────────────────── */}
+        <ClosingMotivation
+          adminName={data.adminName}
+          teamCount={data.teams.length}
+          playerCount={data.totalPlayers}
+          queueTotal={data.queueItems.length}
+        />
+      </Animated.ScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: BRAND.offWhite,
+  },
+  loadingWrap: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  compactHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
+    backgroundColor: 'rgba(246,248,251,0.95)',
+    borderBottomWidth: 1,
+    borderBottomColor: BRAND.border,
+  },
+  compactInner: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+  },
+  compactBrand: {
+    fontFamily: FONTS.bodyExtraBold,
+    fontSize: 20,
+    color: BRAND.skyBlue,
+    letterSpacing: -0.5,
+  },
+  compactRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  urgencyBadge: {
+    backgroundColor: BRAND.error,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+  },
+  urgencyBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  compactRole: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: BRAND.textMuted,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 20,
+    backgroundColor: BRAND.warmGray,
+    borderRadius: 12,
+    height: 44,
+    paddingHorizontal: 14,
+    marginBottom: 16,
+    gap: 10,
+  },
+  searchIcon: {
+    fontSize: 16,
+    opacity: 0.4,
+  },
+  searchPlaceholder: {
+    fontSize: 14,
+    color: BRAND.textFaint,
+    fontFamily: FONTS.bodyMedium,
+  },
+  queueSection: {
+    marginBottom: 20,
+    gap: 10,
+  },
+  viewMoreRow: {
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  viewMoreText: {
+    fontSize: 13,
+    fontFamily: FONTS.bodyMedium,
+    color: BRAND.skyBlue,
+  },
+  allClearWrap: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    marginBottom: 20,
+  },
+  allClearIcon: {
+    fontSize: 32,
+    marginBottom: 8,
+  },
+  allClearTitle: {
+    fontSize: 16,
+    fontFamily: FONTS.bodyBold,
+    color: BRAND.success,
+    marginBottom: 4,
+  },
+  allClearSub: {
+    fontSize: 13,
+    fontFamily: FONTS.bodyMedium,
+    color: BRAND.textMuted,
+  },
+  sectionWrap: {
+    marginBottom: 16,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    marginBottom: 12,
+  },
+  sectionHeader: {
+    fontSize: 10,
+    fontFamily: FONTS.bodyBold,
+    letterSpacing: 1.2,
+    color: BRAND.textFaint,
+  },
+  activePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  activeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: BRAND.success,
+  },
+  activeText: {
+    fontSize: 10,
+    fontFamily: FONTS.bodySemiBold,
+    color: BRAND.success,
+  },
+});
