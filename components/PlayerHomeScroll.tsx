@@ -137,7 +137,7 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
         pointerEvents={headerVisible ? 'auto' : 'none'}
         style={[
           styles.compactHeader,
-          { paddingTop: insets.top, height: 52 + insets.top },
+          { paddingTop: insets.top, height: 32 + insets.top },
           compactHeaderStyle,
         ]}
       >
@@ -275,6 +275,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
+    marginTop: -25,
   },
   compactBrand: {
     fontSize: 20,
