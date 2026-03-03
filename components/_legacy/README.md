@@ -25,3 +25,4 @@ are kept here for reference only. Do NOT import from this folder.
 - AnnouncementBanner.tsx → only consumer was ParentDashboard
 - payments-admin.tsx → payments tab has own implementation
 - game-day-parent.tsx → never referenced anywhere
+- ShoutoutProfileSection.tsx → never imported (Phase 5 sweep)
