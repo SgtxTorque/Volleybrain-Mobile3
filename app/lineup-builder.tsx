@@ -3,7 +3,8 @@ import { useAuth } from '@/lib/auth';
 import { useSeason } from '@/lib/season';
 import { useSport } from '@/lib/sport';
 import { supabase } from '@/lib/supabase';
-import { useTheme } from '@/lib/theme';
+import { BRAND } from '@/theme/colors';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -81,7 +82,6 @@ const SLOT_SIZE = 64;
 // ============================================================================
 
 export default function LineupBuilderScreen() {
-  const { colors } = useTheme();
   const { user } = useAuth();
   const { workingSeason } = useSeason();
   const { activeSport } = useSport();
@@ -835,9 +835,9 @@ export default function LineupBuilderScreen() {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
+            <Ionicons name="arrow-back" size={24} color={BRAND.textLight} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>LINEUP BUILDER</Text>
+          <Text style={[styles.headerTitle, { color: BRAND.textLight }]}>LINEUP BUILDER</Text>
           <View style={styles.headerBtn} />
         </View>
 
@@ -846,7 +846,7 @@ export default function LineupBuilderScreen() {
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            style={[styles.teamTabs, { borderBottomColor: colors.border }]}
+            style={[styles.teamTabs, { borderBottomColor: BRAND.border }]}
             contentContainerStyle={{ paddingHorizontal: 16 }}
           >
             {teams.map((team) => (
@@ -856,7 +856,7 @@ export default function LineupBuilderScreen() {
                   styles.teamTab,
                   selectedTeam?.id === team.id && [
                     styles.teamTabActive,
-                    { backgroundColor: colors.primary + '25', borderBottomColor: colors.primary },
+                    { backgroundColor: BRAND.skyBlue + '25', borderBottomColor: BRAND.skyBlue },
                   ],
                 ]}
                 onPress={() => setSelectedTeam(team)}
@@ -864,8 +864,8 @@ export default function LineupBuilderScreen() {
                 <Text
                   style={[
                     styles.teamTabText,
-                    { color: colors.textMuted },
-                    selectedTeam?.id === team.id && { color: colors.primary },
+                    { color: BRAND.textMuted },
+                    selectedTeam?.id === team.id && { color: BRAND.skyBlue },
                   ]}
                 >
                   {team.name}
@@ -877,8 +877,8 @@ export default function LineupBuilderScreen() {
 
         {/* Instruction */}
         <View style={styles.selectorHeader}>
-          <Ionicons name="calendar" size={20} color={colors.primary} />
-          <Text style={[styles.selectorHeaderText, { color: colors.textSecondary }]}>
+          <Ionicons name="calendar" size={20} color={BRAND.skyBlue} />
+          <Text style={[styles.selectorHeaderText, { color: BRAND.textSecondary }]}>
             Select a game to build lineup for
           </Text>
         </View>
@@ -886,12 +886,12 @@ export default function LineupBuilderScreen() {
         {/* Game List */}
         <ScrollView style={styles.gamesList} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
           {loadingTeams || loadingGames ? (
-            <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
+            <ActivityIndicator size="large" color={BRAND.skyBlue} style={{ marginTop: 40 }} />
           ) : games.length === 0 ? (
             <View style={styles.emptyState}>
-              <Ionicons name="calendar-outline" size={64} color={colors.border} />
-              <Text style={[styles.emptyTitle, { color: colors.textMuted }]}>No Upcoming Games</Text>
-              <Text style={[styles.emptySubtext, { color: colors.textMuted }]}>
+              <Ionicons name="calendar-outline" size={64} color={BRAND.border} />
+              <Text style={[styles.emptyTitle, { color: BRAND.textMuted }]}>No Upcoming Games</Text>
+              <Text style={[styles.emptySubtext, { color: BRAND.textMuted }]}>
                 Schedule games first, then build lineups
               </Text>
             </View>
@@ -902,39 +902,39 @@ export default function LineupBuilderScreen() {
                 style={[
                   styles.gameCard,
                   {
-                    backgroundColor: colors.glassCard,
-                    borderColor: colors.glassBorder,
+                    backgroundColor: BRAND.surfaceCard,
+                    borderColor: BRAND.cardBorder,
                   },
                 ]}
                 onPress={() => handleSelectGame(game)}
                 activeOpacity={0.7}
               >
                 <View style={styles.gameCardTop}>
-                  <Text style={[styles.gameDateText, { color: colors.primary }]}>
+                  <Text style={[styles.gameDateText, { color: BRAND.skyBlue }]}>
                     {formatDate(game.event_date)}
                   </Text>
                   {game.start_time && (
-                    <Text style={[styles.gameTimeText, { color: colors.textMuted }]}>
+                    <Text style={[styles.gameTimeText, { color: BRAND.textMuted }]}>
                       {formatTime(game.start_time)}
                     </Text>
                   )}
                 </View>
-                <Text style={[styles.gameOpponent, { color: colors.text }]}>
+                <Text style={[styles.gameOpponent, { color: BRAND.textLight }]}>
                   vs {game.opponent_name || 'TBD'}
                 </Text>
                 {game.location && (
                   <View style={styles.gameLocation}>
-                    <Ionicons name="location" size={13} color={colors.textMuted} />
-                    <Text style={[styles.gameLocationText, { color: colors.textMuted }]}>
+                    <Ionicons name="location" size={13} color={BRAND.textMuted} />
+                    <Text style={[styles.gameLocationText, { color: BRAND.textMuted }]}>
                       {game.location}
                     </Text>
                   </View>
                 )}
                 <View style={styles.selectGameHint}>
-                  <Text style={[styles.selectGameHintText, { color: colors.primary }]}>
+                  <Text style={[styles.selectGameHintText, { color: BRAND.skyBlue }]}>
                     TAP TO BUILD LINEUP
                   </Text>
-                  <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+                  <Ionicons name="chevron-forward" size={16} color={BRAND.skyBlue} />
                 </View>
               </TouchableOpacity>
             ))
@@ -949,9 +949,9 @@ export default function LineupBuilderScreen() {
   // ============================================================================
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: BRAND.surfaceDark }]}>
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.bgSecondary }]}>
+      <View style={[styles.header, { backgroundColor: BRAND.surfaceCard }]}>
         <TouchableOpacity
           onPress={() => {
             if (!params.eventId && selectedGame) {
@@ -963,12 +963,12 @@ export default function LineupBuilderScreen() {
           }}
           style={styles.headerBtn}
         >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+          <Ionicons name="arrow-back" size={24} color={BRAND.textLight} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>LINEUP BUILDER</Text>
+          <Text style={[styles.headerTitle, { color: BRAND.textLight }]}>LINEUP BUILDER</Text>
           {(selectedGame || params.eventId) && (
-            <Text style={[styles.headerSubtitle, { color: colors.textMuted }]}>
+            <Text style={[styles.headerSubtitle, { color: BRAND.textMuted }]}>
               {selectedGame
                 ? `vs ${selectedGame.opponent_name || 'TBD'} - ${formatDate(selectedGame.event_date)}`
                 : 'Game Lineup'}
@@ -990,7 +990,7 @@ export default function LineupBuilderScreen() {
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            style={[styles.teamTabsInline, { borderBottomColor: colors.border }]}
+            style={[styles.teamTabsInline, { borderBottomColor: BRAND.border }]}
             contentContainerStyle={{ paddingHorizontal: 16 }}
           >
             {teams.map((team) => (
@@ -1005,7 +1005,7 @@ export default function LineupBuilderScreen() {
                 <Text
                   style={[
                     styles.teamTabText,
-                    { color: colors.textMuted },
+                    { color: BRAND.textMuted },
                     selectedTeam?.id === team.id && { color: '#F97316' },
                   ]}
                 >
@@ -1018,7 +1018,7 @@ export default function LineupBuilderScreen() {
 
         {/* Formation Selector */}
         <View style={styles.formationBar}>
-          <Text style={[styles.formationLabel, { color: colors.textMuted }]}>FORMATION</Text>
+          <Text style={[styles.formationLabel, { color: BRAND.textMuted }]}>FORMATION</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.formationBtns}>
             {formations.map((f) => (
               <TouchableOpacity
@@ -1101,7 +1101,7 @@ export default function LineupBuilderScreen() {
                           {
                             width: dynamicSlotWidth,
                             borderColor: slot.color + '80',
-                            backgroundColor: slot.player ? slot.color + '20' : colors.bgSecondary,
+                            backgroundColor: slot.player ? slot.color + '20' : BRAND.surfaceCard,
                           },
                           slot.isLibero && styles.positionSlotLibero,
                         ]}
@@ -1602,13 +1602,13 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 28,
-    fontWeight: '800',
+    fontFamily: FONTS.bodyExtraBold,
     color: '#fff',
     letterSpacing: 2,
   },
   headerSubtitle: {
     fontSize: 11,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
     color: '#94A3B8',
     marginTop: 2,
     letterSpacing: 0.5,
@@ -1623,7 +1623,7 @@ const styles = StyleSheet.create({
   },
   saveBtnText: {
     fontSize: 13,
-    fontWeight: '800',
+    fontFamily: FONTS.bodyExtraBold,
     color: '#000',
     letterSpacing: 1,
   },
@@ -1654,7 +1654,7 @@ const styles = StyleSheet.create({
   },
   teamTabText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
   },
 
   // ── Game Selector ──
@@ -1668,7 +1668,7 @@ const styles = StyleSheet.create({
   },
   selectorHeaderText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
   },
   gamesList: {
     flex: 1,
@@ -1679,7 +1679,7 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: FONTS.bodyBold,
     marginTop: 16,
   },
   emptySubtext: {
@@ -1705,7 +1705,7 @@ const styles = StyleSheet.create({
   },
   gameDateText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: FONTS.bodyBold,
     letterSpacing: 1,
   },
   gameTimeText: {
@@ -1713,7 +1713,7 @@ const styles = StyleSheet.create({
   },
   gameOpponent: {
     fontSize: 20,
-    fontWeight: '800',
+    fontFamily: FONTS.bodyExtraBold,
     marginBottom: 8,
   },
   gameLocation: {
@@ -1736,7 +1736,7 @@ const styles = StyleSheet.create({
   },
   selectGameHintText: {
     fontSize: 13,
-    fontWeight: '800',
+    fontFamily: FONTS.bodyExtraBold,
     letterSpacing: 1,
   },
 
@@ -1755,7 +1755,7 @@ const styles = StyleSheet.create({
   },
   formationLabel: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: FONTS.bodyBold,
     color: '#64748B',
     letterSpacing: 1.5,
     textTransform: 'uppercase',
@@ -1780,7 +1780,7 @@ const styles = StyleSheet.create({
   },
   formationBtnText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: FONTS.bodyBold,
     color: '#64748B',
   },
   formationBtnTextActive: {
@@ -1809,7 +1809,7 @@ const styles = StyleSheet.create({
   },
   setTabText: {
     fontSize: 13,
-    fontWeight: '800',
+    fontFamily: FONTS.bodyExtraBold,
     color: '#64748B',
     letterSpacing: 1,
   },
@@ -1830,7 +1830,7 @@ const styles = StyleSheet.create({
   },
   copyAllBtnText: {
     fontSize: 10,
-    fontWeight: '800',
+    fontFamily: FONTS.bodyExtraBold,
     color: '#6366F1',
     letterSpacing: 0.5,
   },
@@ -1877,7 +1877,7 @@ const styles = StyleSheet.create({
   },
   netLabel: {
     fontSize: 10,
-    fontWeight: '800',
+    fontFamily: FONTS.bodyExtraBold,
     color: '#F97316',
     letterSpacing: 2,
     opacity: 0.8,
@@ -1912,7 +1912,7 @@ const styles = StyleSheet.create({
   },
   positionLabel: {
     fontSize: 9,
-    fontWeight: '800',
+    fontFamily: FONTS.bodyExtraBold,
     letterSpacing: 1,
     marginBottom: 4,
   },
@@ -1929,19 +1929,19 @@ const styles = StyleSheet.create({
   },
   playerDotText: {
     fontSize: 13,
-    fontWeight: '900',
+    fontFamily: FONTS.bodyExtraBold,
     color: '#fff',
   },
   assignedName: {
     fontSize: 9,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
     color: '#CBD5E1',
     textAlign: 'center',
     maxWidth: SLOT_SIZE + 28,
   },
   tapToAssign: {
     fontSize: 8,
-    fontWeight: '700',
+    fontFamily: FONTS.bodyBold,
     color: '#64748B',
     textAlign: 'center',
     letterSpacing: 0.5,
@@ -1960,7 +1960,7 @@ const styles = StyleSheet.create({
   },
   liberoBadgeText: {
     fontSize: 9,
-    fontWeight: '900',
+    fontFamily: FONTS.bodyExtraBold,
     color: '#fff',
   },
   serveArea: {
@@ -1973,13 +1973,13 @@ const styles = StyleSheet.create({
   },
   serveAreaText: {
     fontSize: 9,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
     color: '#64748B',
     letterSpacing: 0.5,
   },
   longPressHint: {
     fontSize: 11,
-    fontWeight: '500',
+    fontFamily: FONTS.bodyMedium,
     color: '#475569',
     textAlign: 'center',
     marginTop: 8,
@@ -2011,7 +2011,7 @@ const styles = StyleSheet.create({
   },
   actionBtnText: {
     fontSize: 12,
-    fontWeight: '800',
+    fontFamily: FONTS.bodyExtraBold,
     letterSpacing: 0.5,
   },
 
@@ -2033,7 +2033,7 @@ const styles = StyleSheet.create({
   },
   benchTitle: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: FONTS.bodyBold,
     color: '#94A3B8',
     letterSpacing: 1.5,
     textTransform: 'uppercase',
@@ -2041,7 +2041,7 @@ const styles = StyleSheet.create({
   },
   benchCount: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
     color: '#64748B',
   },
   benchEmpty: {
@@ -2084,18 +2084,18 @@ const styles = StyleSheet.create({
   },
   benchJerseyText: {
     fontSize: 15,
-    fontWeight: '900',
+    fontFamily: FONTS.bodyExtraBold,
     color: '#94A3B8',
   },
   benchPlayerName: {
     fontSize: 10,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
     color: '#CBD5E1',
     textAlign: 'center',
   },
   benchPlayerPos: {
     fontSize: 9,
-    fontWeight: '500',
+    fontFamily: FONTS.bodyMedium,
     color: '#64748B',
     marginTop: 2,
   },
@@ -2110,7 +2110,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
     color: '#94A3B8',
   },
 
@@ -2141,13 +2141,13 @@ const styles = StyleSheet.create({
   },
   assignModalTitle: {
     fontSize: 18,
-    fontWeight: '900',
+    fontFamily: FONTS.bodyExtraBold,
     color: '#fff',
     letterSpacing: 1,
   },
   assignModalSubtitle: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
     color: '#64748B',
     marginTop: 2,
   },
@@ -2172,7 +2172,7 @@ const styles = StyleSheet.create({
   },
   removeSlotBtnText: {
     fontSize: 13,
-    fontWeight: '800',
+    fontFamily: FONTS.bodyExtraBold,
     color: '#EF4444',
     letterSpacing: 0.5,
   },
@@ -2220,7 +2220,7 @@ const styles = StyleSheet.create({
   },
   assignJerseyText: {
     fontSize: 18,
-    fontWeight: '900',
+    fontFamily: FONTS.bodyExtraBold,
     color: '#94A3B8',
   },
   assignPlayerInfo: {
@@ -2228,7 +2228,7 @@ const styles = StyleSheet.create({
   },
   assignPlayerName: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: FONTS.bodyBold,
     color: '#CBD5E1',
   },
   assignPlayerPos: {
@@ -2244,7 +2244,7 @@ const styles = StyleSheet.create({
   },
   currentBadgeText: {
     fontSize: 10,
-    fontWeight: '700',
+    fontFamily: FONTS.bodyBold,
     color: '#F97316',
     letterSpacing: 0.5,
   },
@@ -2267,7 +2267,7 @@ const styles = StyleSheet.create({
   },
   rsvpAutoFillText: {
     fontSize: 12,
-    fontWeight: '800',
+    fontFamily: FONTS.bodyExtraBold,
     color: '#10B981',
     letterSpacing: 0.5,
   },
@@ -2291,7 +2291,7 @@ const styles = StyleSheet.create({
   },
   rotationToggleText: {
     fontSize: 12,
-    fontWeight: '800',
+    fontFamily: FONTS.bodyExtraBold,
     color: '#6366F1',
     letterSpacing: 0.5,
   },
@@ -2323,13 +2323,13 @@ const styles = StyleSheet.create({
   },
   rotationNavLabel: {
     fontSize: 14,
-    fontWeight: '800',
+    fontFamily: FONTS.bodyExtraBold,
     color: '#6366F1',
     letterSpacing: 1,
   },
   rotationResetText: {
     fontSize: 11,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
     color: '#94A3B8',
     marginTop: 2,
     textDecorationLine: 'underline',
@@ -2353,7 +2353,7 @@ const styles = StyleSheet.create({
   },
   rotationMiniTitle: {
     fontSize: 11,
-    fontWeight: '800',
+    fontFamily: FONTS.bodyExtraBold,
     color: '#64748B',
     letterSpacing: 1,
     marginBottom: 6,
@@ -2377,12 +2377,12 @@ const styles = StyleSheet.create({
   },
   rotationMiniSlotText: {
     fontSize: 9,
-    fontWeight: '800',
+    fontFamily: FONTS.bodyExtraBold,
     color: '#CBD5E1',
   },
   rotationServeLabel: {
     fontSize: 7,
-    fontWeight: '700',
+    fontFamily: FONTS.bodyBold,
     color: '#10B981',
     letterSpacing: 0.5,
     marginTop: 2,
@@ -2406,7 +2406,7 @@ const styles = StyleSheet.create({
   },
   subsTitle: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: FONTS.bodyBold,
     color: '#F59E0B',
     letterSpacing: 1.5,
   },
@@ -2433,7 +2433,7 @@ const styles = StyleSheet.create({
   },
   subPositionText: {
     fontSize: 11,
-    fontWeight: '800',
+    fontFamily: FONTS.bodyExtraBold,
     color: '#fff',
   },
   subStarterInfo: {
@@ -2442,7 +2442,7 @@ const styles = StyleSheet.create({
   },
   subStarterName: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: FONTS.bodyBold,
     color: '#CBD5E1',
   },
   subStarterLabel: {
@@ -2462,7 +2462,7 @@ const styles = StyleSheet.create({
   },
   subAssignedName: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: FONTS.bodyBold,
     color: '#F59E0B',
     maxWidth: 80,
   },
@@ -2476,7 +2476,7 @@ const styles = StyleSheet.create({
   },
   subAssignBtnText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: FONTS.bodyBold,
     color: '#94A3B8',
   },
 });
