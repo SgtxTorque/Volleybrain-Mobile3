@@ -215,7 +215,7 @@ export default function AdminHomeScroll() {
             <TouchableOpacity
               activeOpacity={0.7}
               style={styles.setupBtn}
-              onPress={() => router.push('/season-settings' as any)}
+              onPress={() => router.push('/season-setup-wizard' as any)}
             >
               <Text style={styles.setupBtnText}>Start Setup {'\u203A'}</Text>
             </TouchableOpacity>
