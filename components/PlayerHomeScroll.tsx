@@ -37,9 +37,13 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 
+import { useAuth } from '@/lib/auth';
 import { useScrollAnimations } from '@/hooks/useScrollAnimations';
 import { usePlayerHomeData } from '@/hooks/usePlayerHomeData';
 
+import NoOrgState from './empty-states/NoOrgState';
+import NoTeamState from './empty-states/NoTeamState';
+import EmptySeasonState from './empty-states/EmptySeasonState';
 import HeroIdentityCard from './player-scroll/HeroIdentityCard';
 import StreakBanner from './player-scroll/StreakBanner';
 import TheDrop from './player-scroll/TheDrop';
@@ -85,6 +89,7 @@ type Props = {
 export default function PlayerHomeScroll({ playerId, playerName: externalName, onSwitchChild }: Props) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { organization } = useAuth();
   const { scrollY, scrollHandler } = useScrollAnimations();
   const data = usePlayerHomeData(playerId);
 
@@ -152,6 +157,11 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
       </View>
     );
   }
+
+  // Smart empty states
+  if (!organization) return <NoOrgState />;
+  if (!data.primaryTeam) return <NoTeamState role="player" />;
+  if (!data.nextEvent && !data.lastGame) return <EmptySeasonState role="player" />;
 
   return (
     <View style={styles.root}>

@@ -25,10 +25,15 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 
+import { useAuth } from '@/lib/auth';
 import { useScrollAnimations } from '@/hooks/useScrollAnimations';
 import { useAdminHomeData } from '@/hooks/useAdminHomeData';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
+
+import NoOrgState from './empty-states/NoOrgState';
+import NoTeamState from './empty-states/NoTeamState';
+import EmptySeasonState from './empty-states/EmptySeasonState';
 
 import RoleSelector from './RoleSelector';
 import WelcomeBriefing from './admin-scroll/WelcomeBriefing';
@@ -43,6 +48,7 @@ import ClosingMotivation from './admin-scroll/ClosingMotivation';
 export default function AdminHomeScroll() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { organization } = useAuth();
   const { scrollY, scrollHandler } = useScrollAnimations();
   const data = useAdminHomeData();
 
@@ -81,6 +87,11 @@ export default function AdminHomeScroll() {
       </View>
     );
   }
+
+  // Smart empty states
+  if (!organization) return <NoOrgState />;
+  if (!data.teams || data.teams.length === 0) return <NoTeamState role="admin" />;
+  if (!data.upcomingEvents || data.upcomingEvents.length === 0) return <EmptySeasonState role="admin" />;
 
   const showPaymentCard = data.expected > 0;
 

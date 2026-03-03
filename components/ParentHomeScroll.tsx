@@ -35,6 +35,10 @@ import { supabase } from '@/lib/supabase';
 import { useParentScroll } from '@/lib/parent-scroll-context';
 import { useScrollAnimations, SCROLL_THRESHOLDS } from '@/hooks/useScrollAnimations';
 import { useParentHomeData } from '@/hooks/useParentHomeData';
+
+import NoOrgState from './empty-states/NoOrgState';
+import NoTeamState from './empty-states/NoTeamState';
+import EmptySeasonState from './empty-states/EmptySeasonState';
 import { BRAND } from '@/theme/colors';
 import { SPACING } from '@/theme/spacing';
 import { FONTS } from '@/theme/fonts';
@@ -156,7 +160,7 @@ function buildDynamicMessages(
 export default function ParentHomeScroll() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { profile } = useAuth();
+  const { profile, organization } = useAuth();
   const parentScroll = useParentScroll();
   const { scrollY, isSlowScroll, scrollHandler } = useScrollAnimations({
     onScrollJS: parentScroll.notifyScroll,
@@ -307,6 +311,11 @@ export default function ParentHomeScroll() {
       </View>
     );
   }
+
+  // Smart empty states
+  if (!organization) return <NoOrgState />;
+  if (!data.children || data.children.length === 0) return <NoTeamState role="parent" />;
+  if (!data.upcomingEvents || data.upcomingEvents.length === 0) return <EmptySeasonState role="parent" />;
 
   return (
     <View style={[styles.root, { backgroundColor: BRAND.offWhite }]}>

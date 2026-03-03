@@ -37,6 +37,10 @@ import { BRAND } from '@/theme/colors';
 import { SPACING } from '@/theme/spacing';
 import { FONTS } from '@/theme/fonts';
 
+import NoOrgState from './empty-states/NoOrgState';
+import NoTeamState from './empty-states/NoTeamState';
+import EmptySeasonState from './empty-states/EmptySeasonState';
+
 import RoleSelector from './RoleSelector';
 import PrepChecklist from './coach-scroll/PrepChecklist';
 import GamePlanCard from './coach-scroll/GamePlanCard';
@@ -149,7 +153,7 @@ function formatTime(timeStr: string | null): string {
 export default function CoachHomeScroll() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { profile } = useAuth();
+  const { profile, organization } = useAuth();
   const { scrollY, scrollHandler } = useScrollAnimations();
   const data = useCoachHomeData();
 
@@ -292,6 +296,11 @@ export default function CoachHomeScroll() {
       </View>
     );
   }
+
+  // Smart empty states
+  if (!organization) return <NoOrgState />;
+  if (!data.teams || data.teams.length === 0) return <NoTeamState role="coach" />;
+  if (!data.upcomingEvents || data.upcomingEvents.length === 0) return <EmptySeasonState role="coach" />;
 
   const selectedTeam = data.teams.find(t => t.id === data.selectedTeamId);
   const teamName = selectedTeam?.name ?? '';
