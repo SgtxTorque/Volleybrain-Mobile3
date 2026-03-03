@@ -6,19 +6,14 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { fetchShoutoutStats } from '@/lib/shoutout-service';
 import { supabase } from '@/lib/supabase';
+import { BRAND } from '@/theme/colors';
+import { FONTS } from '@/theme/fonts';
 
 type Props = {
   /** Profile ID (profiles.id) — used directly if provided */
   profileId?: string | null;
   /** Player ID (players.id) — resolved to profile via parent_account_id */
   playerId?: string | null;
-  colors: {
-    glassCard: string;
-    glassBorder: string;
-    text: string;
-    textSecondary: string;
-    textMuted: string;
-  };
 };
 
 type ShoutoutStats = {
@@ -27,7 +22,7 @@ type ShoutoutStats = {
   categoryBreakdown: { name: string; emoji: string; count: number }[];
 };
 
-export default function ShoutoutProfileSection({ profileId, playerId, colors }: Props) {
+export default function ShoutoutProfileSection({ profileId, playerId }: Props) {
   const [stats, setStats] = useState<ShoutoutStats | null>(null);
 
   useEffect(() => {
@@ -68,18 +63,18 @@ export default function ShoutoutProfileSection({ profileId, playerId, colors }: 
   if (!stats || (stats.received === 0 && stats.given === 0)) return null;
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}>
-      <Text style={[styles.sectionLabel, { color: colors.textMuted }]}>SHOUTOUTS</Text>
+    <View style={styles.card}>
+      <Text style={styles.sectionLabel}>SHOUTOUTS</Text>
 
       <View style={styles.countsRow}>
         <View style={styles.countItem}>
-          <Text style={[styles.countValue, { color: colors.text }]}>{stats.received}</Text>
-          <Text style={[styles.countLabel, { color: colors.textMuted }]}>Received</Text>
+          <Text style={styles.countValue}>{stats.received}</Text>
+          <Text style={styles.countLabel}>Received</Text>
         </View>
         <View style={styles.divider} />
         <View style={styles.countItem}>
-          <Text style={[styles.countValue, { color: colors.text }]}>{stats.given}</Text>
-          <Text style={[styles.countLabel, { color: colors.textMuted }]}>Given</Text>
+          <Text style={styles.countValue}>{stats.given}</Text>
+          <Text style={styles.countLabel}>Given</Text>
         </View>
       </View>
 
@@ -88,7 +83,7 @@ export default function ShoutoutProfileSection({ profileId, playerId, colors }: 
           {stats.categoryBreakdown.slice(0, 4).map((cat, i) => (
             <View key={i} style={styles.categoryPill}>
               <Text style={styles.categoryEmoji}>{cat.emoji}</Text>
-              <Text style={[styles.categoryText, { color: colors.textSecondary }]}>
+              <Text style={styles.categoryText}>
                 {cat.name} x{cat.count}
               </Text>
             </View>
@@ -105,13 +100,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 16,
     marginTop: 16,
+    backgroundColor: BRAND.white,
+    borderColor: BRAND.border,
   },
   sectionLabel: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: FONTS.bodyBold,
     letterSpacing: 1,
     textTransform: 'uppercase',
     marginBottom: 12,
+    color: BRAND.textMuted,
   },
   countsRow: {
     flexDirection: 'row',
@@ -125,12 +123,14 @@ const styles = StyleSheet.create({
   },
   countValue: {
     fontSize: 28,
-    fontWeight: '800',
+    fontFamily: FONTS.bodyExtraBold,
+    color: BRAND.textPrimary,
   },
   countLabel: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: FONTS.bodyMedium,
     marginTop: 2,
+    color: BRAND.textMuted,
   },
   divider: {
     width: 1,
@@ -157,6 +157,7 @@ const styles = StyleSheet.create({
   },
   categoryText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
+    color: BRAND.textSecondary,
   },
 });
