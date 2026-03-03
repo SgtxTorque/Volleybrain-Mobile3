@@ -7,6 +7,7 @@ import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -879,23 +880,19 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
       <View
         key={family.family_id || family.family_name}
         style={{
-          backgroundColor: '#FFF',
-          borderRadius: 16,
+          backgroundColor: colors.card,
+          borderRadius: radii.card,
           marginBottom: 12,
           overflow: 'hidden',
           borderWidth: 1,
-          borderColor: family.outstanding > 0 ? '#D94F4F40' : colors.glassBorder,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.15,
-          shadowRadius: 12,
-          elevation: 6,
+          borderColor: family.outstanding > 0 ? '#D94F4F40' : colors.border,
+          ...shadows.card,
         }}
       >
         <View style={{ padding: 14 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>
+              <Text style={{ fontSize: 16, fontFamily: FONTS.bodySemiBold, color: colors.text }}>
                 {family.family_name}
               </Text>
               <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>
@@ -903,7 +900,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
               </Text>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: rateColor }}>
+              <Text style={{ fontSize: 16, fontFamily: FONTS.bodyBold, color: rateColor }}>
                 {Math.round(family.collectionRate)}%
               </Text>
               <Text style={{ fontSize: 11, color: colors.textSecondary }}>collected</Text>
@@ -1216,17 +1213,13 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
                 <View
                   key={group.player_id}
                   style={{
-                    backgroundColor: '#FFF',
-                    borderRadius: 16,
+                    backgroundColor: colors.card,
+                    borderRadius: radii.card,
                     marginBottom: 12,
                     overflow: 'hidden',
                     borderWidth: isFullySelected || isPartiallySelected ? 2 : 1,
-                    borderColor: isFullySelected || isPartiallySelected ? colors.primary : colors.glassBorder,
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.15,
-                    shadowRadius: 12,
-                    elevation: 6,
+                    borderColor: isFullySelected || isPartiallySelected ? colors.primary : colors.border,
+                    ...shadows.card,
                   }}
                 >
                   {/* Player Header */}
@@ -1268,7 +1261,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
 
                     {/* Player Info */}
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>
+                      <Text style={{ fontSize: 16, fontFamily: FONTS.bodySemiBold, color: colors.text }}>
                         {group.player_name}
                       </Text>
                       <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
