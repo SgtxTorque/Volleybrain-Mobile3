@@ -109,7 +109,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // -----------------------------------------------
   async function init() {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      let { data: { session } } = await supabase.auth.getSession();
+
+      // DEV BYPASS: auto-login when no session exists
+      if (
+        !session?.user &&
+        __DEV__ &&
+        process.env.EXPO_PUBLIC_DEV_SKIP_AUTH === 'true' &&
+        process.env.EXPO_PUBLIC_DEV_USER_EMAIL &&
+        process.env.EXPO_PUBLIC_DEV_USER_PASSWORD
+      ) {
+        console.log(`[DEV] Auth bypassed — logging in as ${process.env.EXPO_PUBLIC_DEV_USER_EMAIL}`);
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: process.env.EXPO_PUBLIC_DEV_USER_EMAIL,
+          password: process.env.EXPO_PUBLIC_DEV_USER_PASSWORD,
+        });
+        if (!error && data.session) {
+          session = data.session;
+        } else {
+          console.warn('[DEV] Auto-login failed:', error?.message);
+        }
+      }
+
       if (!session?.user) {
         setSession(null);
         setUser(null);

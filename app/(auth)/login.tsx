@@ -3,10 +3,11 @@ import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
+    Animated,
     Image,
     KeyboardAvoidingView,
     Modal,
@@ -18,6 +19,8 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { BRAND } from '@/theme/colors';
+import { FONTS } from '@/theme/fonts';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -28,6 +31,17 @@ export default function LoginScreen() {
   const [resettingPassword, setResettingPassword] = useState(false);
   const { signIn } = useAuth();
   const { colors } = useTheme();
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  const triggerShake = () => {
+    Animated.sequence([
+      Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -10, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 8, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -8, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
+    ]).start();
+  };
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -40,7 +54,28 @@ export default function LoginScreen() {
     setLoading(false);
 
     if (error) {
+      triggerShake();
       Alert.alert('Error', error.message);
+    }
+  };
+
+  // Dev quick-login helper
+  const devLogin = async (targetRole: string) => {
+    const devEmail = process.env.EXPO_PUBLIC_DEV_USER_EMAIL;
+    const devPassword = process.env.EXPO_PUBLIC_DEV_USER_PASSWORD;
+    if (!devEmail || !devPassword) {
+      Alert.alert('Dev Error', 'Set EXPO_PUBLIC_DEV_USER_EMAIL and EXPO_PUBLIC_DEV_USER_PASSWORD in .env');
+      return;
+    }
+    setEmail(devEmail);
+    setPassword(devPassword);
+    setLoading(true);
+    console.log(`[DEV] Quick login as ${targetRole} → ${devEmail}`);
+    const { error } = await signIn(devEmail, devPassword);
+    setLoading(false);
+    if (error) {
+      triggerShake();
+      Alert.alert('Dev Login Failed', error.message);
     }
   };
 
@@ -94,7 +129,7 @@ export default function LoginScreen() {
         </View>
 
         {/* Form */}
-        <View style={s.form}>
+        <Animated.View style={[s.form, { transform: [{ translateX: shakeAnim }] }]}>
           <TextInput
             style={s.input}
             placeholder="Email"
@@ -142,7 +177,25 @@ export default function LoginScreen() {
               </Text>
             </TouchableOpacity>
           </Link>
-        </View>
+        </Animated.View>
+
+        {/* Dev Tools — only in development */}
+        {__DEV__ && (
+          <View style={s.devTools}>
+            <Text style={s.devLabel}>── DEV TOOLS ──</Text>
+            <View style={s.devRow}>
+              {(['Admin', 'Coach', 'Parent', 'Player'] as const).map((role) => (
+                <TouchableOpacity
+                  key={role}
+                  style={s.devBtn}
+                  onPress={() => devLogin(role.toLowerCase())}
+                >
+                  <Text style={s.devBtnText}>{role}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
       </ScrollView>
 
       {/* Forgot Password Modal */}
@@ -324,5 +377,37 @@ const createStyles = (colors: any) => StyleSheet.create({
     color: colors.textMuted,
     fontSize: 14,
     fontWeight: '500',
+  },
+  // Dev Tools
+  devTools: {
+    marginTop: 24,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+  },
+  devLabel: {
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.3)',
+    fontFamily: 'monospace',
+    marginBottom: 8,
+    letterSpacing: 1,
+  },
+  devRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  devBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+  },
+  devBtnText: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.5)',
+    fontWeight: '600',
   },
 });
