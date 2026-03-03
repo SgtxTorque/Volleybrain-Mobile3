@@ -1,10 +1,21 @@
 /**
  * QuickActionsGrid — 3x2 grid of admin quick-action shortcuts.
+ * Phase 4: fade-in animation, improved grid layout.
  */
-import React from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect } from 'react';
+import { Alert, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
+
+const SCREEN_W = Dimensions.get('window').width;
+const GRID_PAD = 20;
+const GAP = 10;
+const TILE_W = (SCREEN_W - GRID_PAD * 2 - GAP * 2) / 3;
 
 const ACTIONS = [
   { icon: '\u{1F4CB}', label: 'Create\nEvent', key: 'createEvent' },
@@ -16,19 +27,29 @@ const ACTIONS = [
 ];
 
 export default function QuickActionsGrid() {
-  const handlePress = (key: string) => {
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    opacity.value = withTiming(1, { duration: 300 });
+  }, []);
+
+  const fadeStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
+  const handlePress = (_key: string) => {
     Alert.alert('Coming Soon', 'This action will be available in a future update.');
   };
 
   return (
-    <View style={styles.wrap}>
+    <Animated.View style={[styles.wrap, fadeStyle]}>
       <Text style={styles.sectionHeader}>QUICK ACTIONS</Text>
       <View style={styles.grid}>
         {ACTIONS.map((a) => (
           <TouchableOpacity
             key={a.key}
             activeOpacity={0.7}
-            style={styles.actionTile}
+            style={[styles.actionTile, { width: TILE_W }]}
             onPress={() => handlePress(a.key)}
           >
             <Text style={styles.icon}>{a.icon}</Text>
@@ -36,14 +57,14 @@ export default function QuickActionsGrid() {
           </TouchableOpacity>
         ))}
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: {
     marginBottom: 16,
-    paddingHorizontal: 20,
+    paddingHorizontal: GRID_PAD,
   },
   sectionHeader: {
     fontFamily: FONTS.bodyBold,
@@ -56,13 +77,11 @@ const styles = StyleSheet.create({
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
-    justifyContent: 'space-between',
+    gap: GAP,
   },
   actionTile: {
-    width: '30%',
     height: 80,
-    backgroundColor: BRAND.offWhite,
+    backgroundColor: BRAND.warmGray,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',

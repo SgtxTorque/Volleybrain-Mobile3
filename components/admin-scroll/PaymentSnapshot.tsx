@@ -1,6 +1,7 @@
 /**
  * PaymentSnapshot — Payment summary card with progress bar.
- * Shows collected vs expected, overdue families, and reminder CTA.
+ * Phase 4: Shows collected vs expected, overdue families,
+ * reminder CTA, "View Details" link.
  */
 import React from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -44,37 +45,50 @@ export default function PaymentSnapshot({
               <Text style={styles.amountGreen}>${collected.toLocaleString()}</Text>
               <Text style={styles.amountLabel}>collected</Text>
             </View>
-            <View>
+            <View style={styles.rightAlign}>
               <Text style={styles.amountMuted}>
                 ${(expected - collected).toLocaleString()}
               </Text>
-              <Text style={styles.amountLabel}>outstanding</Text>
+              <Text style={[styles.amountLabel, styles.rightAlign]}>outstanding</Text>
             </View>
           </View>
 
-          <View style={styles.barTrack}>
-            <View style={[styles.barFill, { width: `${Math.min(paymentPct, 100)}%` }]} />
+          <View style={styles.barRow}>
+            <View style={styles.barTrack}>
+              <View style={[styles.barFill, { width: `${Math.min(paymentPct, 100)}%` }]} />
+            </View>
+            <Text style={styles.pctText}>{paymentPct}%</Text>
           </View>
-          <Text style={styles.pctText}>{paymentPct}%</Text>
 
           {overdueCount > 0 && (
             <Text style={styles.overdueLine}>
               {overdueCount} famil{overdueCount === 1 ? 'y' : 'ies'} overdue
+              {overdueAmount > 0 ? ` \u00B7 $${overdueAmount.toLocaleString()}` : ''}
             </Text>
           )}
 
           <View style={styles.actionsRow}>
+            {overdueCount > 0 && (
+              <TouchableOpacity
+                activeOpacity={0.7}
+                style={styles.reminderBtn}
+                onPress={() =>
+                  Alert.alert(
+                    'Coming Soon',
+                    'Payment reminders will be available in a future update.',
+                  )
+                }
+              >
+                <Text style={styles.reminderBtnText}>Send All Reminders</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               activeOpacity={0.7}
-              style={styles.reminderBtn}
               onPress={() =>
-                Alert.alert(
-                  'Coming Soon',
-                  'Payment reminders will be available in a future update.',
-                )
+                Alert.alert('Coming Soon', 'Payment details will be available in a future update.')
               }
             >
-              <Text style={styles.reminderBtnText}>Send All Reminders</Text>
+              <Text style={styles.viewDetailsText}>View Details {'\u203A'}</Text>
             </TouchableOpacity>
           </View>
         </>
@@ -92,6 +106,11 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     padding: 16,
     marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
   headerRow: {
     flexDirection: 'row',
@@ -121,6 +140,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 12,
   },
+  rightAlign: {
+    alignItems: 'flex-end',
+  },
   amountGreen: {
     fontFamily: FONTS.bodyBold,
     fontSize: 20,
@@ -130,18 +152,23 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bodyBold,
     fontSize: 20,
     color: BRAND.textMuted,
-    textAlign: 'right',
   },
   amountLabel: {
     fontFamily: FONTS.bodyMedium,
     fontSize: 11,
     color: BRAND.textFaint,
   },
+  barRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 10,
+  },
   barTrack: {
+    flex: 1,
     height: 8,
     borderRadius: 4,
     backgroundColor: BRAND.warmGray,
-    marginBottom: 4,
   },
   barFill: {
     height: 8,
@@ -152,8 +179,6 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bodySemiBold,
     fontSize: 11,
     color: BRAND.textMuted,
-    textAlign: 'right',
-    marginBottom: 10,
   },
   overdueLine: {
     fontFamily: FONTS.bodyMedium,
@@ -164,6 +189,7 @@ const styles = StyleSheet.create({
   actionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   reminderBtn: {
     backgroundColor: BRAND.skyBlue,
@@ -175,5 +201,10 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bodySemiBold,
     fontSize: 13,
     color: '#FFFFFF',
+  },
+  viewDetailsText: {
+    fontFamily: FONTS.bodyMedium,
+    fontSize: 13,
+    color: BRAND.skyBlue,
   },
 });
