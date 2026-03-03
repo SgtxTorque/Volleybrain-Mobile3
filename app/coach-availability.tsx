@@ -1,6 +1,7 @@
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
-import { useTheme } from '@/lib/theme';
+import { BRAND } from '@/theme/colors';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -36,7 +37,6 @@ const REASONS = [
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export default function CoachAvailabilityScreen() {
-  const { colors } = useTheme();
   const { user } = useAuth();
   const router = useRouter();
 
@@ -244,14 +244,14 @@ export default function CoachAvailabilityScreen() {
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(0, 8);
 
-  const s = createStyles(colors);
+  const s = styles;
 
   return (
     <SafeAreaView style={s.container}>
       {/* Header */}
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+          <Ionicons name="arrow-back" size={24} color={BRAND.textPrimary} />
         </TouchableOpacity>
         <Text style={s.headerTitle}>My Availability</Text>
         <View style={s.backBtn} />
@@ -261,26 +261,26 @@ export default function CoachAvailabilityScreen() {
         {/* Month Navigation */}
         <View style={s.monthNav}>
           <TouchableOpacity onPress={prevMonth} style={s.monthBtn}>
-            <Ionicons name="chevron-back" size={24} color={colors.text} />
+            <Ionicons name="chevron-back" size={24} color={BRAND.textPrimary} />
           </TouchableOpacity>
           <Text style={s.monthLabel}>{monthLabel}</Text>
           <TouchableOpacity onPress={nextMonth} style={s.monthBtn}>
-            <Ionicons name="chevron-forward" size={24} color={colors.text} />
+            <Ionicons name="chevron-forward" size={24} color={BRAND.textPrimary} />
           </TouchableOpacity>
         </View>
 
         {/* Legend */}
         <View style={s.legend}>
           <View style={s.legendItem}>
-            <View style={[s.legendDot, { backgroundColor: colors.success }]} />
+            <View style={[s.legendDot, { backgroundColor: BRAND.success }]} />
             <Text style={s.legendText}>Available</Text>
           </View>
           <View style={s.legendItem}>
-            <View style={[s.legendDot, { backgroundColor: colors.danger }]} />
+            <View style={[s.legendDot, { backgroundColor: BRAND.error }]} />
             <Text style={s.legendText}>Unavailable</Text>
           </View>
           <View style={s.legendItem}>
-            <View style={[s.legendDot, { backgroundColor: colors.warning }]} />
+            <View style={[s.legendDot, { backgroundColor: BRAND.warning }]} />
             <Text style={s.legendText}>Tentative</Text>
           </View>
         </View>
@@ -298,7 +298,7 @@ export default function CoachAvailabilityScreen() {
 
           {loading ? (
             <View style={{ padding: 40, alignItems: 'center' }}>
-              <ActivityIndicator size="large" color={colors.primary} />
+              <ActivityIndicator size="large" color={BRAND.skyBlue} />
             </View>
           ) : (
             <View style={s.calendarGrid}>
@@ -307,7 +307,7 @@ export default function CoachAvailabilityScreen() {
                 const isToday = day.dateStr === todayStr;
                 const isCurrentMonth = day.month === 'current';
                 const statusColor = record
-                  ? record.status === 'unavailable' ? colors.danger : colors.warning
+                  ? record.status === 'unavailable' ? BRAND.error : BRAND.warning
                   : null;
 
                 return (
@@ -347,7 +347,7 @@ export default function CoachAvailabilityScreen() {
               const reason = REASONS.find(r => r.value === rec.reason);
               return (
                 <View key={rec.id} style={s.upcomingCard}>
-                  <View style={[s.upcomingDot, { backgroundColor: rec.status === 'unavailable' ? colors.danger : colors.warning }]} />
+                  <View style={[s.upcomingDot, { backgroundColor: rec.status === 'unavailable' ? BRAND.error : BRAND.warning }]} />
                   <View style={s.upcomingInfo}>
                     <Text style={s.upcomingDate}>
                       {d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
@@ -356,7 +356,7 @@ export default function CoachAvailabilityScreen() {
                     {rec.notes && <Text style={s.upcomingNotes}>{rec.notes}</Text>}
                   </View>
                   <TouchableOpacity onPress={() => removeRecord(rec.id)}>
-                    <Ionicons name="close-circle" size={22} color={colors.textMuted} />
+                    <Ionicons name="close-circle" size={22} color={BRAND.textMuted} />
                   </TouchableOpacity>
                 </View>
               );
@@ -374,7 +374,7 @@ export default function CoachAvailabilityScreen() {
             <View style={s.modalHeader}>
               <Text style={s.modalTitle}>Mark Unavailable</Text>
               <TouchableOpacity onPress={() => setShowModal(false)}>
-                <Ionicons name="close" size={24} color={colors.text} />
+                <Ionicons name="close" size={24} color={BRAND.textPrimary} />
               </TouchableOpacity>
             </View>
 
@@ -388,13 +388,13 @@ export default function CoachAvailabilityScreen() {
                   <TouchableOpacity
                     key={st}
                     style={[s.statusBtn, selectedStatus === st && s.statusBtnActive,
-                      selectedStatus === st && { borderColor: st === 'unavailable' ? colors.danger : colors.warning }]}
+                      selectedStatus === st && { borderColor: st === 'unavailable' ? BRAND.error : BRAND.warning }]}
                     onPress={() => setSelectedStatus(st)}
                   >
                     <View style={[s.statusBtnDot, {
-                      backgroundColor: st === 'unavailable' ? colors.danger : colors.warning,
+                      backgroundColor: st === 'unavailable' ? BRAND.error : BRAND.warning,
                     }]} />
-                    <Text style={[s.statusBtnText, selectedStatus === st && { color: colors.text }]}>
+                    <Text style={[s.statusBtnText, selectedStatus === st && { color: BRAND.textPrimary }]}>
                       {st === 'unavailable' ? 'Unavailable' : 'Tentative'}
                     </Text>
                   </TouchableOpacity>
@@ -411,7 +411,7 @@ export default function CoachAvailabilityScreen() {
                     onPress={() => setSelectedReason(r.value)}
                   >
                     <Text style={s.reasonIcon}>{r.icon}</Text>
-                    <Text style={[s.reasonLabel, selectedReason === r.value && { color: colors.primary }]}>
+                    <Text style={[s.reasonLabel, selectedReason === r.value && { color: BRAND.skyBlue }]}>
                       {r.label}
                     </Text>
                   </TouchableOpacity>
@@ -425,7 +425,7 @@ export default function CoachAvailabilityScreen() {
                 value={selectedNotes}
                 onChangeText={setSelectedNotes}
                 placeholder="Add any notes..."
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={BRAND.textMuted}
                 multiline
                 numberOfLines={3}
                 textAlignVertical="top"
@@ -452,64 +452,64 @@ export default function CoachAvailabilityScreen() {
   );
 }
 
-const createStyles = (colors: any) => StyleSheet.create({
+const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: BRAND.border },
   backBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '600', color: colors.text },
+  headerTitle: { fontSize: 18, fontFamily: FONTS.bodySemiBold, color: BRAND.textPrimary },
   scroll: { flex: 1 },
 
   monthNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12 },
   monthBtn: { padding: 8 },
-  monthLabel: { fontSize: 20, fontWeight: '700', color: colors.text },
+  monthLabel: { fontSize: 20, fontFamily: FONTS.bodyBold, color: BRAND.textPrimary },
 
   legend: { flexDirection: 'row', justifyContent: 'center', gap: 16, marginBottom: 12 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendDot: { width: 10, height: 10, borderRadius: 5 },
-  legendText: { fontSize: 12, color: colors.textMuted },
+  legendText: { fontSize: 12, color: BRAND.textMuted },
 
-  calendarCard: { backgroundColor: colors.glassCard, marginHorizontal: 16, borderRadius: 16, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
+  calendarCard: { backgroundColor: BRAND.surfaceCard, marginHorizontal: 16, borderRadius: 16, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: BRAND.cardBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   dayHeaderRow: { flexDirection: 'row' },
   dayHeaderCell: { flex: 1, alignItems: 'center', paddingVertical: 8 },
-  dayHeaderText: { fontSize: 12, fontWeight: '600', color: colors.textMuted },
+  dayHeaderText: { fontSize: 12, fontFamily: FONTS.bodySemiBold, color: BRAND.textMuted },
   calendarGrid: { flexDirection: 'row', flexWrap: 'wrap' },
   dayCell: { width: '14.28%', aspectRatio: 1, justifyContent: 'center', alignItems: 'center' },
-  dayCellToday: { backgroundColor: colors.primary + '15', borderRadius: 8 },
+  dayCellToday: { backgroundColor: BRAND.skyBlue + '15', borderRadius: 8 },
   dayCellMuted: { opacity: 0.3 },
-  dayNumber: { fontSize: 14, fontWeight: '500', color: colors.text },
-  dayNumberToday: { fontWeight: '800', color: colors.primary },
-  dayNumberMuted: { color: colors.textMuted },
+  dayNumber: { fontSize: 14, fontFamily: FONTS.bodyMedium, color: BRAND.textPrimary },
+  dayNumberToday: { fontFamily: FONTS.bodyExtraBold, color: BRAND.skyBlue },
+  dayNumberMuted: { color: BRAND.textMuted },
   statusDot: { width: 6, height: 6, borderRadius: 3, marginTop: 2 },
 
   upcomingSection: { paddingHorizontal: 16, marginBottom: 16 },
-  upcomingSectionTitle: { fontSize: 13, fontWeight: '700', color: colors.textMuted, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1.2 },
-  upcomingCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.glassCard, borderRadius: 16, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
+  upcomingSectionTitle: { fontSize: 13, fontFamily: FONTS.bodyBold, color: BRAND.textMuted, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1.2 },
+  upcomingCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: BRAND.surfaceCard, borderRadius: 16, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: BRAND.cardBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   upcomingDot: { width: 10, height: 10, borderRadius: 5, marginRight: 12 },
   upcomingInfo: { flex: 1 },
-  upcomingDate: { fontSize: 14, fontWeight: '600', color: colors.text },
-  upcomingReason: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
-  upcomingNotes: { fontSize: 12, color: colors.textMuted, fontStyle: 'italic', marginTop: 2 },
+  upcomingDate: { fontSize: 14, fontFamily: FONTS.bodySemiBold, color: BRAND.textPrimary },
+  upcomingReason: { fontSize: 13, color: BRAND.textMuted, marginTop: 2 },
+  upcomingNotes: { fontSize: 12, color: BRAND.textMuted, fontStyle: 'italic', marginTop: 2 },
 
   // Modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '80%', padding: 0 },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, borderBottomWidth: 1, borderBottomColor: colors.border },
-  modalTitle: { fontSize: 20, fontWeight: 'bold', color: colors.text },
+  modalContent: { backgroundColor: BRAND.cardBg, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '80%', padding: 0 },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, borderBottomWidth: 1, borderBottomColor: BRAND.border },
+  modalTitle: { fontSize: 20, fontFamily: FONTS.bodyBold, color: BRAND.textPrimary },
   modalScroll: { padding: 20 },
-  modalDate: { fontSize: 16, fontWeight: '600', color: colors.primary, marginBottom: 16 },
-  modalLabel: { fontSize: 14, fontWeight: '600', color: colors.text, marginBottom: 8, marginTop: 12 },
+  modalDate: { fontSize: 16, fontFamily: FONTS.bodySemiBold, color: BRAND.skyBlue, marginBottom: 16 },
+  modalLabel: { fontSize: 14, fontFamily: FONTS.bodySemiBold, color: BRAND.textPrimary, marginBottom: 8, marginTop: 12 },
   statusRow: { flexDirection: 'row', gap: 10 },
-  statusBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.background },
-  statusBtnActive: { backgroundColor: colors.card },
+  statusBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: BRAND.border, backgroundColor: BRAND.offWhite },
+  statusBtnActive: { backgroundColor: BRAND.cardBg },
   statusBtnDot: { width: 10, height: 10, borderRadius: 5 },
-  statusBtnText: { fontSize: 14, fontWeight: '500', color: colors.textMuted },
+  statusBtnText: { fontSize: 14, fontFamily: FONTS.bodyMedium, color: BRAND.textMuted },
   reasonGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  reasonBtn: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.background, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  reasonBtnActive: { borderColor: colors.primary, backgroundColor: colors.primary + '15' },
+  reasonBtn: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: BRAND.border, backgroundColor: BRAND.offWhite, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  reasonBtnActive: { borderColor: BRAND.skyBlue, backgroundColor: BRAND.skyBlue + '15' },
   reasonIcon: { fontSize: 16 },
-  reasonLabel: { fontSize: 13, fontWeight: '500', color: colors.textMuted },
-  notesInput: { backgroundColor: colors.background, borderRadius: 12, padding: 14, fontSize: 14, color: colors.text, borderWidth: 1, borderColor: colors.border, minHeight: 80 },
-  modalFooter: { padding: 16, borderTopWidth: 1, borderTopColor: colors.border },
-  saveBtn: { backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
-  saveBtnText: { fontSize: 16, fontWeight: '600', color: '#000' },
+  reasonLabel: { fontSize: 13, fontFamily: FONTS.bodyMedium, color: BRAND.textMuted },
+  notesInput: { backgroundColor: BRAND.offWhite, borderRadius: 12, padding: 14, fontSize: 14, color: BRAND.textPrimary, borderWidth: 1, borderColor: BRAND.border, minHeight: 80 },
+  modalFooter: { padding: 16, borderTopWidth: 1, borderTopColor: BRAND.border },
+  saveBtn: { backgroundColor: BRAND.skyBlue, borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
+  saveBtnText: { fontSize: 16, fontFamily: FONTS.bodySemiBold, color: '#000' },
 });
