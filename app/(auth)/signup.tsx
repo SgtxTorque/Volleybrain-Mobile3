@@ -199,10 +199,15 @@ export default function SignupScreen() {
       }).eq('id', user.id);
 
       // Create sport entry
-      await supabase.from('organization_sports').insert({
-        organization_id: org.id,
-        sport_name: orgSport,
-      }).catch(() => {}); // ignore if table doesn't exist
+      // Create sport entry (ignore if table doesn't exist)
+      try {
+        await supabase.from('organization_sports').insert({
+          organization_id: org.id,
+          sport_name: orgSport,
+        });
+      } catch {
+        // noop
+      }
 
       setCreatedOrgCode(code);
       await refreshProfile();
