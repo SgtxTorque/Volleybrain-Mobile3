@@ -1,6 +1,8 @@
 import AdminContextBar from '@/components/AdminContextBar';
+import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -389,32 +391,32 @@ export default function SeasonArchivesScreen() {
 
 const createStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.screenPadding, borderBottomWidth: 1, borderBottomColor: colors.border },
   backBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '600', color: colors.text },
+  headerTitle: { ...displayTextStyle, fontSize: 18, color: colors.text },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { marginTop: 12, fontSize: 14, color: colors.textMuted },
+  loadingText: { marginTop: 12, fontSize: 14, color: colors.textMuted, fontFamily: FONTS.bodyMedium },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
-  emptyTitle: { fontSize: 16, fontWeight: '600', color: colors.text, marginTop: 16 },
-  emptySubtitle: { fontSize: 13, color: colors.textMuted, marginTop: 8, textAlign: 'center' },
+  emptyTitle: { fontSize: 16, fontFamily: FONTS.bodySemiBold, color: colors.text, marginTop: 16 },
+  emptySubtitle: { fontSize: 13, color: colors.textMuted, fontFamily: FONTS.bodyMedium, marginTop: 8, textAlign: 'center' },
   scroll: { flex: 1 },
-  scrollContent: { padding: 16 },
-  seasonCard: { backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
+  scrollContent: { padding: spacing.screenPadding },
+  seasonCard: { backgroundColor: colors.glassCard, borderRadius: radii.card, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: colors.glassBorder, ...shadows.card },
   seasonCardExpanded: { marginBottom: 0, borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
   seasonHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
-  seasonName: { fontSize: 17, fontWeight: '700', color: colors.text },
-  seasonDates: { fontSize: 13, color: colors.textMuted, marginTop: 4 },
-  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  statusText: { fontSize: 12, fontWeight: '600', textTransform: 'capitalize' },
+  seasonName: { fontSize: 17, fontFamily: FONTS.bodyBold, color: colors.text },
+  seasonDates: { fontSize: 13, color: colors.textMuted, fontFamily: FONTS.bodyMedium, marginTop: 4 },
+  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: radii.statBox },
+  statusText: { fontSize: 12, fontFamily: FONTS.bodySemiBold, textTransform: 'capitalize' },
   seasonStats: { flexDirection: 'row', marginTop: 12, gap: 20 },
   statItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  statValue: { fontSize: 14, fontWeight: '600', color: colors.text },
-  statLabel: { fontSize: 13, color: colors.textMuted },
-  detailContainer: { backgroundColor: colors.glassCard, borderBottomLeftRadius: 16, borderBottomRightRadius: 16, paddingHorizontal: 16, paddingBottom: 16, marginBottom: 12, borderWidth: 1, borderColor: colors.glassBorder, borderTopColor: colors.border },
+  statValue: { fontSize: 14, fontFamily: FONTS.bodySemiBold, color: colors.text },
+  statLabel: { fontSize: 13, color: colors.textMuted, fontFamily: FONTS.bodyMedium },
+  detailContainer: { backgroundColor: colors.glassCard, borderBottomLeftRadius: radii.card, borderBottomRightRadius: radii.card, paddingHorizontal: 16, paddingBottom: 16, marginBottom: 12, borderWidth: 1, borderColor: colors.glassBorder, borderTopColor: colors.border },
   detailSection: { marginTop: 12 },
-  detailTitle: { fontSize: 13, fontWeight: '700', color: colors.textMuted, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 },
-  detailEmpty: { fontSize: 13, color: colors.textMuted, fontStyle: 'italic' },
+  detailTitle: { fontSize: 13, fontFamily: FONTS.bodyBold, color: colors.textMuted, marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 },
+  detailEmpty: { fontSize: 13, color: colors.textMuted, fontFamily: FONTS.bodyMedium, fontStyle: 'italic' },
   detailRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, gap: 10 },
-  detailRowText: { flex: 1, fontSize: 14, color: colors.text },
-  detailRowMeta: { fontSize: 12, color: colors.textMuted },
+  detailRowText: { flex: 1, fontSize: 14, color: colors.text, fontFamily: FONTS.bodyMedium },
+  detailRowMeta: { fontSize: 12, color: colors.textMuted, fontFamily: FONTS.bodyMedium },
 });

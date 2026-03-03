@@ -10,6 +10,7 @@ import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -813,77 +814,77 @@ const createStyles = (colors: any) => StyleSheet.create({
   statsRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
 
   // Alert Banner
-  alertText: { fontSize: 14, color: '#E8913A', fontWeight: '500', flex: 1 },
+  alertText: { fontSize: 14, color: '#E8913A', fontFamily: FONTS.bodySemiBold, flex: 1 },
 
   // Search
   searchRow: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF',
+    flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card,
     borderRadius: radii.card, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 16,
-    borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', gap: 8, ...shadows.card,
+    borderWidth: 1, borderColor: colors.border, gap: 8, ...shadows.card,
   },
-  searchInput: { flex: 1, fontSize: 15, color: colors.text, padding: 0 },
+  searchInput: { flex: 1, fontSize: 15, color: colors.text, fontFamily: FONTS.bodyMedium, padding: 0 },
 
   // Team Card (inner body — Card wrapper handles outer styling)
   teamBody: { flex: 1 },
   teamTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   teamName: { ...displayTextStyle, fontSize: 16, color: colors.text },
   recordText: { ...displayTextStyle, fontSize: 14, color: colors.textSecondary },
-  teamMeta: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
-  coachList: { fontSize: 12, color: colors.textSecondary, marginTop: 4 },
+  teamMeta: { fontSize: 13, color: colors.textMuted, fontFamily: FONTS.bodyMedium, marginTop: 2 },
+  coachList: { fontSize: 12, color: colors.textSecondary, fontFamily: FONTS.bodyMedium, marginTop: 4 },
   waiverPill: {
     flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start',
     paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, marginTop: 6,
   },
 
   // Empty
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: colors.text, marginTop: 12 },
-  emptySubtext: { fontSize: 14, color: colors.textMuted, marginTop: 4 },
+  emptyTitle: { fontSize: 18, fontFamily: FONTS.bodyBold, color: colors.text, marginTop: 12 },
+  emptySubtext: { fontSize: 14, color: colors.textMuted, fontFamily: FONTS.bodyMedium, marginTop: 4 },
 
   // Unrostered Section
   unrosteredSection: { marginTop: 12 },
   unrosteredCard: {
-    backgroundColor: '#FFF', borderRadius: radii.card, padding: 12, marginBottom: 8,
-    borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', ...shadows.card,
+    backgroundColor: colors.card, borderRadius: radii.card, padding: 12, marginBottom: 8,
+    borderWidth: 1, borderColor: colors.border, ...shadows.card,
   },
   unrosteredInfo: { marginBottom: 8 },
-  unrosteredName: { fontSize: 15, fontWeight: '600', color: colors.text },
-  unrosteredMeta: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+  unrosteredName: { fontSize: 15, fontFamily: FONTS.bodySemiBold, color: colors.text },
+  unrosteredMeta: { fontSize: 12, color: colors.textMuted, fontFamily: FONTS.bodyMedium, marginTop: 2 },
   teamPillScroll: { flexGrow: 0 },
   teamPill: {
     flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 8,
     paddingHorizontal: 10, paddingVertical: 5, marginRight: 6,
   },
   teamPillDot: { width: 8, height: 8, borderRadius: 4, marginRight: 6 },
-  teamPillText: { fontSize: 12, color: colors.text },
+  teamPillText: { fontSize: 12, color: colors.text, fontFamily: FONTS.bodyMedium },
   allRostered: { flexDirection: 'row', alignItems: 'center', padding: 16, justifyContent: 'center' },
 
   // Modals
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-  modal: { backgroundColor: colors.card || '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '85%' },
+  modal: { backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '85%' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   modalTitle: { ...displayTextStyle, fontSize: 20, color: colors.text },
-  detailModal: { backgroundColor: colors.card || '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, height: '88%' },
+  detailModal: { backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, height: '88%' },
   detailHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: colors.border },
-  detailTitle: { fontSize: 20, fontWeight: '700', color: colors.text, flex: 1, textAlign: 'center' },
+  detailTitle: { ...displayTextStyle, fontSize: 20, color: colors.text, flex: 1, textAlign: 'center' },
   detailScroll: { flex: 1, padding: 16 },
 
   syncBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.info + '15', borderRadius: 12, padding: 12, marginBottom: 16 },
-  syncBtnTxt: { fontSize: 14, color: colors.info, fontWeight: '600' },
+  syncBtnTxt: { fontSize: 14, color: colors.info, fontFamily: FONTS.bodySemiBold },
 
-  section: { backgroundColor: '#FAFAFA', borderRadius: radii.card, padding: 16, marginBottom: 16 },
-  sectionTitle: { fontSize: 12, fontWeight: '700', color: colors.textMuted, marginBottom: 12, letterSpacing: 1 },
+  section: { backgroundColor: colors.background, borderRadius: radii.card, padding: 16, marginBottom: 16 },
+  sectionTitle: { fontSize: 12, fontFamily: FONTS.bodyExtraBold, color: colors.textMuted, marginBottom: 12, letterSpacing: 1, textTransform: 'uppercase' as const },
   memberRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
   avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primary + '20', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  avatarText: { fontSize: 14, fontWeight: '700', color: colors.primary },
-  memberName: { fontSize: 15, fontWeight: '600', color: colors.text },
-  memberRole: { fontSize: 12, color: colors.textMuted, marginTop: 1 },
+  avatarText: { fontSize: 14, fontFamily: FONTS.bodyBold, color: colors.primary },
+  memberName: { fontSize: 15, fontFamily: FONTS.bodySemiBold, color: colors.text },
+  memberRole: { fontSize: 12, color: colors.textMuted, fontFamily: FONTS.bodyMedium, marginTop: 1 },
 
-  addLabel: { fontSize: 12, fontWeight: '600', color: colors.textMuted, marginTop: 12, marginBottom: 8 },
+  addLabel: { fontSize: 12, fontFamily: FONTS.bodySemiBold, color: colors.textMuted, marginTop: 12, marginBottom: 8 },
   addRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, gap: 8 },
-  addName: { flex: 1, fontSize: 14, color: colors.text },
+  addName: { flex: 1, fontSize: 14, color: colors.text, fontFamily: FONTS.bodyMedium },
   addMeta: { fontSize: 12, color: colors.textMuted },
   roleBtn: { backgroundColor: colors.primary + '20', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
-  roleBtnTxt: { fontSize: 12, color: colors.primary, fontWeight: '600' },
+  roleBtnTxt: { fontSize: 12, color: colors.primary, fontFamily: FONTS.bodySemiBold },
   moreText: { fontSize: 13, color: colors.textMuted, paddingVertical: 8, textAlign: 'center' },
 
   // Move Player Modal
@@ -892,26 +893,26 @@ const createStyles = (colors: any) => StyleSheet.create({
     borderRadius: 12, overflow: 'hidden', marginBottom: 8, borderWidth: 1, borderColor: colors.glassBorder,
   },
   moveTeamStripe: { width: 6, alignSelf: 'stretch' },
-  moveTeamName: { fontSize: 15, fontWeight: '600', color: colors.text, paddingLeft: 12 },
-  moveTeamMeta: { fontSize: 12, color: colors.textMuted, paddingLeft: 12, marginTop: 2 },
+  moveTeamName: { fontSize: 15, fontFamily: FONTS.bodySemiBold, color: colors.text, paddingLeft: 12 },
+  moveTeamMeta: { fontSize: 12, color: colors.textMuted, fontFamily: FONTS.bodyMedium, paddingLeft: 12, marginTop: 2 },
 
   // Form elements
-  label: { fontSize: 14, fontWeight: '600', color: colors.text, marginBottom: 8, marginTop: 8 },
-  input: { backgroundColor: colors.background, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, color: colors.text, borderWidth: 1, borderColor: colors.border, marginBottom: 4 },
+  label: { fontSize: 14, fontFamily: FONTS.bodySemiBold, color: colors.text, marginBottom: 8, marginTop: 8 },
+  input: { backgroundColor: colors.background, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, color: colors.text, fontFamily: FONTS.bodyMedium, borderWidth: 1, borderColor: colors.border, marginBottom: 4 },
   optionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
   optionBtn: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 10, backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border },
   optionBtnSel: { backgroundColor: colors.primary + '20', borderColor: colors.primary },
-  optionBtnTxt: { fontSize: 14, color: colors.text },
-  optionBtnTxtSel: { color: colors.primary, fontWeight: '600' },
+  optionBtnTxt: { fontSize: 14, color: colors.text, fontFamily: FONTS.bodyMedium },
+  optionBtnTxtSel: { color: colors.primary, fontFamily: FONTS.bodySemiBold },
   typeRow: { flexDirection: 'row', gap: 12, marginBottom: 8 },
   typeBtn: { flex: 1, paddingVertical: 12, borderRadius: 10, backgroundColor: colors.background, alignItems: 'center', borderWidth: 1, borderColor: colors.border },
   typeBtnSel: { backgroundColor: colors.primary + '20', borderColor: colors.primary },
-  typeBtnTxt: { fontSize: 14, color: colors.text },
-  typeBtnTxtSel: { color: colors.primary, fontWeight: '600' },
+  typeBtnTxt: { fontSize: 14, color: colors.text, fontFamily: FONTS.bodyMedium },
+  typeBtnTxtSel: { color: colors.primary, fontFamily: FONTS.bodySemiBold },
   colorRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 8 },
   colorBtn: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
   colorBtnSel: { borderWidth: 3, borderColor: colors.text },
   primaryBtn: { backgroundColor: colors.primary, padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 16 },
-  primaryBtnTxt: { color: colors.background, fontSize: 18, fontWeight: '700' },
+  primaryBtnTxt: { color: colors.background, fontSize: 18, fontFamily: FONTS.bodyBold },
   disabled: { opacity: 0.5 },
 });
