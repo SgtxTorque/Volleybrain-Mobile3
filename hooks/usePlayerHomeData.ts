@@ -139,6 +139,9 @@ export function usePlayerHomeData(playerId: string | null) {
   // Social (tables may not exist)
   const [recentPhotos, setRecentPhotos] = useState<PhotoPreview[]>([]);
 
+  // Personal best detection
+  const [personalBest, setPersonalBest] = useState<string | null>(null);
+
   // Feature flags for missing tables
   const [shoutoutsAvailable] = useState(false);
   const [challengesAvailable] = useState(false);
@@ -211,14 +214,15 @@ export function usePlayerHomeData(playerId: string | null) {
         }
       }
 
-      // 3. Last game stats
-      const { data: lastGameData } = await supabase
+      // 3. Last game stats + personal best detection
+      const { data: recentGames } = await supabase
         .from('game_player_stats')
         .select('kills, aces, digs, blocks, assists, points, event_id, created_at')
         .eq('player_id', playerId)
         .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .limit(10);
+
+      const lastGameData = recentGames?.[0] || null;
 
       if (lastGameData) {
         // Get event details
@@ -240,8 +244,33 @@ export function usePlayerHomeData(playerId: string | null) {
           our_score: eventData?.our_score ?? null,
           opponent_score: eventData?.opponent_score ?? null,
         });
+
+        // Personal best: compare last game to previous games
+        const previousGames = (recentGames || []).slice(1);
+        if (previousGames.length > 0) {
+          const statFields = [
+            { key: 'kills', label: 'kills' },
+            { key: 'aces', label: 'aces' },
+            { key: 'digs', label: 'digs' },
+            { key: 'blocks', label: 'blocks' },
+            { key: 'assists', label: 'assists' },
+          ] as const;
+          let bestStat: string | null = null;
+          for (const field of statFields) {
+            const lastVal = (lastGameData as any)[field.key] || 0;
+            const prevMax = Math.max(...previousGames.map((g: any) => g[field.key] || 0), 0);
+            if (lastVal > prevMax && lastVal > 0) {
+              bestStat = field.label;
+              break;
+            }
+          }
+          setPersonalBest(bestStat);
+        } else {
+          setPersonalBest(null);
+        }
       } else {
         setLastGame(null);
+        setPersonalBest(null);
       }
 
       // 4. Badges
@@ -419,6 +448,7 @@ export function usePlayerHomeData(playerId: string | null) {
     seasonStats,
     lastGame,
     badges,
+    personalBest,
     // Computed
     xp,
     level,

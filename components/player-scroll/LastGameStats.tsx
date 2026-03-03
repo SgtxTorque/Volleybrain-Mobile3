@@ -24,7 +24,7 @@ const PT = {
 type Props = {
   lastGame: LastGameStatsType | null;
   position: string | null;
-  seasonStats: Record<string, number> | null;
+  personalBest: string | null;
 };
 
 type StatItem = {
@@ -67,55 +67,26 @@ function getTopStats(
   return all.slice(0, 4);
 }
 
-function findPersonalBest(
-  game: LastGameStatsType,
-  seasonStats: Record<string, number> | null,
-): string | null {
-  if (!seasonStats) return null;
-  // Compare per-game stats to season per-game averages
-  const gp = seasonStats.games_played || 1;
-  const checks: { stat: string; gameVal: number; avgVal: number }[] = [
-    { stat: 'kills', gameVal: game.kills, avgVal: (seasonStats.total_kills || 0) / gp },
-    { stat: 'aces', gameVal: game.aces, avgVal: (seasonStats.total_aces || 0) / gp },
-    { stat: 'digs', gameVal: game.digs, avgVal: (seasonStats.total_digs || 0) / gp },
-    { stat: 'blocks', gameVal: game.blocks, avgVal: (seasonStats.total_blocks || 0) / gp },
-    { stat: 'assists', gameVal: game.assists, avgVal: (seasonStats.total_assists || 0) / gp },
-  ];
-
-  // Find stat where game value exceeds average by at least 50% (and value > 0)
-  let best: { stat: string; ratio: number } | null = null;
-  for (const c of checks) {
-    if (c.gameVal > 0 && c.avgVal > 0) {
-      const ratio = c.gameVal / c.avgVal;
-      if (ratio >= 1.5 && (!best || ratio > best.ratio)) {
-        best = { stat: c.stat, ratio };
-      }
-    }
-  }
-
-  return best ? best.stat : null;
-}
-
-function StatBox({ item, index }: { item: StatItem; index: number }) {
-  const animValue = useSharedValue(0);
+function StatBox({ item }: { item: StatItem }) {
+  const animOpacity = useSharedValue(0);
 
   useEffect(() => {
-    animValue.value = withTiming(item.value, { duration: 400 });
-  }, [item.value]);
+    animOpacity.value = withTiming(1, { duration: 400 });
+  }, []);
 
-  const countStyle = useAnimatedStyle(() => ({
-    opacity: 1,
+  const fadeStyle = useAnimatedStyle(() => ({
+    opacity: animOpacity.value,
   }));
 
   return (
-    <Animated.View style={[styles.statBox, countStyle]}>
+    <Animated.View style={[styles.statBox, fadeStyle]}>
       <Text style={styles.statValue}>{item.value}</Text>
       <Text style={styles.statLabel}>{item.label}</Text>
     </Animated.View>
   );
 }
 
-export default function LastGameStats({ lastGame, position, seasonStats }: Props) {
+export default function LastGameStats({ lastGame, position, personalBest }: Props) {
   if (!lastGame) return null;
 
   // Check if there's any meaningful data
@@ -124,15 +95,14 @@ export default function LastGameStats({ lastGame, position, seasonStats }: Props
   if (!hasData) return null;
 
   const topStats = getTopStats(lastGame, position);
-  const personalBest = findPersonalBest(lastGame, seasonStats);
 
   return (
     <View style={styles.card}>
       <Text style={styles.header}>LAST GAME HIGHLIGHTS</Text>
 
       <View style={styles.grid}>
-        {topStats.map((item, i) => (
-          <StatBox key={item.key} item={item} index={i} />
+        {topStats.map((item) => (
+          <StatBox key={item.key} item={item} />
         ))}
       </View>
 

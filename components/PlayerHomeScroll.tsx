@@ -228,7 +228,7 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
         <LastGameStats
           lastGame={data.lastGame}
           position={data.position}
-          seasonStats={data.seasonStats}
+          personalBest={data.personalBest}
         />
 
         {/* ─── 10. CLOSING MASCOT + XP CALLBACK ──────────────── */}
