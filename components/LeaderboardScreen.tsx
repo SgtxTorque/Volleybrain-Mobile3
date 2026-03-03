@@ -10,8 +10,9 @@
  *   - Coach  → highlight own team
  *   - Parent → highlight children
  */
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Animated as RNAnimated,
   Image,
   Platform,
   ScrollView,
@@ -110,16 +111,30 @@ export default function LeaderboardScreen({
     [highlightPlayerId, highlightTeamId, highlightPlayerIds],
   );
 
+  // ── Skeleton pulse animation ─────────────────────────────────
+  const pulseAnim = useRef(new RNAnimated.Value(0.3)).current;
+  useEffect(() => {
+    if (!loading) return;
+    const loop = RNAnimated.loop(
+      RNAnimated.sequence([
+        RNAnimated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+        RNAnimated.timing(pulseAnim, { toValue: 0.3, duration: 800, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [loading]);
+
   // ── Loading state ───────────────────────────────────────────
   if (loading) {
     return (
       <View style={s.skeletonWrap}>
         {[...Array(4)].map((_, i) => (
-          <View key={i} style={s.skeletonCard}>
+          <RNAnimated.View key={i} style={[s.skeletonCard, { opacity: pulseAnim }]}>
             <View style={s.skeletonBar} />
             <View style={[s.skeletonBar, { width: '60%', marginTop: 8 }]} />
             <View style={[s.skeletonBar, { width: '80%', marginTop: 8 }]} />
-          </View>
+          </RNAnimated.View>
         ))}
       </View>
     );
@@ -242,9 +257,16 @@ export default function LeaderboardScreen({
                         <Text style={[s.miniJersey, { color: colors.textMuted }]}>#{entry.jerseyNumber}</Text>
                       )}
                     </View>
-                    <Text style={[s.miniStatValue, { color: cat.color }]}>
-                      {formatStat(entry.statValue, cat)}
-                    </Text>
+                    <View style={s.miniStatWrap}>
+                      <Text style={[s.miniStatValue, { color: cat.color }]}>
+                        {formatStat(entry.statValue, cat)}
+                      </Text>
+                      {!cat.isPercentage && entry.gamesPlayed > 0 && (
+                        <Text style={[s.miniPerGame, { color: colors.textMuted }]}>
+                          {(entry.statValue / entry.gamesPlayed).toFixed(1)}/g
+                        </Text>
+                      )}
+                    </View>
                   </TouchableOpacity>
                 );
               })}
@@ -362,7 +384,7 @@ export default function LeaderboardScreen({
         {/* Per-Game Toggle */}
         {currentCat && !currentCat.isPercentage && (
           <View style={s.perGameRow}>
-            <Text style={[s.perGameLabel, { color: colors.textSecondary }]}>Per-Game Average</Text>
+            <Text style={[s.perGameLabel, { color: colors.textSecondary }]}>Sort by Per-Game Average</Text>
             <TouchableOpacity
               style={[s.perGameToggle, showPerGame && { backgroundColor: (currentCat.color || colors.primary) + '25' }]}
               onPress={() => {
@@ -443,11 +465,21 @@ export default function LeaderboardScreen({
                   {/* Stat */}
                   <View style={s.listStatCol}>
                     <Text style={[s.listStatValue, { color: currentCat?.color || '#888' }, rank <= 3 && { fontWeight: '800', fontSize: 20 }]}>
-                      {currentCat?.isPercentage ? formatPercentage(displayValue) : (showPerGame ? displayValue.toFixed(1) : displayValue)}
+                      {currentCat?.isPercentage
+                        ? formatPercentage(showPerGame ? displayValue : entry.statValue)
+                        : (showPerGame ? displayValue.toFixed(1) : entry.statValue)}
                     </Text>
-                    <Text style={[s.listGamesPlayed, { color: colors.textMuted }]}>
-                      {entry.gamesPlayed} gm{entry.gamesPlayed !== 1 ? 's' : ''}
-                    </Text>
+                    {!currentCat?.isPercentage && perGame !== null ? (
+                      <Text style={[s.listGamesPlayed, { color: colors.textMuted }]}>
+                        {showPerGame
+                          ? `${entry.gamesPlayed} gm${entry.gamesPlayed !== 1 ? 's' : ''}`
+                          : `${perGame}/game`}
+                      </Text>
+                    ) : (
+                      <Text style={[s.listGamesPlayed, { color: colors.textMuted }]}>
+                        {entry.gamesPlayed} gm{entry.gamesPlayed !== 1 ? 's' : ''}
+                      </Text>
+                    )}
                   </View>
                 </TouchableOpacity>
               );
@@ -686,9 +718,16 @@ const createStyles = (colors: any) =>
     miniJersey: {
       fontSize: 11,
     },
+    miniStatWrap: {
+      alignItems: 'flex-end',
+    },
     miniStatValue: {
       fontSize: 15,
       fontWeight: '700',
+    },
+    miniPerGame: {
+      fontSize: 9,
+      marginTop: 1,
     },
     viewAllBtn: {
       paddingVertical: 10,
