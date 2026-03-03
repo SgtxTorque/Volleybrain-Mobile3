@@ -6,6 +6,7 @@ import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
+  Image,
   Linking,
   ScrollView,
   StyleSheet,
@@ -75,6 +76,16 @@ export default function HelpScreen() {
       </View>
 
       <ScrollView style={s.scroll} contentContainerStyle={s.scrollContent}>
+        {/* Mascot Welcome */}
+        <View style={s.mascotWrap}>
+          <Image
+            source={require('@/assets/images/mascot/HiLynx.png')}
+            style={s.mascotImage}
+            resizeMode="contain"
+          />
+          <Text style={s.mascotTitle}>How can we help?</Text>
+        </View>
+
         {/* FAQ Section */}
         <View style={s.sectionContainer}>
           <Text style={s.sectionTitle}>Frequently Asked Questions</Text>
@@ -158,6 +169,20 @@ const createStyles = (colors: any) =>
     },
     scrollContent: {
       padding: 20,
+    },
+    mascotWrap: {
+      alignItems: 'center',
+      marginBottom: 20,
+    },
+    mascotImage: {
+      width: 120,
+      height: 120,
+      marginBottom: 8,
+    },
+    mascotTitle: {
+      ...displayTextStyle,
+      fontSize: 20,
+      color: colors.text,
     },
     sectionContainer: {
       marginBottom: 24,

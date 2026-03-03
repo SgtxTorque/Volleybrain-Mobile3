@@ -8,6 +8,7 @@ import { useRouter } from 'expo-router';
 import React from 'react';
 import {
   Alert,
+  Image,
   Linking,
   Platform,
   ScrollView,
@@ -108,10 +109,12 @@ export default function InviteFriendsScreen() {
       >
         {/* Hero Section */}
         <View style={s.heroCard}>
-          <View style={[s.heroIconWrap, { backgroundColor: colors.primary + '20' }]}>
-            <Ionicons name="people" size={40} color={colors.primary} />
-          </View>
-          <Text style={s.heroTitle}>Grow Your Team</Text>
+          <Image
+            source={require('@/assets/images/mascot/Meet-Lynx.png')}
+            style={s.mascotImage}
+            resizeMode="contain"
+          />
+          <Text style={s.heroTitle}>Spread the Word!</Text>
           <Text style={s.heroSubtitle}>
             Share the registration link with other parents to help grow {orgName}!
           </Text>
@@ -277,13 +280,10 @@ const createStyles = (colors: any) =>
       marginBottom: 24,
       ...shadows.card,
     },
-    heroIconWrap: {
-      width: 80,
-      height: 80,
-      borderRadius: 40,
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginBottom: 16,
+    mascotImage: {
+      width: 140,
+      height: 140,
+      marginBottom: 12,
     },
     heroTitle: {
       ...displayTextStyle,
