@@ -1,12 +1,13 @@
 import { useAuth } from '@/lib/auth';
+import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -438,7 +439,7 @@ const createStyles = (colors: any) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingHorizontal: 16,
+      paddingHorizontal: spacing.screenPadding,
       paddingVertical: 14,
     },
     backBtn: {
@@ -448,8 +449,8 @@ const createStyles = (colors: any) =>
       alignItems: 'center',
     },
     headerTitle: {
+      ...displayTextStyle,
       fontSize: 28,
-      fontWeight: '800',
       color: colors.text,
     },
 
@@ -458,7 +459,7 @@ const createStyles = (colors: any) =>
       flex: 1,
     },
     scrollContent: {
-      paddingHorizontal: 16,
+      paddingHorizontal: spacing.screenPadding,
     },
 
     // Empty State
@@ -480,8 +481,8 @@ const createStyles = (colors: any) =>
       borderColor: colors.glassBorder,
     },
     emptyTitle: {
+      ...displayTextStyle,
       fontSize: 20,
-      fontWeight: '700',
       color: colors.text,
       marginBottom: 8,
     },
@@ -511,14 +512,14 @@ const createStyles = (colors: any) =>
     },
     childAvatarText: {
       fontSize: 16,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
     },
     childHeaderInfo: {
       flex: 1,
     },
     childName: {
+      ...displayTextStyle,
       fontSize: 18,
-      fontWeight: '700',
       color: colors.text,
     },
     childWaiverCount: {
@@ -532,18 +533,10 @@ const createStyles = (colors: any) =>
       backgroundColor: colors.glassCard,
       borderWidth: 1,
       borderColor: colors.glassBorder,
-      borderRadius: 16,
+      borderRadius: radii.card,
       padding: 14,
       marginBottom: 10,
-      ...Platform.select({
-        ios: {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.15,
-          shadowRadius: 12,
-        },
-        android: { elevation: 6 },
-      }),
+      ...shadows.card,
     },
     waiverHeader: {
       flexDirection: 'row',
@@ -562,7 +555,7 @@ const createStyles = (colors: any) =>
     },
     waiverName: {
       fontSize: 15,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
       color: colors.text,
       marginBottom: 6,
     },
@@ -581,7 +574,7 @@ const createStyles = (colors: any) =>
     },
     statusBadgeText: {
       fontSize: 11,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
     },
     typeBadge: {
       paddingHorizontal: 8,
@@ -590,7 +583,7 @@ const createStyles = (colors: any) =>
     },
     typeBadgeText: {
       fontSize: 11,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
     },
 
     // Waiver Details

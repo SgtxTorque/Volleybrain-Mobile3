@@ -1,7 +1,9 @@
 import { useAuth } from '@/lib/auth';
+import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { createGlassStyle, useTheme } from '@/lib/theme';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -9,7 +11,6 @@ import {
   ActivityIndicator,
   Alert,
   Image,
-  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -384,7 +385,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.screenPadding,
     paddingVertical: 12,
   },
   backBtn: {
@@ -394,12 +395,12 @@ const createStyles = (colors: any) => StyleSheet.create({
     alignItems: 'center',
   },
   pageTitle: {
+    ...displayTextStyle,
     fontSize: 28,
-    fontWeight: '800',
     color: colors.text,
   },
   scrollContent: {
-    padding: 16,
+    padding: spacing.screenPadding,
   },
   emptyWrap: {
     flex: 1,
@@ -408,8 +409,8 @@ const createStyles = (colors: any) => StyleSheet.create({
     gap: 8,
   },
   emptyTitle: {
+    ...displayTextStyle,
     fontSize: 20,
-    fontWeight: '700',
     color: colors.textSecondary,
   },
   emptySubtext: {
@@ -444,8 +445,8 @@ const createStyles = (colors: any) => StyleSheet.create({
     marginBottom: 12,
   },
   coachName: {
+    ...displayTextStyle,
     fontSize: 24,
-    fontWeight: '800',
     color: colors.text,
   },
   statusBadge: {
@@ -456,13 +457,13 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   statusBadgeText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
   },
 
   // Section Titles
   sectionTitle: {
     fontSize: 13,
-    fontWeight: '700',
+    fontFamily: FONTS.bodyBold,
     color: colors.textMuted,
     letterSpacing: 1,
     textTransform: 'uppercase',
@@ -475,19 +476,9 @@ const createStyles = (colors: any) => StyleSheet.create({
     backgroundColor: colors.glassCard,
     borderWidth: 1,
     borderColor: colors.glassBorder,
-    borderRadius: 16,
+    borderRadius: radii.card,
     marginBottom: 20,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 12,
-      },
-      android: {
-        elevation: 6,
-      },
-    }),
+    ...shadows.card,
   },
 
   // Field Rows
@@ -500,13 +491,13 @@ const createStyles = (colors: any) => StyleSheet.create({
   fieldLabel: {
     width: 100,
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: FONTS.bodySemiBold,
     color: colors.textMuted,
   },
   fieldInput: {
     flex: 1,
     fontSize: 16,
-    fontWeight: '500',
+    fontFamily: FONTS.bodySemiBold,
     color: colors.text,
     padding: 0,
     textAlign: 'right',
@@ -532,7 +523,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   statusLabel: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: FONTS.bodySemiBold,
     color: colors.text,
   },
   statusPill: {
@@ -542,11 +533,11 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   statusPillText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
   },
   statusValue: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
   },
 
   // Team Rows
@@ -565,7 +556,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   teamName: {
     flex: 1,
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
     color: colors.text,
   },
   roleBadge: {
@@ -581,7 +572,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   roleBadgeText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
     color: colors.text,
   },
 
@@ -593,12 +584,12 @@ const createStyles = (colors: any) => StyleSheet.create({
     gap: 8,
     backgroundColor: colors.primary,
     paddingVertical: 16,
-    borderRadius: 16,
+    borderRadius: radii.card,
     marginTop: 8,
   },
   saveButtonText: {
     fontSize: 16,
-    fontWeight: '800',
+    fontFamily: FONTS.bodyExtraBold,
     color: '#000',
   },
 });

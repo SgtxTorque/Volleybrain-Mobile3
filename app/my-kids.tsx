@@ -1,12 +1,13 @@
 import { useAuth } from '@/lib/auth';
+import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { supabase } from '@/lib/supabase';
 import { createGlassStyle, useTheme } from '@/lib/theme';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -490,7 +491,7 @@ const createStyles = (colors: any) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingHorizontal: 16,
+      paddingHorizontal: spacing.screenPadding,
       paddingVertical: 14,
     },
     backBtn: {
@@ -500,8 +501,8 @@ const createStyles = (colors: any) =>
       alignItems: 'center',
     },
     headerTitle: {
+      ...displayTextStyle,
       fontSize: 28,
-      fontWeight: '800',
       color: colors.text,
     },
 
@@ -510,7 +511,7 @@ const createStyles = (colors: any) =>
       flex: 1,
     },
     scrollContent: {
-      paddingHorizontal: 16,
+      paddingHorizontal: spacing.screenPadding,
     },
 
     // Balance Card
@@ -518,21 +519,13 @@ const createStyles = (colors: any) =>
       backgroundColor: colors.glassCard,
       borderWidth: 1,
       borderColor: colors.warning + '40',
-      borderRadius: 16,
+      borderRadius: radii.card,
       padding: 16,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
       marginBottom: 20,
-      ...Platform.select({
-        ios: {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.15,
-          shadowRadius: 12,
-        },
-        android: { elevation: 6 },
-      }),
+      ...shadows.card,
     },
     balanceLeft: {
       flexDirection: 'row',
@@ -548,14 +541,14 @@ const createStyles = (colors: any) =>
     },
     balanceLabel: {
       fontSize: 11,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
       color: colors.textMuted,
       letterSpacing: 1,
       textTransform: 'uppercase' as const,
     },
     balanceAmount: {
       fontSize: 22,
-      fontWeight: '800',
+      fontFamily: FONTS.bodyExtraBold,
       color: colors.warning,
       marginTop: 2,
     },
@@ -570,14 +563,14 @@ const createStyles = (colors: any) =>
     },
     payNowText: {
       fontSize: 14,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
       color: '#000',
     },
 
     // Section Title
     sectionTitle: {
       fontSize: 13,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
       color: colors.textMuted,
       marginBottom: 12,
       marginTop: 8,
@@ -604,8 +597,8 @@ const createStyles = (colors: any) =>
       borderColor: colors.glassBorder,
     },
     emptyTitle: {
+      ...displayTextStyle,
       fontSize: 20,
-      fontWeight: '700',
       color: colors.text,
       marginBottom: 8,
     },
@@ -621,18 +614,10 @@ const createStyles = (colors: any) =>
       backgroundColor: colors.glassCard,
       borderWidth: 1,
       borderColor: colors.glassBorder,
-      borderRadius: 16,
+      borderRadius: radii.card,
       padding: 16,
       marginBottom: 12,
-      ...Platform.select({
-        ios: {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.15,
-          shadowRadius: 12,
-        },
-        android: { elevation: 6 },
-      }),
+      ...shadows.card,
     },
     childHeader: {
       flexDirection: 'row',
@@ -649,15 +634,15 @@ const createStyles = (colors: any) =>
     },
     childAvatarText: {
       fontSize: 18,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
       color: colors.primary,
     },
     childHeaderInfo: {
       flex: 1,
     },
     childName: {
+      ...displayTextStyle,
       fontSize: 18,
-      fontWeight: '700',
       color: colors.text,
     },
     childJersey: {
@@ -677,7 +662,7 @@ const createStyles = (colors: any) =>
     },
     paymentBadgeText: {
       fontSize: 12,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
     },
 
     // Teams Row
@@ -705,7 +690,7 @@ const createStyles = (colors: any) =>
     },
     teamBadgeText: {
       fontSize: 13,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
       color: colors.text,
     },
     teamJersey: {
@@ -715,7 +700,7 @@ const createStyles = (colors: any) =>
     teamPosition: {
       fontSize: 11,
       color: colors.primary,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
       textTransform: 'uppercase' as const,
     },
 
@@ -760,7 +745,7 @@ const createStyles = (colors: any) =>
     },
     childActionText: {
       fontSize: 12,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
       color: colors.text,
     },
 
@@ -771,18 +756,10 @@ const createStyles = (colors: any) =>
       backgroundColor: colors.glassCard,
       borderWidth: 1,
       borderColor: colors.glassBorder,
-      borderRadius: 16,
+      borderRadius: radii.card,
       marginBottom: 8,
       overflow: 'hidden',
-      ...Platform.select({
-        ios: {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.15,
-          shadowRadius: 12,
-        },
-        android: { elevation: 6 },
-      }),
+      ...shadows.card,
     },
     eventIndicator: {
       width: 4,
@@ -794,7 +771,7 @@ const createStyles = (colors: any) =>
     },
     eventTitle: {
       fontSize: 15,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
       color: colors.text,
       marginBottom: 4,
     },
@@ -816,6 +793,6 @@ const createStyles = (colors: any) =>
     },
     eventTypeText: {
       fontSize: 11,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
     },
   });

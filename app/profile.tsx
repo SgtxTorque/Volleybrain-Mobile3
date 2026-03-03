@@ -1,6 +1,8 @@
 import { useAuth } from '@/lib/auth';
+import { displayTextStyle, radii, shadows } from '@/lib/design-tokens';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
@@ -466,30 +468,30 @@ const createStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border },
   backBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '600', color: colors.text },
+  headerTitle: { ...displayTextStyle, fontSize: 18, color: colors.text },
   scroll: { flex: 1 },
   scrollContent: { padding: 20 },
   avatarSection: { alignItems: 'center', marginBottom: 24 },
   avatar: { width: 100, height: 100, borderRadius: 50, borderWidth: 3, borderColor: colors.primary },
   avatarPlaceholder: { width: 100, height: 100, borderRadius: 50, backgroundColor: colors.primary + '30', justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: colors.primary },
-  avatarInitials: { fontSize: 36, fontWeight: 'bold', color: colors.primary },
+  avatarInitials: { fontSize: 36, fontFamily: FONTS.bodyBold, color: colors.primary },
   cameraBadge: { position: 'absolute', bottom: 0, right: 0, width: 32, height: 32, borderRadius: 16, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: colors.background },
-  section: { backgroundColor: colors.glassCard, borderRadius: 16, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
-  sectionTitle: { fontSize: 13, fontWeight: '700', color: colors.textMuted, marginBottom: 16, textTransform: 'uppercase', letterSpacing: 1.2 },
-  label: { fontSize: 14, fontWeight: '600', color: colors.text, marginBottom: 6, marginTop: 12 },
+  section: { backgroundColor: colors.glassCard, borderRadius: radii.card, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: colors.glassBorder, ...shadows.card },
+  sectionTitle: { fontSize: 13, fontFamily: FONTS.bodyBold, color: colors.textMuted, marginBottom: 16, textTransform: 'uppercase', letterSpacing: 1.2 },
+  label: { fontSize: 14, fontFamily: FONTS.bodySemiBold, color: colors.text, marginBottom: 6, marginTop: 12 },
   input: { backgroundColor: colors.background, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, color: colors.text, borderWidth: 1, borderColor: colors.border },
   inputDisabled: { opacity: 0.6 },
   disabledText: { fontSize: 16, color: colors.textMuted },
   saveBtn: { backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 16 },
   saveBtnDisabled: { opacity: 0.5 },
-  saveBtnText: { fontSize: 16, fontWeight: '600', color: '#000' },
-  dataRightsCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.info + '30', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
+  saveBtnText: { fontSize: 16, fontFamily: FONTS.bodySemiBold, color: '#000' },
+  dataRightsCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.glassCard, borderRadius: radii.card, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.info + '30', ...shadows.card },
   dataRightsIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: colors.info + '20', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   dataRightsContent: { flex: 1 },
-  dataRightsTitle: { fontSize: 15, fontWeight: '600', color: colors.text },
+  dataRightsTitle: { fontSize: 15, fontFamily: FONTS.bodySemiBold, color: colors.text },
   dataRightsDesc: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
   dangerSection: { borderColor: colors.danger + '40', backgroundColor: colors.danger + '08' },
   dangerText: { fontSize: 14, color: colors.textMuted, lineHeight: 20, marginBottom: 8 },
   deleteBtn: { backgroundColor: colors.danger, borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 16, flexDirection: 'row', justifyContent: 'center', gap: 8 },
-  deleteBtnText: { fontSize: 16, fontWeight: '600', color: '#fff' },
+  deleteBtnText: { fontSize: 16, fontFamily: FONTS.bodySemiBold, color: '#fff' },
 });
