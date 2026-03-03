@@ -1,9 +1,15 @@
 /**
  * ClosingMotivation — Tier 3 ambient closing section.
- * Scope summary + motivational sign-off.
+ * Phase 6: fade-in animation, scope summary + motivational sign-off.
  */
-import React from 'react';
+import React, { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withTiming,
+} from 'react-native-reanimated';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 
@@ -20,8 +26,21 @@ export default function ClosingMotivation({
   playerCount,
   queueTotal,
 }: Props) {
+  const opacity = useSharedValue(0);
+  const translateY = useSharedValue(12);
+
+  useEffect(() => {
+    opacity.value = withDelay(200, withTiming(1, { duration: 500 }));
+    translateY.value = withDelay(200, withTiming(0, { duration: 500 }));
+  }, []);
+
+  const fadeStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateY: translateY.value }],
+  }));
+
   return (
-    <View style={styles.wrap}>
+    <Animated.View style={[styles.wrap, fadeStyle]}>
       <Text style={styles.mascot}>{'\u{1F431}'}</Text>
       <Text style={styles.scopeLine}>
         You're managing {teamCount} team{teamCount !== 1 ? 's' : ''},{' '}
@@ -33,10 +52,12 @@ export default function ClosingMotivation({
           {queueTotal} item{queueTotal !== 1 ? 's' : ''} left in your queue.
         </Text>
       ) : (
-        <Text style={styles.progressLine}>Queue is clear — great work!</Text>
+        <Text style={[styles.progressLine, { color: BRAND.success }]}>
+          Queue is clear {'\u2014'} great work!
+        </Text>
       )}
       <Text style={styles.signOff}>You've got this, {adminName}.</Text>
-    </View>
+    </Animated.View>
   );
 }
 
