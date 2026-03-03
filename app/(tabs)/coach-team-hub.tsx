@@ -4,7 +4,8 @@ import TeamWall from '@/components/TeamWall';
 import { useAuth } from '@/lib/auth';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
-import { useTheme } from '@/lib/theme';
+import { BRAND } from '@/theme/colors';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -35,10 +36,8 @@ type CoachTeam = {
 // ---------------------------------------------------------------------------
 
 export default function CoachTeamHubScreen() {
-  const { colors } = useTheme();
   const { user } = useAuth();
   const { workingSeason } = useSeason();
-  const s = createStyles(colors);
 
   // State
   const [coachTeams, setCoachTeams] = useState<CoachTeam[]>([]);
@@ -152,10 +151,10 @@ export default function CoachTeamHubScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={[s.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={[s.container, { backgroundColor: BRAND.offWhite }]}>
         <AppHeaderBar title="MY TEAM" showAvatar={false} showNotificationBell={false} />
         <View style={s.centered}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={BRAND.teal} />
         </View>
       </SafeAreaView>
     );
@@ -167,12 +166,12 @@ export default function CoachTeamHubScreen() {
 
   if (coachTeams.length === 0) {
     return (
-      <SafeAreaView style={[s.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={[s.container, { backgroundColor: BRAND.offWhite }]}>
         <AppHeaderBar title="MY TEAM" showAvatar={false} showNotificationBell={false} />
         <View style={s.centered}>
-          <Ionicons name="people-outline" size={64} color={colors.textMuted} />
-          <Text style={[s.emptyTitle, { color: colors.text }]}>No Teams Assigned</Text>
-          <Text style={[s.emptySubtitle, { color: colors.textSecondary }]}>
+          <Ionicons name="people-outline" size={64} color={BRAND.textMuted} />
+          <Text style={[s.emptyTitle, { color: BRAND.textPrimary }]}>No Teams Assigned</Text>
+          <Text style={[s.emptySubtitle, { color: BRAND.textSecondary }]}>
             Once you are assigned to a team, your team hub will appear here.
           </Text>
         </View>
@@ -185,7 +184,7 @@ export default function CoachTeamHubScreen() {
   // ---------------------------------------------------------------------------
 
   return (
-    <SafeAreaView style={[s.container, { backgroundColor: colors.background }]} edges={['top']}>
+    <SafeAreaView style={[s.container, { backgroundColor: BRAND.offWhite }]} edges={['top']}>
       <AppHeaderBar title="MY TEAM" showAvatar={false} showNotificationBell={false} />
 
       {/* Carousel indicator dots — above hero, below header */}
@@ -193,8 +192,8 @@ export default function CoachTeamHubScreen() {
         <CarouselDots
           total={coachTeams.length}
           activeIndex={pageIndex}
-          activeColor={colors.primary}
-          inactiveColor={colors.textMuted}
+          activeColor={BRAND.teal}
+          inactiveColor={BRAND.textMuted}
         />
       )}
 
@@ -245,29 +244,28 @@ export default function CoachTeamHubScreen() {
 // Styles
 // ---------------------------------------------------------------------------
 
-const createStyles = (colors: any) =>
-  StyleSheet.create({
-    container: {
-      flex: 1,
-    },
-    centered: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      paddingHorizontal: 32,
-      gap: 12,
-    },
-    emptyTitle: {
-      fontSize: 20,
-      fontWeight: '700',
-      textAlign: 'center',
-    },
-    emptySubtitle: {
-      fontSize: 14,
-      textAlign: 'center',
-      lineHeight: 20,
-    },
-    feedContainer: {
-      flex: 1,
-    },
-  });
+const s = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+    gap: 12,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontFamily: FONTS.bodyBold,
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  feedContainer: {
+    flex: 1,
+  },
+});

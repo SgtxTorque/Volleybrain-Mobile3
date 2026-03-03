@@ -2,10 +2,11 @@ import PhotoViewer, { GalleryItem } from '@/components/PhotoViewer';
 import AppHeaderBar from '@/components/ui/AppHeaderBar';
 import PillTabs from '@/components/ui/PillTabs';
 import { useAuth } from '@/lib/auth';
-import { radii, shadows, spacing } from '@/lib/design-tokens';
+import { radii } from '@/lib/design-tokens';
 import { usePermissions } from '@/lib/permissions-context';
 import { supabase } from '@/lib/supabase';
-import { useTheme } from '@/lib/theme';
+import { BRAND } from '@/theme/colors';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -69,12 +70,10 @@ const isVideoUrl = (url: string): boolean =>
 // =============================================================================
 
 export default function TeamGalleryScreen() {
-  const { colors } = useTheme();
   const { user } = useAuth();
   const { isCoach, isAdmin } = usePermissions();
   const { teamId, teamName } = useLocalSearchParams<{ teamId?: string; teamName?: string }>();
   const router = useRouter();
-  const s = useMemo(() => createStyles(colors), [colors]);
 
   const [posts, setPosts] = useState<MediaPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -225,13 +224,13 @@ export default function TeamGalleryScreen() {
     if (loading) return null;
     return (
       <View style={s.emptyContainer}>
-        <Ionicons name="images-outline" size={64} color={colors.textMuted} />
-        <Text style={[s.emptyTitle, { color: colors.text }]}>No photos yet</Text>
-        <Text style={[s.emptySubtitle, { color: colors.textSecondary }]}>
+        <Ionicons name="images-outline" size={64} color={BRAND.textMuted} />
+        <Text style={s.emptyTitle}>No photos yet</Text>
+        <Text style={s.emptySubtitle}>
           Post to the team wall to start building your gallery!
         </Text>
         <TouchableOpacity
-          style={[s.emptyBtn, { backgroundColor: colors.primary }]}
+          style={s.emptyBtn}
           onPress={() => router.back()}
           activeOpacity={0.7}
         >
@@ -246,10 +245,10 @@ export default function TeamGalleryScreen() {
   // ---------------------------------------------------------------------------
 
   return (
-    <SafeAreaView style={[s.container, { backgroundColor: colors.background }]} edges={['top']}>
+    <SafeAreaView style={s.container} edges={['top']}>
       <AppHeaderBar
         title={teamName ? `Gallery · ${teamName}` : 'Gallery'}
-        leftIcon={<Ionicons name="arrow-back" size={22} color={colors.text} />}
+        leftIcon={<Ionicons name="arrow-back" size={22} color={BRAND.textPrimary} />}
         onLeftPress={() => router.back()}
         showAvatar={false}
         showNotificationBell={false}
@@ -261,7 +260,7 @@ export default function TeamGalleryScreen() {
       {/* Loading */}
       {loading && posts.length === 0 ? (
         <View style={s.centered}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={BRAND.teal} />
         </View>
       ) : (
         <FlatList
@@ -271,7 +270,7 @@ export default function TeamGalleryScreen() {
           columnWrapperStyle={s.gridRow}
           renderItem={renderTile}
           ListEmptyComponent={renderEmpty}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={BRAND.teal} />}
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.5}
           contentContainerStyle={filteredItems.length === 0 ? s.emptyListContent : undefined}
@@ -298,67 +297,70 @@ export default function TeamGalleryScreen() {
 // STYLES
 // =============================================================================
 
-const createStyles = (colors: any) =>
-  StyleSheet.create({
-    container: {
-      flex: 1,
-    },
-    centered: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
+const s = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: BRAND.offWhite,
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 
-    // Grid
-    gridRow: {
-      gap: GRID_GAP,
-    },
-    tile: {
-      marginBottom: GRID_GAP,
-      backgroundColor: colors.secondary,
-      overflow: 'hidden',
-    },
-    tileImage: {
-      width: '100%',
-      height: '100%',
-    },
-    videoOverlay: {
-      ...StyleSheet.absoluteFillObject,
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: 'rgba(0,0,0,0.2)',
-    },
+  // Grid
+  gridRow: {
+    gap: GRID_GAP,
+  },
+  tile: {
+    marginBottom: GRID_GAP,
+    backgroundColor: BRAND.warmGray,
+    overflow: 'hidden',
+  },
+  tileImage: {
+    width: '100%',
+    height: '100%',
+  },
+  videoOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.2)',
+  },
 
-    // Empty state
-    emptyListContent: {
-      flex: 1,
-    },
-    emptyContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      paddingHorizontal: 32,
-      gap: 12,
-    },
-    emptyTitle: {
-      fontSize: 20,
-      fontWeight: '700',
-      textAlign: 'center',
-    },
-    emptySubtitle: {
-      fontSize: 14,
-      textAlign: 'center',
-      lineHeight: 20,
-    },
-    emptyBtn: {
-      paddingHorizontal: 24,
-      paddingVertical: 12,
-      borderRadius: radii.badge,
-      marginTop: 8,
-    },
-    emptyBtnText: {
-      color: '#fff',
-      fontSize: 15,
-      fontWeight: '700',
-    },
-  });
+  // Empty state
+  emptyListContent: {
+    flex: 1,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+    gap: 12,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontFamily: FONTS.bodyBold,
+    textAlign: 'center',
+    color: BRAND.textPrimary,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+    color: BRAND.textSecondary,
+  },
+  emptyBtn: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: radii.badge,
+    marginTop: 8,
+    backgroundColor: BRAND.teal,
+  },
+  emptyBtnText: {
+    color: '#fff',
+    fontSize: 15,
+    fontFamily: FONTS.bodyBold,
+  },
+});

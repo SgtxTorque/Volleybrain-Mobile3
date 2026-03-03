@@ -3,7 +3,8 @@ import CarouselDots from '@/components/ui/CarouselDots';
 import TeamWall from '@/components/TeamWall';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
-import { useTheme } from '@/lib/theme';
+import { BRAND } from '@/theme/colors';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -35,9 +36,7 @@ type ChildTeam = {
 // ---------------------------------------------------------------------------
 
 export default function ParentTeamHubScreen() {
-  const { colors } = useTheme();
   const { user, profile } = useAuth();
-  const s = createStyles(colors);
 
   // State
   const [childTeams, setChildTeams] = useState<ChildTeam[]>([]);
@@ -155,10 +154,10 @@ export default function ParentTeamHubScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={[s.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={[s.container, { backgroundColor: BRAND.offWhite }]}>
         <AppHeaderBar title="MY TEAM" showAvatar={false} showNotificationBell={false} />
         <View style={s.centered}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={BRAND.teal} />
         </View>
       </SafeAreaView>
     );
@@ -170,12 +169,12 @@ export default function ParentTeamHubScreen() {
 
   if (childTeams.length === 0) {
     return (
-      <SafeAreaView style={[s.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={[s.container, { backgroundColor: BRAND.offWhite }]}>
         <AppHeaderBar title="MY TEAM" showAvatar={false} showNotificationBell={false} />
         <View style={s.centered}>
-          <Ionicons name="people-outline" size={64} color={colors.textMuted} />
-          <Text style={[s.emptyTitle, { color: colors.text }]}>No Teams Yet</Text>
-          <Text style={[s.emptySubtitle, { color: colors.textSecondary }]}>
+          <Ionicons name="people-outline" size={64} color={BRAND.textMuted} />
+          <Text style={[s.emptyTitle, { color: BRAND.textPrimary }]}>No Teams Yet</Text>
+          <Text style={[s.emptySubtitle, { color: BRAND.textSecondary }]}>
             Once your child is registered and assigned to a team, their team hub will appear here.
           </Text>
         </View>
@@ -188,7 +187,7 @@ export default function ParentTeamHubScreen() {
   // ---------------------------------------------------------------------------
 
   return (
-    <SafeAreaView style={[s.container, { backgroundColor: colors.background }]} edges={['top']}>
+    <SafeAreaView style={[s.container, { backgroundColor: BRAND.offWhite }]} edges={['top']}>
       <AppHeaderBar title="MY TEAM" showAvatar={false} showNotificationBell={false} />
 
       {/* Carousel indicator dots — above hero, below header */}
@@ -196,8 +195,8 @@ export default function ParentTeamHubScreen() {
         <CarouselDots
           total={childTeams.length}
           activeIndex={pageIndex}
-          activeColor={colors.primary}
-          inactiveColor={colors.textMuted}
+          activeColor={BRAND.teal}
+          inactiveColor={BRAND.textMuted}
         />
       )}
 
@@ -245,29 +244,28 @@ export default function ParentTeamHubScreen() {
 // Styles
 // ---------------------------------------------------------------------------
 
-const createStyles = (colors: any) =>
-  StyleSheet.create({
-    container: {
-      flex: 1,
-    },
-    centered: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      paddingHorizontal: 32,
-      gap: 12,
-    },
-    emptyTitle: {
-      fontSize: 20,
-      fontWeight: '700',
-      textAlign: 'center',
-    },
-    emptySubtitle: {
-      fontSize: 14,
-      textAlign: 'center',
-      lineHeight: 20,
-    },
-    feedContainer: {
-      flex: 1,
-    },
-  });
+const s = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+    gap: 12,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontFamily: FONTS.bodyBold,
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  feedContainer: {
+    flex: 1,
+  },
+});

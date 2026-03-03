@@ -1,6 +1,7 @@
 import TeamWall from '@/components/TeamWall';
 import { supabase } from '@/lib/supabase';
-import { useTheme } from '@/lib/theme';
+import { BRAND } from '@/theme/colors';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -8,7 +9,6 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-nat
 
 // Simple Achievements tab content
 function AchievementsTab({ teamId }: { teamId: string }) {
-  const { colors } = useTheme();
   const [badges, setBadges] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -25,22 +25,22 @@ function AchievementsTab({ teamId }: { teamId: string }) {
     })();
   }, [teamId]);
 
-  if (loading) return <View style={{ padding: 40, alignItems: 'center' }}><ActivityIndicator color={colors.primary} /></View>;
+  if (loading) return <View style={{ padding: 40, alignItems: 'center' }}><ActivityIndicator color={BRAND.teal} /></View>;
   if (badges.length === 0) return (
     <View style={{ padding: 40, alignItems: 'center' }}>
-      <Ionicons name="trophy-outline" size={48} color={colors.textMuted} />
-      <Text style={{ fontSize: 14, color: colors.textMuted, marginTop: 8 }}>No achievements yet</Text>
+      <Ionicons name="trophy-outline" size={48} color={BRAND.textMuted} />
+      <Text style={{ fontSize: 14, color: BRAND.textMuted, marginTop: 8 }}>No achievements yet</Text>
     </View>
   );
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16, gap: 8 }}>
       {badges.map(b => (
-        <View key={b.id} style={{ backgroundColor: colors.glassCard, borderRadius: 12, borderWidth: 1, borderColor: colors.glassBorder, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <View key={b.id} style={{ backgroundColor: BRAND.white, borderRadius: 12, borderWidth: 1, borderColor: BRAND.border, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <Ionicons name="trophy" size={20} color="#E8913A" />
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>{b.badge_name}</Text>
-            {b.players && <Text style={{ fontSize: 12, color: colors.textMuted }}>{(b.players as any).first_name} {(b.players as any).last_name}</Text>}
+            <Text style={{ fontSize: 14, fontFamily: FONTS.bodySemiBold, color: BRAND.textPrimary }}>{b.badge_name}</Text>
+            {b.players && <Text style={{ fontSize: 12, color: BRAND.textMuted }}>{(b.players as any).first_name} {(b.players as any).last_name}</Text>}
           </View>
         </View>
       ))}
@@ -50,7 +50,6 @@ function AchievementsTab({ teamId }: { teamId: string }) {
 
 // Simple Stats tab content
 function StatsTab({ teamId }: { teamId: string }) {
-  const { colors } = useTheme();
   const [stats, setStats] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -81,21 +80,21 @@ function StatsTab({ teamId }: { teamId: string }) {
     })();
   }, [teamId]);
 
-  if (loading) return <View style={{ padding: 40, alignItems: 'center' }}><ActivityIndicator color={colors.primary} /></View>;
+  if (loading) return <View style={{ padding: 40, alignItems: 'center' }}><ActivityIndicator color={BRAND.teal} /></View>;
   if (stats.length === 0) return (
     <View style={{ padding: 40, alignItems: 'center' }}>
-      <Ionicons name="stats-chart-outline" size={48} color={colors.textMuted} />
-      <Text style={{ fontSize: 14, color: colors.textMuted, marginTop: 8 }}>No stats recorded yet</Text>
+      <Ionicons name="stats-chart-outline" size={48} color={BRAND.textMuted} />
+      <Text style={{ fontSize: 14, color: BRAND.textMuted, marginTop: 8 }}>No stats recorded yet</Text>
     </View>
   );
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16, gap: 8 }}>
       {stats.map(s => (
-        <View key={s.id} style={{ backgroundColor: colors.glassCard, borderRadius: 12, borderWidth: 1, borderColor: colors.glassBorder, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <Ionicons name="person" size={18} color={colors.primary} />
-          <Text style={{ flex: 1, fontSize: 14, fontWeight: '600', color: colors.text }}>{s.name}</Text>
-          {s.stats && <Text style={{ fontSize: 12, color: colors.textMuted }}>GP: {s.stats.games_played || 0}</Text>}
+        <View key={s.id} style={{ backgroundColor: BRAND.white, borderRadius: 12, borderWidth: 1, borderColor: BRAND.border, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <Ionicons name="person" size={18} color={BRAND.teal} />
+          <Text style={{ flex: 1, fontSize: 14, fontFamily: FONTS.bodySemiBold, color: BRAND.textPrimary }}>{s.name}</Text>
+          {s.stats && <Text style={{ fontSize: 12, color: BRAND.textMuted }}>GP: {s.stats.games_played || 0}</Text>}
         </View>
       ))}
     </ScrollView>
