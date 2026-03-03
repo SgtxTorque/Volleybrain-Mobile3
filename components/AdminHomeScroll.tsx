@@ -6,7 +6,6 @@
 import React, { useCallback } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   RefreshControl,
   StatusBar,
   StyleSheet,
@@ -151,7 +150,7 @@ export default function AdminHomeScroll() {
         {/* ─── 2. SEARCH BAR ──────────────────────────────── */}
         <TouchableOpacity
           activeOpacity={0.7}
-          onPress={() => Alert.alert('Search', 'Universal search is coming in the next update. For now, use the Manage tab to find what you need.')}
+          onPress={() => router.push('/(tabs)/players' as any)}
           style={styles.searchBar}
         >
           <Text style={styles.searchIcon}>{'\u{1F50D}'}</Text>

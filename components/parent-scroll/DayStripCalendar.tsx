@@ -3,7 +3,7 @@
  * Shows week centered on today, highlights today, shows event dots.
  */
 import React, { useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, {
   Extrapolation,
@@ -121,6 +121,8 @@ export default function DayStripCalendar({ scrollY, eventDates }: Props) {
   );
 }
 
+const Dimensions_WIDTH = Dimensions.get('window').width;
+
 const styles = StyleSheet.create({
   container: {
     paddingVertical: 8,
@@ -170,7 +172,3 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
 });
-
-// Need Dimensions for width calc
-import { Dimensions } from 'react-native';
-const Dimensions_WIDTH = Dimensions.get('window').width;

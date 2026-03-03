@@ -57,7 +57,7 @@ export default function ChallengesScreen() {
   const { viewAs } = usePermissions();
   const { workingSeason } = useSeason();
 
-  const isCoach = viewAs === 'coach';
+  const isCoach = viewAs === 'head_coach' || viewAs === 'assistant_coach';
   const isPlayer = viewAs === 'player';
 
   // State
