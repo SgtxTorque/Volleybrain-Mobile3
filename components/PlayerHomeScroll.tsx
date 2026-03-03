@@ -51,6 +51,7 @@ import ActiveChallengeCard from './player-scroll/ActiveChallengeCard';
 import LastGameStats from './player-scroll/LastGameStats';
 import ClosingMascot from './player-scroll/ClosingMascot';
 import LevelUpCelebrationModal from './LevelUpCelebrationModal';
+import GiveShoutoutModal from './GiveShoutoutModal';
 
 // ─── Player Dark Theme ──────────────────────────────────────────
 export const PLAYER_THEME = {
@@ -85,6 +86,9 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
   const router = useRouter();
   const { scrollY, scrollHandler } = useScrollAnimations();
   const data = usePlayerHomeData(playerId);
+
+  // ─── Shoutout modal ──
+  const [showShoutoutModal, setShowShoutoutModal] = useState(false);
 
   // ─── Level-up celebration ──
   const LEVEL_KEY = `lynx_player_level_${playerId}`;
@@ -239,7 +243,7 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
         <ChatPeek teamId={data.primaryTeam?.id} />
 
         {/* ─── 7. QUICK PROPS ─────────────────────────────────── */}
-        <QuickPropsRow teamId={data.primaryTeam?.id} />
+        <QuickPropsRow teamId={data.primaryTeam?.id} onGiveShoutout={() => setShowShoutoutModal(true)} />
 
         {/* ─── 8. ACTIVE CHALLENGE (if exists) ────────────────── */}
         <ActiveChallengeCard available={data.challengesAvailable} />
@@ -276,6 +280,14 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
         newLevel={data.level}
         totalXp={data.xp}
         onDismiss={() => setShowLevelUp(false)}
+      />
+
+      {/* ─── SHOUTOUT MODAL ──────────────────────────────────────── */}
+      <GiveShoutoutModal
+        visible={showShoutoutModal}
+        teamId={data.primaryTeam?.id ?? ''}
+        onClose={() => setShowShoutoutModal(false)}
+        onSuccess={() => setShowShoutoutModal(false)}
       />
     </View>
   );

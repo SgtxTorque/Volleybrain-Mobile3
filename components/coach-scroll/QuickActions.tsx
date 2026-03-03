@@ -30,9 +30,10 @@ type Props = {
   isEventDay: boolean;
   pendingStatsCount?: number;
   hasRosterIssues?: boolean;
+  onGiveShoutout?: () => void;
 };
 
-export default function QuickActions({ isEventDay, pendingStatsCount = 0, hasRosterIssues = false }: Props) {
+export default function QuickActions({ isEventDay, pendingStatsCount = 0, hasRosterIssues = false, onGiveShoutout }: Props) {
   const router = useRouter();
 
   const actions = ALL_ACTIONS.filter(a => {
@@ -61,10 +62,12 @@ export default function QuickActions({ isEventDay, pendingStatsCount = 0, hasRos
             style={[styles.row, i < actions.length - 1 && styles.rowBorder]}
             activeOpacity={0.7}
             onPress={() => {
-              if (action.route) {
+              if (action.label === 'Give a Shoutout' && onGiveShoutout) {
+                onGiveShoutout();
+              } else if (action.route) {
                 router.push(action.route as any);
               } else {
-                Alert.alert('Coming Soon', `${action.label} is coming in a future update.`);
+                Alert.alert('Challenges', 'The challenge system is coming in the next update.');
               }
             }}
           >

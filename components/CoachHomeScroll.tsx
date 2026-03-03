@@ -49,6 +49,7 @@ import ActionItems from './coach-scroll/ActionItems';
 import TeamHubPreviewCard from './coach-scroll/TeamHubPreviewCard';
 import ActivityFeed from './coach-scroll/ActivityFeed';
 import SeasonSetupCard from './coach-scroll/SeasonSetupCard';
+import GiveShoutoutModal from './GiveShoutoutModal';
 
 // ─── Welcome briefing logic ─────────────────────────────────────
 
@@ -160,6 +161,10 @@ export default function CoachHomeScroll() {
     if (parts.length === 1) return parts[0][0].toUpperCase();
     return '?';
   }, [profile?.full_name]);
+
+  // Shoutout modal state
+  const [showShoutoutModal, setShowShoutoutModal] = useState(false);
+  const [shoutoutRecipient, setShoutoutRecipient] = useState<{ id: string; full_name: string; avatar_url: string | null; role: string } | null>(null);
 
   // Mascot float animation
   const mascotFloat = useSharedValue(0);
@@ -445,12 +450,13 @@ export default function CoachHomeScroll() {
             isEventDay={data.heroEvent !== null}
             pendingStatsCount={data.pendingStatsCount}
             hasRosterIssues={hasRosterIssues}
+            onGiveShoutout={() => setShowShoutoutModal(true)}
           />
         </Animated.View>
 
         {/* ─── 6. ENGAGEMENT NUDGE (Tier 3 — 1 line max) ── ↕ 24px ── */}
         <View style={{ marginBottom: 24 }}>
-          <EngagementSection />
+          <EngagementSection onGiveShoutout={() => setShowShoutoutModal(true)} />
         </View>
 
         {/* ─── 7. TEAM HEALTH CARD (Tier 1.5 — dots + bars) ── ↕ 20px ── */}
@@ -516,6 +522,21 @@ export default function CoachHomeScroll() {
           </Text>
         </View>
       </Animated.ScrollView>
+
+      {/* ─── SHOUTOUT MODAL ──────────────────────────────────────── */}
+      <GiveShoutoutModal
+        visible={showShoutoutModal}
+        teamId={data.selectedTeamId ?? ''}
+        onClose={() => {
+          setShowShoutoutModal(false);
+          setShoutoutRecipient(null);
+        }}
+        onSuccess={() => {
+          setShowShoutoutModal(false);
+          setShoutoutRecipient(null);
+        }}
+        preselectedRecipient={shoutoutRecipient}
+      />
     </View>
   );
 }

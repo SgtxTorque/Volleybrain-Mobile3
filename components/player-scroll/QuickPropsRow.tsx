@@ -1,11 +1,9 @@
 /**
  * QuickPropsRow — "Who balled out?" CTA row.
- * Phase 5A: Gold-tinted row. Navigates to team wall for social interaction.
- * (Shoutout tables don't exist yet — using team wall as fallback.)
+ * Phase 5A: Gold-tinted row. Opens shoutout modal for giving props.
  */
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
 
 const PT = {
   gold: '#FFD700',
@@ -16,21 +14,14 @@ const PT = {
 
 type Props = {
   teamId?: string | null;
+  onGiveShoutout?: () => void;
 };
 
-export default function QuickPropsRow({ teamId }: Props) {
-  const router = useRouter();
-
-  const handlePress = () => {
-    if (teamId) {
-      router.push(`/team-wall?teamId=${teamId}` as any);
-    }
-  };
-
+export default function QuickPropsRow({ teamId, onGiveShoutout }: Props) {
   return (
     <TouchableOpacity
       activeOpacity={0.7}
-      onPress={handlePress}
+      onPress={onGiveShoutout}
       style={styles.row}
     >
       <Text style={styles.icon}>{'\u{1F31F}'}</Text>
