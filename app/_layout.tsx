@@ -54,7 +54,7 @@ function RootLayoutNav() {
         router.replace('/(auth)/pending-approval');
       } else if (needsOnboarding) {
         hasNavigated.current = true;
-        router.replace('/(auth)/league-setup');
+        router.replace('/(tabs)');
       } else if (hasOrphanRecords) {
         hasNavigated.current = true;
         router.replace('/claim-account' as any);
@@ -67,7 +67,7 @@ function RootLayoutNav() {
       router.replace('/(auth)/pending-approval');
     } else if (session && !inAuthGroup && needsOnboarding) {
       hasNavigated.current = true;
-      router.replace('/(auth)/league-setup');
+      router.replace('/(tabs)');
     }
   }, [session, loading, profile?.pending_approval, needsOnboarding, hasOrphanRecords]);
 

@@ -1,37 +1,40 @@
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
-import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Animated,
-    Image,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [showForgotModal, setShowForgotModal] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [resettingPassword, setResettingPassword] = useState(false);
   const { signIn } = useAuth();
-  const { colors } = useTheme();
   const shakeAnim = useRef(new Animated.Value(0)).current;
+  const emailRef = useRef<TextInput>(null);
+
+  const canSubmit = email.trim().length > 0 && password.length > 0;
 
   const triggerShake = () => {
     Animated.sequence([
@@ -44,23 +47,40 @@ export default function LoginScreen() {
   };
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
-      return;
-    }
-
+    if (!canSubmit) return;
     setLoading(true);
-    const { error } = await signIn(email, password);
+    const { error } = await signIn(email.trim().toLowerCase(), password);
     setLoading(false);
-
     if (error) {
       triggerShake();
-      Alert.alert('Error', error.message);
+      Alert.alert('Sign In Failed', error.message || 'Please check your credentials.');
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    const target = resetEmail.trim() || email.trim();
+    if (!target) {
+      Alert.alert('Error', 'Please enter your email address.');
+      return;
+    }
+    setResettingPassword(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(target.toLowerCase());
+      if (error) throw error;
+      Alert.alert(
+        'Check Your Email',
+        'If an account exists with that email, you will receive a password reset link.',
+        [{ text: 'OK', onPress: () => { setShowForgotModal(false); setResetEmail(''); } }]
+      );
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to send reset email.');
+    } finally {
+      setResettingPassword(false);
     }
   };
 
   // Dev quick-login helper
-  const devLogin = async (targetRole: string) => {
+  const devLogin = async (role: string) => {
     const devEmail = process.env.EXPO_PUBLIC_DEV_USER_EMAIL;
     const devPassword = process.env.EXPO_PUBLIC_DEV_USER_PASSWORD;
     if (!devEmail || !devPassword) {
@@ -70,7 +90,7 @@ export default function LoginScreen() {
     setEmail(devEmail);
     setPassword(devPassword);
     setLoading(true);
-    console.log(`[DEV] Quick login as ${targetRole} → ${devEmail}`);
+    console.log(`[DEV] Quick login as ${role} → ${devEmail}`);
     const { error } = await signIn(devEmail, devPassword);
     setLoading(false);
     if (error) {
@@ -79,280 +99,270 @@ export default function LoginScreen() {
     }
   };
 
-  const handleForgotPassword = async () => {
-    const emailToReset = resetEmail.trim() || email.trim();
-    if (!emailToReset) {
-      Alert.alert('Error', 'Please enter your email address.');
-      return;
-    }
-
-    setResettingPassword(true);
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(emailToReset);
-      if (error) {
-        Alert.alert('Error', error.message);
-      } else {
-        Alert.alert(
-          'Check Your Email',
-          'If an account exists with that email, you will receive a password reset link shortly.',
-          [{ text: 'OK', onPress: () => { setShowForgotPassword(false); setResetEmail(''); } }]
-        );
-      }
-    } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to send reset email.');
-    } finally {
-      setResettingPassword(false);
-    }
-  };
-
-  const s = createStyles(colors);
-
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={s.container}
-    >
-      <ScrollView
-        contentContainerStyle={s.content}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-        bounces={false}
+    <SafeAreaView style={s.safe}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={s.flex}
       >
-        {/* Logo */}
-        <View style={s.logoContainer}>
-          <Image
-            source={require('@/assets/images/lynx-logo.png')}
-            style={s.logoImage}
-            resizeMode="contain"
-          />
-          <Text style={s.tagline}>Youth Sports Management</Text>
-        </View>
-
-        {/* Form */}
-        <Animated.View style={[s.form, { transform: [{ translateX: shakeAnim }] }]}>
-          <TextInput
-            style={s.input}
-            placeholder="Email"
-            placeholderTextColor={colors.textMuted}
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-          />
-          <TextInput
-            style={s.input}
-            placeholder="Password"
-            placeholderTextColor={colors.textMuted}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
-
-          <TouchableOpacity
-            style={[s.button, loading && s.buttonDisabled]}
-            onPress={handleLogin}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#000" />
-            ) : (
-              <Text style={s.buttonText}>Sign In</Text>
-            )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={s.forgotButton}
-            onPress={() => {
-              setResetEmail(email);
-              setShowForgotPassword(true);
-            }}
-          >
-            <Text style={s.forgotText}>Forgot Password?</Text>
-          </TouchableOpacity>
-
-          <Link href="/(auth)/signup" asChild>
-            <TouchableOpacity style={s.linkButton}>
-              <Text style={s.linkText}>
-                Don't have an account? <Text style={s.linkTextBold}>Sign Up</Text>
-              </Text>
-            </TouchableOpacity>
-          </Link>
-        </Animated.View>
-
-        {/* Dev Tools — only in development */}
-        {__DEV__ && (
-          <View style={s.devTools}>
-            <Text style={s.devLabel}>── DEV TOOLS ──</Text>
-            <View style={s.devRow}>
-              {(['Admin', 'Coach', 'Parent', 'Player'] as const).map((role) => (
-                <TouchableOpacity
-                  key={role}
-                  style={s.devBtn}
-                  onPress={() => devLogin(role.toLowerCase())}
-                >
-                  <Text style={s.devBtnText}>{role}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+        <ScrollView
+          contentContainerStyle={s.content}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
+          {/* Logo */}
+          <View style={s.logoWrap}>
+            <Image
+              source={require('@/assets/images/lynx-logo.png')}
+              style={s.logo}
+              resizeMode="contain"
+            />
           </View>
-        )}
-      </ScrollView>
 
-      {/* Forgot Password Modal */}
-      <Modal visible={showForgotPassword} animationType="fade" transparent>
-        <View style={s.modalOverlay}>
-          <View style={s.modalContent}>
-            <View style={s.modalHeader}>
-              <Text style={s.modalTitle}>Reset Password</Text>
-              <TouchableOpacity onPress={() => setShowForgotPassword(false)}>
-                <Ionicons name="close" size={24} color={colors.text} />
+          {/* Form card */}
+          <Animated.View style={[s.card, { transform: [{ translateX: shakeAnim }] }]}>
+            <Text style={s.heading}>Welcome Back</Text>
+
+            {/* Email */}
+            <View style={s.inputWrap}>
+              <Ionicons name="mail-outline" size={18} color={BRAND.textMuted} style={s.inputIcon} />
+              <TextInput
+                ref={emailRef}
+                style={s.input}
+                placeholder="Email address"
+                placeholderTextColor={BRAND.textMuted}
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoFocus
+                returnKeyType="next"
+              />
+            </View>
+
+            {/* Password */}
+            <View style={s.inputWrap}>
+              <Ionicons name="lock-closed-outline" size={18} color={BRAND.textMuted} style={s.inputIcon} />
+              <TextInput
+                style={s.input}
+                placeholder="Password"
+                placeholderTextColor={BRAND.textMuted}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                returnKeyType="go"
+                onSubmitEditing={handleLogin}
+              />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color={BRAND.textMuted} />
               </TouchableOpacity>
             </View>
 
-            <Text style={s.modalDescription}>
-              Enter your email address and we will send you a link to reset your password.
-            </Text>
-
-            <TextInput
-              style={s.input}
-              placeholder="Email address"
-              placeholderTextColor={colors.textMuted}
-              value={resetEmail}
-              onChangeText={setResetEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              autoFocus
-            />
-
+            {/* Sign In */}
             <TouchableOpacity
-              style={[s.button, resettingPassword && s.buttonDisabled]}
+              style={[s.signInBtn, !canSubmit && s.btnDisabled]}
+              onPress={handleLogin}
+              disabled={loading || !canSubmit}
+              activeOpacity={0.85}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={s.signInText}>Sign In</Text>
+              )}
+            </TouchableOpacity>
+
+            {/* Forgot Password */}
+            <TouchableOpacity
+              style={s.forgotBtn}
+              onPress={() => { setResetEmail(email); setShowForgotModal(true); }}
+            >
+              <Text style={s.forgotText}>Forgot Password?</Text>
+            </TouchableOpacity>
+          </Animated.View>
+
+          {/* Sign Up link */}
+          <Link href="/(auth)/signup" asChild>
+            <TouchableOpacity style={s.signUpLink}>
+              <Text style={s.signUpText}>
+                Don't have an account?{' '}
+                <Text style={s.signUpBold}>Sign Up</Text>
+              </Text>
+            </TouchableOpacity>
+          </Link>
+
+          {/* Dev Tools */}
+          {__DEV__ && (
+            <View style={s.devTools}>
+              <Text style={s.devLabel}>── DEV TOOLS ──</Text>
+              <View style={s.devRow}>
+                {(['Admin', 'Coach', 'Parent', 'Player'] as const).map((role) => (
+                  <TouchableOpacity key={role} style={s.devBtn} onPress={() => devLogin(role.toLowerCase())}>
+                    <Text style={s.devBtnText}>{role}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
+
+      {/* Forgot Password Modal */}
+      <Modal visible={showForgotModal} animationType="fade" transparent>
+        <View style={s.modalOverlay}>
+          <View style={s.modalCard}>
+            <View style={s.modalHeader}>
+              <Text style={s.modalTitle}>Reset Password</Text>
+              <TouchableOpacity onPress={() => setShowForgotModal(false)}>
+                <Ionicons name="close" size={22} color={BRAND.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <Text style={s.modalDesc}>
+              Enter your email address and we'll send you a reset link.
+            </Text>
+            <View style={s.inputWrap}>
+              <Ionicons name="mail-outline" size={18} color={BRAND.textMuted} style={s.inputIcon} />
+              <TextInput
+                style={s.input}
+                placeholder="Email address"
+                placeholderTextColor={BRAND.textMuted}
+                value={resetEmail}
+                onChangeText={setResetEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoFocus
+              />
+            </View>
+            <TouchableOpacity
+              style={[s.signInBtn, resettingPassword && s.btnDisabled]}
               onPress={handleForgotPassword}
               disabled={resettingPassword}
             >
               {resettingPassword ? (
-                <ActivityIndicator color="#000" />
+                <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={s.buttonText}>Send Reset Link</Text>
+                <Text style={s.signInText}>Send Reset Link</Text>
               )}
             </TouchableOpacity>
-
-            <TouchableOpacity
-              style={s.modalCancelBtn}
-              onPress={() => setShowForgotPassword(false)}
-            >
-              <Text style={s.modalCancelText}>Cancel</Text>
+            <TouchableOpacity onPress={() => setShowForgotModal(false)} style={{ alignItems: 'center', padding: 8 }}>
+              <Text style={s.forgotText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
-    </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
-const createStyles = (colors: any) => StyleSheet.create({
-  container: {
+const s = StyleSheet.create({
+  safe: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: BRAND.offWhite,
   },
+  flex: { flex: 1 },
   content: {
     flexGrow: 1,
     justifyContent: 'center',
     padding: 24,
   },
-  logoContainer: {
+  logoWrap: {
     alignItems: 'center',
-    marginBottom: 48,
+    marginBottom: 32,
   },
-  logoImage: {
-    width: 200,
-    height: 82,
-    marginBottom: 12,
+  logo: {
+    width: 140,
+    height: 48,
   },
-  tagline: {
-    fontSize: 16,
-    color: colors.textMuted,
-    marginTop: 8,
-  },
-  form: {
-    gap: 16,
-    backgroundColor: colors.glassCard,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
-    borderRadius: 24,
+  card: {
+    backgroundColor: BRAND.white,
+    borderRadius: 20,
     padding: 24,
+    gap: 14,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
     shadowRadius: 12,
-    elevation: 6,
+    elevation: 3,
+  },
+  heading: {
+    fontFamily: FONTS.bodyBold,
+    fontSize: 22,
+    color: BRAND.navy,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  inputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: BRAND.warmGray,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: BRAND.border,
+  },
+  inputIcon: {
+    marginRight: 10,
   },
   input: {
-    backgroundColor: colors.background,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    flex: 1,
+    fontFamily: FONTS.bodyMedium,
     fontSize: 16,
-    color: colors.text,
-    borderWidth: 1,
-    borderColor: colors.border,
+    color: BRAND.textPrimary,
+    paddingVertical: 14,
   },
-  button: {
-    backgroundColor: colors.primary,
+  signInBtn: {
+    backgroundColor: BRAND.teal,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 4,
   },
-  buttonDisabled: {
-    opacity: 0.7,
+  btnDisabled: {
+    opacity: 0.5,
   },
-  buttonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#000',
+  signInText: {
+    fontFamily: FONTS.bodyBold,
+    fontSize: 16,
+    color: '#fff',
   },
-  forgotButton: {
+  forgotBtn: {
     alignItems: 'center',
-    padding: 8,
+    padding: 4,
   },
   forgotText: {
-    color: colors.primary,
-    fontSize: 14,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 13,
+    color: BRAND.teal,
   },
-  linkButton: {
+  signUpLink: {
     alignItems: 'center',
-    padding: 16,
+    paddingVertical: 20,
   },
-  linkText: {
-    color: colors.textMuted,
+  signUpText: {
+    fontFamily: FONTS.bodyMedium,
     fontSize: 14,
+    color: BRAND.textMuted,
   },
-  linkTextBold: {
-    color: colors.primary,
-    fontWeight: 'bold',
+  signUpBold: {
+    fontFamily: FONTS.bodyBold,
+    color: BRAND.teal,
   },
-  // Forgot Password Modal
+  // Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
   },
-  modalContent: {
+  modalCard: {
     width: '100%',
-    backgroundColor: colors.card,
-    borderRadius: 24,
+    backgroundColor: BRAND.white,
+    borderRadius: 20,
     padding: 24,
-    gap: 16,
-    borderWidth: 1,
-    borderColor: colors.glassBorder,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 8,
+    gap: 14,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -360,35 +370,27 @@ const createStyles = (colors: any) => StyleSheet.create({
     alignItems: 'center',
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.text,
+    fontFamily: FONTS.bodyBold,
+    fontSize: 18,
+    color: BRAND.navy,
   },
-  modalDescription: {
+  modalDesc: {
+    fontFamily: FONTS.bodyMedium,
     fontSize: 14,
-    color: colors.textMuted,
+    color: BRAND.textMuted,
     lineHeight: 20,
   },
-  modalCancelBtn: {
-    alignItems: 'center',
-    padding: 8,
-  },
-  modalCancelText: {
-    color: colors.textMuted,
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  // Dev Tools
+  // Dev
   devTools: {
-    marginTop: 24,
+    marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.1)',
+    borderTopColor: BRAND.border,
     alignItems: 'center',
   },
   devLabel: {
     fontSize: 10,
-    color: 'rgba(255,255,255,0.3)',
+    color: BRAND.textMuted,
     fontFamily: 'monospace',
     marginBottom: 8,
     letterSpacing: 1,
@@ -401,13 +403,13 @@ const createStyles = (colors: any) => StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: BRAND.warmGray,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    borderColor: BRAND.border,
   },
   devBtnText: {
     fontSize: 11,
-    color: 'rgba(255,255,255,0.5)',
+    color: BRAND.textMuted,
     fontWeight: '600',
   },
 });

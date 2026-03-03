@@ -1,585 +1,226 @@
-import { useAuth } from '@/lib/auth';
-import { supabase } from '@/lib/supabase';
-import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
+  Animated,
+  Dimensions,
   Image,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
+  StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { BRAND } from '@/theme/colors';
+import { FONTS } from '@/theme/fonts';
+
+const { width: SCREEN_W } = Dimensions.get('window');
 
 export default function WelcomeScreen() {
-  const { colors } = useTheme();
-  const { signInWithGoogle, signInWithApple } = useAuth();
   const router = useRouter();
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [oauthLoading, setOauthLoading] = useState<'google' | 'apple' | null>(null);
+  // Entrance animations
+  const logoOpacity = useRef(new Animated.Value(0)).current;
+  const mascotY = useRef(new Animated.Value(40)).current;
+  const mascotOpacity = useRef(new Animated.Value(0)).current;
+  const cta1Y = useRef(new Animated.Value(30)).current;
+  const cta1Opacity = useRef(new Animated.Value(0)).current;
+  const cta2Y = useRef(new Animated.Value(30)).current;
+  const cta2Opacity = useRef(new Animated.Value(0)).current;
 
-  const handleSignIn = async () => {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert('Missing Fields', 'Please enter your email and password.');
-      return;
-    }
+  useEffect(() => {
+    // Logo fade in (300ms)
+    Animated.timing(logoOpacity, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
 
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
-        password: password,
-      });
+    // Mascot spring up (400ms delay)
+    setTimeout(() => {
+      Animated.parallel([
+        Animated.spring(mascotY, {
+          toValue: 0,
+          friction: 6,
+          tension: 50,
+          useNativeDriver: true,
+        }),
+        Animated.timing(mascotOpacity, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }, 300);
 
-      if (error) throw error;
-    } catch (error: any) {
-      if (__DEV__) console.error('Sign in error:', error);
-      Alert.alert(
-        'Sign In Failed',
-        error.message || 'Please check your credentials and try again.'
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+    // CTAs stagger in
+    setTimeout(() => {
+      Animated.parallel([
+        Animated.spring(cta1Y, { toValue: 0, friction: 7, useNativeDriver: true }),
+        Animated.timing(cta1Opacity, { toValue: 1, duration: 250, useNativeDriver: true }),
+      ]).start();
+    }, 600);
 
-  const handleGoogleSignIn = async () => {
-    setOauthLoading('google');
-    try {
-      const { error } = await signInWithGoogle();
-      if (error) throw error;
-    } catch (error: any) {
-      if (__DEV__) console.error('Google sign in error:', error);
-      Alert.alert('Sign In Failed', error.message || 'Google sign-in failed. Please try again.');
-    } finally {
-      setOauthLoading(null);
-    }
-  };
-
-  const handleAppleSignIn = async () => {
-    setOauthLoading('apple');
-    try {
-      const { error } = await signInWithApple();
-      if (error) throw error;
-    } catch (error: any) {
-      if (__DEV__) console.error('Apple sign in error:', error);
-      Alert.alert('Sign In Failed', error.message || 'Apple sign-in failed. Please try again.');
-    } finally {
-      setOauthLoading(null);
-    }
-  };
-
-  const handleForgotPassword = async () => {
-    if (!email.trim()) {
-      Alert.alert('Enter Email', 'Please enter your email address first.');
-      return;
-    }
-
-    Alert.alert(
-      'Reset Password',
-      `Send password reset link to ${email}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Send',
-          onPress: async () => {
-            try {
-              const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase());
-              if (error) throw error;
-              Alert.alert('Check Your Email', 'We sent you a password reset link.');
-            } catch (error: any) {
-              Alert.alert('Error', error.message || 'Failed to send reset email.');
-            }
-          },
-        },
-      ]
-    );
-  };
+    setTimeout(() => {
+      Animated.parallel([
+        Animated.spring(cta2Y, { toValue: 0, friction: 7, useNativeDriver: true }),
+        Animated.timing(cta2Opacity, { toValue: 1, duration: 250, useNativeDriver: true }),
+      ]).start();
+    }, 700);
+  }, []);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-      >
-        <ScrollView
-          contentContainerStyle={{
-            flexGrow: 1,
-            padding: 24,
-          }}
-          keyboardShouldPersistTaps="handled"
+    <LinearGradient
+      colors={[BRAND.navy, BRAND.skyBlue]}
+      style={s.gradient}
+      start={{ x: 0.2, y: 0 }}
+      end={{ x: 0.8, y: 1 }}
+    >
+      <SafeAreaView style={s.safe}>
+        {/* Logo - upper third */}
+        <Animated.View style={[s.logoWrap, { opacity: logoOpacity }]}>
+          <Image
+            source={require('@/assets/images/lynx-logo.png')}
+            style={s.logo}
+            resizeMode="contain"
+          />
+        </Animated.View>
+
+        {/* Mascot - center */}
+        <Animated.View
+          style={[
+            s.mascotWrap,
+            { opacity: mascotOpacity, transform: [{ translateY: mascotY }] },
+          ]}
         >
-          {/* Logo & Branding */}
-          <View style={{ alignItems: 'center', marginTop: 16, marginBottom: 24 }}>
-            <Image
-              source={require('@/assets/images/lynx-mascot.png')}
-              style={{ width: 120, height: 172, marginBottom: 14 }}
-              resizeMode="contain"
-            />
-            <Image
-              source={require('@/assets/images/lynx-logo.png')}
-              style={{ width: 180, height: 74, marginBottom: 4 }}
-              resizeMode="contain"
-            />
-            <Text style={{
-              fontSize: 15,
-              color: colors.primary,
-              fontWeight: '600',
-              marginTop: 4,
-            }}>
-              Youth Sports Management
-            </Text>
-          </View>
+          <Image
+            source={require('@/assets/images/lynx-mascot.png')}
+            style={s.mascot}
+            resizeMode="contain"
+          />
+        </Animated.View>
 
-          {/* OAuth Buttons */}
-          <View style={{ gap: 10, marginBottom: 16 }}>
-            {/* Continue with Google */}
+        {/* Tagline */}
+        <Animated.Text style={[s.tagline, { opacity: mascotOpacity }]}>
+          Youth Sports Management
+        </Animated.Text>
+
+        {/* CTAs - bottom third */}
+        <View style={s.ctaWrap}>
+          {/* Get Started (filled teal) */}
+          <Animated.View style={{ opacity: cta1Opacity, transform: [{ translateY: cta1Y }] }}>
             <TouchableOpacity
-              onPress={handleGoogleSignIn}
-              disabled={oauthLoading !== null}
-              style={{
-                backgroundColor: colors.glassCard,
-                borderRadius: 12,
-                padding: 14,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderWidth: 1,
-                borderColor: colors.glassBorder,
-                opacity: oauthLoading !== null ? 0.7 : 1,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.15,
-                shadowRadius: 12,
-                elevation: 6,
-              }}
+              style={s.ctaPrimary}
+              onPress={() => router.push('/(auth)/signup')}
+              activeOpacity={0.85}
             >
-              {oauthLoading === 'google' ? (
-                <ActivityIndicator color={colors.text} size="small" />
-              ) : (
-                <>
-                  <Ionicons name="logo-google" size={20} color="#DB4437" />
-                  <Text style={{
-                    fontSize: 16,
-                    fontWeight: '600',
-                    color: colors.text,
-                    marginLeft: 10,
-                  }}>
-                    Continue with Google
-                  </Text>
-                </>
-              )}
+              <Text style={s.ctaPrimaryText}>Get Started</Text>
+              <Ionicons name="arrow-forward" size={20} color="#fff" />
             </TouchableOpacity>
+          </Animated.View>
 
-            {/* Continue with Apple */}
-            {Platform.OS === 'ios' && (
-              <TouchableOpacity
-                onPress={handleAppleSignIn}
-                disabled={oauthLoading !== null}
-                style={{
-                  backgroundColor: colors.text,
-                  borderRadius: 12,
-                  padding: 14,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  opacity: oauthLoading !== null ? 0.7 : 1,
-                }}
-              >
-                {oauthLoading === 'apple' ? (
-                  <ActivityIndicator color={colors.background} size="small" />
-                ) : (
-                  <>
-                    <Ionicons name="logo-apple" size={20} color={colors.background} />
-                    <Text style={{
-                      fontSize: 16,
-                      fontWeight: '600',
-                      color: colors.background,
-                      marginLeft: 10,
-                    }}>
-                      Continue with Apple
-                    </Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Divider - "or" */}
-          <View style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            marginBottom: 16,
-          }}>
-            <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
-            <Text style={{
-              fontSize: 13,
-              color: colors.textSecondary,
-              marginHorizontal: 14,
-              fontWeight: '500',
-            }}>
-              or sign in with email
-            </Text>
-            <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
-          </View>
-
-          {/* Email Sign In Section */}
-          <View style={{ marginBottom: 20 }}>
-            {/* Email Input */}
-            <View style={{
-              backgroundColor: colors.glassCard,
-              borderRadius: 12,
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingHorizontal: 14,
-              marginBottom: 10,
-              borderWidth: 1,
-              borderColor: colors.glassBorder,
-            }}>
-              <Ionicons name="mail-outline" size={20} color={colors.textSecondary} />
-              <TextInput
-                value={email}
-                onChangeText={setEmail}
-                placeholder="Email address"
-                placeholderTextColor={colors.textSecondary}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                style={{
-                  flex: 1,
-                  padding: 14,
-                  fontSize: 16,
-                  color: colors.text,
-                }}
-              />
-            </View>
-
-            {/* Password Input */}
-            <View style={{
-              backgroundColor: colors.glassCard,
-              borderRadius: 12,
-              flexDirection: 'row',
-              alignItems: 'center',
-              paddingHorizontal: 14,
-              marginBottom: 10,
-              borderWidth: 1,
-              borderColor: colors.glassBorder,
-            }}>
-              <Ionicons name="lock-closed-outline" size={20} color={colors.textSecondary} />
-              <TextInput
-                value={password}
-                onChangeText={setPassword}
-                placeholder="Password"
-                placeholderTextColor={colors.textSecondary}
-                secureTextEntry={!showPassword}
-                style={{
-                  flex: 1,
-                  padding: 14,
-                  fontSize: 16,
-                  color: colors.text,
-                }}
-              />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                <Ionicons
-                  name={showPassword ? 'eye-off-outline' : 'eye-outline'}
-                  size={20}
-                  color={colors.textSecondary}
-                />
-              </TouchableOpacity>
-            </View>
-
-            {/* Forgot Password */}
+          {/* I Already Have an Account (outlined) */}
+          <Animated.View style={{ opacity: cta2Opacity, transform: [{ translateY: cta2Y }] }}>
             <TouchableOpacity
-              onPress={handleForgotPassword}
-              style={{ alignSelf: 'flex-end', marginBottom: 14 }}
+              style={s.ctaSecondary}
+              onPress={() => router.push('/(auth)/login')}
+              activeOpacity={0.85}
             >
-              <Text style={{ fontSize: 13, color: colors.primary, fontWeight: '500' }}>
-                Forgot password?
-              </Text>
+              <Text style={s.ctaSecondaryText}>I Already Have an Account</Text>
             </TouchableOpacity>
+          </Animated.View>
+        </View>
 
-            {/* Sign In Button */}
-            <TouchableOpacity
-              onPress={handleSignIn}
-              disabled={loading}
-              style={{
-                backgroundColor: colors.primary,
-                borderRadius: 12,
-                paddingVertical: 16,
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexDirection: 'row',
-              }}
-            >
-              {loading ? (
-                <ActivityIndicator color="#000" />
-              ) : (
-                <>
-                  <Ionicons name="log-in-outline" size={20} color="#000" />
-                  <Text style={{
-                    fontSize: 16,
-                    fontWeight: '600',
-                    color: '#000',
-                    marginLeft: 8,
-                  }}>
-                    Sign In
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
-
-          {/* Divider */}
-          <View style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            marginVertical: 20,
-          }}>
-            <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
-            <Text style={{
-              fontSize: 13,
-              color: colors.textSecondary,
-              marginHorizontal: 14,
-              fontWeight: '500',
-            }}>
-              Get Started
-            </Text>
-            <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
-          </View>
-
-          {/* Get Started Options */}
-          <View style={{ gap: 10 }}>
-            {/* I have an invite code */}
-            <TouchableOpacity
-              onPress={() => router.push('/(auth)/redeem-code')}
-              style={{
-                backgroundColor: colors.primary + '10',
-                borderRadius: 16,
-                padding: 14,
-                flexDirection: 'row',
-                alignItems: 'center',
-                borderWidth: 1,
-                borderColor: colors.primary + '40',
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.15,
-                shadowRadius: 12,
-                elevation: 6,
-              }}
-            >
-              <View style={{
-                width: 44,
-                height: 44,
-                borderRadius: 12,
-                backgroundColor: colors.primary + '20',
-                justifyContent: 'center',
-                alignItems: 'center',
-                marginRight: 12,
-              }}>
-                <Ionicons name="ticket" size={22} color={colors.primary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{
-                  fontSize: 15,
-                  fontWeight: '600',
-                  color: colors.text,
-                }}>
-                  I have an invite code
-                </Text>
-                <Text style={{
-                  fontSize: 12,
-                  color: colors.textSecondary,
-                  marginTop: 1,
-                }}>
-                  Redeem a code from your coach or admin
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.primary} />
-            </TouchableOpacity>
-
-            {/* Start a League */}
-            <TouchableOpacity
-              onPress={() => router.push('/(auth)/league-setup')}
-              style={{
-                backgroundColor: colors.glassCard,
-                borderRadius: 16,
-                padding: 14,
-                flexDirection: 'row',
-                alignItems: 'center',
-                borderWidth: 1,
-                borderColor: colors.glassBorder,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.15,
-                shadowRadius: 12,
-                elevation: 6,
-              }}
-            >
-              <View style={{
-                width: 44,
-                height: 44,
-                borderRadius: 12,
-                backgroundColor: '#FF950020',
-                justifyContent: 'center',
-                alignItems: 'center',
-                marginRight: 12,
-              }}>
-                <Ionicons name="trophy" size={22} color="#FF9500" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{
-                  fontSize: 15,
-                  fontWeight: '600',
-                  color: colors.text,
-                }}>
-                  I'm starting a league
-                </Text>
-                <Text style={{
-                  fontSize: 12,
-                  color: colors.textSecondary,
-                  marginTop: 1,
-                }}>
-                  Set up your organization
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
-
-            {/* Register a Player */}
-            <TouchableOpacity
-              onPress={() => router.push('/(auth)/parent-register')}
-              style={{
-                backgroundColor: colors.glassCard,
-                borderRadius: 16,
-                padding: 14,
-                flexDirection: 'row',
-                alignItems: 'center',
-                borderWidth: 1,
-                borderColor: colors.glassBorder,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.15,
-                shadowRadius: 12,
-                elevation: 6,
-              }}
-            >
-              <View style={{
-                width: 44,
-                height: 44,
-                borderRadius: 12,
-                backgroundColor: '#34C75920',
-                justifyContent: 'center',
-                alignItems: 'center',
-                marginRight: 12,
-              }}>
-                <Ionicons name="people" size={22} color="#34C759" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{
-                  fontSize: 15,
-                  fontWeight: '600',
-                  color: colors.text,
-                }}>
-                  Register a player
-                </Text>
-                <Text style={{
-                  fontSize: 12,
-                  color: colors.textSecondary,
-                  marginTop: 1,
-                }}>
-                  Sign up your player for a season
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
-
-            {/* Join as Coach */}
-            <TouchableOpacity
-              onPress={() => router.push('/(auth)/coach-register')}
-              style={{
-                backgroundColor: colors.glassCard,
-                borderRadius: 16,
-                padding: 14,
-                flexDirection: 'row',
-                alignItems: 'center',
-                borderWidth: 1,
-                borderColor: colors.glassBorder,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.15,
-                shadowRadius: 12,
-                elevation: 6,
-              }}
-            >
-              <View style={{
-                width: 44,
-                height: 44,
-                borderRadius: 12,
-                backgroundColor: '#007AFF20',
-                justifyContent: 'center',
-                alignItems: 'center',
-                marginRight: 12,
-              }}>
-                <Ionicons name="clipboard" size={22} color="#007AFF" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{
-                  fontSize: 15,
-                  fontWeight: '600',
-                  color: colors.text,
-                }}>
-                  Join as a coach
-                </Text>
-                <Text style={{
-                  fontSize: 12,
-                  color: colors.textSecondary,
-                  marginTop: 1,
-                }}>
-                  Request to coach a team
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Legal Links */}
-          <Text style={{
-            fontSize: 12,
-            color: colors.textMuted,
-            textAlign: 'center',
-            marginTop: 16,
-          }}>
-            By signing up, you agree to our{' '}
-            <Text
-              style={{ color: colors.primary, textDecorationLine: 'underline' }}
-              onPress={() => router.push('/privacy-policy')}
-            >
-              Privacy Policy
-            </Text>{' '}
-            and{' '}
-            <Text
-              style={{ color: colors.primary, textDecorationLine: 'underline' }}
-              onPress={() => router.push('/terms-of-service')}
-            >
-              Terms of Service
-            </Text>
+        {/* Legal */}
+        <Animated.Text style={[s.legal, { opacity: cta2Opacity }]}>
+          By continuing, you agree to our{' '}
+          <Text style={s.legalLink} onPress={() => router.push('/privacy-policy')}>
+            Privacy Policy
+          </Text>{' '}
+          and{' '}
+          <Text style={s.legalLink} onPress={() => router.push('/terms-of-service')}>
+            Terms of Service
           </Text>
-
-          {/* Footer Spacer */}
-          <View style={{ height: 30 }} />
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+        </Animated.Text>
+      </SafeAreaView>
+    </LinearGradient>
   );
 }
+
+const s = StyleSheet.create({
+  gradient: {
+    flex: 1,
+  },
+  safe: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingBottom: 16,
+  },
+  logoWrap: {
+    marginTop: 48,
+    alignItems: 'center',
+  },
+  logo: {
+    width: 180,
+    height: 74,
+  },
+  mascotWrap: {
+    alignItems: 'center',
+  },
+  mascot: {
+    width: 140,
+    height: 200,
+  },
+  tagline: {
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.8)',
+    letterSpacing: 0.5,
+    marginTop: -8,
+  },
+  ctaWrap: {
+    width: '100%',
+    gap: 12,
+  },
+  ctaPrimary: {
+    backgroundColor: BRAND.teal,
+    borderRadius: 16,
+    paddingVertical: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  ctaPrimaryText: {
+    fontFamily: FONTS.bodyBold,
+    fontSize: 18,
+    color: '#fff',
+  },
+  ctaSecondary: {
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.4)',
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ctaSecondaryText: {
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 16,
+    color: '#fff',
+  },
+  legal: {
+    fontFamily: FONTS.bodyMedium,
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.45)',
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+  legalLink: {
+    color: 'rgba(255,255,255,0.7)',
+    textDecorationLine: 'underline',
+  },
+});
