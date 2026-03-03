@@ -9,6 +9,7 @@ import Animated, {
   Extrapolation,
   interpolate,
   useAnimatedStyle,
+  type SharedValue,
 } from 'react-native-reanimated';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
@@ -20,7 +21,7 @@ type Props = {
   playerCount: number;
   overdueCount: number;
   thisWeekCount: number;
-  scrollY: Animated.SharedValue<number>;
+  scrollY: SharedValue<number>;
 };
 
 export default function WelcomeBriefing({

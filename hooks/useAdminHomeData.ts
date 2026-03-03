@@ -374,7 +374,7 @@ export function useAdminHomeData() {
           .from('seasons')
           .select('name, start_date')
           .eq('organization_id', orgId)
-          .gt('start_date', workingSeason.end_date || today)
+          .gt('start_date', (workingSeason as any).end_date || today)
           .order('start_date', { ascending: true })
           .limit(1)
           .maybeSingle();
