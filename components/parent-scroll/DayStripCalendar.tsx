@@ -4,6 +4,7 @@
  */
 import React, { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -48,6 +49,13 @@ function buildWeek(): DayItem[] {
 }
 
 export default function DayStripCalendar({ scrollY, eventDates }: Props) {
+  const router = useRouter();
+
+  const handleDayPress = (date: Date) => {
+    const iso = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    router.push(`/(tabs)/parent-schedule?date=${iso}` as any);
+  };
+
   const week = useMemo(() => {
     const days = buildWeek();
     return days.map((d) => ({
@@ -90,6 +98,7 @@ export default function DayStripCalendar({ scrollY, eventDates }: Props) {
             key={day.date.toISOString()}
             style={styles.dayCell}
             activeOpacity={0.7}
+            onPress={() => handleDayPress(day.date)}
           >
             <Text style={styles.dayName}>{day.dayName}</Text>
             <View style={[styles.dayNumWrap, day.isToday && styles.dayNumWrapToday]}>
