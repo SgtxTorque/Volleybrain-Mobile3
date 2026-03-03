@@ -1,5 +1,7 @@
 import { useAuth } from '@/lib/auth';
+import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { useTheme } from '@/lib/theme';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
@@ -230,7 +232,7 @@ const createStyles = (colors: any) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingHorizontal: 16,
+      paddingHorizontal: spacing.screenPadding,
       paddingVertical: 14,
     },
     backBtn: {
@@ -240,8 +242,8 @@ const createStyles = (colors: any) =>
       alignItems: 'center',
     },
     headerTitle: {
+      ...displayTextStyle,
       fontSize: 28,
-      fontWeight: '800',
       color: colors.text,
     },
 
@@ -250,13 +252,13 @@ const createStyles = (colors: any) =>
       flex: 1,
     },
     scrollContent: {
-      paddingHorizontal: 16,
+      paddingHorizontal: spacing.screenPadding,
     },
 
     // Section Title
     sectionTitle: {
       fontSize: 13,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
       color: colors.textMuted,
       marginBottom: 12,
       marginTop: 8,
@@ -269,19 +271,11 @@ const createStyles = (colors: any) =>
       backgroundColor: colors.glassCard,
       borderWidth: 1,
       borderColor: colors.glassBorder,
-      borderRadius: 16,
+      borderRadius: radii.card,
       padding: 28,
       alignItems: 'center',
       marginBottom: 24,
-      ...Platform.select({
-        ios: {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.15,
-          shadowRadius: 12,
-        },
-        android: { elevation: 6 },
-      }),
+      ...shadows.card,
     },
     heroIconWrap: {
       width: 80,
@@ -292,8 +286,8 @@ const createStyles = (colors: any) =>
       marginBottom: 16,
     },
     heroTitle: {
+      ...displayTextStyle,
       fontSize: 24,
-      fontWeight: '800',
       color: colors.text,
       marginBottom: 8,
     },
@@ -309,18 +303,10 @@ const createStyles = (colors: any) =>
       backgroundColor: colors.glassCard,
       borderWidth: 1,
       borderColor: colors.glassBorder,
-      borderRadius: 16,
+      borderRadius: radii.card,
       padding: 16,
       marginBottom: 24,
-      ...Platform.select({
-        ios: {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.15,
-          shadowRadius: 12,
-        },
-        android: { elevation: 6 },
-      }),
+      ...shadows.card,
     },
     linkRow: {
       flexDirection: 'row',
@@ -362,7 +348,7 @@ const createStyles = (colors: any) =>
     },
     actionBtnText: {
       fontSize: 15,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
     },
 
     // Social Share Row
@@ -383,7 +369,7 @@ const createStyles = (colors: any) =>
     },
     socialBtnText: {
       fontSize: 12,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
     },
 
     // Info Card
@@ -391,19 +377,11 @@ const createStyles = (colors: any) =>
       backgroundColor: colors.glassCard,
       borderWidth: 1,
       borderColor: colors.glassBorder,
-      borderRadius: 16,
+      borderRadius: radii.card,
       padding: 20,
       marginBottom: 20,
       gap: 18,
-      ...Platform.select({
-        ios: {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.15,
-          shadowRadius: 12,
-        },
-        android: { elevation: 6 },
-      }),
+      ...shadows.card,
     },
     infoRow: {
       flexDirection: 'row',
@@ -419,14 +397,14 @@ const createStyles = (colors: any) =>
     },
     infoStepNum: {
       fontSize: 16,
-      fontWeight: '800',
+      fontFamily: FONTS.bodyExtraBold,
     },
     infoStepContent: {
       flex: 1,
     },
     infoStepTitle: {
       fontSize: 15,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
       color: colors.text,
       marginBottom: 4,
     },

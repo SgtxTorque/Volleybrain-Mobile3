@@ -1,6 +1,8 @@
 import { useAuth } from '@/lib/auth';
+import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
@@ -193,7 +195,7 @@ const createStyles = (colors: any) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      padding: 16,
+      padding: spacing.screenPadding,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
@@ -204,8 +206,8 @@ const createStyles = (colors: any) =>
       alignItems: 'center',
     },
     headerTitle: {
+      ...displayTextStyle,
       fontSize: 18,
-      fontWeight: '600',
       color: colors.text,
     },
     scroll: {
@@ -218,21 +220,18 @@ const createStyles = (colors: any) =>
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: colors.glassCard,
-      borderRadius: 16,
-      padding: 16,
+      borderRadius: radii.card,
+      padding: spacing.screenPadding,
       marginBottom: 24,
       borderWidth: 1,
       borderColor: colors.glassBorder,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.15,
-      shadowRadius: 12,
-      elevation: 6,
+      ...shadows.card,
       gap: 12,
     },
     infoText: {
       flex: 1,
       fontSize: 14,
+      fontFamily: FONTS.bodyMedium,
       color: colors.textSecondary,
       lineHeight: 20,
     },
@@ -241,7 +240,7 @@ const createStyles = (colors: any) =>
     },
     sectionTitle: {
       fontSize: 13,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
       color: colors.textMuted,
       marginBottom: 16,
       textTransform: 'uppercase',
@@ -251,16 +250,12 @@ const createStyles = (colors: any) =>
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: colors.glassCard,
-      borderRadius: 16,
-      padding: 16,
+      borderRadius: radii.card,
+      padding: spacing.screenPadding,
       marginBottom: 10,
       borderWidth: 1,
       borderColor: colors.glassBorder,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.15,
-      shadowRadius: 12,
-      elevation: 6,
+      ...shadows.card,
     },
     prefIconContainer: {
       width: 40,
@@ -277,7 +272,7 @@ const createStyles = (colors: any) =>
     },
     prefLabel: {
       fontSize: 15,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
       color: colors.text,
     },
     prefDescription: {

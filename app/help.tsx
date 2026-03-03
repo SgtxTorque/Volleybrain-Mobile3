@@ -1,4 +1,6 @@
+import { displayTextStyle, radii, shadows } from '@/lib/design-tokens';
 import { useTheme } from '@/lib/theme';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
@@ -147,8 +149,8 @@ const createStyles = (colors: any) =>
       alignItems: 'center',
     },
     headerTitle: {
+      ...displayTextStyle,
       fontSize: 18,
-      fontWeight: '600',
       color: colors.text,
     },
     scroll: {
@@ -162,7 +164,7 @@ const createStyles = (colors: any) =>
     },
     sectionTitle: {
       fontSize: 13,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
       color: colors.textMuted,
       marginBottom: 16,
       textTransform: 'uppercase',
@@ -170,16 +172,12 @@ const createStyles = (colors: any) =>
     },
     faqCard: {
       backgroundColor: colors.glassCard,
-      borderRadius: 16,
+      borderRadius: radii.card,
       padding: 16,
       marginBottom: 10,
       borderWidth: 1,
       borderColor: colors.glassBorder,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.15,
-      shadowRadius: 12,
-      elevation: 6,
+      ...shadows.card,
     },
     faqHeader: {
       flexDirection: 'row',
@@ -188,7 +186,7 @@ const createStyles = (colors: any) =>
     },
     faqQuestion: {
       fontSize: 15,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
       color: colors.text,
       flex: 1,
       marginRight: 12,
@@ -204,16 +202,12 @@ const createStyles = (colors: any) =>
     },
     contactCard: {
       backgroundColor: colors.glassCard,
-      borderRadius: 16,
+      borderRadius: radii.card,
       padding: 24,
       alignItems: 'center',
       borderWidth: 1,
       borderColor: colors.glassBorder,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.15,
-      shadowRadius: 12,
-      elevation: 6,
+      ...shadows.card,
     },
     contactText: {
       fontSize: 15,
@@ -234,7 +228,7 @@ const createStyles = (colors: any) =>
     },
     emailText: {
       fontSize: 15,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
       color: colors.primary,
     },
     versionContainer: {
