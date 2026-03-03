@@ -1,8 +1,9 @@
 import { displayTextStyle, radii, shadows } from '@/lib/design-tokens';
-import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { BRAND } from '@/theme/colors';
+import { FONTS } from '@/theme/fonts';
 
 export type VolunteerSummary = {
   line_judge?: string | null;  // Primary line judge name
@@ -44,18 +45,18 @@ type EventCardProps = {
 };
 
 const eventTypeConfig: Record<string, { icon: string; color: string; label: string }> = {
-  game: { icon: 'trophy', color: '#D94F4F', label: 'Match' },
-  practice: { icon: 'fitness', color: '#14B8A6', label: 'Practice' },
-  event: { icon: 'calendar', color: '#2C5F7C', label: 'Event' },
-  tournament: { icon: 'medal', color: '#E8913A', label: 'Tournament' },
-  team_event: { icon: 'people', color: '#2C5F7C', label: 'Team Event' },
-  other: { icon: 'calendar', color: '#2C5F7C', label: 'Other' },
+  game: { icon: 'trophy', color: BRAND.coral, label: 'Match' },
+  practice: { icon: 'fitness', color: BRAND.teal, label: 'Practice' },
+  event: { icon: 'calendar', color: BRAND.skyBlue, label: 'Event' },
+  tournament: { icon: 'medal', color: BRAND.goldBrand, label: 'Tournament' },
+  team_event: { icon: 'people', color: BRAND.skyBlue, label: 'Team Event' },
+  other: { icon: 'calendar', color: BRAND.skyBlue, label: 'Other' },
 };
 
 const locationTypeConfig: Record<string, { icon: string; color: string; label: string }> = {
-  home: { icon: 'home', color: '#14B8A6', label: 'HOME' },
-  away: { icon: 'airplane', color: '#E8913A', label: 'AWAY' },
-  neutral: { icon: 'location', color: '#0EA5E9', label: 'NEUTRAL' },
+  home: { icon: 'home', color: BRAND.teal, label: 'HOME' },
+  away: { icon: 'airplane', color: BRAND.coral, label: 'AWAY' },
+  neutral: { icon: 'location', color: BRAND.skyBlue, label: 'NEUTRAL' },
 };
 
 const formatTime = (time: string | null): string => {
@@ -68,7 +69,6 @@ const formatTime = (time: string | null): string => {
 };
 
 export default function EventCard({ event, onPress, compact = false }: EventCardProps) {
-  const { colors } = useTheme();
   const typeConfig = eventTypeConfig[event.event_type] || eventTypeConfig.other;
   const locConfig = event.location_type ? locationTypeConfig[event.location_type] : null;
 
@@ -92,14 +92,14 @@ export default function EventCard({ event, onPress, compact = false }: EventCard
     if (total === 0) return null;
     if (pending > 0) {
       return (
-        <View style={[s.rsvpCircle, { backgroundColor: '#E8913A20' }]}>
-          <Ionicons name="time" size={14} color="#E8913A" />
+        <View style={[s.rsvpCircle, { backgroundColor: BRAND.goldBrand + '20' }]}>
+          <Ionicons name="time" size={14} color={BRAND.goldBrand} />
         </View>
       );
     }
     return (
-      <View style={[s.rsvpCircle, { backgroundColor: '#22C55E20' }]}>
-        <Ionicons name="checkmark" size={14} color="#22C55E" />
+      <View style={[s.rsvpCircle, { backgroundColor: BRAND.success + '20' }]}>
+        <Ionicons name="checkmark" size={14} color={BRAND.success} />
       </View>
     );
   };
@@ -117,8 +117,8 @@ export default function EventCard({ event, onPress, compact = false }: EventCard
           <Ionicons name={typeConfig.icon as any} size={16} color={typeConfig.color} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={[s.compactTitle, { color: colors.text }]} numberOfLines={1}>{event.title}</Text>
-          <Text style={[s.compactMeta, { color: colors.textMuted }]}>{formatTime(event.start_time)}</Text>
+          <Text style={[s.compactTitle, { color: BRAND.textPrimary }]} numberOfLines={1}>{event.title}</Text>
+          <Text style={[s.compactMeta, { color: BRAND.textMuted }]}>{formatTime(event.start_time)}</Text>
         </View>
         {event.event_type === 'game' && locConfig && (
           <View style={[s.locBadgeMini, { backgroundColor: locConfig.color + '20' }]}>
@@ -134,8 +134,8 @@ export default function EventCard({ event, onPress, compact = false }: EventCard
     <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={[s.card, { borderLeftColor: typeConfig.color }]}>
       {/* LEFT: Day number + Day name */}
       <View style={s.dateBlock}>
-        <Text style={[s.dayNum, { color: colors.navy || '#1B2838' }]}>{dayNum}</Text>
-        <Text style={[s.dayName, { color: colors.textMuted }]}>{dayName}</Text>
+        <Text style={s.dayNum}>{dayNum}</Text>
+        <Text style={[s.dayName, { color: BRAND.textMuted }]}>{dayName}</Text>
       </View>
 
       {/* CENTER: Content */}
@@ -145,7 +145,7 @@ export default function EventCard({ event, onPress, compact = false }: EventCard
           <View style={[s.typeBadge, { backgroundColor: typeConfig.color }]}>
             <Text style={s.typeBadgeText}>{typeConfig.label.toUpperCase()}</Text>
           </View>
-          <Text style={[s.timeText, { color: colors.text }]}>
+          <Text style={[s.timeText, { color: BRAND.textPrimary }]}>
             {formatTime(event.start_time)}
             {event.end_time ? ` \u2014 ${formatTime(event.end_time)}` : ''}
           </Text>
@@ -153,18 +153,18 @@ export default function EventCard({ event, onPress, compact = false }: EventCard
 
         {/* Title / Opponent */}
         {opponentName ? (
-          <Text style={[s.cardTitle, { color: colors.text }]} numberOfLines={1}>
+          <Text style={[s.cardTitle, { color: BRAND.textPrimary }]} numberOfLines={1}>
             vs {opponentName}
           </Text>
         ) : (
-          <Text style={[s.cardTitle, { color: colors.text }]} numberOfLines={1}>
+          <Text style={[s.cardTitle, { color: BRAND.textPrimary }]} numberOfLines={1}>
             {event.title}
           </Text>
         )}
 
         {/* Venue */}
         {(event.venue_name || event.location) && (
-          <Text style={[s.venueText, { color: colors.textMuted }]} numberOfLines={1}>
+          <Text style={[s.venueText, { color: BRAND.textMuted }]} numberOfLines={1}>
             {event.venue_name || event.location}
             {locConfig ? ` \u00B7 ${locConfig.label}` : ''}
           </Text>
@@ -173,10 +173,10 @@ export default function EventCard({ event, onPress, compact = false }: EventCard
         {/* Score (if completed) */}
         {hasScore && (
           <View style={s.scoreRow}>
-            <Text style={[s.scoreResult, { color: isWin ? '#22C55E' : '#D94F4F' }]}>
+            <Text style={[s.scoreResult, { color: isWin ? BRAND.success : BRAND.coral }]}>
               {isWin ? 'WIN' : 'LOSS'}
             </Text>
-            <Text style={[s.scoreValue, { color: colors.text }]}>
+            <Text style={[s.scoreValue, { color: BRAND.textPrimary }]}>
               {event.our_score}-{event.opponent_score}
             </Text>
           </View>
@@ -185,11 +185,11 @@ export default function EventCard({ event, onPress, compact = false }: EventCard
         {/* RSVP summary */}
         {event.rsvp_count && (
           <View style={s.rsvpRow}>
-            <Text style={{ color: '#14B8A6', fontSize: 11, fontWeight: '600' }}>
+            <Text style={{ color: BRAND.teal, fontSize: 11, fontFamily: FONTS.bodySemiBold }}>
               {event.rsvp_count.yes} going
             </Text>
             {event.rsvp_count.pending > 0 && (
-              <Text style={{ color: colors.textMuted, fontSize: 11 }}>
+              <Text style={{ color: BRAND.textMuted, fontSize: 11, fontFamily: FONTS.bodyMedium }}>
                 {event.rsvp_count.pending} pending
               </Text>
             )}
@@ -199,7 +199,7 @@ export default function EventCard({ event, onPress, compact = false }: EventCard
         {/* Volunteer needs */}
         {needsVolunteers && (
           <View style={s.volunteerRow}>
-            <Ionicons name="hand-left" size={10} color="#E8913A" />
+            <Ionicons name="hand-left" size={10} color={BRAND.goldBrand} />
             <Text style={s.volunteerText}>Volunteers needed</Text>
           </View>
         )}
@@ -224,10 +224,10 @@ const s = StyleSheet.create({
   // ── Full Card ──
   card: {
     flexDirection: 'row',
-    backgroundColor: '#FFF',
+    backgroundColor: BRAND.white,
     borderRadius: radii.card,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)',
+    borderColor: BRAND.border,
     borderLeftWidth: 4,
     marginBottom: 10,
     paddingVertical: 12,
@@ -244,12 +244,14 @@ const s = StyleSheet.create({
     ...displayTextStyle,
     fontSize: 22,
     lineHeight: 26,
+    color: BRAND.navy,
   },
   dayName: {
+    fontFamily: FONTS.bodyBold,
     fontSize: 9,
-    fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+    color: BRAND.textMuted,
   },
   cardContent: {
     flex: 1,
@@ -266,23 +268,27 @@ const s = StyleSheet.create({
     borderRadius: 10,
   },
   typeBadgeText: {
-    color: '#FFF',
+    color: BRAND.white,
+    fontFamily: FONTS.bodyExtraBold,
     fontSize: 9,
-    fontWeight: '800',
     letterSpacing: 0.5,
   },
   timeText: {
+    fontFamily: FONTS.bodyBold,
     fontSize: 13,
-    fontWeight: '700',
+    color: BRAND.textPrimary,
   },
   cardTitle: {
+    fontFamily: FONTS.bodySemiBold,
     fontSize: 14,
-    fontWeight: '600',
     marginBottom: 2,
+    color: BRAND.textPrimary,
   },
   venueText: {
+    fontFamily: FONTS.bodyMedium,
     fontSize: 11,
     marginBottom: 4,
+    color: BRAND.textMuted,
   },
   scoreRow: {
     flexDirection: 'row',
@@ -291,8 +297,8 @@ const s = StyleSheet.create({
     marginTop: 4,
   },
   scoreResult: {
+    fontFamily: FONTS.bodyExtraBold,
     fontSize: 10,
-    fontWeight: '800',
     letterSpacing: 0.5,
   },
   scoreValue: {
@@ -311,9 +317,9 @@ const s = StyleSheet.create({
     marginTop: 4,
   },
   volunteerText: {
-    color: '#E8913A',
+    color: BRAND.goldBrand,
+    fontFamily: FONTS.bodySemiBold,
     fontSize: 10,
-    fontWeight: '600',
   },
   teamBadge: {
     alignSelf: 'flex-start',
@@ -323,8 +329,8 @@ const s = StyleSheet.create({
     marginTop: 6,
   },
   teamBadgeText: {
+    fontFamily: FONTS.bodyBold,
     fontSize: 9,
-    fontWeight: '700',
   },
 
   // ── RSVP circle ──
@@ -343,12 +349,12 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 10,
-    backgroundColor: '#FFF',
+    backgroundColor: BRAND.white,
     borderRadius: radii.card,
     borderLeftWidth: 4,
     marginBottom: 6,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)',
+    borderColor: BRAND.border,
     ...shadows.card,
   },
   compactIconWrap: {
@@ -360,12 +366,15 @@ const s = StyleSheet.create({
     marginRight: 10,
   },
   compactTitle: {
+    fontFamily: FONTS.bodySemiBold,
     fontSize: 13,
-    fontWeight: '600',
+    color: BRAND.textPrimary,
   },
   compactMeta: {
+    fontFamily: FONTS.bodyMedium,
     fontSize: 11,
     marginTop: 1,
+    color: BRAND.textMuted,
   },
   locBadgeMini: {
     paddingHorizontal: 6,
@@ -374,7 +383,7 @@ const s = StyleSheet.create({
     marginLeft: 8,
   },
   locBadgeMiniText: {
+    fontFamily: FONTS.bodyExtraBold,
     fontSize: 9,
-    fontWeight: '800',
   },
 });
