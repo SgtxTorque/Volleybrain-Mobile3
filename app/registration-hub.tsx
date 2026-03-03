@@ -1,4 +1,5 @@
 import AdminContextBar from '@/components/AdminContextBar';
+import { ShareRegistrationButton } from '@/components/ShareRegistrationModal';
 import AppHeaderBar from '@/components/ui/AppHeaderBar';
 import Badge from '@/components/ui/Badge';
 import Card from '@/components/ui/Card';
@@ -1610,6 +1611,11 @@ export default function RegistrationHubScreen() {
             </View>
           </View>
         )}
+
+        {/* Share Registration Link */}
+        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 12 }}>
+          <ShareRegistrationButton label="Share Registration Link" />
+        </View>
 
         {/* Selection mode controls */}
         {selectionMode && (

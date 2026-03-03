@@ -31,6 +31,7 @@ import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useAuth } from '@/lib/auth';
+import { supabase } from '@/lib/supabase';
 import { useParentScroll } from '@/lib/parent-scroll-context';
 import { useScrollAnimations, SCROLL_THRESHOLDS } from '@/hooks/useScrollAnimations';
 import { useParentHomeData } from '@/hooks/useParentHomeData';
@@ -52,6 +53,8 @@ import AmbientCelebration from './parent-scroll/AmbientCelebration';
 import FlatChatPreview from './parent-scroll/FlatChatPreview';
 import ParentOnboardingModal from './ParentOnboardingModal';
 import LevelUpCelebrationModal from './LevelUpCelebrationModal';
+import RegistrationBanner from './RegistrationBanner';
+import ReenrollmentBanner from './ReenrollmentBanner';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
@@ -188,6 +191,19 @@ export default function ParentHomeScroll() {
       AsyncStorage.setItem(key, String(data.childXp!.level));
     });
   }, [data.loading, data.childXp?.level, data.children]);
+
+  // ─── Open registration count for RegistrationBanner ──
+  const [openRegCount, setOpenRegCount] = useState(0);
+  useEffect(() => {
+    const orgId = profile?.current_organization_id;
+    if (!orgId) return;
+    supabase
+      .from('seasons')
+      .select('id', { count: 'exact', head: true })
+      .eq('organization_id', orgId)
+      .eq('registration_open', true)
+      .then(({ count }) => setOpenRegCount(count || 0));
+  }, [profile?.current_organization_id]);
 
   // Signal to tab bar that parent scroll is active
   useEffect(() => {
@@ -444,6 +460,12 @@ export default function ParentHomeScroll() {
             </View>
           )}
         </Animated.View>
+
+        {/* ─── REGISTRATION / RE-ENROLLMENT BANNERS ──────────── */}
+        <View style={{ paddingHorizontal: SPACING.pagePadding }}>
+          <RegistrationBanner count={openRegCount} />
+          <ReenrollmentBanner />
+        </View>
 
         {/* ─── EVENT HERO CARD ────────────────────────────────── */}
         <EventHeroCard
