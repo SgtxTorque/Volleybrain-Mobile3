@@ -1,7 +1,6 @@
 import { displayTextStyle, radii, shadows } from '@/lib/design-tokens';
 import { usePermissions } from '@/lib/permissions-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -23,7 +22,6 @@ const roleOptions: RoleOption[] = [
 
 export default function RoleSelector() {
   const { actualRoles, devViewAs, setDevViewAs } = usePermissions();
-  const router = useRouter();
   const [showPicker, setShowPicker] = useState(false);
 
   // Only show if user has multiple roles
@@ -53,7 +51,11 @@ export default function RoleSelector() {
   const handleSelectRole = (roleKey: string) => {
     setDevViewAs(roleKey as any);
     setShowPicker(false);
-    router.replace('/(tabs)/' as any);
+    // No router.replace needed — DashboardRouter and TabLayout
+    // react to viewAs changes automatically via permissions context.
+    // Calling router.replace('/(tabs)/') here was triggering a
+    // navigation event that could race with the auth guard and
+    // redirect to the login screen.
   };
 
   return (
