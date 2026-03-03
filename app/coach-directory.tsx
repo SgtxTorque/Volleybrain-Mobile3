@@ -4,6 +4,7 @@ import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -508,112 +509,106 @@ const createStyles = (colors: any) => StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 12 },
   backBtn: { padding: 4 },
   title: { ...displayTextStyle, fontSize: 24, color: colors.text },
-  subtitle: { fontSize: 13, color: colors.primary, marginTop: 2 },
+  subtitle: { fontSize: 13, fontFamily: FONTS.bodySemiBold, color: colors.primary, marginTop: 2 },
 
   // Stats
   statsRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
   statBox: {
-    flex: 1, backgroundColor: '#FFF', borderRadius: 16, padding: 12, alignItems: 'center',
-    borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)',
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8 },
-      android: { elevation: 4 },
-    }),
+    flex: 1, backgroundColor: colors.card, borderRadius: radii.card, padding: 12, alignItems: 'center',
+    borderWidth: 1, borderColor: colors.border,
+    ...shadows.card,
   },
-  statNum: { fontSize: 24, fontWeight: '800', color: colors.text },
-  statLabel: { fontSize: 10, color: colors.textMuted, marginTop: 2, fontWeight: '700', textTransform: 'uppercase' as const, letterSpacing: 0.5 },
+  statNum: { ...displayTextStyle, fontSize: 28, color: colors.text },
+  statLabel: { fontSize: 10, fontFamily: FONTS.bodyExtraBold, color: colors.textMuted, marginTop: 2, textTransform: 'uppercase' as const, letterSpacing: 0.5 },
 
   // Search
   searchRow: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF',
-    borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12,
-    borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', gap: 8,
+    flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card,
+    borderRadius: radii.card, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12,
+    borderWidth: 1, borderColor: colors.border, gap: 8, ...shadows.card,
   },
-  searchInput: { flex: 1, fontSize: 15, color: colors.text, padding: 0 },
+  searchInput: { flex: 1, fontSize: 15, fontFamily: FONTS.bodyMedium, color: colors.text, padding: 0 },
 
   // Filter Pills
   filterRow: { flexGrow: 0, marginBottom: 16 },
   filterPill: {
-    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
-    backgroundColor: '#FFF', borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', marginRight: 8,
+    paddingHorizontal: 14, paddingVertical: 8, borderRadius: radii.badge,
+    backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, marginRight: 8,
   },
   filterPillActive: { backgroundColor: colors.primary + '20', borderColor: colors.primary },
-  filterPillText: { fontSize: 13, color: colors.textMuted, fontWeight: '600' },
+  filterPillText: { fontSize: 13, fontFamily: FONTS.bodySemiBold, color: colors.textMuted },
   filterPillTextActive: { color: colors.primary },
 
   // Coach Card
   coachCard: {
-    backgroundColor: '#FFF', borderRadius: 16, marginBottom: 12,
-    borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)',
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8 },
-      android: { elevation: 4 },
-    }),
+    backgroundColor: colors.card, borderRadius: radii.card, marginBottom: 12,
+    borderWidth: 1, borderColor: colors.border,
+    ...shadows.card,
   },
   cardContent: { flexDirection: 'row', alignItems: 'center', padding: 14 },
   avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.primary + '20', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  avatarText: { fontSize: 18, fontWeight: '700', color: colors.primary },
+  avatarText: { fontSize: 18, fontFamily: FONTS.bodyBold, color: colors.primary },
   cardInfo: { flex: 1 },
   cardNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  coachName: { fontSize: 16, fontWeight: '700', color: colors.text },
-  levelText: { fontSize: 11, color: colors.textMuted, backgroundColor: colors.background, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+  coachName: { fontSize: 16, fontFamily: FONTS.bodyBold, color: colors.text },
+  levelText: { fontSize: 11, fontFamily: FONTS.bodyMedium, color: colors.textMuted, backgroundColor: colors.background, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
 
   contactRow: { marginTop: 4, gap: 2 },
   contactBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  contactText: { fontSize: 12, color: colors.textSecondary },
+  contactText: { fontSize: 12, fontFamily: FONTS.bodyMedium, color: colors.textSecondary },
 
   teamPillsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 6 },
   teamPill: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  teamPillText: { fontSize: 11, fontWeight: '600' },
+  teamPillText: { fontSize: 11, fontFamily: FONTS.bodySemiBold },
 
   badgesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 6 },
   badge: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 6, paddingVertical: 3, borderRadius: 6 },
-  badgeText: { fontSize: 10, fontWeight: '600' },
+  badgeText: { fontSize: 10, fontFamily: FONTS.bodySemiBold },
 
   // Empty
   empty: { alignItems: 'center', paddingVertical: 60 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: colors.text, marginTop: 12 },
-  emptySubtext: { fontSize: 14, color: colors.textMuted, marginTop: 4, textAlign: 'center' },
+  emptyTitle: { ...displayTextStyle, fontSize: 20, color: colors.text, marginTop: 12 },
+  emptySubtext: { fontSize: 14, fontFamily: FONTS.bodyMedium, color: colors.textMuted, marginTop: 4, textAlign: 'center' },
 
   // Detail Modal
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-  detailModal: { backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, height: '88%', borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)' },
+  detailModal: { backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, height: '88%', borderWidth: 1, borderColor: colors.border },
   detailHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: colors.border },
-  detailTitle: { fontSize: 20, fontWeight: '700', color: colors.text },
+  detailTitle: { ...displayTextStyle, fontSize: 22, color: colors.text },
   detailScroll: { flex: 1, padding: 16 },
 
   profileHeader: { alignItems: 'center', marginBottom: 24 },
   avatarLg: { width: 80, height: 80, borderRadius: 40, backgroundColor: colors.primary + '20', justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
-  avatarLgText: { fontSize: 32, fontWeight: '700', color: colors.primary },
-  profileName: { fontSize: 24, fontWeight: '800', color: colors.text },
-  profileLevel: { fontSize: 14, color: colors.primary, marginTop: 4, fontWeight: '600' },
-  profileMeta: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
+  avatarLgText: { fontSize: 32, fontFamily: FONTS.bodyBold, color: colors.primary },
+  profileName: { ...displayTextStyle, fontSize: 28, color: colors.text },
+  profileLevel: { fontSize: 14, fontFamily: FONTS.bodySemiBold, color: colors.primary, marginTop: 4 },
+  profileMeta: { fontSize: 13, fontFamily: FONTS.bodyMedium, color: colors.textMuted, marginTop: 2 },
 
-  section: { backgroundColor: colors.background, borderRadius: 16, padding: 16, marginBottom: 16 },
-  sectionTitle: { fontSize: 12, fontWeight: '700', color: colors.textMuted, marginBottom: 12, letterSpacing: 1 },
+  section: { backgroundColor: colors.background, borderRadius: radii.card, padding: 16, marginBottom: 16 },
+  sectionTitle: { fontSize: 11, fontFamily: FONTS.bodyExtraBold, color: colors.textMuted, marginBottom: 12, letterSpacing: 1.5 },
 
   detailRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border },
-  detailRowText: { flex: 1, fontSize: 15, color: colors.text },
-  noDataText: { fontSize: 14, color: colors.textMuted, fontStyle: 'italic' },
+  detailRowText: { flex: 1, fontSize: 15, fontFamily: FONTS.bodyMedium, color: colors.text },
+  noDataText: { fontSize: 14, fontFamily: FONTS.bodyMedium, color: colors.textMuted, fontStyle: 'italic' },
 
   bgCheckRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  bgCheckLabel: { fontSize: 16, fontWeight: '700' },
-  bgCheckDate: { fontSize: 13, color: colors.textMuted, marginTop: 4 },
+  bgCheckLabel: { fontSize: 16, fontFamily: FONTS.bodyBold },
+  bgCheckDate: { fontSize: 13, fontFamily: FONTS.bodyMedium, color: colors.textMuted, marginTop: 4 },
 
   certsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   certBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#AF52DE15', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
-  certText: { fontSize: 13, color: '#AF52DE', fontWeight: '600' },
+  certText: { fontSize: 13, fontFamily: FONTS.bodySemiBold, color: '#AF52DE' },
 
   teamAssignRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border, gap: 8 },
   teamDot: { width: 10, height: 10, borderRadius: 5 },
-  teamAssignName: { flex: 1, fontSize: 15, color: colors.text, fontWeight: '500' },
-  roleToggle: { backgroundColor: '#FFF', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, marginRight: 8 },
-  roleToggleText: { fontSize: 12, color: colors.textMuted },
+  teamAssignName: { flex: 1, fontSize: 15, fontFamily: FONTS.bodyMedium, color: colors.text },
+  roleToggle: { backgroundColor: colors.card, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, marginRight: 8 },
+  roleToggleText: { fontSize: 12, fontFamily: FONTS.bodyMedium, color: colors.textMuted },
 
   assignRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border, gap: 8 },
-  assignTeamName: { flex: 1, fontSize: 15, color: colors.text },
+  assignTeamName: { flex: 1, fontSize: 15, fontFamily: FONTS.bodyMedium, color: colors.text },
   assignBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  assignBtnText: { fontSize: 13, color: colors.success, fontWeight: '600' },
+  assignBtnText: { fontSize: 13, fontFamily: FONTS.bodySemiBold, color: colors.success },
 
-  specialtiesText: { fontSize: 14, color: colors.text, lineHeight: 20 },
+  specialtiesText: { fontSize: 14, fontFamily: FONTS.bodyMedium, color: colors.text, lineHeight: 20 },
 });

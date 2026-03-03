@@ -1,5 +1,7 @@
+import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -224,32 +226,32 @@ export default function OrgDirectoryScreen() {
 }
 
 const createStyles = (colors: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'transparent' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border },
+  container: { flex: 1, backgroundColor: colors.background },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.screenPadding, borderBottomWidth: 1, borderBottomColor: colors.border },
   backBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '600', color: colors.text, flex: 1, textAlign: 'center' },
-  searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, borderRadius: 12, margin: 16, paddingHorizontal: 16, gap: 10, borderWidth: 1, borderColor: colors.border },
-  searchInput: { flex: 1, paddingVertical: 14, fontSize: 16, color: colors.text },
+  headerTitle: { ...displayTextStyle, fontSize: 22, color: colors.text, flex: 1, textAlign: 'center' },
+  searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, borderRadius: radii.card, margin: spacing.screenPadding, paddingHorizontal: 16, gap: 10, borderWidth: 1, borderColor: colors.border, ...shadows.card },
+  searchInput: { flex: 1, paddingVertical: 14, fontSize: 15, fontFamily: FONTS.bodyMedium, color: colors.text },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
-  emptyTitle: { fontSize: 16, fontWeight: '600', color: colors.text, marginTop: 16 },
-  emptySubtitle: { fontSize: 13, color: colors.textMuted, marginTop: 8 },
+  emptyTitle: { ...displayTextStyle, fontSize: 20, color: colors.text, marginTop: 16 },
+  emptySubtitle: { fontSize: 13, fontFamily: FONTS.bodyMedium, color: colors.textMuted, marginTop: 8 },
   scroll: { flex: 1 },
-  scrollContent: { padding: 16 },
-  resultCount: { fontSize: 13, color: colors.textMuted, marginBottom: 12 },
-  orgCard: { backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
+  scrollContent: { padding: spacing.screenPadding },
+  resultCount: { fontSize: 13, fontFamily: FONTS.bodyMedium, color: colors.textMuted, marginBottom: 12 },
+  orgCard: { backgroundColor: colors.glassCard, borderRadius: radii.card, padding: 16, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderColor: colors.glassBorder, ...shadows.card },
   orgLogo: { width: 48, height: 48, borderRadius: 12 },
   orgLogoPlaceholder: { width: 48, height: 48, borderRadius: 12, backgroundColor: colors.primary + '20', justifyContent: 'center', alignItems: 'center' },
-  orgInitials: { fontSize: 16, fontWeight: '700', color: colors.primary },
-  orgName: { fontSize: 16, fontWeight: '600', color: colors.text },
-  orgLocation: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
+  orgInitials: { fontSize: 16, fontFamily: FONTS.bodyBold, color: colors.primary },
+  orgName: { fontSize: 16, fontFamily: FONTS.bodySemiBold, color: colors.text },
+  orgLocation: { fontSize: 13, fontFamily: FONTS.bodyMedium, color: colors.textMuted, marginTop: 2 },
   orgDetailHeader: { alignItems: 'center', paddingVertical: 24 },
   orgDetailLogo: { width: 80, height: 80, borderRadius: 20 },
   orgDetailLogoPlaceholder: { width: 80, height: 80, borderRadius: 20, backgroundColor: colors.primary + '20', justifyContent: 'center', alignItems: 'center' },
-  orgDetailInitials: { fontSize: 28, fontWeight: '700', color: colors.primary },
-  orgDetailName: { fontSize: 22, fontWeight: '700', color: colors.text, marginTop: 12, textAlign: 'center' },
-  orgDetailLocation: { fontSize: 14, color: colors.textMuted, marginTop: 4 },
-  infoCard: { backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, gap: 14, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
+  orgDetailInitials: { fontSize: 28, fontFamily: FONTS.bodyBold, color: colors.primary },
+  orgDetailName: { ...displayTextStyle, fontSize: 26, color: colors.text, marginTop: 12, textAlign: 'center' },
+  orgDetailLocation: { fontSize: 14, fontFamily: FONTS.bodyMedium, color: colors.textMuted, marginTop: 4 },
+  infoCard: { backgroundColor: colors.glassCard, borderRadius: radii.card, padding: 16, gap: 14, borderWidth: 1, borderColor: colors.glassBorder, ...shadows.card },
   infoRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  infoText: { flex: 1, fontSize: 15, color: colors.text, lineHeight: 22 },
+  infoText: { flex: 1, fontSize: 15, fontFamily: FONTS.bodyMedium, color: colors.text, lineHeight: 22 },
 });
