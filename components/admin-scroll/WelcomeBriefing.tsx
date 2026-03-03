@@ -1,9 +1,15 @@
 /**
  * WelcomeBriefing — Tier 3 ambient welcome section for admin.
- * Shows greeting, scope, and urgency counters.
+ * Shows greeting, scope, urgency counters.
+ * Phase 2: parallax mascot, celebratory all-clear variant.
  */
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedStyle,
+} from 'react-native-reanimated';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 
@@ -14,6 +20,7 @@ type Props = {
   playerCount: number;
   overdueCount: number;
   thisWeekCount: number;
+  scrollY: Animated.SharedValue<number>;
 };
 
 export default function WelcomeBriefing({
@@ -23,12 +30,25 @@ export default function WelcomeBriefing({
   playerCount,
   overdueCount,
   thisWeekCount,
+  scrollY,
 }: Props) {
   const allClear = overdueCount === 0 && thisWeekCount === 0;
 
+  // Parallax mascot: moves at 0.3x scroll speed
+  const mascotStyle = useAnimatedStyle(() => ({
+    transform: [{
+      translateY: interpolate(scrollY.value, [0, 300], [0, -90], Extrapolation.CLAMP),
+    }],
+  }));
+
   return (
     <View style={styles.wrap}>
-      <Text style={styles.mascot}>{'\u{1F431}'}</Text>
+      <Animated.View style={mascotStyle}>
+        <Text style={styles.mascot}>
+          {allClear ? '\u{1F389}' : '\u{1F431}'}
+        </Text>
+      </Animated.View>
+
       <Text style={styles.greeting}>
         {greeting}, {adminName}.
       </Text>
@@ -38,19 +58,21 @@ export default function WelcomeBriefing({
       </Text>
 
       {allClear ? (
-        <Text style={styles.allClear}>
-          {'\u2705'} All caught up! Enjoy the moment.
-        </Text>
+        <View style={styles.allClearWrap}>
+          <Text style={styles.allClearText}>
+            {'\u2705'} All caught up! Enjoy the moment.
+          </Text>
+        </View>
       ) : (
         <View style={styles.countersRow}>
           {overdueCount > 0 && (
-            <View style={styles.counter}>
+            <View style={[styles.counterPill, { borderColor: 'rgba(239,68,68,0.20)', backgroundColor: 'rgba(239,68,68,0.06)' }]}>
               <View style={[styles.dot, { backgroundColor: BRAND.error }]} />
               <Text style={[styles.counterNum, { color: BRAND.error }]}>{overdueCount}</Text>
             </View>
           )}
           {thisWeekCount > 0 && (
-            <View style={styles.counter}>
+            <View style={[styles.counterPill, { borderColor: 'rgba(245,158,11,0.20)', backgroundColor: 'rgba(245,158,11,0.06)' }]}>
               <View style={[styles.dot, { backgroundColor: BRAND.warning }]} />
               <Text style={[styles.counterNum, { color: BRAND.warning }]}>{thisWeekCount}</Text>
             </View>
@@ -85,7 +107,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 16,
   },
-  allClear: {
+  allClearWrap: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: 'rgba(34,197,94,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(34,197,94,0.15)',
+  },
+  allClearText: {
     fontFamily: FONTS.bodySemiBold,
     fontSize: 14,
     color: BRAND.success,
@@ -94,12 +124,16 @@ const styles = StyleSheet.create({
   countersRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 12,
   },
-  counter: {
+  counterPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+    borderWidth: 1,
   },
   dot: {
     width: 8,

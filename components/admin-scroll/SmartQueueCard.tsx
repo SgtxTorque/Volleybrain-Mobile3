@@ -1,15 +1,23 @@
 /**
  * SmartQueueCard — Tier 1 action card for admin Smart Queue.
- * Shows urgency-colored left accent, title, subtitle, and action button.
+ * Phase 2: urgency-colored left accent, icon, title, subtitle,
+ * action button, and slide-in entry animation with stagger.
  */
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withTiming,
+} from 'react-native-reanimated';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 import type { QueueItem } from '@/hooks/useAdminHomeData';
 
 type Props = {
   item: QueueItem;
+  index: number;
 };
 
 const URGENCY_LABELS: Record<string, string> = {
@@ -19,10 +27,24 @@ const URGENCY_LABELS: Record<string, string> = {
   upcoming: 'UPCOMING',
 };
 
-export default function SmartQueueCard({ item }: Props) {
+export default function SmartQueueCard({ item, index }: Props) {
+  // Stagger slide-in animation: each card slides from right with 100ms stagger
+  const translateX = useSharedValue(60);
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    const delay = index * 100;
+    translateX.value = withDelay(delay, withTiming(0, { duration: 350 }));
+    opacity.value = withDelay(delay, withTiming(1, { duration: 350 }));
+  }, []);
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+    opacity: opacity.value,
+  }));
+
   const handleAction = () => {
     if (item.actionRoute) {
-      // Navigate — will be wired later
       Alert.alert('Coming Soon', `Navigation to ${item.actionRoute} coming soon.`);
     } else {
       Alert.alert('Coming Soon', `${item.actionLabel} coming in a future update.`);
@@ -30,15 +52,18 @@ export default function SmartQueueCard({ item }: Props) {
   };
 
   return (
-    <View style={styles.card}>
+    <Animated.View style={[styles.card, animStyle]}>
       {/* Left accent strip */}
       <View style={[styles.accent, { backgroundColor: item.color }]} />
 
       <View style={styles.body}>
         {/* Urgency + Category label */}
-        <Text style={[styles.urgencyLabel, { color: item.color }]}>
-          {URGENCY_LABELS[item.urgency] || 'UPCOMING'} {'\u00B7'} {item.category}
-        </Text>
+        <View style={styles.topRow}>
+          <Text style={styles.icon}>{item.icon}</Text>
+          <Text style={[styles.urgencyLabel, { color: item.color }]}>
+            {URGENCY_LABELS[item.urgency] || 'UPCOMING'} {'\u00B7'} {item.category}
+          </Text>
+        </View>
 
         <Text style={styles.title}>{item.title}</Text>
         <Text style={styles.subtitle}>{item.subtitle}</Text>
@@ -53,7 +78,7 @@ export default function SmartQueueCard({ item }: Props) {
           </TouchableOpacity>
         </View>
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -66,6 +91,11 @@ const styles = StyleSheet.create({
     borderColor: BRAND.border,
     marginHorizontal: 20,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
   accent: {
     width: 4,
@@ -74,12 +104,19 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+  },
+  icon: {
+    fontSize: 14,
+  },
   urgencyLabel: {
     fontSize: 10,
     fontFamily: FONTS.bodyBold,
     letterSpacing: 1,
-    textTransform: 'uppercase',
-    marginBottom: 6,
   },
   title: {
     fontFamily: FONTS.bodySemiBold,

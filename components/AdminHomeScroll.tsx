@@ -132,6 +132,7 @@ export default function AdminHomeScroll() {
           playerCount={data.totalPlayers}
           overdueCount={data.overdueQueueCount}
           thisWeekCount={data.thisWeekQueueCount}
+          scrollY={scrollY}
         />
 
         {/* ─── 2. SEARCH BAR ──────────────────────────────── */}
@@ -147,8 +148,8 @@ export default function AdminHomeScroll() {
         {/* ─── 3. SMART QUEUE ─────────────────────────────── */}
         {data.queueItems.length > 0 ? (
           <View style={styles.queueSection}>
-            {data.queueItems.slice(0, 4).map((item) => (
-              <SmartQueueCard key={item.id} item={item} />
+            {data.queueItems.slice(0, 4).map((item, idx) => (
+              <SmartQueueCard key={item.id} item={item} index={idx} />
             ))}
             {data.queueItems.length > 4 && (
               <TouchableOpacity style={styles.viewMoreRow}>
