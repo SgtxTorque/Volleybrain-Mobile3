@@ -1,7 +1,8 @@
 import { useAuth } from '@/lib/auth';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
-import { useTheme } from '@/lib/theme';
+import { BRAND } from '@/theme/colors';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -88,7 +89,6 @@ const getReadRateColor = (rate: number): string => {
 // ============================================================================
 
 export default function BlastHistoryScreen() {
-  const { colors } = useTheme();
   const { user, profile } = useAuth();
   const { workingSeason } = useSeason();
   const router = useRouter();
@@ -103,8 +103,6 @@ export default function BlastHistoryScreen() {
   const [loadingRecipients, setLoadingRecipients] = useState<string | null>(null);
   const [resending, setResending] = useState<string | null>(null);
   const [teamNames, setTeamNames] = useState<Map<string, string>>(new Map());
-
-  const s = createStyles(colors);
 
   // ============================================================================
   // DATA FETCHING
@@ -324,10 +322,10 @@ export default function BlastHistoryScreen() {
 
     return (
       <View style={s.readBarContainer}>
-        <Text style={[s.readBarLabel, { color: colors.textSecondary }]}>
+        <Text style={s.readBarLabel}>
           {acknowledged}/{total} read ({pct}%)
         </Text>
-        <View style={[s.readBarTrack, { backgroundColor: colors.border }]}>
+        <View style={s.readBarTrack}>
           <View style={[s.readBarFill, { width: `${pct}%`, backgroundColor: barColor }]} />
         </View>
       </View>
@@ -338,8 +336,8 @@ export default function BlastHistoryScreen() {
     if (loadingRecipients === messageId) {
       return (
         <View style={s.recipientLoadingWrap}>
-          <ActivityIndicator size="small" color={colors.primary} />
-          <Text style={[s.recipientLoadingText, { color: colors.textMuted }]}>Loading recipients...</Text>
+          <ActivityIndicator size="small" color={BRAND.teal} />
+          <Text style={s.recipientLoadingText}>Loading recipients...</Text>
         </View>
       );
     }
@@ -349,36 +347,36 @@ export default function BlastHistoryScreen() {
 
     if (recipients.length === 0) {
       return (
-        <Text style={[s.noRecipientsText, { color: colors.textMuted }]}>No recipients found.</Text>
+        <Text style={s.noRecipientsText}>No recipients found.</Text>
       );
     }
 
     return (
       <View style={s.recipientList}>
         {recipients.map(r => (
-          <View key={r.id} style={[s.recipientRow, { borderBottomColor: colors.border }]}>
+          <View key={r.id} style={s.recipientRow}>
             <Ionicons
               name={r.acknowledged ? 'shield-checkmark' : 'time-outline'}
               size={18}
-              color={r.acknowledged ? '#34C759' : colors.textMuted}
+              color={r.acknowledged ? '#34C759' : BRAND.textMuted}
             />
             <View style={s.recipientInfo}>
-              <Text style={[s.recipientName, { color: colors.text }]}>{r.recipient_name || 'Unknown'}</Text>
+              <Text style={s.recipientName}>{r.recipient_name || 'Unknown'}</Text>
               {r.recipient_email ? (
-                <Text style={[s.recipientEmail, { color: colors.textMuted }]}>{r.recipient_email}</Text>
+                <Text style={s.recipientEmail}>{r.recipient_email}</Text>
               ) : null}
             </View>
             {r.acknowledged ? (
               <View style={s.recipientStatus}>
                 <Text style={[s.recipientStatusText, { color: '#34C759' }]}>Read</Text>
                 {r.acknowledged_at && (
-                  <Text style={[s.recipientTimestamp, { color: colors.textMuted }]}>
+                  <Text style={s.recipientTimestamp}>
                     {formatTimestamp(r.acknowledged_at)}
                   </Text>
                 )}
               </View>
             ) : (
-              <Text style={[s.recipientStatusText, { color: colors.textMuted }]}>Unread</Text>
+              <Text style={[s.recipientStatusText, { color: BRAND.textMuted }]}>Unread</Text>
             )}
           </View>
         ))}
@@ -404,17 +402,17 @@ export default function BlastHistoryScreen() {
         {/* Card Header */}
         <View style={s.blastCardHeader}>
           <View style={s.blastTitleRow}>
-            <Text style={[s.blastTitle, { color: colors.text }]} numberOfLines={isExpanded ? undefined : 1}>
+            <Text style={s.blastTitle} numberOfLines={isExpanded ? undefined : 1}>
               {blast.title}
             </Text>
             <Ionicons
               name={isExpanded ? 'chevron-up' : 'chevron-down'}
               size={18}
-              color={colors.textMuted}
+              color={BRAND.textMuted}
             />
           </View>
 
-          <Text style={[s.blastDate, { color: colors.textMuted }]}>{formatDate(blast.created_at)}</Text>
+          <Text style={s.blastDate}>{formatDate(blast.created_at)}</Text>
 
           {/* Badges Row */}
           <View style={s.blastBadgesRow}>
@@ -425,9 +423,9 @@ export default function BlastHistoryScreen() {
                 <Text style={s.urgentBadgeText}>URGENT</Text>
               </View>
             )}
-            <View style={[s.targetBadge, { backgroundColor: colors.primary + '15' }]}>
-              <Ionicons name="people" size={12} color={colors.primary} />
-              <Text style={[s.targetBadgeText, { color: colors.primary }]}>{targetLabel}</Text>
+            <View style={s.targetBadge}>
+              <Ionicons name="people" size={12} color={BRAND.teal} />
+              <Text style={s.targetBadgeText}>{targetLabel}</Text>
             </View>
           </View>
 
@@ -437,32 +435,32 @@ export default function BlastHistoryScreen() {
 
         {/* Expanded Detail */}
         {isExpanded && (
-          <View style={[s.expandedSection, { borderTopColor: colors.border }]}>
+          <View style={s.expandedSection}>
             {/* Full Message Body */}
             <View style={s.bodySection}>
-              <Text style={[s.bodySectionLabel, { color: colors.textMuted }]}>MESSAGE</Text>
-              <Text style={[s.bodyText, { color: colors.textSecondary }]}>{blast.body}</Text>
+              <Text style={s.bodySectionLabel}>MESSAGE</Text>
+              <Text style={s.bodyText}>{blast.body}</Text>
             </View>
 
             {/* Recipients Section */}
             <View style={s.recipientSection}>
-              <Text style={[s.bodySectionLabel, { color: colors.textMuted }]}>RECIPIENTS</Text>
+              <Text style={s.bodySectionLabel}>RECIPIENTS</Text>
               {renderRecipientList(blast.id)}
             </View>
 
             {/* Resend to Unread Button */}
             {recipients.length > 0 && unreadCount > 0 && (
               <TouchableOpacity
-                style={[s.resendButton, { backgroundColor: colors.primary + '15', borderColor: colors.primary }]}
+                style={s.resendButton}
                 onPress={() => handleResend(blast)}
                 disabled={resending === blast.id}
               >
                 {resending === blast.id ? (
-                  <ActivityIndicator size="small" color={colors.primary} />
+                  <ActivityIndicator size="small" color={BRAND.teal} />
                 ) : (
                   <>
-                    <Ionicons name="refresh" size={18} color={colors.primary} />
-                    <Text style={[s.resendButtonText, { color: colors.primary }]}>
+                    <Ionicons name="refresh" size={18} color={BRAND.teal} />
+                    <Text style={s.resendButtonText}>
                       Resend to {unreadCount} Unread
                     </Text>
                   </>
@@ -482,9 +480,9 @@ export default function BlastHistoryScreen() {
   if (loading) {
     return (
       <SafeAreaView style={s.container}>
-        <View style={[s.loadingWrap, { backgroundColor: colors.background }]}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={[s.loadingText, { color: colors.textMuted }]}>Loading announcements...</Text>
+        <View style={s.loadingWrap}>
+          <ActivityIndicator size="large" color={BRAND.teal} />
+          <Text style={s.loadingText}>Loading announcements...</Text>
         </View>
       </SafeAreaView>
     );
@@ -496,12 +494,12 @@ export default function BlastHistoryScreen() {
         style={s.scroll}
         contentContainerStyle={s.scrollContent}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BRAND.teal} />}
       >
         {/* Header */}
         <View style={s.header}>
           <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
+            <Ionicons name="arrow-back" size={24} color={BRAND.textPrimary} />
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
             <Text style={s.title}>Blast History</Text>
@@ -547,7 +545,7 @@ export default function BlastHistoryScreen() {
         {/* Blast Cards or Empty State */}
         {filteredBlasts.length === 0 ? (
           <View style={s.empty}>
-            <Ionicons name="megaphone-outline" size={56} color={colors.textMuted} />
+            <Ionicons name="megaphone-outline" size={56} color={BRAND.textMuted} />
             <Text style={s.emptyTitle}>
               {blasts.length === 0 ? 'No sent announcements yet' : 'No matches for this filter'}
             </Text>
@@ -571,42 +569,42 @@ export default function BlastHistoryScreen() {
 // STYLES
 // ============================================================================
 
-const createStyles = (colors: any) => StyleSheet.create({
+const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 16, paddingTop: 8 },
 
   // Loading
-  loadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
-  loadingText: { fontSize: 15, fontWeight: '600' },
+  loadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12, backgroundColor: BRAND.offWhite },
+  loadingText: { fontSize: 15, fontFamily: FONTS.bodySemiBold, color: BRAND.textMuted },
 
   // Header
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 12 },
   backBtn: { padding: 4 },
-  title: { fontSize: 24, fontWeight: '900', color: colors.text, letterSpacing: -0.5 },
-  subtitle: { fontSize: 13, color: colors.primary, marginTop: 2 },
+  title: { fontSize: 24, fontFamily: FONTS.bodyExtraBold, color: BRAND.textPrimary, letterSpacing: -0.5 },
+  subtitle: { fontSize: 13, color: BRAND.teal, marginTop: 2 },
 
   // Stats
   statsRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
   statBox: {
     flex: 1,
-    backgroundColor: colors.glassCard,
+    backgroundColor: BRAND.white,
     borderRadius: 16,
     padding: 12,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.glassBorder,
+    borderColor: BRAND.border,
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8 },
       android: { elevation: 4 },
     }),
   },
-  statNum: { fontSize: 22, fontWeight: '800', color: colors.text },
+  statNum: { fontSize: 22, fontFamily: FONTS.bodyExtraBold, color: BRAND.textPrimary },
   statLabel: {
     fontSize: 10,
-    color: colors.textMuted,
+    color: BRAND.textMuted,
     marginTop: 2,
-    fontWeight: '700',
+    fontFamily: FONTS.bodyBold,
     textTransform: 'uppercase' as const,
     letterSpacing: 0.5,
   },
@@ -617,22 +615,22 @@ const createStyles = (colors: any) => StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: colors.glassCard,
+    backgroundColor: BRAND.white,
     borderWidth: 1,
-    borderColor: colors.glassBorder,
+    borderColor: BRAND.border,
     marginRight: 8,
   },
-  filterPillActive: { backgroundColor: colors.primary + '20', borderColor: colors.primary },
-  filterPillText: { fontSize: 13, color: colors.textMuted, fontWeight: '600' },
-  filterPillTextActive: { color: colors.primary },
+  filterPillActive: { backgroundColor: BRAND.teal + '20', borderColor: BRAND.teal },
+  filterPillText: { fontSize: 13, color: BRAND.textMuted, fontFamily: FONTS.bodySemiBold },
+  filterPillTextActive: { color: BRAND.teal },
 
   // Blast Card
   blastCard: {
-    backgroundColor: colors.glassCard,
+    backgroundColor: BRAND.white,
     borderRadius: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: colors.glassBorder,
+    borderColor: BRAND.border,
     overflow: 'hidden',
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8 },
@@ -641,8 +639,8 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   blastCardHeader: { padding: 14 },
   blastTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  blastTitle: { fontSize: 16, fontWeight: '700', flex: 1 },
-  blastDate: { fontSize: 12, marginTop: 2, marginBottom: 8 },
+  blastTitle: { fontSize: 16, fontFamily: FONTS.bodyBold, flex: 1, color: BRAND.textPrimary },
+  blastDate: { fontSize: 12, marginTop: 2, marginBottom: 8, color: BRAND.textMuted },
 
   // Badges Row
   blastBadgesRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 },
@@ -654,7 +652,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 8,
   },
-  typeBadgeText: { fontSize: 11, fontWeight: '700' },
+  typeBadgeText: { fontSize: 11, fontFamily: FONTS.bodyBold },
   urgentBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -663,7 +661,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 8,
   },
-  urgentBadgeText: { fontSize: 11, fontWeight: '800', color: '#FF3B30' },
+  urgentBadgeText: { fontSize: 11, fontFamily: FONTS.bodyExtraBold, color: '#FF3B30' },
   targetBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -671,32 +669,34 @@ const createStyles = (colors: any) => StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
+    backgroundColor: BRAND.teal + '15',
   },
-  targetBadgeText: { fontSize: 11, fontWeight: '600' },
+  targetBadgeText: { fontSize: 11, fontFamily: FONTS.bodySemiBold, color: BRAND.teal },
 
   // Read Bar
   readBarContainer: { marginTop: 2 },
-  readBarLabel: { fontSize: 12, fontWeight: '600', marginBottom: 4 },
-  readBarTrack: { height: 6, borderRadius: 3, overflow: 'hidden' },
+  readBarLabel: { fontSize: 12, fontFamily: FONTS.bodySemiBold, marginBottom: 4, color: BRAND.textSecondary },
+  readBarTrack: { height: 6, borderRadius: 3, overflow: 'hidden', backgroundColor: BRAND.border },
   readBarFill: { height: 6, borderRadius: 3 },
 
   // Expanded Section
-  expandedSection: { borderTopWidth: 1, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 14 },
+  expandedSection: { borderTopWidth: 1, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 14, borderTopColor: BRAND.border },
   bodySection: { marginBottom: 14 },
   bodySectionLabel: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: FONTS.bodyBold,
     letterSpacing: 1,
     textTransform: 'uppercase' as const,
     marginBottom: 6,
+    color: BRAND.textMuted,
   },
-  bodyText: { fontSize: 14, lineHeight: 20 },
+  bodyText: { fontSize: 14, lineHeight: 20, color: BRAND.textSecondary },
 
   // Recipient Section
   recipientSection: { marginBottom: 12 },
   recipientLoadingWrap: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 12 },
-  recipientLoadingText: { fontSize: 13 },
-  noRecipientsText: { fontSize: 13, fontStyle: 'italic', paddingVertical: 8 },
+  recipientLoadingText: { fontSize: 13, color: BRAND.textMuted },
+  noRecipientsText: { fontSize: 13, fontStyle: 'italic', paddingVertical: 8, color: BRAND.textMuted },
   recipientList: { gap: 0 },
   recipientRow: {
     flexDirection: 'row',
@@ -704,13 +704,14 @@ const createStyles = (colors: any) => StyleSheet.create({
     gap: 10,
     paddingVertical: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: BRAND.border,
   },
   recipientInfo: { flex: 1 },
-  recipientName: { fontSize: 14, fontWeight: '600' },
-  recipientEmail: { fontSize: 11, marginTop: 1 },
+  recipientName: { fontSize: 14, fontFamily: FONTS.bodySemiBold, color: BRAND.textPrimary },
+  recipientEmail: { fontSize: 11, marginTop: 1, color: BRAND.textMuted },
   recipientStatus: { alignItems: 'flex-end' },
-  recipientStatusText: { fontSize: 12, fontWeight: '700' },
-  recipientTimestamp: { fontSize: 10, marginTop: 1 },
+  recipientStatusText: { fontSize: 12, fontFamily: FONTS.bodyBold },
+  recipientTimestamp: { fontSize: 10, marginTop: 1, color: BRAND.textMuted },
 
   // Resend Button
   resendButton: {
@@ -722,11 +723,13 @@ const createStyles = (colors: any) => StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     marginTop: 4,
+    backgroundColor: BRAND.teal + '15',
+    borderColor: BRAND.teal,
   },
-  resendButtonText: { fontSize: 14, fontWeight: '700' },
+  resendButtonText: { fontSize: 14, fontFamily: FONTS.bodyBold, color: BRAND.teal },
 
   // Empty State
   empty: { alignItems: 'center', paddingVertical: 60 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: colors.text, marginTop: 12, textAlign: 'center' },
-  emptySubtext: { fontSize: 14, color: colors.textMuted, marginTop: 4, textAlign: 'center' },
+  emptyTitle: { fontSize: 18, fontFamily: FONTS.bodyBold, color: BRAND.textPrimary, marginTop: 12, textAlign: 'center' },
+  emptySubtext: { fontSize: 14, color: BRAND.textMuted, marginTop: 4, textAlign: 'center' },
 });

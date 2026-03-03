@@ -2,7 +2,8 @@ import { useAuth } from '@/lib/auth';
 import { queueBlastEmail } from '@/lib/email-queue';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
-import { useTheme } from '@/lib/theme';
+import { BRAND } from '@/theme/colors';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -45,7 +46,6 @@ const MESSAGE_TYPES: { key: MessageType; label: string; icon: string }[] = [
 // ============================================================================
 
 export default function BlastComposerScreen() {
-  const { colors } = useTheme();
   const { user, profile } = useAuth();
   const { workingSeason } = useSeason();
   const router = useRouter();
@@ -280,15 +280,15 @@ export default function BlastComposerScreen() {
   // ============================================================================
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: 'transparent' }]}>
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={[s.safeArea, { backgroundColor: 'transparent' }]}>
+      <View style={s.container}>
         {/* Header */}
-        <View style={[styles.header, { backgroundColor: colors.bgSecondary, borderBottomColor: colors.border }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.headerBtn}>
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
+        <View style={s.header}>
+          <TouchableOpacity onPress={() => router.back()} style={s.headerBtn}>
+            <Ionicons name="arrow-back" size={24} color={BRAND.textPrimary} />
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>New Announcement</Text>
-          <View style={styles.headerBtn} />
+          <Text style={s.headerTitle}>New Announcement</Text>
+          <View style={s.headerBtn} />
         </View>
 
         <KeyboardAvoidingView
@@ -297,17 +297,17 @@ export default function BlastComposerScreen() {
           keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
         >
         <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          style={s.scrollView}
+          contentContainerStyle={s.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
           {/* Title Input */}
-          <View style={[styles.card, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}>
-            <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>TITLE</Text>
+          <View style={s.card}>
+            <Text style={s.fieldLabel}>TITLE</Text>
             <TextInput
-              style={[styles.textInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.bgSecondary }]}
+              style={s.textInput}
               placeholder="Announcement title..."
-              placeholderTextColor={colors.textMuted}
+              placeholderTextColor={BRAND.textMuted}
               value={title}
               onChangeText={setTitle}
               maxLength={100}
@@ -315,12 +315,12 @@ export default function BlastComposerScreen() {
           </View>
 
           {/* Message Body */}
-          <View style={[styles.card, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}>
-            <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>MESSAGE</Text>
+          <View style={s.card}>
+            <Text style={s.fieldLabel}>MESSAGE</Text>
             <TextInput
-              style={[styles.textAreaInput, { color: colors.text, borderColor: colors.border, backgroundColor: colors.bgSecondary }]}
+              style={s.textAreaInput}
               placeholder="Write your message here..."
-              placeholderTextColor={colors.textMuted}
+              placeholderTextColor={BRAND.textMuted}
               value={body}
               onChangeText={setBody}
               multiline
@@ -328,32 +328,32 @@ export default function BlastComposerScreen() {
               textAlignVertical="top"
               maxLength={2000}
             />
-            <Text style={[styles.charCount, { color: colors.textMuted }]}>
+            <Text style={s.charCount}>
               {body.length}/2000
             </Text>
           </View>
 
           {/* Message Type */}
-          <View style={[styles.card, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}>
-            <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>TYPE</Text>
-            <View style={styles.chipRow}>
+          <View style={s.card}>
+            <Text style={s.fieldLabel}>TYPE</Text>
+            <View style={s.chipRow}>
               {MESSAGE_TYPES.map(mt => {
                 const isSelected = messageType === mt.key;
                 return (
                   <TouchableOpacity
                     key={mt.key}
                     style={[
-                      styles.chip,
-                      { borderColor: isSelected ? colors.primary : colors.border, backgroundColor: isSelected ? colors.primary + '20' : colors.bgSecondary },
+                      s.chip,
+                      { borderColor: isSelected ? BRAND.teal : BRAND.border, backgroundColor: isSelected ? BRAND.teal + '20' : BRAND.warmGray },
                     ]}
                     onPress={() => setMessageType(mt.key)}
                   >
                     <Ionicons
                       name={mt.icon as any}
                       size={16}
-                      color={isSelected ? colors.primary : colors.textMuted}
+                      color={isSelected ? BRAND.teal : BRAND.textMuted}
                     />
-                    <Text style={[styles.chipText, { color: isSelected ? colors.primary : colors.textSecondary }]}>
+                    <Text style={[s.chipText, { color: isSelected ? BRAND.teal : BRAND.textSecondary }]}>
                       {mt.label}
                     </Text>
                   </TouchableOpacity>
@@ -363,15 +363,15 @@ export default function BlastComposerScreen() {
           </View>
 
           {/* Priority Toggle */}
-          <View style={[styles.card, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}>
-            <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>PRIORITY</Text>
-            <View style={styles.toggleRow}>
+          <View style={s.card}>
+            <Text style={s.fieldLabel}>PRIORITY</Text>
+            <View style={s.toggleRow}>
               <TouchableOpacity
                 style={[
-                  styles.toggleBtn,
+                  s.toggleBtn,
                   {
-                    borderColor: priority === 'normal' ? colors.success : colors.border,
-                    backgroundColor: priority === 'normal' ? colors.success + '20' : colors.bgSecondary,
+                    borderColor: priority === 'normal' ? BRAND.success : BRAND.border,
+                    backgroundColor: priority === 'normal' ? BRAND.success + '20' : BRAND.warmGray,
                   },
                 ]}
                 onPress={() => setPriority('normal')}
@@ -379,19 +379,19 @@ export default function BlastComposerScreen() {
                 <Ionicons
                   name="checkmark-circle"
                   size={18}
-                  color={priority === 'normal' ? colors.success : colors.textMuted}
+                  color={priority === 'normal' ? BRAND.success : BRAND.textMuted}
                 />
-                <Text style={[styles.toggleText, { color: priority === 'normal' ? colors.success : colors.textSecondary }]}>
+                <Text style={[s.toggleText, { color: priority === 'normal' ? BRAND.success : BRAND.textSecondary }]}>
                   Normal
                 </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={[
-                  styles.toggleBtn,
+                  s.toggleBtn,
                   {
-                    borderColor: priority === 'urgent' ? colors.danger : colors.border,
-                    backgroundColor: priority === 'urgent' ? colors.danger + '20' : colors.bgSecondary,
+                    borderColor: priority === 'urgent' ? BRAND.coral : BRAND.border,
+                    backgroundColor: priority === 'urgent' ? BRAND.coral + '20' : BRAND.warmGray,
                   },
                 ]}
                 onPress={() => setPriority('urgent')}
@@ -399,9 +399,9 @@ export default function BlastComposerScreen() {
                 <Ionicons
                   name="alert-circle"
                   size={18}
-                  color={priority === 'urgent' ? colors.danger : colors.textMuted}
+                  color={priority === 'urgent' ? BRAND.coral : BRAND.textMuted}
                 />
-                <Text style={[styles.toggleText, { color: priority === 'urgent' ? colors.danger : colors.textSecondary }]}>
+                <Text style={[s.toggleText, { color: priority === 'urgent' ? BRAND.coral : BRAND.textSecondary }]}>
                   Urgent
                 </Text>
               </TouchableOpacity>
@@ -409,15 +409,15 @@ export default function BlastComposerScreen() {
           </View>
 
           {/* Target Audience */}
-          <View style={[styles.card, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}>
-            <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>TARGET AUDIENCE</Text>
-            <View style={styles.toggleRow}>
+          <View style={s.card}>
+            <Text style={s.fieldLabel}>TARGET AUDIENCE</Text>
+            <View style={s.toggleRow}>
               <TouchableOpacity
                 style={[
-                  styles.toggleBtn,
+                  s.toggleBtn,
                   {
-                    borderColor: targetType === 'all' ? colors.primary : colors.border,
-                    backgroundColor: targetType === 'all' ? colors.primary + '20' : colors.bgSecondary,
+                    borderColor: targetType === 'all' ? BRAND.teal : BRAND.border,
+                    backgroundColor: targetType === 'all' ? BRAND.teal + '20' : BRAND.warmGray,
                     flex: 1,
                   },
                 ]}
@@ -426,19 +426,19 @@ export default function BlastComposerScreen() {
                 <Ionicons
                   name="people"
                   size={18}
-                  color={targetType === 'all' ? colors.primary : colors.textMuted}
+                  color={targetType === 'all' ? BRAND.teal : BRAND.textMuted}
                 />
-                <Text style={[styles.toggleText, { color: targetType === 'all' ? colors.primary : colors.textSecondary }]}>
+                <Text style={[s.toggleText, { color: targetType === 'all' ? BRAND.teal : BRAND.textSecondary }]}>
                   All Parents
                 </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={[
-                  styles.toggleBtn,
+                  s.toggleBtn,
                   {
-                    borderColor: targetType === 'team' ? colors.primary : colors.border,
-                    backgroundColor: targetType === 'team' ? colors.primary + '20' : colors.bgSecondary,
+                    borderColor: targetType === 'team' ? BRAND.teal : BRAND.border,
+                    backgroundColor: targetType === 'team' ? BRAND.teal + '20' : BRAND.warmGray,
                     flex: 1,
                   },
                 ]}
@@ -447,9 +447,9 @@ export default function BlastComposerScreen() {
                 <Ionicons
                   name="shirt"
                   size={18}
-                  color={targetType === 'team' ? colors.primary : colors.textMuted}
+                  color={targetType === 'team' ? BRAND.teal : BRAND.textMuted}
                 />
-                <Text style={[styles.toggleText, { color: targetType === 'team' ? colors.primary : colors.textSecondary }]}>
+                <Text style={[s.toggleText, { color: targetType === 'team' ? BRAND.teal : BRAND.textSecondary }]}>
                   Specific Team
                 </Text>
               </TouchableOpacity>
@@ -457,25 +457,25 @@ export default function BlastComposerScreen() {
 
             {/* Team Picker */}
             {targetType === 'team' && (
-              <View style={styles.teamPickerSection}>
+              <View style={s.teamPickerSection}>
                 {loadingTeams ? (
-                  <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 12 }} />
+                  <ActivityIndicator size="small" color={BRAND.teal} style={{ marginTop: 12 }} />
                 ) : teams.length === 0 ? (
-                  <Text style={[styles.noTeamsText, { color: colors.textMuted }]}>
+                  <Text style={s.noTeamsText}>
                     No teams found for this season.
                   </Text>
                 ) : (
-                  <View style={styles.teamList}>
+                  <View style={s.teamList}>
                     {teams.map(team => {
                       const isSelected = selectedTeamId === team.id;
                       return (
                         <TouchableOpacity
                           key={team.id}
                           style={[
-                            styles.teamItem,
+                            s.teamItem,
                             {
-                              borderColor: isSelected ? colors.primary : colors.border,
-                              backgroundColor: isSelected ? colors.primary + '15' : colors.bgSecondary,
+                              borderColor: isSelected ? BRAND.teal : BRAND.border,
+                              backgroundColor: isSelected ? BRAND.teal + '15' : BRAND.warmGray,
                             },
                           ]}
                           onPress={() => setSelectedTeamId(team.id)}
@@ -483,9 +483,9 @@ export default function BlastComposerScreen() {
                           <Ionicons
                             name={isSelected ? 'radio-button-on' : 'radio-button-off'}
                             size={20}
-                            color={isSelected ? colors.primary : colors.textMuted}
+                            color={isSelected ? BRAND.teal : BRAND.textMuted}
                           />
-                          <Text style={[styles.teamItemText, { color: isSelected ? colors.primary : colors.text }]}>
+                          <Text style={[s.teamItemText, { color: isSelected ? BRAND.teal : BRAND.textPrimary }]}>
                             {team.name}
                           </Text>
                         </TouchableOpacity>
@@ -498,23 +498,23 @@ export default function BlastComposerScreen() {
           </View>
 
           {/* Recipient Count Preview */}
-          <View style={[styles.recipientPreview, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}>
-            <Ionicons name="mail" size={20} color={colors.primary} />
-            <Text style={[styles.recipientText, { color: colors.textSecondary }]}>
+          <View style={s.recipientPreview}>
+            <Ionicons name="mail" size={20} color={BRAND.teal} />
+            <Text style={s.recipientText}>
               {loadingCount ? (
                 'Counting recipients...'
               ) : (
                 `This will be sent to ${recipientCount} recipient${recipientCount !== 1 ? 's' : ''}`
               )}
             </Text>
-            {loadingCount && <ActivityIndicator size="small" color={colors.primary} />}
+            {loadingCount && <ActivityIndicator size="small" color={BRAND.teal} />}
           </View>
 
           {/* Urgent Warning */}
           {priority === 'urgent' && (
-            <View style={[styles.urgentWarning, { backgroundColor: colors.danger + '15', borderColor: colors.danger + '40' }]}>
-              <Ionicons name="warning" size={18} color={colors.danger} />
-              <Text style={[styles.urgentWarningText, { color: colors.danger }]}>
+            <View style={s.urgentWarning}>
+              <Ionicons name="warning" size={18} color={BRAND.coral} />
+              <Text style={s.urgentWarningText}>
                 Urgent messages may trigger push notifications and email alerts.
               </Text>
             </View>
@@ -523,10 +523,10 @@ export default function BlastComposerScreen() {
           {/* Send Button */}
           <TouchableOpacity
             style={[
-              styles.sendButton,
+              s.sendButton,
               {
-                backgroundColor: isFormValid ? colors.primary : colors.bgSecondary,
-                borderColor: isFormValid ? colors.primary : colors.border,
+                backgroundColor: isFormValid ? BRAND.teal : BRAND.warmGray,
+                borderColor: isFormValid ? BRAND.teal : BRAND.border,
               },
             ]}
             onPress={handleSend}
@@ -539,9 +539,9 @@ export default function BlastComposerScreen() {
                 <Ionicons
                   name="send"
                   size={20}
-                  color={isFormValid ? '#000' : colors.textMuted}
+                  color={isFormValid ? '#000' : BRAND.textMuted}
                 />
-                <Text style={[styles.sendButtonText, { color: isFormValid ? '#000' : colors.textMuted }]}>
+                <Text style={[s.sendButtonText, { color: isFormValid ? '#000' : BRAND.textMuted }]}>
                   Send Announcement
                 </Text>
               </>
@@ -560,12 +560,13 @@ export default function BlastComposerScreen() {
 // STYLES
 // ============================================================================
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
   container: {
     flex: 1,
+    backgroundColor: BRAND.offWhite,
   },
 
   // Header
@@ -576,6 +577,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
+    backgroundColor: BRAND.warmGray,
+    borderBottomColor: BRAND.border,
   },
   headerBtn: {
     width: 44,
@@ -585,8 +588,9 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: FONTS.bodyBold,
     letterSpacing: 0.5,
+    color: BRAND.textPrimary,
   },
 
   // Scroll
@@ -608,15 +612,18 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 6,
+    backgroundColor: BRAND.white,
+    borderColor: BRAND.border,
   },
 
   // Field Label
   fieldLabel: {
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: FONTS.bodyBold,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
     marginBottom: 10,
+    color: BRAND.textMuted,
   },
 
   // Text Input
@@ -626,6 +633,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     borderWidth: 1,
+    color: BRAND.textPrimary,
+    borderColor: BRAND.border,
+    backgroundColor: BRAND.warmGray,
   },
 
   // Text Area
@@ -636,6 +646,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     minHeight: 130,
+    color: BRAND.textPrimary,
+    borderColor: BRAND.border,
+    backgroundColor: BRAND.warmGray,
   },
 
   // Char count
@@ -643,6 +656,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     textAlign: 'right',
     marginTop: 6,
+    color: BRAND.textMuted,
   },
 
   // Chips
@@ -662,7 +676,7 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
   },
 
   // Toggle Row
@@ -682,7 +696,7 @@ const styles = StyleSheet.create({
   },
   toggleText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
   },
 
   // Team Picker
@@ -693,6 +707,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     paddingVertical: 12,
+    color: BRAND.textMuted,
   },
   teamList: {
     gap: 8,
@@ -708,7 +723,7 @@ const styles = StyleSheet.create({
   },
   teamItemText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
   },
 
   // Recipient Preview
@@ -724,11 +739,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 6,
+    backgroundColor: BRAND.white,
+    borderColor: BRAND.border,
   },
   recipientText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
     flex: 1,
+    color: BRAND.textSecondary,
   },
 
   // Urgent Warning
@@ -739,11 +757,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     padding: 14,
+    backgroundColor: BRAND.coral + '15',
+    borderColor: BRAND.coral + '40',
   },
   urgentWarningText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
     flex: 1,
+    color: BRAND.coral,
   },
 
   // Send Button
@@ -764,7 +785,7 @@ const styles = StyleSheet.create({
   },
   sendButtonText: {
     fontSize: 17,
-    fontWeight: '800',
+    fontFamily: FONTS.bodyExtraBold,
     letterSpacing: 0.5,
   },
 });
