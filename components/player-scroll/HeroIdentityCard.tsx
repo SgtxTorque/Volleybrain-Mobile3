@@ -3,7 +3,8 @@
  * Phase 2: The first thing the player sees.
  */
 import React, { useEffect } from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -54,6 +55,7 @@ export default function HeroIdentityCard({
   xpMax,
   scrollY,
 }: Props) {
+  const router = useRouter();
   // OVR badge glow animation
   const glowAnim = useSharedValue(0.3);
   useEffect(() => {
@@ -118,7 +120,7 @@ export default function HeroIdentityCard({
           {/* OVR Badge */}
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => Alert.alert('Player Profile', 'Full profile coming soon!')}
+            onPress={() => router.push('/my-stats' as any)}
           >
             <Animated.View style={[styles.ovrBadge, ovrGlowStyle]}>
               <Text style={styles.ovrNumber}>{ovr || '--'}</Text>

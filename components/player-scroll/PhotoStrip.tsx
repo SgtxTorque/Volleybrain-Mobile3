@@ -1,18 +1,28 @@
 /**
  * PhotoStrip — Horizontal thumbnail scroll of recent team photos.
- * Phase 4A: Shows photos from team_posts. Hides if no photos.
+ * Phase 4A: Shows photos from team_posts. Tapping navigates to team gallery.
  */
 import React from 'react';
 import { FlatList, Image, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import type { PhotoPreview } from '@/hooks/usePlayerHomeData';
 
 type Props = {
   photos: PhotoPreview[];
+  teamId?: string | null;
 };
 
-export default function PhotoStrip({ photos }: Props) {
+export default function PhotoStrip({ photos, teamId }: Props) {
+  const router = useRouter();
+
   if (photos.length === 0) return null;
+
+  const handlePhotoPress = () => {
+    if (teamId) {
+      router.push(`/team-gallery?teamId=${teamId}` as any);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -23,7 +33,7 @@ export default function PhotoStrip({ photos }: Props) {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         renderItem={({ item }) => (
-          <TouchableOpacity activeOpacity={0.8} style={styles.thumbWrap}>
+          <TouchableOpacity activeOpacity={0.8} style={styles.thumbWrap} onPress={handlePhotoPress}>
             <Image source={{ uri: item.media_url }} style={styles.thumb} />
           </TouchableOpacity>
         )}

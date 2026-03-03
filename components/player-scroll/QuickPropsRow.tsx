@@ -1,9 +1,11 @@
 /**
- * QuickPropsRow — "Who balled out?" shoutout CTA row.
- * Phase 5A: Gold-tinted row. Tapping shows "Coming soon" toast.
+ * QuickPropsRow — "Who balled out?" CTA row.
+ * Phase 5A: Gold-tinted row. Navigates to team wall for social interaction.
+ * (Shoutout tables don't exist yet — using team wall as fallback.)
  */
 import React from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
 
 const PT = {
   gold: '#FFD700',
@@ -12,11 +14,23 @@ const PT = {
   borderGold: 'rgba(255,215,0,0.15)',
 };
 
-export default function QuickPropsRow() {
+type Props = {
+  teamId?: string | null;
+};
+
+export default function QuickPropsRow({ teamId }: Props) {
+  const router = useRouter();
+
+  const handlePress = () => {
+    if (teamId) {
+      router.push(`/team-wall?teamId=${teamId}` as any);
+    }
+  };
+
   return (
     <TouchableOpacity
       activeOpacity={0.7}
-      onPress={() => Alert.alert('Coming Soon', 'Shoutouts are coming in a future update!')}
+      onPress={handlePress}
       style={styles.row}
     >
       <Text style={styles.icon}>{'\u{1F31F}'}</Text>

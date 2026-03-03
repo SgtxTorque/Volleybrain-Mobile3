@@ -205,7 +205,7 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
         />
 
         {/* ─── 4. PHOTO STRIP (if photos exist) ───────────────── */}
-        <PhotoStrip photos={data.recentPhotos} />
+        <PhotoStrip photos={data.recentPhotos} teamId={data.primaryTeam?.id} />
 
         {/* ─── 5. NEXT UP — event + RSVP ──────────────────────── */}
         <NextUpCard
@@ -216,10 +216,10 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
         />
 
         {/* ─── 6. CHAT PEEK ───────────────────────────────────── */}
-        <ChatPeek />
+        <ChatPeek teamId={data.primaryTeam?.id} />
 
         {/* ─── 7. QUICK PROPS ─────────────────────────────────── */}
-        <QuickPropsRow />
+        <QuickPropsRow teamId={data.primaryTeam?.id} />
 
         {/* ─── 8. ACTIVE CHALLENGE (if exists) ────────────────── */}
         <ActiveChallengeCard available={data.challengesAvailable} />

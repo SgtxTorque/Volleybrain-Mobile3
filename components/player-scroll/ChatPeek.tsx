@@ -1,9 +1,11 @@
 /**
- * ChatPeek — Latest chat message preview or "coming soon" ambient text.
- * Phase 4C: Single flat row, not a card.
+ * ChatPeek — Latest chat message preview or "No team chat yet" ambient text.
+ * Phase 4C: Single flat row, navigates to team chat channel.
  */
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { supabase } from '@/lib/supabase';
 
 const PT = {
   textSecondary: 'rgba(255,255,255,0.60)',
@@ -11,12 +13,41 @@ const PT = {
   textFaint: 'rgba(255,255,255,0.15)',
 };
 
-export default function ChatPeek() {
-  // Chat/messages table doesn't exist yet — show coming soon
+type Props = {
+  teamId?: string | null;
+};
+
+export default function ChatPeek({ teamId }: Props) {
+  const router = useRouter();
+  const [channelId, setChannelId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!teamId) return;
+    supabase
+      .from('chat_channels')
+      .select('id')
+      .eq('team_id', teamId)
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) setChannelId(data.id);
+      });
+  }, [teamId]);
+
+  const handlePress = () => {
+    if (channelId) {
+      router.push(`/chat/${channelId}` as any);
+    } else {
+      router.push('/(tabs)/chats' as any);
+    }
+  };
+
+  const label = channelId ? 'Team Chat' : teamId ? 'No team chat yet' : 'Chat';
+
   return (
-    <TouchableOpacity activeOpacity={0.7} style={styles.row}>
+    <TouchableOpacity activeOpacity={0.7} style={styles.row} onPress={handlePress}>
       <Text style={styles.icon}>{'\u{1F4AC}'}</Text>
-      <Text style={styles.text}>Chat coming soon</Text>
+      <Text style={styles.text}>{label}</Text>
       <Text style={styles.arrow}>{'\u203A'}</Text>
     </TouchableOpacity>
   );
