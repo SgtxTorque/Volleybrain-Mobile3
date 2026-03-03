@@ -1,5 +1,6 @@
 import { useAuth } from '@/lib/auth';
 import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
+import { FONTS } from '@/theme/fonts';
 import { usePermissions } from '@/lib/permissions-context';
 import { AccentColor, accentColors, useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -81,7 +82,7 @@ function CollapsibleSection({ title, children, defaultOpen = true, colors }: Col
         <Text
           style={{
             fontSize: 12,
-            fontWeight: '700',
+            fontFamily: FONTS.bodyBold,
             color: colors.textMuted,
             textTransform: 'uppercase',
             letterSpacing: 1,
@@ -543,9 +544,9 @@ const createStyles = (colors: any, isDark: boolean) =>
 
     // ===== PROFILE HERO =====
     heroCard: {
-      backgroundColor: '#FFF',
+      backgroundColor: colors.card,
       borderWidth: 1,
-      borderColor: 'rgba(0,0,0,0.06)',
+      borderColor: colors.border,
       borderRadius: radii.card,
       padding: 24,
       alignItems: 'center',
@@ -576,7 +577,7 @@ const createStyles = (colors: any, isDark: boolean) =>
     },
     avatarText: {
       fontSize: 28,
-      fontWeight: '800',
+      fontFamily: FONTS.bodyExtraBold,
       color: '#FFFFFF',
     },
     heroName: {
@@ -599,7 +600,7 @@ const createStyles = (colors: any, isDark: boolean) =>
     },
     roleBadgeText: {
       fontSize: 12,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
     },
     heroOrg: {
       fontSize: 13,
@@ -609,9 +610,9 @@ const createStyles = (colors: any, isDark: boolean) =>
 
     // ===== MENU CARD =====
     menuCard: {
-      backgroundColor: '#FFF',
+      backgroundColor: colors.card,
       borderWidth: 1,
-      borderColor: 'rgba(0,0,0,0.06)',
+      borderColor: colors.border,
       borderRadius: radii.card,
       overflow: 'hidden',
       ...shadows.card,
@@ -635,7 +636,7 @@ const createStyles = (colors: any, isDark: boolean) =>
     menuItemLabel: {
       flex: 1,
       fontSize: 15,
-      fontWeight: '500',
+      fontFamily: FONTS.bodySemiBold,
       color: colors.text,
     },
 
@@ -696,7 +697,7 @@ const createStyles = (colors: any, isDark: boolean) =>
     },
     customLabel: {
       fontSize: 13,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
       marginBottom: 10,
     },
     customRow: {
@@ -712,7 +713,7 @@ const createStyles = (colors: any, isDark: boolean) =>
     },
     themeCardLabel: {
       fontSize: 12,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
     },
     layoutOption: {
       borderRadius: 10,
@@ -722,7 +723,7 @@ const createStyles = (colors: any, isDark: boolean) =>
     },
     layoutLabel: {
       fontSize: 13,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
     },
     radioOuter: {
       width: 18,
@@ -763,7 +764,7 @@ const createStyles = (colors: any, isDark: boolean) =>
     },
     callingCardName: {
       fontSize: 9,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
       color: '#FFF',
       textAlign: 'center',
     },
@@ -786,7 +787,7 @@ const createStyles = (colors: any, isDark: boolean) =>
     },
     signOutText: {
       fontSize: 16,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
       color: colors.danger,
     },
 

@@ -1,7 +1,8 @@
 import AppHeaderBar from '@/components/ui/AppHeaderBar';
 import SectionHeader from '@/components/ui/SectionHeader';
 import { useAuth } from '@/lib/auth';
-import { radii, shadows, spacing } from '@/lib/design-tokens';
+import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
+import { FONTS } from '@/theme/fonts';
 import { supabase } from '@/lib/supabase';
 import { AccentColor, accentColors, useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -484,7 +485,7 @@ const createStyles = (colors: any) =>
     },
     avatarText: {
       fontSize: 22,
-      fontWeight: '800',
+      fontFamily: FONTS.bodyExtraBold,
       color: '#FFFFFF',
     },
     profileInfo: {
@@ -494,7 +495,7 @@ const createStyles = (colors: any) =>
     },
     profileName: {
       fontSize: 18,
-      fontWeight: '700',
+      ...displayTextStyle,
       color: colors.text,
     },
     profileEmail: {
@@ -535,7 +536,7 @@ const createStyles = (colors: any) =>
     },
     teamCardName: {
       fontSize: 16,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
       color: colors.text,
     },
     teamCardMeta: {
@@ -551,7 +552,7 @@ const createStyles = (colors: any) =>
     },
     roleBadgeText: {
       fontSize: 11,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
     },
     teamPlayerCount: {
       fontSize: 12,
@@ -605,7 +606,7 @@ const createStyles = (colors: any) =>
     menuLabel: {
       flex: 1,
       fontSize: 15,
-      fontWeight: '500',
+      fontFamily: FONTS.bodySemiBold,
       color: colors.text,
     },
 
@@ -627,7 +628,7 @@ const createStyles = (colors: any) =>
     },
     certsTitle: {
       fontSize: 15,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
       color: colors.text,
     },
     certRow: {
@@ -640,7 +641,7 @@ const createStyles = (colors: any) =>
     },
     certItemLabel: {
       fontSize: 13,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
       color: colors.text,
     },
     certItemValue: {
@@ -697,7 +698,7 @@ const createStyles = (colors: any) =>
     },
     signOutText: {
       fontSize: 16,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
       color: colors.danger,
     },
 

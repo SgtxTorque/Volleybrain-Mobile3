@@ -1,7 +1,8 @@
 import AppHeaderBar from '@/components/ui/AppHeaderBar';
 import SectionHeader from '@/components/ui/SectionHeader';
 import { useAuth } from '@/lib/auth';
-import { radii, shadows, spacing } from '@/lib/design-tokens';
+import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
+import { FONTS } from '@/theme/fonts';
 import { supabase } from '@/lib/supabase';
 import { AccentColor, accentColors, useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -643,8 +644,8 @@ const createStyles = (colors: any) =>
     },
     avatarText: {
       fontSize: 22,
-      fontWeight: '800',
-      color: '#FFFFFF',
+      fontFamily: FONTS.bodyExtraBold,
+      color: '#fff',
     },
     profileInfo: {
       flex: 1,
@@ -653,7 +654,7 @@ const createStyles = (colors: any) =>
     },
     profileName: {
       fontSize: 18,
-      fontWeight: '700',
+      ...displayTextStyle,
       color: colors.text,
     },
     profileEmail: {
@@ -711,7 +712,7 @@ const createStyles = (colors: any) =>
     },
     childPhotoText: {
       fontSize: 16,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
     },
     childInfo: {
       flex: 1,
@@ -719,7 +720,7 @@ const createStyles = (colors: any) =>
     },
     childName: {
       fontSize: 15,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
       color: colors.text,
     },
     childTeam: {
@@ -735,7 +736,7 @@ const createStyles = (colors: any) =>
     },
     jerseyText: {
       fontSize: 13,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
     },
 
     // Payments
@@ -762,17 +763,17 @@ const createStyles = (colors: any) =>
     },
     paymentLabel: {
       fontSize: 14,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
       color: colors.text,
     },
     paymentAmount: {
       fontSize: 24,
-      fontWeight: '800',
+      ...displayTextStyle,
       marginTop: 2,
     },
     paymentSubtext: {
       fontSize: 13,
-      fontWeight: '500',
+      fontFamily: FONTS.bodySemiBold,
       marginTop: 2,
     },
     payNowBtn: {
@@ -782,9 +783,9 @@ const createStyles = (colors: any) =>
       borderRadius: radii.badge,
     },
     payNowText: {
-      color: '#FFFFFF',
+      color: '#fff',
       fontSize: 14,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
     },
 
     // Registration
@@ -800,7 +801,7 @@ const createStyles = (colors: any) =>
     },
     statusBadgeText: {
       fontSize: 11,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
     },
 
     // Waivers
@@ -828,7 +829,7 @@ const createStyles = (colors: any) =>
     },
     emptyLink: {
       fontSize: 14,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
     },
 
     // Menu card & rows
@@ -861,7 +862,7 @@ const createStyles = (colors: any) =>
     menuLabel: {
       flex: 1,
       fontSize: 15,
-      fontWeight: '500',
+      fontFamily: FONTS.bodySemiBold,
       color: colors.text,
     },
 
@@ -889,7 +890,7 @@ const createStyles = (colors: any) =>
     },
     accentCircleActive: {
       borderWidth: 2,
-      borderColor: '#FFFFFF',
+      borderColor: '#fff',
       ...Platform.select({
         ios: {
           shadowColor: '#000',
@@ -913,7 +914,7 @@ const createStyles = (colors: any) =>
     },
     signOutText: {
       fontSize: 16,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
       color: colors.danger,
     },
 

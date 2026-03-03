@@ -1,7 +1,8 @@
 import AppHeaderBar from '@/components/ui/AppHeaderBar';
 import SectionHeader from '@/components/ui/SectionHeader';
 import { useAuth } from '@/lib/auth';
-import { radii, shadows, spacing } from '@/lib/design-tokens';
+import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
+import { FONTS } from '@/theme/fonts';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { AccentColor, accentColors, useTheme } from '@/lib/theme';
@@ -472,7 +473,7 @@ export default function AdminMyStuffScreen() {
                     <Ionicons name="trophy" size={18} color={colors.success} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={[s.menuLabel, { fontWeight: '700' }]}>{season.name}</Text>
+                    <Text style={[s.menuLabel, { fontFamily: FONTS.bodyBold }]}>{season.name}</Text>
                   </View>
                   <View style={[s.activeBadge, { backgroundColor: colors.success + '15' }]}>
                     <Text style={[s.activeBadgeText, { color: colors.success }]}>Active</Text>
@@ -739,14 +740,14 @@ const createStyles = (colors: any) =>
       backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center', overflow: 'hidden',
     },
     avatarImage: { width: 60, height: 60, borderRadius: 30 },
-    avatarText: { fontSize: 22, fontWeight: '800', color: '#FFFFFF' },
+    avatarText: { fontSize: 22, fontFamily: FONTS.bodyExtraBold, color: '#FFFFFF' },
     profileInfo: { flex: 1, marginLeft: 14, marginRight: 24 },
-    profileName: { fontSize: 18, fontWeight: '700', color: colors.text },
+    profileName: { fontSize: 18, ...displayTextStyle, color: colors.text },
     profileEmail: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
     profileMeta: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 },
     profileOrg: { fontSize: 13, color: colors.textSecondary },
     roleBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
-    roleBadgeText: { fontSize: 11, fontWeight: '700' },
+    roleBadgeText: { fontSize: 11, fontFamily: FONTS.bodyBold },
     editIcon: {
       position: 'absolute', right: 16, top: 16,
       width: 32, height: 32, borderRadius: 16,
@@ -763,7 +764,7 @@ const createStyles = (colors: any) =>
 
     // Season info
     seasonRow: { flexDirection: 'row', alignItems: 'center' },
-    seasonName: { fontSize: 16, fontWeight: '700', color: colors.text },
+    seasonName: { fontSize: 16, fontFamily: FONTS.bodyBold, color: colors.text },
     seasonStatus: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
 
     // Portal card
@@ -773,7 +774,7 @@ const createStyles = (colors: any) =>
       padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12,
       marginBottom: 8, ...shadows.card,
     },
-    portalTitle: { fontSize: 15, fontWeight: '700', color: colors.primary },
+    portalTitle: { fontSize: 15, fontFamily: FONTS.bodyBold, color: colors.primary },
     portalSubtitle: { fontSize: 12, color: colors.textMuted, marginTop: 1 },
 
     // Menu card
@@ -790,16 +791,16 @@ const createStyles = (colors: any) =>
       width: 36, height: 36, borderRadius: 10,
       justifyContent: 'center', alignItems: 'center', marginRight: 12,
     },
-    menuLabel: { flex: 1, fontSize: 15, fontWeight: '500', color: colors.text },
+    menuLabel: { flex: 1, fontSize: 15, fontFamily: FONTS.bodySemiBold, color: colors.text },
 
     // Active badge
     activeBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, marginRight: 6 },
-    activeBadgeText: { fontSize: 11, fontWeight: '700' },
+    activeBadgeText: { fontSize: 11, fontFamily: FONTS.bodyBold },
 
     // Overview card (waiver)
     overviewRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-    overviewTitle: { fontSize: 15, fontWeight: '600', color: colors.text },
-    overviewSubtitle: { fontSize: 13, fontWeight: '600', marginTop: 2 },
+    overviewTitle: { fontSize: 15, fontFamily: FONTS.bodySemiBold, color: colors.text },
+    overviewSubtitle: { fontSize: 13, fontFamily: FONTS.bodySemiBold, marginTop: 2 },
 
     // Progress bar
     progressTrack: {
@@ -811,8 +812,8 @@ const createStyles = (colors: any) =>
     // Financials
     finRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
     finItem: { flex: 1, alignItems: 'center' },
-    finAmount: { fontSize: 22, fontWeight: '800' },
-    finLabel: { fontSize: 12, color: colors.textMuted, marginTop: 2, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
+    finAmount: { fontSize: 22, ...displayTextStyle },
+    finLabel: { fontSize: 12, color: colors.textMuted, marginTop: 2, fontFamily: FONTS.bodySemiBold, textTransform: 'uppercase', letterSpacing: 0.5 },
     finDivider: { width: 1, height: 36, marginHorizontal: 12 },
     finFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 },
     finFooterText: { fontSize: 12, color: colors.textMuted },
@@ -822,7 +823,7 @@ const createStyles = (colors: any) =>
       flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 14,
       borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.glassBorder,
     },
-    inviteEmail: { fontSize: 14, fontWeight: '600', color: colors.text },
+    inviteEmail: { fontSize: 14, fontFamily: FONTS.bodySemiBold, color: colors.text },
     inviteMeta: { fontSize: 12, color: colors.textMuted, marginTop: 2 },
     inviteActionBtn: {
       width: 30, height: 30, borderRadius: 15,
@@ -860,7 +861,7 @@ const createStyles = (colors: any) =>
       gap: 8, paddingVertical: 14, marginTop: 8,
       marginHorizontal: spacing.screenPadding,
     },
-    signOutText: { fontSize: 16, fontWeight: '600', color: colors.danger },
+    signOutText: { fontSize: 16, fontFamily: FONTS.bodySemiBold, color: colors.danger },
 
     // Version
     versionText: {
