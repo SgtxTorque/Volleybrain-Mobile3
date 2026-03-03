@@ -279,6 +279,11 @@ export default function GiveShoutoutModal({ visible, teamId, onClose, onSuccess,
       </Text>
 
       <View style={s.categoryGrid}>
+        {categories.length === 0 && !loading && (
+          <Text style={[s.emptyText, { color: colors.textMuted, paddingVertical: 20, textAlign: 'center', width: '100%' }]}>
+            No shoutout categories available yet.
+          </Text>
+        )}
         {categories.map((cat) => {
           const isSelected = selectedCategory?.id === cat.id;
           return (
