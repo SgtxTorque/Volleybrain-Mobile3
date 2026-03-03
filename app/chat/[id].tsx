@@ -550,7 +550,7 @@ export default function ChatScreen() {
     try {
       const { granted } = await AudioModule.requestRecordingPermissionsAsync();
       if (!granted) { Alert.alert('Permission', 'Microphone access is required for voice messages.'); return; }
-      await AudioModule.setAudioModeAsync({ allowsRecording: true, playsInSilentModeIOS: true });
+      await AudioModule.setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
       audioRecorder.record();
       setVoiceState('recording');
       setRecordingDuration(0);
