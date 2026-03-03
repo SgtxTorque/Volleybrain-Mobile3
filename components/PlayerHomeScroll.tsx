@@ -119,7 +119,7 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
   if (data.loading) {
     return (
       <View style={[styles.root, { paddingTop: insets.top }]}>
-        <StatusBar barStyle="light-content" />
+        <StatusBar barStyle="light-content" backgroundColor="#0D1B3E" />
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="large" color={PLAYER_THEME.accent} />
           <Text style={styles.loadingText}>Loading player data...</Text>
@@ -130,7 +130,7 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
 
   return (
     <View style={styles.root}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="light-content" backgroundColor="#0D1B3E" />
 
       {/* ─── COMPACT HEADER ────────────────────────────────── */}
       <Animated.View
@@ -166,7 +166,7 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
         onScroll={scrollHandler}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 140 }}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 140 }}
         refreshControl={
           <RefreshControl
             refreshing={data.refreshing}

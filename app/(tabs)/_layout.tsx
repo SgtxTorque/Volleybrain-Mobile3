@@ -15,12 +15,21 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 export default function TabLayout() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const { loading, isAdmin, isCoach, isParent } = usePermissions();
+  const { loading, isAdmin, isCoach, isParent, isPlayer, viewAs } = usePermissions();
   const { profile } = useAuth();
   const { openDrawer } = useDrawer();
   const primaryRole = isCoach ? 'coach' : isParent ? 'parent' : null;
   useFirstTimeWelcome(primaryRole);
   const { isScrolling, isParentScrollActive } = useParentScroll();
+
+  // Detect when the player dashboard is active (dark theme needed)
+  const isPlayerMode = (() => {
+    if (viewAs === 'player') return true;
+    if (isAdmin) return false;
+    if (isCoach) return false;
+    if (isParent) return false;
+    return isPlayer;
+  })();
 
   // Auto-hide tab bar animation (parent home only)
   const tabBarTranslateY = useRef(new Animated.Value(0)).current;
@@ -137,11 +146,19 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        sceneStyle: { backgroundColor: colors.background },
+        sceneStyle: { backgroundColor: isPlayerMode ? '#0D1B3E' : colors.background },
         tabBarStyle: {
-          backgroundColor: isParentScrollActive ? 'rgba(255,255,255,0.95)' : colors.card,
+          backgroundColor: isPlayerMode
+            ? 'rgba(13, 27, 62, 0.95)'
+            : isParentScrollActive
+              ? 'rgba(255,255,255,0.95)'
+              : colors.card,
           borderTopWidth: 1,
-          borderTopColor: isParentScrollActive ? '#E8ECF2' : colors.border,
+          borderTopColor: isPlayerMode
+            ? 'rgba(255, 255, 255, 0.05)'
+            : isParentScrollActive
+              ? '#E8ECF2'
+              : colors.border,
           height: 56 + insets.bottom,
           paddingBottom: insets.bottom,
           paddingTop: 8,
@@ -158,8 +175,8 @@ export default function TabLayout() {
             },
           }),
         },
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textMuted,
+        tabBarActiveTintColor: isPlayerMode ? '#4BB9EC' : colors.primary,
+        tabBarInactiveTintColor: isPlayerMode ? 'rgba(255, 255, 255, 0.20)' : colors.textMuted,
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '600',
