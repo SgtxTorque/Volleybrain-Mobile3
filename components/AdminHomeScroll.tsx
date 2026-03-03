@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -41,6 +42,7 @@ import ClosingMotivation from './admin-scroll/ClosingMotivation';
 
 export default function AdminHomeScroll() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { scrollY, scrollHandler } = useScrollAnimations();
   const data = useAdminHomeData();
 
@@ -138,7 +140,7 @@ export default function AdminHomeScroll() {
         {/* ─── 2. SEARCH BAR ──────────────────────────────── */}
         <TouchableOpacity
           activeOpacity={0.7}
-          onPress={() => Alert.alert('Coming Soon', 'Search is coming in a future update!')}
+          onPress={() => Alert.alert('Search', 'Universal search is coming in the next update. For now, use the Manage tab to find what you need.')}
           style={styles.searchBar}
         >
           <Text style={styles.searchIcon}>{'\u{1F50D}'}</Text>
@@ -152,7 +154,10 @@ export default function AdminHomeScroll() {
               <SmartQueueCard key={item.id} item={item} index={idx} />
             ))}
             {data.queueItems.length > 4 && (
-              <TouchableOpacity style={styles.viewMoreRow}>
+              <TouchableOpacity
+                style={styles.viewMoreRow}
+                onPress={() => router.push('/registration-hub' as any)}
+              >
                 <Text style={styles.viewMoreText}>
                   View {data.queueItems.length - 4} more {'\u203A'}
                 </Text>
@@ -199,7 +204,7 @@ export default function AdminHomeScroll() {
             <TouchableOpacity
               activeOpacity={0.7}
               style={styles.setupBtn}
-              onPress={() => Alert.alert('Coming Soon', 'Season setup will be available in a future update.')}
+              onPress={() => router.push('/season-settings' as any)}
             >
               <Text style={styles.setupBtnText}>Start Setup {'\u203A'}</Text>
             </TouchableOpacity>

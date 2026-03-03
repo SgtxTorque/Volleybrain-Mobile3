@@ -4,16 +4,26 @@
  * action button, and slide-in entry animation with stagger.
  */
 import React, { useEffect } from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withDelay,
   withTiming,
 } from 'react-native-reanimated';
+import { useRouter } from 'expo-router';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 import type { QueueItem } from '@/hooks/useAdminHomeData';
+
+/** Map queue category → navigation target */
+const CATEGORY_ROUTES: Record<string, string> = {
+  registration: '/registration-hub',
+  payment: '/(tabs)/payments',
+  waiver: '/registration-hub',
+  schedule: '/(tabs)/admin-schedule',
+  jersey: '/(tabs)/jersey-management',
+};
 
 type Props = {
   item: QueueItem;
@@ -28,6 +38,8 @@ const URGENCY_LABELS: Record<string, string> = {
 };
 
 export default function SmartQueueCard({ item, index }: Props) {
+  const router = useRouter();
+
   // Stagger slide-in animation: each card slides from right with 100ms stagger
   const translateX = useSharedValue(60);
   const opacity = useSharedValue(0);
@@ -44,11 +56,8 @@ export default function SmartQueueCard({ item, index }: Props) {
   }));
 
   const handleAction = () => {
-    if (item.actionRoute) {
-      Alert.alert('Coming Soon', `Navigation to ${item.actionRoute} coming soon.`);
-    } else {
-      Alert.alert('Coming Soon', `${item.actionLabel} coming in a future update.`);
-    }
+    const route = item.actionRoute || CATEGORY_ROUTES[item.category.toLowerCase()] || '/registration-hub';
+    router.push(route as any);
   };
 
   return (

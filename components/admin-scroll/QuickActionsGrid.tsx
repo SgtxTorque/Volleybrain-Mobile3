@@ -3,7 +3,8 @@
  * Phase 4: fade-in animation, improved grid layout.
  */
 import React, { useEffect } from 'react';
-import { Alert, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -26,7 +27,17 @@ const ACTIONS = [
   { icon: '\u{1F4CA}', label: 'Season\nReport', key: 'seasonReport' },
 ];
 
+const ACTION_ROUTES: Record<string, string> = {
+  createEvent: '/(tabs)/admin-schedule',
+  quickSchedule: '/(tabs)/admin-schedule',
+  sendReminder: '/blast-composer',
+  blastAll: '/blast-composer',
+  addPlayer: '/registration-hub',
+  seasonReport: '/season-reports',
+};
+
 export default function QuickActionsGrid() {
+  const router = useRouter();
   const opacity = useSharedValue(0);
 
   useEffect(() => {
@@ -37,8 +48,9 @@ export default function QuickActionsGrid() {
     opacity: opacity.value,
   }));
 
-  const handlePress = (_key: string) => {
-    Alert.alert('Coming Soon', 'This action will be available in a future update.');
+  const handlePress = (key: string) => {
+    const route = ACTION_ROUTES[key];
+    if (route) router.push(route as any);
   };
 
   return (

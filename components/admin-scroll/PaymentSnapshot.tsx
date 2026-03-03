@@ -4,7 +4,8 @@
  * reminder CTA, "View Details" link.
  */
 import React from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 
@@ -25,6 +26,7 @@ export default function PaymentSnapshot({
   paymentPct,
   seasonName,
 }: Props) {
+  const router = useRouter();
   const allPaid = paymentPct >= 100;
 
   return (
@@ -72,21 +74,14 @@ export default function PaymentSnapshot({
               <TouchableOpacity
                 activeOpacity={0.7}
                 style={styles.reminderBtn}
-                onPress={() =>
-                  Alert.alert(
-                    'Coming Soon',
-                    'Payment reminders will be available in a future update.',
-                  )
-                }
+                onPress={() => router.push('/blast-composer' as any)}
               >
                 <Text style={styles.reminderBtnText}>Send All Reminders</Text>
               </TouchableOpacity>
             )}
             <TouchableOpacity
               activeOpacity={0.7}
-              onPress={() =>
-                Alert.alert('Coming Soon', 'Payment details will be available in a future update.')
-              }
+              onPress={() => router.push('/(tabs)/payments' as any)}
             >
               <Text style={styles.viewDetailsText}>View Details {'\u203A'}</Text>
             </TouchableOpacity>

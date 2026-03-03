@@ -4,7 +4,8 @@
  * with "Assign Task" CTA placeholder.
  */
 import React from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 import type { CoachInfo } from '@/hooks/useAdminHomeData';
@@ -21,6 +22,8 @@ function getInitials(name: string): string {
 }
 
 export default function CoachSection({ coaches }: Props) {
+  const router = useRouter();
+
   return (
     <View style={styles.wrap}>
       <View style={styles.headerRow}>
@@ -45,9 +48,7 @@ export default function CoachSection({ coaches }: Props) {
       <TouchableOpacity
         activeOpacity={0.7}
         style={styles.assignBtn}
-        onPress={() =>
-          Alert.alert('Coming Soon', 'Task assignment will be available in a future update.')
-        }
+        onPress={() => router.push('/blast-composer' as any)}
       >
         <Text style={styles.assignBtnText}>Assign Task {'\u203A'}</Text>
       </TouchableOpacity>

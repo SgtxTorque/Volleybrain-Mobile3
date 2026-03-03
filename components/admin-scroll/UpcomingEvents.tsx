@@ -3,7 +3,8 @@
  * Phase 5: structured event rows, "View Calendar" link, "Create Event" CTA when empty.
  */
 import React from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 import type { UpcomingEvent } from '@/hooks/useAdminHomeData';
@@ -59,15 +60,15 @@ function EventRow({ event }: { event: UpcomingEvent }) {
 }
 
 export default function UpcomingEvents({ events }: Props) {
+  const router = useRouter();
+
   return (
     <View style={styles.wrap}>
       <View style={styles.headerRow}>
         <Text style={styles.sectionHeader}>UPCOMING</Text>
         <TouchableOpacity
           activeOpacity={0.7}
-          onPress={() =>
-            Alert.alert('Coming Soon', 'Calendar view will be available in a future update.')
-          }
+          onPress={() => router.push('/(tabs)/admin-schedule' as any)}
         >
           <Text style={styles.viewCalendar}>View Calendar {'\u203A'}</Text>
         </TouchableOpacity>
@@ -78,9 +79,7 @@ export default function UpcomingEvents({ events }: Props) {
           <Text style={styles.emptyText}>No upcoming events.</Text>
           <TouchableOpacity
             activeOpacity={0.7}
-            onPress={() =>
-              Alert.alert('Coming Soon', 'Event creation will be available in a future update.')
-            }
+            onPress={() => router.push('/(tabs)/admin-schedule' as any)}
           >
             <Text style={styles.createEventText}>Create Event {'\u203A'}</Text>
           </TouchableOpacity>

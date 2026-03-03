@@ -4,6 +4,7 @@
  */
 import React from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 import type { TeamHealth } from '@/hooks/useAdminHomeData';
@@ -23,13 +24,14 @@ function getTileColors(status: TeamHealth['paymentStatus']) {
   }
 }
 
-function TeamTile({ team }: { team: TeamHealth }) {
+function TeamTile({ team, onPress }: { team: TeamHealth; onPress: () => void }) {
   const tileColors = getTileColors(team.paymentStatus);
   const hasRecord = team.wins > 0 || team.losses > 0;
 
   return (
     <TouchableOpacity
       activeOpacity={0.7}
+      onPress={onPress}
       style={[styles.tile, { backgroundColor: tileColors.bg, borderColor: tileColors.border }]}
     >
       <View style={styles.tileHeader}>
@@ -56,6 +58,8 @@ function TeamTile({ team }: { team: TeamHealth }) {
 }
 
 export default function TeamHealthTiles({ teams }: Props) {
+  const router = useRouter();
+
   return (
     <FlatList
       data={teams}
@@ -63,7 +67,12 @@ export default function TeamHealthTiles({ teams }: Props) {
       horizontal
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.list}
-      renderItem={({ item }) => <TeamTile team={item} />}
+      renderItem={({ item }) => (
+        <TeamTile
+          team={item}
+          onPress={() => router.push(`/team-roster?teamId=${item.id}` as any)}
+        />
+      )}
     />
   );
 }
