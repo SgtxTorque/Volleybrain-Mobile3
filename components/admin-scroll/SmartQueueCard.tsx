@@ -144,13 +144,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   actionBtn: {
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
   actionBtnText: {
     fontFamily: FONTS.bodySemiBold,
     fontSize: 13,
-    color: '#FFFFFF',
+    color: BRAND.white,
   },
 });

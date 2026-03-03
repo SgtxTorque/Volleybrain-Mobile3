@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
   actionTile: {
     height: 80,
     backgroundColor: BRAND.warmGray,
-    borderRadius: 14,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },

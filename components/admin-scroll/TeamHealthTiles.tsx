@@ -16,11 +16,11 @@ type Props = {
 function getTileColors(status: TeamHealth['paymentStatus']) {
   switch (status) {
     case 'good':
-      return { bg: 'rgba(34,197,94,0.06)', border: 'rgba(34,197,94,0.30)' };
+      return { bg: `${BRAND.success}0F`, border: `${BRAND.success}4D` };
     case 'warning':
-      return { bg: 'rgba(245,158,11,0.06)', border: 'rgba(245,158,11,0.30)' };
+      return { bg: `${BRAND.warning}0F`, border: `${BRAND.warning}4D` };
     case 'overdue':
-      return { bg: 'rgba(239,68,68,0.06)', border: 'rgba(239,68,68,0.30)' };
+      return { bg: `${BRAND.error}0F`, border: `${BRAND.error}4D` };
   }
 }
 
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
   tile: {
     width: 110,
     height: 94,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     padding: 10,
     justifyContent: 'space-between',

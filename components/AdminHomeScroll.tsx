@@ -305,9 +305,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   urgencyBadgeText: {
+    fontFamily: FONTS.bodyBold,
     fontSize: 10,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    color: BRAND.white,
   },
   roleSelectorWrap: {
     backgroundColor: BRAND.navy,
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginHorizontal: 20,
     backgroundColor: BRAND.warmGray,
-    borderRadius: 12,
+    borderRadius: 16,
     height: 44,
     paddingHorizontal: 14,
     marginBottom: 16,
@@ -449,7 +449,7 @@ const styles = StyleSheet.create({
   },
   setupBtn: {
     backgroundColor: BRAND.skyBlue,
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 8,
     alignSelf: 'flex-start',
@@ -457,6 +457,6 @@ const styles = StyleSheet.create({
   setupBtnText: {
     fontFamily: FONTS.bodySemiBold,
     fontSize: 13,
-    color: '#FFFFFF',
+    color: BRAND.white,
   },
 });

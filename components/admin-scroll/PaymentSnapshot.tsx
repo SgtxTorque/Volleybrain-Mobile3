@@ -188,14 +188,14 @@ const styles = StyleSheet.create({
   },
   reminderBtn: {
     backgroundColor: BRAND.skyBlue,
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
   reminderBtnText: {
     fontFamily: FONTS.bodySemiBold,
     fontSize: 13,
-    color: '#FFFFFF',
+    color: BRAND.white,
   },
   viewDetailsText: {
     fontFamily: FONTS.bodyMedium,

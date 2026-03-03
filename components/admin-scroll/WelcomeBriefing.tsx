@@ -67,13 +67,13 @@ export default function WelcomeBriefing({
       ) : (
         <View style={styles.countersRow}>
           {overdueCount > 0 && (
-            <View style={[styles.counterPill, { borderColor: 'rgba(239,68,68,0.20)', backgroundColor: 'rgba(239,68,68,0.06)' }]}>
+            <View style={[styles.counterPill, styles.counterError]}>
               <View style={[styles.dot, { backgroundColor: BRAND.error }]} />
               <Text style={[styles.counterNum, { color: BRAND.error }]}>{overdueCount}</Text>
             </View>
           )}
           {thisWeekCount > 0 && (
-            <View style={[styles.counterPill, { borderColor: 'rgba(245,158,11,0.20)', backgroundColor: 'rgba(245,158,11,0.06)' }]}>
+            <View style={[styles.counterPill, styles.counterWarning]}>
               <View style={[styles.dot, { backgroundColor: BRAND.warning }]} />
               <Text style={[styles.counterNum, { color: BRAND.warning }]}>{thisWeekCount}</Text>
             </View>
@@ -111,10 +111,10 @@ const styles = StyleSheet.create({
   allClearWrap: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 12,
-    backgroundColor: 'rgba(34,197,94,0.06)',
+    borderRadius: 16,
+    backgroundColor: `${BRAND.success}0F`,
     borderWidth: 1,
-    borderColor: 'rgba(34,197,94,0.15)',
+    borderColor: `${BRAND.success}26`,
   },
   allClearText: {
     fontFamily: FONTS.bodySemiBold,
@@ -144,5 +144,13 @@ const styles = StyleSheet.create({
   counterNum: {
     fontFamily: FONTS.bodyBold,
     fontSize: 16,
+  },
+  counterError: {
+    borderColor: `${BRAND.error}33`,
+    backgroundColor: `${BRAND.error}0F`,
+  },
+  counterWarning: {
+    borderColor: `${BRAND.warning}33`,
+    backgroundColor: `${BRAND.warning}0F`,
   },
 });
