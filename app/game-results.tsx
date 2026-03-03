@@ -1,7 +1,8 @@
 import { getSportDisplay } from '@/constants/sport-display';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
-import { useTheme } from '@/lib/theme';
+import { BRAND } from '@/theme/colors';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -61,7 +62,6 @@ type ChildInfo = {
 // ============================================
 
 export default function GameResultsScreen() {
-  const { colors } = useTheme();
   const { user, profile } = useAuth();
   const { eventId } = useLocalSearchParams();
   const router = useRouter();
@@ -71,7 +71,7 @@ export default function GameResultsScreen() {
   const [childStats, setChildStats] = useState<(PlayerStats & { child: ChildInfo })[]>([]);
   const [sportName, setSportName] = useState<string | null>(null);
 
-  const s = createStyles(colors);
+  const s = styles;
 
   useEffect(() => {
     if (eventId && user?.id) {
@@ -189,9 +189,9 @@ export default function GameResultsScreen() {
   const isLoss = game?.game_result === 'loss';
 
   const getResultColor = () => {
-    if (isWin) return colors.success;
-    if (isLoss) return colors.danger;
-    return colors.textMuted;
+    if (isWin) return BRAND.success;
+    if (isLoss) return BRAND.error;
+    return BRAND.textMuted;
   };
 
   const getResultLabel = () => {
@@ -261,7 +261,7 @@ export default function GameResultsScreen() {
     return (
       <SafeAreaView style={s.container}>
         <View style={s.centered}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={BRAND.skyBlue} />
           <Text style={s.loadingText}>Loading game recap...</Text>
         </View>
       </SafeAreaView>
@@ -273,13 +273,13 @@ export default function GameResultsScreen() {
       <SafeAreaView style={s.container}>
         <View style={s.header}>
           <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
+            <Ionicons name="arrow-back" size={24} color={BRAND.textLight} />
           </TouchableOpacity>
           <Text style={s.headerTitle}>Game Recap</Text>
           <View style={s.backBtn} />
         </View>
         <View style={s.centered}>
-          <Ionicons name="alert-circle-outline" size={48} color={colors.textMuted} />
+          <Ionicons name="alert-circle-outline" size={48} color={BRAND.textMuted} />
           <Text style={s.emptyText}>Game not found</Text>
         </View>
       </SafeAreaView>
@@ -294,7 +294,7 @@ export default function GameResultsScreen() {
       {/* Header */}
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+          <Ionicons name="arrow-back" size={24} color={BRAND.textLight} />
         </TouchableOpacity>
         <Text style={s.headerTitle}>Game Recap</Text>
         <View style={s.backBtn} />
@@ -324,13 +324,13 @@ export default function GameResultsScreen() {
               <View
                 style={[
                   s.teamCircle,
-                  { backgroundColor: (game.teams?.color || colors.primary) + '25' },
+                  { backgroundColor: (game.teams?.color || BRAND.skyBlue) + '25' },
                 ]}
               >
                 <Ionicons
                   name="people"
                   size={24}
-                  color={game.teams?.color || colors.primary}
+                  color={game.teams?.color || BRAND.skyBlue}
                 />
               </View>
               <Text style={s.teamLabel} numberOfLines={2}>
@@ -341,11 +341,11 @@ export default function GameResultsScreen() {
             {/* Score Display */}
             <View style={s.scoreCenterBlock}>
               <View style={s.scoreRow}>
-                <Text style={[s.scoreBig, isWin && { color: colors.success }]}>
+                <Text style={[s.scoreBig, isWin && { color: BRAND.success }]}>
                   {game.our_score ?? '-'}
                 </Text>
                 <Text style={s.scoreDash}>:</Text>
-                <Text style={[s.scoreBig, isLoss && { color: colors.danger }]}>
+                <Text style={[s.scoreBig, isLoss && { color: BRAND.error }]}>
                   {game.opponent_score ?? '-'}
                 </Text>
               </View>
@@ -354,8 +354,8 @@ export default function GameResultsScreen() {
 
             {/* Opponent */}
             <View style={s.teamSide}>
-              <View style={[s.teamCircle, { backgroundColor: colors.textMuted + '20' }]}>
-                <Ionicons name="shield" size={24} color={colors.textMuted} />
+              <View style={[s.teamCircle, { backgroundColor: BRAND.textMuted + '20' }]}>
+                <Ionicons name="shield" size={24} color={BRAND.textMuted} />
               </View>
               <Text style={s.teamLabel} numberOfLines={2}>
                 {game.opponent_name || 'Opponent'}
@@ -409,7 +409,7 @@ export default function GameResultsScreen() {
 
         {childStats.length === 0 && (
           <View style={s.noStats}>
-            <Ionicons name="stats-chart-outline" size={36} color={colors.textMuted} />
+            <Ionicons name="stats-chart-outline" size={36} color={BRAND.textMuted} />
             <Text style={s.noStatsText}>
               Stats weren't tracked for this game. Ask your coach to record stats!
             </Text>
@@ -426,8 +426,7 @@ export default function GameResultsScreen() {
 // STYLES
 // ============================================
 
-const createStyles = (colors: any) =>
-  StyleSheet.create({
+const styles = StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: 'transparent',
@@ -439,12 +438,12 @@ const createStyles = (colors: any) =>
     },
     loadingText: {
       fontSize: 14,
-      color: colors.textMuted,
+      color: BRAND.textMuted,
       marginTop: 12,
     },
     emptyText: {
       fontSize: 16,
-      color: colors.textMuted,
+      color: BRAND.textMuted,
       marginTop: 12,
     },
 
@@ -464,8 +463,8 @@ const createStyles = (colors: any) =>
     },
     headerTitle: {
       fontSize: 28,
-      fontWeight: '800',
-      color: colors.text,
+      fontFamily: FONTS.bodyExtraBold,
+      color: BRAND.textLight,
     },
 
     // Scroll
@@ -478,9 +477,9 @@ const createStyles = (colors: any) =>
 
     // Hero Card
     heroCard: {
-      backgroundColor: colors.glassCard,
+      backgroundColor: BRAND.surfaceCard,
       borderWidth: 1,
-      borderColor: colors.glassBorder,
+      borderColor: BRAND.cardBorder,
       borderRadius: 16,
       padding: 24,
       marginBottom: 20,
@@ -505,14 +504,14 @@ const createStyles = (colors: any) =>
     },
     resultText: {
       fontSize: 16,
-      fontWeight: '800',
+      fontFamily: FONTS.bodyExtraBold,
       letterSpacing: 2,
     },
 
     // Game Date
     gameDate: {
       fontSize: 14,
-      color: colors.textMuted,
+      color: BRAND.textMuted,
       marginBottom: 20,
     },
 
@@ -537,8 +536,8 @@ const createStyles = (colors: any) =>
     },
     teamLabel: {
       fontSize: 13,
-      fontWeight: '600',
-      color: colors.text,
+      fontFamily: FONTS.bodySemiBold,
+      color: BRAND.textLight,
       textAlign: 'center',
     },
     scoreCenterBlock: {
@@ -552,18 +551,18 @@ const createStyles = (colors: any) =>
     },
     scoreBig: {
       fontSize: 48,
-      fontWeight: '900',
-      color: colors.text,
+      fontFamily: FONTS.bodyExtraBold,
+      color: BRAND.textLight,
     },
     scoreDash: {
       fontSize: 32,
-      fontWeight: '300',
-      color: colors.textMuted,
+      fontFamily: FONTS.bodyMedium,
+      color: BRAND.textMuted,
     },
     scoreSubtext: {
       fontSize: 10,
-      fontWeight: '700',
-      color: colors.textMuted,
+      fontFamily: FONTS.bodyBold,
+      color: BRAND.textMuted,
       letterSpacing: 2,
       marginTop: 4,
     },
@@ -573,14 +572,14 @@ const createStyles = (colors: any) =>
       width: '100%',
       marginTop: 20,
       borderTopWidth: 1,
-      borderTopColor: colors.glassBorder,
+      borderTopColor: BRAND.cardBorder,
       paddingTop: 16,
       alignItems: 'center',
     },
     setScoresLabel: {
       fontSize: 11,
-      fontWeight: '700',
-      color: colors.textMuted,
+      fontFamily: FONTS.bodyBold,
+      color: BRAND.textMuted,
       letterSpacing: 1.5,
       marginBottom: 10,
     },
@@ -590,30 +589,30 @@ const createStyles = (colors: any) =>
     },
     setScoreBadge: {
       alignItems: 'center',
-      backgroundColor: colors.bgSecondary,
+      backgroundColor: BRAND.surfaceCard,
       paddingHorizontal: 14,
       paddingVertical: 8,
       borderRadius: 10,
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: BRAND.border,
     },
     setScoreNumber: {
       fontSize: 10,
-      fontWeight: '600',
-      color: colors.textMuted,
+      fontFamily: FONTS.bodySemiBold,
+      color: BRAND.textMuted,
       marginBottom: 2,
     },
     setScoreValue: {
       fontSize: 16,
-      fontWeight: '700',
-      color: colors.text,
+      fontFamily: FONTS.bodyBold,
+      color: BRAND.textLight,
     },
 
     // Section Title
     sectionTitle: {
       fontSize: 13,
-      fontWeight: '700',
-      color: colors.textMuted,
+      fontFamily: FONTS.bodyBold,
+      color: BRAND.textMuted,
       marginBottom: 12,
       marginTop: 4,
       textTransform: 'uppercase' as const,
@@ -629,9 +628,9 @@ const createStyles = (colors: any) =>
     },
     statCard: {
       width: '31%',
-      backgroundColor: colors.glassCard,
+      backgroundColor: BRAND.surfaceCard,
       borderWidth: 1,
-      borderColor: colors.glassBorder,
+      borderColor: BRAND.cardBorder,
       borderRadius: 16,
       padding: 14,
       alignItems: 'center',
@@ -655,12 +654,12 @@ const createStyles = (colors: any) =>
     },
     statValue: {
       fontSize: 24,
-      fontWeight: '800',
+      fontFamily: FONTS.bodyExtraBold,
     },
     statLabel: {
       fontSize: 11,
-      fontWeight: '600',
-      color: colors.textMuted,
+      fontFamily: FONTS.bodySemiBold,
+      color: BRAND.textMuted,
       marginTop: 2,
       textTransform: 'uppercase' as const,
       letterSpacing: 0.5,
@@ -673,7 +672,7 @@ const createStyles = (colors: any) =>
     },
     noStatsText: {
       fontSize: 14,
-      color: colors.textMuted,
+      color: BRAND.textMuted,
       marginTop: 10,
       textAlign: 'center',
     },
