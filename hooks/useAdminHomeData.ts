@@ -118,6 +118,9 @@ export function useAdminHomeData() {
   // Season name
   const [seasonName, setSeasonName] = useState('');
 
+  // Upcoming season
+  const [upcomingSeason, setUpcomingSeason] = useState<{ name: string; start_date: string } | null>(null);
+
   const fetchAll = useCallback(async () => {
     if (!workingSeason?.id) {
       setLoading(false);
@@ -365,6 +368,21 @@ export function useAdminHomeData() {
         } catch { /* fallback */ }
       }
 
+      // 8. Upcoming season
+      try {
+        const { data: nextSeason } = await supabase
+          .from('seasons')
+          .select('name, start_date')
+          .eq('organization_id', orgId)
+          .gt('start_date', workingSeason.end_date || today)
+          .order('start_date', { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        setUpcomingSeason(nextSeason || null);
+      } catch {
+        setUpcomingSeason(null);
+      }
+
       // ─── Build Smart Queue ──────────────────────────────────
       const queue: QueueItem[] = [];
 
@@ -474,5 +492,6 @@ export function useAdminHomeData() {
     pendingRegs,
     upcomingEvents,
     coaches,
+    upcomingSeason,
   };
 }

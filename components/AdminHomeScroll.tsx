@@ -181,6 +181,31 @@ export default function AdminHomeScroll() {
           </View>
         )}
 
+        {/* ─── 4b. UPCOMING SEASON PROMPT ────────────────── */}
+        {data.upcomingSeason && (
+          <View style={styles.upcomingSeasonCard}>
+            <View style={styles.upcomingSeasonHeader}>
+              <Text style={styles.upcomingSeasonName}>
+                {data.upcomingSeason.name.toUpperCase()}
+              </Text>
+              <View style={styles.planningPill}>
+                <View style={styles.planningDot} />
+                <Text style={styles.planningText}>Planning</Text>
+              </View>
+            </View>
+            <Text style={styles.upcomingSeasonSub}>
+              Starts {new Date(data.upcomingSeason.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            </Text>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              style={styles.setupBtn}
+              onPress={() => Alert.alert('Coming Soon', 'Season setup will be available in a future update.')}
+            >
+              <Text style={styles.setupBtnText}>Start Setup {'\u203A'}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* ─── 5. PAYMENT SNAPSHOT ────────────────────────── */}
         {showPaymentCard && (
           <PaymentSnapshot
@@ -357,5 +382,60 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontFamily: FONTS.bodySemiBold,
     color: BRAND.success,
+  },
+  upcomingSeasonCard: {
+    backgroundColor: BRAND.attentionBannerBg,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(245,158,11,0.15)',
+    marginHorizontal: 20,
+    padding: 16,
+    marginBottom: 16,
+  },
+  upcomingSeasonHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  upcomingSeasonName: {
+    fontFamily: FONTS.bodyBold,
+    fontSize: 10,
+    letterSpacing: 1.2,
+    color: BRAND.textFaint,
+  },
+  planningPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  planningDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: BRAND.warning,
+  },
+  planningText: {
+    fontSize: 10,
+    fontFamily: FONTS.bodySemiBold,
+    color: BRAND.warning,
+  },
+  upcomingSeasonSub: {
+    fontFamily: FONTS.bodyMedium,
+    fontSize: 13,
+    color: BRAND.textMuted,
+    marginBottom: 12,
+  },
+  setupBtn: {
+    backgroundColor: BRAND.skyBlue,
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    alignSelf: 'flex-start',
+  },
+  setupBtnText: {
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 13,
+    color: '#FFFFFF',
   },
 });

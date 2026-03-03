@@ -1,6 +1,6 @@
 /**
  * TeamHealthTiles — Horizontal scroll of compact team health tiles.
- * Color-coded by payment/roster health.
+ * Phase 3: Color-coded by health, shows roster count, W-L record, payment status.
  */
 import React from 'react';
 import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -25,6 +25,7 @@ function getTileColors(status: TeamHealth['paymentStatus']) {
 
 function TeamTile({ team }: { team: TeamHealth }) {
   const tileColors = getTileColors(team.paymentStatus);
+  const hasRecord = team.wins > 0 || team.losses > 0;
 
   return (
     <TouchableOpacity
@@ -35,9 +36,16 @@ function TeamTile({ team }: { team: TeamHealth }) {
         <View style={[styles.teamDot, { backgroundColor: team.color || BRAND.skyBlue }]} />
         <Text style={styles.teamName} numberOfLines={1}>{team.name}</Text>
       </View>
-      <Text style={styles.roster}>
-        {team.rosterCount}/{team.maxPlayers || '?'}
-      </Text>
+
+      <View style={styles.midRow}>
+        <Text style={styles.roster}>
+          {team.rosterCount}/{team.maxPlayers || '?'}
+        </Text>
+        {hasRecord && (
+          <Text style={styles.record}>{team.wins}-{team.losses}</Text>
+        )}
+      </View>
+
       {team.paymentStatus === 'good' ? (
         <Text style={styles.paidText}>{'\u2713'} Paid</Text>
       ) : (
@@ -67,7 +75,7 @@ const styles = StyleSheet.create({
   },
   tile: {
     width: 110,
-    height: 90,
+    height: 94,
     borderRadius: 14,
     borderWidth: 1,
     padding: 10,
@@ -89,10 +97,20 @@ const styles = StyleSheet.create({
     color: BRAND.textPrimary,
     flex: 1,
   },
+  midRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   roster: {
     fontFamily: FONTS.bodyMedium,
     fontSize: 12,
     color: BRAND.textMuted,
+  },
+  record: {
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 10,
+    color: BRAND.textFaint,
   },
   paidText: {
     fontFamily: FONTS.bodySemiBold,
