@@ -3,7 +3,8 @@ import GifPicker from '@/components/GifPicker';
 import { useAuth } from '@/lib/auth';
 import { pickImage, pickVideo, takePhoto, uploadMedia } from '@/lib/media-utils';
 import { supabase } from '@/lib/supabase';
-import { useTheme } from '@/lib/theme';
+import { BRAND } from '@/theme/colors';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useAudioPlayer, useAudioPlayerStatus, useAudioRecorder, AudioModule, RecordingPresets } from 'expo-audio';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -13,7 +14,7 @@ import { ActionSheetIOS, ActivityIndicator, Alert, FlatList, Image, KeyboardAvoi
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Voice message playback component
-function VoiceMessagePlayer({ url, duration, colors }: { url: string; duration?: number; colors: any }) {
+function VoiceMessagePlayer({ url, duration }: { url: string; duration?: number }) {
   const player = useAudioPlayer(url);
   const status = useAudioPlayerStatus(player);
   const playing = status.playing;
@@ -29,12 +30,12 @@ function VoiceMessagePlayer({ url, duration, colors }: { url: string; duration?:
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 4 }}>
       <TouchableOpacity onPress={togglePlay}>
-        <Ionicons name={playing ? 'pause-circle' : 'play-circle'} size={36} color={colors.primary} />
+        <Ionicons name={playing ? 'pause-circle' : 'play-circle'} size={36} color={BRAND.teal} />
       </TouchableOpacity>
-      <View style={{ flex: 1, height: 4, backgroundColor: colors.border, borderRadius: 2 }}>
-        <View style={{ width: `${progress * 100}%`, height: 4, backgroundColor: colors.primary, borderRadius: 2 }} />
+      <View style={{ flex: 1, height: 4, backgroundColor: BRAND.border, borderRadius: 2 }}>
+        <View style={{ width: `${progress * 100}%`, height: 4, backgroundColor: BRAND.teal, borderRadius: 2 }} />
       </View>
-      <Text style={{ fontSize: 12, color: colors.textMuted }}>{formatDur(duration || 0)}</Text>
+      <Text style={{ fontSize: 12, color: BRAND.textMuted }}>{formatDur(duration || 0)}</Text>
     </View>
   );
 }
@@ -76,7 +77,6 @@ const getEmojiOnlySize = (text: string): number | null => {
 export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { profile } = useAuth();
-  const { colors } = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const flatListRef = useRef<FlatList>(null);
@@ -866,7 +866,7 @@ export default function ChatScreen() {
 
             {/* Voice message */}
             {message.message_type === 'voice' && message.attachments?.[0] && (
-              <VoiceMessagePlayer url={message.attachments[0].file_url} duration={message.attachments[0].duration_seconds} colors={colors} />
+              <VoiceMessagePlayer url={message.attachments[0].file_url} duration={message.attachments[0].duration_seconds} />
             )}
 
             {/* Text content with @mention highlighting */}
@@ -881,7 +881,7 @@ export default function ChatScreen() {
                 <Text style={[s.messageText, isMe && s.messageTextMe]}>
                   {parts.map((part, i) => {
                     if (part.startsWith('@') && mentionNames.has(part.slice(1).toLowerCase())) {
-                      return <Text key={i} style={{ fontWeight: 'bold', color: isMe ? '#FFD700' : colors.primary }}>{part}</Text>;
+                      return <Text key={i} style={{ fontFamily: FONTS.bodyBold, color: isMe ? '#FFD700' : BRAND.teal }}>{part}</Text>;
                     }
                     return part;
                   })}
@@ -919,15 +919,15 @@ export default function ChatScreen() {
               <Text style={s.reactionOptionEmoji}>➕</Text>
             </TouchableOpacity>
             <TouchableOpacity style={s.reactionOption} onPress={() => { setReplyingTo(message); setShowReactions(null); }}>
-              <Ionicons name="arrow-undo" size={20} color={colors.text} />
+              <Ionicons name="arrow-undo" size={20} color={BRAND.textPrimary} />
             </TouchableOpacity>
             {(currentMember?.can_moderate || isMe) && (
               <TouchableOpacity style={s.reactionOption} onPress={() => deleteMessage(message)}>
-                <Ionicons name="trash" size={20} color={colors.danger} />
+                <Ionicons name="trash" size={20} color={BRAND.coral} />
               </TouchableOpacity>
             )}
             <TouchableOpacity style={s.reactionOption} onPress={() => setShowReactions(null)}>
-              <Ionicons name="close" size={20} color={colors.textMuted} />
+              <Ionicons name="close" size={20} color={BRAND.textMuted} />
             </TouchableOpacity>
           </View>
         )}
@@ -949,21 +949,19 @@ export default function ChatScreen() {
     );
   };
 
-  const s = createStyles(colors);
-
   return (
     <SafeAreaView style={s.container} edges={['top', 'bottom']}>
       {/* Header */}
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
-          <Ionicons name="chevron-back" size={28} color={colors.text} />
+          <Ionicons name="chevron-back" size={28} color={BRAND.textPrimary} />
         </TouchableOpacity>
         <TouchableOpacity style={s.headerInfo} onPress={() => setShowInfo(true)}>
           <Text style={s.headerTitle} numberOfLines={1}>{channel?.name || 'Chat'}</Text>
           <Text style={s.headerSubtitle}>{members.length} members</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={() => setShowInfo(true)}>
-          <Ionicons name="information-circle-outline" size={26} color={colors.text} />
+          <Ionicons name="information-circle-outline" size={26} color={BRAND.textPrimary} />
         </TouchableOpacity>
       </View>
 
@@ -1000,7 +998,7 @@ export default function ChatScreen() {
       {/* Uploading indicator */}
       {uploading && (
         <View style={s.uploadingBar}>
-          <ActivityIndicator size="small" color={colors.primary} />
+          <ActivityIndicator size="small" color={BRAND.teal} />
           <Text style={s.uploadingText}>Uploading...</Text>
         </View>
       )}
@@ -1013,7 +1011,7 @@ export default function ChatScreen() {
             <Text style={s.replyContent} numberOfLines={1}>{replyingTo.content}</Text>
           </View>
           <TouchableOpacity onPress={() => setReplyingTo(null)}>
-            <Ionicons name="close" size={22} color={colors.textMuted} />
+            <Ionicons name="close" size={22} color={BRAND.textMuted} />
           </TouchableOpacity>
         </View>
       )}
@@ -1059,36 +1057,36 @@ export default function ChatScreen() {
               /* State 2: RECORDING — pulsing dot + timer + cancel/stop */
               <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                 <TouchableOpacity onPress={cancelRecording} style={{ padding: 8 }}>
-                  <Ionicons name="trash" size={22} color={colors.danger} />
+                  <Ionicons name="trash" size={22} color={BRAND.coral} />
                 </TouchableOpacity>
-                <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: colors.danger, opacity: voicePulse ? 1 : 0.3 }} />
-                <Text style={{ color: colors.danger, fontSize: 15, flex: 1, fontWeight: '600' }}>
+                <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: BRAND.coral, opacity: voicePulse ? 1 : 0.3 }} />
+                <Text style={{ color: BRAND.coral, fontSize: 15, flex: 1, fontFamily: FONTS.bodySemiBold }}>
                   Recording... {Math.floor(recordingDuration / 60)}:{String(recordingDuration % 60).padStart(2, '0')}
                 </Text>
-                <TouchableOpacity onPress={stopRecording} style={[s.sendBtn, { backgroundColor: colors.text }]}>
-                  <Ionicons name="stop" size={22} color={colors.background} />
+                <TouchableOpacity onPress={stopRecording} style={[s.sendBtn, { backgroundColor: BRAND.textPrimary }]}>
+                  <Ionicons name="stop" size={22} color={BRAND.offWhite} />
                 </TouchableOpacity>
               </View>
             ) : voiceState === 'preview' || voiceState === 'sending' ? (
               /* State 3: PREVIEW / State 4: SENDING — play/pause + progress + delete/send */
               <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <TouchableOpacity onPress={deleteVoicePreview} style={{ padding: 8 }} disabled={voiceState === 'sending'}>
-                  <Ionicons name="trash" size={22} color={voiceState === 'sending' ? colors.textMuted : colors.danger} />
+                  <Ionicons name="trash" size={22} color={voiceState === 'sending' ? BRAND.textMuted : BRAND.coral} />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => previewStatus.playing ? previewPlayer.pause() : previewPlayer.play()} style={{ padding: 4 }}>
-                  <Ionicons name={previewStatus.playing ? 'pause-circle' : 'play-circle'} size={36} color={colors.primary} />
+                  <Ionicons name={previewStatus.playing ? 'pause-circle' : 'play-circle'} size={36} color={BRAND.teal} />
                 </TouchableOpacity>
-                <View style={{ flex: 1, height: 4, backgroundColor: colors.border, borderRadius: 2 }}>
-                  <View style={{ width: `${previewStatus.duration > 0 ? (previewStatus.currentTime / previewStatus.duration) * 100 : 0}%`, height: 4, backgroundColor: colors.primary, borderRadius: 2 }} />
+                <View style={{ flex: 1, height: 4, backgroundColor: BRAND.border, borderRadius: 2 }}>
+                  <View style={{ width: `${previewStatus.duration > 0 ? (previewStatus.currentTime / previewStatus.duration) * 100 : 0}%`, height: 4, backgroundColor: BRAND.teal, borderRadius: 2 }} />
                 </View>
-                <Text style={{ fontSize: 12, color: colors.textMuted }}>
+                <Text style={{ fontSize: 12, color: BRAND.textMuted }}>
                   {Math.floor(recordedDuration / 60)}:{String(recordedDuration % 60).padStart(2, '0')}
                 </Text>
                 <TouchableOpacity onPress={sendVoiceMessage} style={s.sendBtn} disabled={voiceState === 'sending'}>
                   {voiceState === 'sending' ? (
-                    <ActivityIndicator size="small" color={colors.background} />
+                    <ActivityIndicator size="small" color={BRAND.offWhite} />
                   ) : (
-                    <Ionicons name="send" size={22} color={colors.background} />
+                    <Ionicons name="send" size={22} color={BRAND.offWhite} />
                   )}
                 </TouchableOpacity>
               </View>
@@ -1096,11 +1094,11 @@ export default function ChatScreen() {
             /* State 1: IDLE — normal text input */
             <>
               <TouchableOpacity style={s.inputBtn} onPress={showMediaActionSheet}>
-                <Ionicons name="add-circle" size={28} color={colors.primary} />
+                <Ionicons name="add-circle" size={28} color={BRAND.teal} />
               </TouchableOpacity>
 
               <TouchableOpacity style={s.inputBtn} onPress={() => handleMediaPick('camera')}>
-                <Ionicons name="camera" size={24} color={colors.textMuted} />
+                <Ionicons name="camera" size={24} color={BRAND.textMuted} />
               </TouchableOpacity>
 
               <TouchableOpacity style={s.inputBtn} onPress={() => setShowGifPicker(true)}>
@@ -1110,7 +1108,7 @@ export default function ChatScreen() {
               <TextInput
                 style={s.input}
                 placeholder="Type a message..."
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={BRAND.textMuted}
                 value={inputText}
                 onChangeText={(text) => {
                   setInputText(text);
@@ -1139,23 +1137,23 @@ export default function ChatScreen() {
               />
 
               <TouchableOpacity style={s.inputBtn} onPress={() => setShowEmojiPicker(true)}>
-                <Ionicons name="happy-outline" size={26} color={colors.textMuted} />
+                <Ionicons name="happy-outline" size={26} color={BRAND.textMuted} />
               </TouchableOpacity>
 
               {inputText.trim() ? (
                 <TouchableOpacity style={s.sendBtn} onPress={() => sendMessage()} disabled={sending}>
-                  <Ionicons name="send" size={22} color={colors.background} />
+                  <Ionicons name="send" size={22} color={BRAND.offWhite} />
                 </TouchableOpacity>
               ) : (
                 <TouchableOpacity style={s.inputBtn} onPress={startRecording}>
-                  <Ionicons name="mic" size={26} color={colors.primary} />
+                  <Ionicons name="mic" size={26} color={BRAND.teal} />
                 </TouchableOpacity>
               )}
             </>
             )
           ) : (
             <View style={s.viewOnlyBar}>
-              <Ionicons name="eye" size={18} color={colors.textMuted} />
+              <Ionicons name="eye" size={18} color={BRAND.textMuted} />
               <Text style={s.viewOnlyText}>View only - you cannot send messages here</Text>
             </View>
           )}
@@ -1195,15 +1193,15 @@ export default function ChatScreen() {
           <View style={s.mediaModal}>
             <Text style={s.mediaModalTitle}>Add Media</Text>
             <TouchableOpacity style={s.mediaOption} onPress={() => handleMediaPick('camera')}>
-              <Ionicons name="camera" size={24} color={colors.primary} />
+              <Ionicons name="camera" size={24} color={BRAND.teal} />
               <Text style={s.mediaOptionText}>Take Photo</Text>
             </TouchableOpacity>
             <TouchableOpacity style={s.mediaOption} onPress={() => handleMediaPick('library')}>
-              <Ionicons name="image" size={24} color={colors.success} />
+              <Ionicons name="image" size={24} color={BRAND.success} />
               <Text style={s.mediaOptionText}>Choose Image</Text>
             </TouchableOpacity>
             <TouchableOpacity style={s.mediaOption} onPress={() => handleMediaPick('video')}>
-              <Ionicons name="videocam" size={24} color={colors.info} />
+              <Ionicons name="videocam" size={24} color={BRAND.skyBlue} />
               <Text style={s.mediaOptionText}>Choose Video</Text>
             </TouchableOpacity>
             <TouchableOpacity style={s.mediaCancelBtn} onPress={() => setShowMediaOptions(false)}>
@@ -1230,7 +1228,7 @@ export default function ChatScreen() {
             <View style={s.infoHeader}>
               <Text style={s.infoTitle}>{channel?.name}</Text>
               <TouchableOpacity onPress={() => setShowInfo(false)}>
-                <Ionicons name="close" size={24} color={colors.text} />
+                <Ionicons name="close" size={24} color={BRAND.textPrimary} />
               </TouchableOpacity>
             </View>
             <Text style={s.infoSection}>Members ({members.length})</Text>
@@ -1248,7 +1246,7 @@ export default function ChatScreen() {
             ))}
             {(currentMember?.can_moderate || currentMember?.member_role === 'admin') && channel?.channel_type !== 'dm' && (
               <TouchableOpacity style={s.addMemberBtn} onPress={() => { setShowInfo(false); setShowAddMember(true); }}>
-                <Ionicons name="person-add" size={18} color={colors.primary} />
+                <Ionicons name="person-add" size={18} color={BRAND.teal} />
                 <Text style={s.addMemberBtnText}>Add Member</Text>
               </TouchableOpacity>
             )}
@@ -1263,15 +1261,15 @@ export default function ChatScreen() {
             <View style={s.infoHeader}>
               <Text style={s.infoTitle}>Add Member</Text>
               <TouchableOpacity onPress={() => { setShowAddMember(false); setAddMemberQuery(''); setAddMemberResults([]); }}>
-                <Ionicons name="close" size={24} color={colors.text} />
+                <Ionicons name="close" size={24} color={BRAND.textPrimary} />
               </TouchableOpacity>
             </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.background, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, gap: 8, marginBottom: 12 }}>
-              <Ionicons name="search" size={18} color={colors.textMuted} />
+            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: BRAND.offWhite, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, gap: 8, marginBottom: 12 }}>
+              <Ionicons name="search" size={18} color={BRAND.textMuted} />
               <TextInput
-                style={{ flex: 1, fontSize: 16, color: colors.text }}
+                style={{ flex: 1, fontSize: 16, color: BRAND.textPrimary }}
                 placeholder="Search by name or email..."
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={BRAND.textMuted}
                 value={addMemberQuery}
                 onChangeText={(q) => { setAddMemberQuery(q); searchAddMembers(q); }}
                 autoFocus
@@ -1286,10 +1284,10 @@ export default function ChatScreen() {
                   <Text style={s.memberName}>{user.full_name}</Text>
                   <Text style={s.memberRole}>{user.email}</Text>
                 </View>
-                <Ionicons name="add-circle" size={22} color={colors.primary} />
+                <Ionicons name="add-circle" size={22} color={BRAND.teal} />
               </TouchableOpacity>
             ))}
-            {addingMember && <ActivityIndicator style={{ marginTop: 12 }} color={colors.primary} />}
+            {addingMember && <ActivityIndicator style={{ marginTop: 12 }} color={BRAND.teal} />}
           </View>
         </View>
       </Modal>
@@ -1313,7 +1311,7 @@ export default function ChatScreen() {
             )}
             {currentMember?.can_moderate && channel?.channel_type !== 'dm' && (
               <TouchableOpacity style={s.profileRemoveBtn} onPress={() => selectedMember && handleRemoveMember(selectedMember)}>
-                <Ionicons name="person-remove" size={16} color={colors.danger} />
+                <Ionicons name="person-remove" size={16} color={BRAND.coral} />
                 <Text style={s.profileRemoveText}>Remove from Chat</Text>
               </TouchableOpacity>
             )}
@@ -1324,103 +1322,103 @@ export default function ChatScreen() {
   );
 }
 
-const createStyles = (colors: any) => StyleSheet.create({
+const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: BRAND.border },
   backBtn: { padding: 4 },
   headerInfo: { flex: 1, marginLeft: 8 },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', color: colors.text },
-  headerSubtitle: { fontSize: 13, color: colors.textMuted },
+  headerTitle: { fontSize: 18, fontFamily: FONTS.bodyBold, color: BRAND.textPrimary },
+  headerSubtitle: { fontSize: 13, color: BRAND.textMuted },
   messageList: { padding: 12, paddingBottom: 8 },
   dateHeader: { alignItems: 'center', marginVertical: 16 },
-  dateHeaderText: { fontSize: 12, color: colors.textMuted, backgroundColor: colors.card, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12 },
+  dateHeaderText: { fontSize: 12, color: BRAND.textMuted, backgroundColor: BRAND.white, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12 },
   messageRow: { flexDirection: 'row', marginBottom: 6, alignItems: 'flex-end' },
   messageRowMe: { justifyContent: 'flex-end' },
   avatarSmall: { width: 32, height: 32, borderRadius: 16, marginRight: 8 },
-  avatarSmallBg: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.border, justifyContent: 'center', alignItems: 'center', marginRight: 8 },
-  avatarSmallText: { color: colors.primary, fontSize: 12, fontWeight: 'bold' },
+  avatarSmallBg: { width: 32, height: 32, borderRadius: 16, backgroundColor: BRAND.border, justifyContent: 'center', alignItems: 'center', marginRight: 8 },
+  avatarSmallText: { color: BRAND.teal, fontSize: 12, fontFamily: FONTS.bodyBold },
   avatarSpacer: { width: 32, marginRight: 8 },
   messageBubble: { maxWidth: '75%', padding: 12, borderRadius: 16 },
-  bubbleMe: { backgroundColor: colors.primary, borderBottomRightRadius: 4 },
-  bubbleOther: { backgroundColor: colors.glassCard, borderBottomLeftRadius: 4, borderWidth: 1, borderColor: colors.glassBorder },
-  senderName: { fontSize: 12, fontWeight: '600', color: colors.primary, marginBottom: 4 },
-  replyPreview: { backgroundColor: colors.background + '40', padding: 8, borderRadius: 8, marginBottom: 8, borderLeftWidth: 3, borderLeftColor: colors.primary },
-  replyName: { fontSize: 11, fontWeight: '600', color: colors.primary },
-  replyContent: { fontSize: 12, color: colors.textMuted },
+  bubbleMe: { backgroundColor: BRAND.teal, borderBottomRightRadius: 4 },
+  bubbleOther: { backgroundColor: BRAND.white, borderBottomLeftRadius: 4, borderWidth: 1, borderColor: BRAND.border },
+  senderName: { fontSize: 12, fontFamily: FONTS.bodySemiBold, color: BRAND.teal, marginBottom: 4 },
+  replyPreview: { backgroundColor: BRAND.offWhite + '40', padding: 8, borderRadius: 8, marginBottom: 8, borderLeftWidth: 3, borderLeftColor: BRAND.teal },
+  replyName: { fontSize: 11, fontFamily: FONTS.bodySemiBold, color: BRAND.teal },
+  replyContent: { fontSize: 12, color: BRAND.textMuted },
   attachmentImage: { width: 200, height: 200, borderRadius: 12, marginBottom: 8 },
   gifImage: { width: 200, height: 150, borderRadius: 12, marginBottom: 8 },
-  messageText: { fontSize: 16, color: colors.text, lineHeight: 22 },
-  messageTextMe: { color: colors.background },
+  messageText: { fontSize: 16, color: BRAND.textPrimary, lineHeight: 22 },
+  messageTextMe: { color: BRAND.offWhite },
   messageFooter: { flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 6 },
-  messageTime: { fontSize: 11, color: colors.textMuted },
-  messageTimeMe: { color: colors.background + 'aa' },
-  editedLabel: { fontSize: 10, color: colors.textMuted, fontStyle: 'italic' },
+  messageTime: { fontSize: 11, color: BRAND.textMuted },
+  messageTimeMe: { color: BRAND.offWhite + 'aa' },
+  editedLabel: { fontSize: 10, color: BRAND.textMuted, fontStyle: 'italic' },
   reactionsRow: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 6, gap: 4 },
-  reactionBubble: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.background, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 12, gap: 2 },
-  reactionBubbleActive: { backgroundColor: colors.primary + '30' },
+  reactionBubble: { flexDirection: 'row', alignItems: 'center', backgroundColor: BRAND.offWhite, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 12, gap: 2 },
+  reactionBubbleActive: { backgroundColor: BRAND.teal + '30' },
   reactionEmoji: { fontSize: 14 },
-  reactionCount: { fontSize: 12, color: colors.text },
-  reactionPicker: { flexDirection: 'row', backgroundColor: colors.card, padding: 8, borderRadius: 24, marginBottom: 8, alignSelf: 'flex-start', gap: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 4 },
+  reactionCount: { fontSize: 12, color: BRAND.textPrimary },
+  reactionPicker: { flexDirection: 'row', backgroundColor: BRAND.white, padding: 8, borderRadius: 24, marginBottom: 8, alignSelf: 'flex-start', gap: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 4 },
   reactionPickerMe: { alignSelf: 'flex-end' },
   reactionPickerOther: { marginLeft: 40 },
   reactionOption: { padding: 8 },
   reactionOptionEmoji: { fontSize: 22 },
-  uploadingBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 8, backgroundColor: colors.card },
-  uploadingText: { fontSize: 14, color: colors.textMuted },
-  replyBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, paddingHorizontal: 16, paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.border },
+  uploadingBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 8, backgroundColor: BRAND.white },
+  uploadingText: { fontSize: 14, color: BRAND.textMuted },
+  replyBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: BRAND.white, paddingHorizontal: 16, paddingVertical: 10, borderTopWidth: 1, borderTopColor: BRAND.border },
   replyInfo: { flex: 1 },
-  replyLabel: { fontSize: 12, fontWeight: '600', color: colors.primary },
-  inputContainer: { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 8, paddingVertical: 12, paddingBottom: 16, borderTopWidth: 1, borderTopColor: colors.glassBorder, backgroundColor: colors.glassCard },
+  replyLabel: { fontSize: 12, fontFamily: FONTS.bodySemiBold, color: BRAND.teal },
+  inputContainer: { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 8, paddingVertical: 12, paddingBottom: 16, borderTopWidth: 1, borderTopColor: BRAND.border, backgroundColor: BRAND.white },
   inputBtn: { padding: 6 },
-  gifBtn: { fontSize: 12, fontWeight: 'bold', color: colors.primary, backgroundColor: colors.primary + '20', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-  input: { flex: 1, backgroundColor: colors.card, borderRadius: 24, paddingHorizontal: 16, paddingVertical: 10, fontSize: 16, color: colors.text, maxHeight: 100, marginHorizontal: 4 },
-  sendBtn: { backgroundColor: colors.primary, width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
-  sendBtnDisabled: { backgroundColor: colors.card },
+  gifBtn: { fontSize: 12, fontFamily: FONTS.bodyBold, color: BRAND.teal, backgroundColor: BRAND.teal + '20', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  input: { flex: 1, backgroundColor: BRAND.white, borderRadius: 24, paddingHorizontal: 16, paddingVertical: 10, fontSize: 16, color: BRAND.textPrimary, maxHeight: 100, marginHorizontal: 4 },
+  sendBtn: { backgroundColor: BRAND.teal, width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
+  sendBtnDisabled: { backgroundColor: BRAND.white },
   viewOnlyBar: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12 },
-  viewOnlyText: { fontSize: 14, color: colors.textMuted },
+  viewOnlyText: { fontSize: 14, color: BRAND.textMuted },
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-  mediaModal: { backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 },
-  mediaModalTitle: { fontSize: 18, fontWeight: 'bold', color: colors.text, textAlign: 'center', marginBottom: 20 },
-  mediaOption: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: colors.border },
-  mediaOptionText: { fontSize: 16, color: colors.text },
+  mediaModal: { backgroundColor: BRAND.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 },
+  mediaModalTitle: { fontSize: 18, fontFamily: FONTS.bodyBold, color: BRAND.textPrimary, textAlign: 'center', marginBottom: 20 },
+  mediaOption: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: BRAND.border },
+  mediaOptionText: { fontSize: 16, color: BRAND.textPrimary },
   mediaCancelBtn: { marginTop: 16, padding: 16, alignItems: 'center' },
-  mediaCancelText: { fontSize: 16, color: colors.danger, fontWeight: '600' },
+  mediaCancelText: { fontSize: 16, color: BRAND.coral, fontFamily: FONTS.bodySemiBold },
   imageViewerOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'center', alignItems: 'center' },
   imageViewerClose: { position: 'absolute', top: 50, right: 20, zIndex: 10, padding: 10 },
   fullImage: { width: '100%', height: '80%' },
-  infoModal: { backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '70%' },
+  infoModal: { backgroundColor: BRAND.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '70%' },
   infoHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  infoTitle: { fontSize: 20, fontWeight: 'bold', color: colors.text },
-  infoSection: { fontSize: 12, fontWeight: '700', color: colors.textMuted, marginBottom: 12, marginTop: 8, textTransform: 'uppercase' as const, letterSpacing: 1 },
-  memberRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
-  memberAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.border, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  memberInitials: { color: colors.primary, fontSize: 14, fontWeight: 'bold' },
+  infoTitle: { fontSize: 20, fontFamily: FONTS.bodyBold, color: BRAND.textPrimary },
+  infoSection: { fontSize: 12, fontFamily: FONTS.bodyBold, color: BRAND.textMuted, marginBottom: 12, marginTop: 8, textTransform: 'uppercase' as const, letterSpacing: 1 },
+  memberRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: BRAND.border },
+  memberAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: BRAND.border, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  memberInitials: { color: BRAND.teal, fontSize: 14, fontFamily: FONTS.bodyBold },
   memberInfo: { flex: 1 },
-  memberName: { fontSize: 16, fontWeight: '500', color: colors.text },
-  memberRole: { fontSize: 13, color: colors.textMuted, textTransform: 'capitalize' },
-  viewOnlyBadge: { backgroundColor: colors.warning + '20', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  viewOnlyBadgeText: { fontSize: 11, color: colors.warning },
-  scrollToBottomBtn: { position: 'absolute', right: 16, bottom: 8, width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 4 },
-  newMsgBadge: { position: 'absolute', top: -6, right: -6, backgroundColor: colors.danger, minWidth: 18, height: 18, borderRadius: 9, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 4 },
-  newMsgBadgeText: { color: '#fff', fontSize: 10, fontWeight: 'bold' },
+  memberName: { fontSize: 16, fontFamily: FONTS.bodyMedium, color: BRAND.textPrimary },
+  memberRole: { fontSize: 13, color: BRAND.textMuted, textTransform: 'capitalize' },
+  viewOnlyBadge: { backgroundColor: BRAND.warning + '20', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  viewOnlyBadgeText: { fontSize: 11, color: BRAND.warning },
+  scrollToBottomBtn: { position: 'absolute', right: 16, bottom: 8, width: 40, height: 40, borderRadius: 20, backgroundColor: BRAND.teal, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 4, elevation: 4 },
+  newMsgBadge: { position: 'absolute', top: -6, right: -6, backgroundColor: BRAND.coral, minWidth: 18, height: 18, borderRadius: 9, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 4 },
+  newMsgBadgeText: { color: '#fff', fontSize: 10, fontFamily: FONTS.bodyBold },
   typingBar: { paddingHorizontal: 16, paddingVertical: 4 },
-  typingText: { fontSize: 13, color: colors.primary, fontStyle: 'italic' },
-  readReceipt: { fontSize: 11, color: colors.textMuted, alignSelf: 'flex-end' as const, marginTop: 2, marginRight: 4, fontStyle: 'italic' as const },
-  mentionDropdown: { backgroundColor: colors.card, borderTopWidth: 1, borderTopColor: colors.border, paddingHorizontal: 12 },
-  mentionItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
-  mentionName: { fontSize: 15, fontWeight: '600', color: colors.text },
-  mentionRole: { fontSize: 12, color: colors.textMuted, textTransform: 'capitalize' as const },
-  addMemberBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, marginTop: 8, borderTopWidth: 1, borderTopColor: colors.border },
-  addMemberBtnText: { color: colors.primary, fontSize: 15, fontWeight: '600' },
+  typingText: { fontSize: 13, color: BRAND.teal, fontStyle: 'italic' },
+  readReceipt: { fontSize: 11, color: BRAND.textMuted, alignSelf: 'flex-end' as const, marginTop: 2, marginRight: 4, fontStyle: 'italic' as const },
+  mentionDropdown: { backgroundColor: BRAND.white, borderTopWidth: 1, borderTopColor: BRAND.border, paddingHorizontal: 12 },
+  mentionItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: BRAND.border },
+  mentionName: { fontSize: 15, fontFamily: FONTS.bodySemiBold, color: BRAND.textPrimary },
+  mentionRole: { fontSize: 12, color: BRAND.textMuted, textTransform: 'capitalize' as const },
+  addMemberBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, marginTop: 8, borderTopWidth: 1, borderTopColor: BRAND.border },
+  addMemberBtnText: { color: BRAND.teal, fontSize: 15, fontFamily: FONTS.bodySemiBold },
   profileOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' },
-  profileCard: { backgroundColor: colors.card, borderRadius: 20, padding: 28, alignItems: 'center', width: 280, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8 },
-  profileAvatarLg: { width: 72, height: 72, borderRadius: 36, backgroundColor: colors.primary + '20', justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
-  profileInitials: { color: colors.primary, fontSize: 24, fontWeight: 'bold' },
-  profileName: { fontSize: 20, fontWeight: 'bold', color: colors.text, marginBottom: 6 },
-  profileRoleBadge: { backgroundColor: colors.primary + '15', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, marginBottom: 16 },
-  profileRoleText: { fontSize: 13, color: colors.primary, fontWeight: '600', textTransform: 'capitalize' as const },
-  profileDMBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, marginBottom: 8, width: '100%', justifyContent: 'center' },
-  profileDMText: { color: '#fff', fontSize: 15, fontWeight: '600' },
+  profileCard: { backgroundColor: BRAND.white, borderRadius: 20, padding: 28, alignItems: 'center', width: 280, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8 },
+  profileAvatarLg: { width: 72, height: 72, borderRadius: 36, backgroundColor: BRAND.teal + '20', justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
+  profileInitials: { color: BRAND.teal, fontSize: 24, fontFamily: FONTS.bodyBold },
+  profileName: { fontSize: 20, fontFamily: FONTS.bodyBold, color: BRAND.textPrimary, marginBottom: 6 },
+  profileRoleBadge: { backgroundColor: BRAND.teal + '15', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, marginBottom: 16 },
+  profileRoleText: { fontSize: 13, color: BRAND.teal, fontFamily: FONTS.bodySemiBold, textTransform: 'capitalize' as const },
+  profileDMBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: BRAND.teal, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, marginBottom: 8, width: '100%', justifyContent: 'center' },
+  profileDMText: { color: '#fff', fontSize: 15, fontFamily: FONTS.bodySemiBold },
   profileRemoveBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, marginTop: 4 },
-  profileRemoveText: { color: colors.danger, fontSize: 14 },
+  profileRemoveText: { color: BRAND.coral, fontSize: 14 },
 });
