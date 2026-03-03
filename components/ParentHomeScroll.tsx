@@ -51,7 +51,6 @@ import RecentBadges from './parent-scroll/RecentBadges';
 import SecondaryEvents from './parent-scroll/SecondaryEvents';
 import AmbientCelebration from './parent-scroll/AmbientCelebration';
 import FlatChatPreview from './parent-scroll/FlatChatPreview';
-import ParentOnboardingModal from './ParentOnboardingModal';
 import LevelUpCelebrationModal from './LevelUpCelebrationModal';
 import RegistrationBanner from './RegistrationBanner';
 import ReenrollmentBanner from './ReenrollmentBanner';
@@ -163,15 +162,6 @@ export default function ParentHomeScroll() {
     onScrollJS: parentScroll.notifyScroll,
   });
   const data = useParentHomeData();
-
-  // ─── Onboarding modal (first-time parent) ──
-  const ONBOARDING_KEY = 'lynx_parent_onboarding_complete';
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  useEffect(() => {
-    AsyncStorage.getItem(ONBOARDING_KEY).then((done) => {
-      if (!done) setShowOnboarding(true);
-    });
-  }, []);
 
   // ─── Level-up celebration for child ──
   const [showLevelUp, setShowLevelUp] = useState(false);
@@ -572,15 +562,6 @@ export default function ParentHomeScroll() {
           </Text>
         </View>
       </Animated.ScrollView>
-
-      {/* ─── ONBOARDING MODAL (first-time parent) ──────────────── */}
-      <ParentOnboardingModal
-        visible={showOnboarding}
-        onDone={() => {
-          setShowOnboarding(false);
-          AsyncStorage.setItem(ONBOARDING_KEY, 'true');
-        }}
-      />
 
       {/* ─── LEVEL-UP CELEBRATION (child) ──────────────────────── */}
       <LevelUpCelebrationModal
