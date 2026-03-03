@@ -9,7 +9,8 @@ import { getSportDisplay, type StatConfig } from '@/constants/sport-display';
 import { useAuth } from '@/lib/auth';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
-import { useTheme } from '@/lib/theme';
+import { BRAND } from '@/theme/colors';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -105,13 +106,11 @@ const formatShortDate = (dateStr: string): string => {
 // =============================================================================
 
 export default function MyStatsScreen() {
-  const { colors } = useTheme();
   const { user } = useAuth();
   const { allSeasons, workingSeason } = useSeason();
   const router = useRouter();
   const { highlightStat } = useLocalSearchParams<{ highlightStat?: string }>();
 
-  const s = useMemo(() => createStyles(colors), [colors]);
   const highlightHandled = useRef(false);
 
   // State
@@ -449,14 +448,14 @@ export default function MyStatsScreen() {
         return (
           <TouchableOpacity
             key={season.id}
-            style={[s.seasonPill, isActive && { backgroundColor: colors.primary + '25', borderColor: colors.primary }]}
+            style={[s.seasonPill, isActive && { backgroundColor: BRAND.teal + '25', borderColor: BRAND.teal }]}
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               setSelectedSeasonId(season.id);
               highlightHandled.current = false;
             }}
           >
-            <Text style={[s.seasonPillText, isActive && { color: colors.primary, fontWeight: '700' }]}>
+            <Text style={[s.seasonPillText, isActive && { color: BRAND.teal, fontFamily: FONTS.bodyBold }]}>
               {season.name}
             </Text>
           </TouchableOpacity>
@@ -473,7 +472,7 @@ export default function MyStatsScreen() {
         <Text style={s.sectionTitle}>SEASON SUMMARY</Text>
         {!seasonSummary ? (
           <View style={s.emptyState}>
-            <Ionicons name="stats-chart-outline" size={48} color={colors.textMuted} />
+            <Ionicons name="stats-chart-outline" size={48} color={BRAND.textMuted} />
             <Text style={s.emptyTitle}>Your Stats Journey Begins Here</Text>
             <Text style={s.emptySubtitle}>
               Once you hit the court, your stats start tracking automatically.
@@ -486,13 +485,13 @@ export default function MyStatsScreen() {
               const avg = gp > 0 ? (total / gp).toFixed(1) : '0.0';
               const trend = trends[sc.key] || 'flat';
               const trendIcon = trend === 'up' ? 'arrow-up' : trend === 'down' ? 'arrow-down' : 'remove';
-              const trendColor = trend === 'up' ? colors.success : trend === 'down' ? colors.danger : colors.textMuted;
+              const trendColor = trend === 'up' ? BRAND.success : trend === 'down' ? BRAND.coral : BRAND.textMuted;
               const rank = leagueRanks[sc.key];
 
               return (
                 <TouchableOpacity
                   key={sc.key}
-                  style={[s.statCard, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}
+                  style={[s.statCard, { backgroundColor: BRAND.white, borderColor: BRAND.border }]}
                   onPress={() => openDrillDown(sc)}
                   activeOpacity={0.7}
                 >
@@ -500,9 +499,9 @@ export default function MyStatsScreen() {
                     <Ionicons name={sc.ionicon as any} size={18} color={sc.color} />
                   </View>
                   <Text style={[s.statCardTotal, { color: sc.color }]}>{total}</Text>
-                  <Text style={[s.statCardLabel, { color: colors.text }]}>{sc.label}</Text>
+                  <Text style={[s.statCardLabel, { color: BRAND.textPrimary }]}>{sc.label}</Text>
                   <View style={s.statCardFooter}>
-                    <Text style={[s.statCardAvg, { color: colors.textMuted }]}>{avg}/g</Text>
+                    <Text style={[s.statCardAvg, { color: BRAND.textMuted }]}>{avg}/g</Text>
                     <Ionicons name={trendIcon as any} size={14} color={trendColor} />
                   </View>
                   {rank && (
@@ -525,16 +524,16 @@ export default function MyStatsScreen() {
     return (
       <View style={s.section}>
         <Text style={s.sectionTitle}>PERSONAL BESTS</Text>
-        <View style={[s.bestsCard, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}>
+        <View style={[s.bestsCard, { backgroundColor: BRAND.white, borderColor: BRAND.border }]}>
           {personalBests.map((pb, i) => (
             <View
               key={pb.statKey}
-              style={[s.bestRow, i < personalBests.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.glassBorder }]}
+              style={[s.bestRow, i < personalBests.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: BRAND.border }]}
             >
               <Ionicons name="star" size={16} color={pb.color} />
               <View style={s.bestInfo}>
-                <Text style={[s.bestLabel, { color: colors.text }]}>{pb.statLabel}</Text>
-                <Text style={[s.bestMeta, { color: colors.textMuted }]}>
+                <Text style={[s.bestLabel, { color: BRAND.textPrimary }]}>{pb.statLabel}</Text>
+                <Text style={[s.bestMeta, { color: BRAND.textMuted }]}>
                   vs {pb.opponentName || 'Unknown'}, {formatShortDate(pb.eventDate)}
                 </Text>
               </View>
@@ -552,7 +551,7 @@ export default function MyStatsScreen() {
 
       {gameHistory.length === 0 ? (
         <View style={s.emptyState}>
-          <Ionicons name="game-controller-outline" size={48} color={colors.textMuted} />
+          <Ionicons name="game-controller-outline" size={48} color={BRAND.textMuted} />
           <Text style={s.emptyTitle}>Game Log Loading...</Text>
           <Text style={s.emptySubtitle}>After your first match, you'll see a full breakdown of every game here.</Text>
         </View>
@@ -560,7 +559,7 @@ export default function MyStatsScreen() {
         gameHistory.map((game) => {
           const isWin = game.gameResult === 'win';
           const isLoss = game.gameResult === 'loss';
-          const accentColor = isWin ? colors.success : isLoss ? colors.danger : colors.textMuted;
+          const accentColor = isWin ? BRAND.success : isLoss ? BRAND.coral : BRAND.textMuted;
           const resultLetter = isWin ? 'W' : isLoss ? 'L' : 'T';
           const scoreText =
             game.ourScore != null && game.opponentScore != null ? `${game.ourScore}-${game.opponentScore}` : '';
@@ -571,7 +570,7 @@ export default function MyStatsScreen() {
           return (
             <TouchableOpacity
               key={game.eventId}
-              style={[s.gameRow, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}
+              style={[s.gameRow, { backgroundColor: BRAND.white, borderColor: BRAND.border }]}
               onPress={() => router.push(`/game-results?eventId=${game.eventId}` as any)}
               activeOpacity={0.7}
             >
@@ -582,18 +581,18 @@ export default function MyStatsScreen() {
                     <Text style={[s.gameResultText, { color: accentColor }]}>{resultLetter}</Text>
                   </View>
                   <View style={s.gameRowInfo}>
-                    <Text style={[s.gameRowOpponent, { color: colors.text }]} numberOfLines={1}>
+                    <Text style={[s.gameRowOpponent, { color: BRAND.textPrimary }]} numberOfLines={1}>
                       vs {game.opponentName || 'Opponent'}
                     </Text>
-                    <Text style={[s.gameRowDate, { color: colors.textMuted }]}>
+                    <Text style={[s.gameRowDate, { color: BRAND.textMuted }]}>
                       {formatShortDate(game.eventDate)}
                       {scoreText ? ` \u00B7 ${scoreText}` : ''}
                     </Text>
                   </View>
                 </View>
-                <Text style={[s.gameRowStats, { color: colors.textSecondary }]}>{statLine}</Text>
+                <Text style={[s.gameRowStats, { color: BRAND.textSecondary }]}>{statLine}</Text>
               </View>
-              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+              <Ionicons name="chevron-forward" size={16} color={BRAND.textMuted} />
             </TouchableOpacity>
           );
         })
@@ -620,7 +619,7 @@ export default function MyStatsScreen() {
     return (
       <View style={s.section}>
         <Text style={s.sectionTitle}>SKILL RATINGS</Text>
-        <View style={[s.skillCard, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}>
+        <View style={[s.skillCard, { backgroundColor: BRAND.white, borderColor: BRAND.border }]}>
           {SKILL_CATEGORIES.map((skill) => {
             const value = hasRatings
               ? (latestRating as any)?.[skill.key] || 0
@@ -630,8 +629,8 @@ export default function MyStatsScreen() {
 
             return (
               <View key={skill.key} style={s.skillRow}>
-                <Text style={[s.skillLabel, { color: colors.text }]}>{skill.label}</Text>
-                <View style={[s.skillBarTrack, { backgroundColor: colors.border }]}>
+                <Text style={[s.skillLabel, { color: BRAND.textPrimary }]}>{skill.label}</Text>
+                <View style={[s.skillBarTrack, { backgroundColor: BRAND.border }]}>
                   <View style={[s.skillBarFill, { width: `${pct}%` as any, backgroundColor: skill.color }]} />
                 </View>
                 <Text style={[s.skillValue, { color: skill.color }]}>
@@ -660,11 +659,11 @@ export default function MyStatsScreen() {
               if (improvements.length === 0) return null;
 
               return (
-                <View style={[s.skillTrend, { borderTopColor: colors.glassBorder }]}>
-                  <Ionicons name="trending-up" size={16} color={colors.success} />
+                <View style={[s.skillTrend, { borderTopColor: BRAND.border }]}>
+                  <Ionicons name="trending-up" size={16} color={BRAND.success} />
                   <View style={{ flex: 1, marginLeft: 8 }}>
                     {improvements.map((imp, i) => (
-                      <Text key={i} style={[s.skillTrendText, { color: colors.success }]}>
+                      <Text key={i} style={[s.skillTrendText, { color: BRAND.success }]}>
                         {imp}
                       </Text>
                     ))}
@@ -675,9 +674,9 @@ export default function MyStatsScreen() {
 
           {/* Coach notes */}
           {latestRating?.coach_notes && (
-            <View style={[s.coachNoteBox, { borderTopColor: colors.glassBorder }]}>
-              <Ionicons name="chatbubble" size={14} color={colors.textMuted} />
-              <Text style={[s.coachNoteText, { color: colors.textSecondary }]}>{latestRating.coach_notes}</Text>
+            <View style={[s.coachNoteBox, { borderTopColor: BRAND.border }]}>
+              <Ionicons name="chatbubble" size={14} color={BRAND.textMuted} />
+              <Text style={[s.coachNoteText, { color: BRAND.textSecondary }]}>{latestRating.coach_notes}</Text>
             </View>
           )}
         </View>
@@ -697,18 +696,18 @@ export default function MyStatsScreen() {
     return (
       <Modal visible={showDrillDown} transparent animationType="slide" onRequestClose={() => setShowDrillDown(false)}>
         <View style={s.modalOverlay}>
-          <View style={[s.modalContent, { backgroundColor: colors.card || colors.bgSecondary }]}>
+          <View style={[s.modalContent, { backgroundColor: BRAND.white }]}>
             {/* Handle bar */}
-            <View style={[s.modalHandle, { backgroundColor: colors.textMuted }]} />
+            <View style={[s.modalHandle, { backgroundColor: BRAND.textMuted }]} />
 
             {/* Header */}
             <View style={s.modalHeader}>
               <View style={[s.modalStatIcon, { backgroundColor: sc.color + '20' }]}>
                 <Ionicons name={sc.ionicon as any} size={24} color={sc.color} />
               </View>
-              <Text style={[s.modalTitle, { color: colors.text }]}>{sc.label}</Text>
+              <Text style={[s.modalTitle, { color: BRAND.textPrimary }]}>{sc.label}</Text>
               <TouchableOpacity onPress={() => setShowDrillDown(false)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-                <Ionicons name="close-circle" size={28} color={colors.textMuted} />
+                <Ionicons name="close-circle" size={28} color={BRAND.textMuted} />
               </TouchableOpacity>
             </View>
 
@@ -716,21 +715,21 @@ export default function MyStatsScreen() {
             {leagueRank.total > 0 && (
               <View style={[s.modalRankRow, { backgroundColor: sc.color + '10', borderColor: sc.color + '25' }]}>
                 <Ionicons name="podium" size={18} color={sc.color} />
-                <Text style={[s.modalRankText, { color: colors.text }]}>
+                <Text style={[s.modalRankText, { color: BRAND.textPrimary }]}>
                   #{leagueRank.rank}{' '}
-                  <Text style={{ color: colors.textMuted, fontWeight: '400' }}>of {leagueRank.total} in the league</Text>
+                  <Text style={{ color: BRAND.textMuted, fontFamily: FONTS.bodyLight }}>of {leagueRank.total} in the league</Text>
                 </Text>
               </View>
             )}
 
             {/* Personal Best */}
             {personalBest && (
-              <View style={[s.modalPBRow, { backgroundColor: colors.warning + '10', borderColor: colors.warning + '25' }]}>
-                <Ionicons name="star" size={16} color={colors.warning} />
-                <Text style={[s.modalPBText, { color: colors.warning }]}>
+              <View style={[s.modalPBRow, { backgroundColor: BRAND.warning + '10', borderColor: BRAND.warning + '25' }]}>
+                <Ionicons name="star" size={16} color={BRAND.warning} />
+                <Text style={[s.modalPBText, { color: BRAND.warning }]}>
                   Best: {personalBest.value}
                 </Text>
-                <Text style={{ color: colors.textMuted, fontSize: 12, marginLeft: 4 }}>
+                <Text style={{ color: BRAND.textMuted, fontSize: 12, marginLeft: 4 }}>
                   vs {personalBest.opponentName}, {formatShortDate(personalBest.eventDate)}
                 </Text>
               </View>
@@ -739,7 +738,7 @@ export default function MyStatsScreen() {
             {/* Game-by-Game Bars */}
             <ScrollView style={{ flex: 1, marginTop: 16 }} showsVerticalScrollIndicator={false}>
               {gameBreakdown.length === 0 ? (
-                <Text style={{ color: colors.textMuted, textAlign: 'center', marginTop: 24 }}>No game data</Text>
+                <Text style={{ color: BRAND.textMuted, textAlign: 'center', marginTop: 24 }}>No game data</Text>
               ) : (
                 gameBreakdown.map((g) => {
                   const barPct = maxVal > 0 ? (g.value / maxVal) * 100 : 0;
@@ -747,19 +746,19 @@ export default function MyStatsScreen() {
                   return (
                     <View key={g.eventId} style={s.drillDownRow}>
                       <View style={s.drillDownLeft}>
-                        <Text style={[s.drillDownOpponent, { color: colors.text }]} numberOfLines={1}>
+                        <Text style={[s.drillDownOpponent, { color: BRAND.textPrimary }]} numberOfLines={1}>
                           vs {g.opponent}
                         </Text>
-                        <Text style={[s.drillDownDate, { color: colors.textMuted }]}>
+                        <Text style={[s.drillDownDate, { color: BRAND.textMuted }]}>
                           {formatShortDate(g.date)}
                         </Text>
                       </View>
                       <View style={s.drillDownBarWrap}>
-                        <View style={[s.drillDownBarTrack, { backgroundColor: colors.border }]}>
+                        <View style={[s.drillDownBarTrack, { backgroundColor: BRAND.border }]}>
                           <View
                             style={[
                               s.drillDownBarFill,
-                              { width: `${barPct}%` as any, backgroundColor: isPB ? colors.warning : sc.color },
+                              { width: `${barPct}%` as any, backgroundColor: isPB ? BRAND.warning : sc.color },
                             ]}
                           />
                         </View>
@@ -767,8 +766,8 @@ export default function MyStatsScreen() {
                       <Text
                         style={[
                           s.drillDownValue,
-                          { color: isPB ? colors.warning : sc.color },
-                          isPB && { fontWeight: '900' },
+                          { color: isPB ? BRAND.warning : sc.color },
+                          isPB && { fontFamily: FONTS.bodyExtraBold },
                         ]}
                       >
                         {g.value}
@@ -795,14 +794,14 @@ export default function MyStatsScreen() {
       <SafeAreaView style={s.container}>
         <View style={s.header}>
           <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
+            <Ionicons name="arrow-back" size={24} color={BRAND.textPrimary} />
           </TouchableOpacity>
-          <Text style={[s.headerTitle, { color: colors.text }]}>MY STATS</Text>
+          <Text style={[s.headerTitle, { color: BRAND.textPrimary }]}>MY STATS</Text>
           <View style={s.backBtn} />
         </View>
         <View style={s.centeredLoader}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={[s.loadingText, { color: colors.textMuted }]}>Loading your stats...</Text>
+          <ActivityIndicator size="large" color={BRAND.teal} />
+          <Text style={[s.loadingText, { color: BRAND.textMuted }]}>Loading your stats...</Text>
         </View>
       </SafeAreaView>
     );
@@ -813,13 +812,13 @@ export default function MyStatsScreen() {
       <SafeAreaView style={s.container}>
         <View style={s.header}>
           <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
+            <Ionicons name="arrow-back" size={24} color={BRAND.textPrimary} />
           </TouchableOpacity>
-          <Text style={[s.headerTitle, { color: colors.text }]}>MY STATS</Text>
+          <Text style={[s.headerTitle, { color: BRAND.textPrimary }]}>MY STATS</Text>
           <View style={s.backBtn} />
         </View>
         <View style={s.emptyState}>
-          <Ionicons name="person-outline" size={48} color={colors.textMuted} />
+          <Ionicons name="person-outline" size={48} color={BRAND.textMuted} />
           <Text style={s.emptyTitle}>Player Not Found</Text>
           <Text style={s.emptySubtitle}>We couldn't find a player profile linked to your account.</Text>
         </View>
@@ -832,11 +831,11 @@ export default function MyStatsScreen() {
       {/* Header */}
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+          <Ionicons name="arrow-back" size={24} color={BRAND.textPrimary} />
         </TouchableOpacity>
         <View style={s.headerCenter}>
-          <Text style={[s.headerTitle, { color: colors.text }]}>MY STATS</Text>
-          {playerName ? <Text style={[s.headerSubtitle, { color: colors.textMuted }]}>{playerName}</Text> : null}
+          <Text style={[s.headerTitle, { color: BRAND.textPrimary }]}>MY STATS</Text>
+          {playerName ? <Text style={[s.headerSubtitle, { color: BRAND.textMuted }]}>{playerName}</Text> : null}
         </View>
         <View style={s.backBtn} />
       </View>
@@ -849,8 +848,8 @@ export default function MyStatsScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={colors.primary}
-            colors={[colors.primary]}
+            tintColor={BRAND.teal}
+            colors={[BRAND.teal]}
           />
         }
       >
@@ -872,7 +871,7 @@ export default function MyStatsScreen() {
         {/* Shoutout Stats */}
         {playerId && (
           <View style={{ marginHorizontal: 20 }}>
-            <ShoutoutProfileSection playerId={playerId} colors={colors} />
+            <ShoutoutProfileSection playerId={playerId} />
           </View>
         )}
 
@@ -889,424 +888,423 @@ export default function MyStatsScreen() {
 // STYLES
 // =============================================================================
 
-const createStyles = (colors: any) =>
-  StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: 'transparent',
-    },
+const s = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
 
-    // Header
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: 16,
-      paddingVertical: 14,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    backBtn: {
-      width: 40,
-      height: 40,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    headerCenter: {
-      alignItems: 'center',
-    },
-    headerTitle: {
-      fontSize: 24,
-      fontWeight: '800',
-      letterSpacing: 2,
-    },
-    headerSubtitle: {
-      fontSize: 12,
-      marginTop: 2,
-    },
+  // Header
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: BRAND.border,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerCenter: {
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontFamily: FONTS.bodyExtraBold,
+    letterSpacing: 2,
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    marginTop: 2,
+  },
 
-    // Scroll
-    scroll: { flex: 1 },
-    scrollContent: { paddingTop: 16 },
+  // Scroll
+  scroll: { flex: 1 },
+  scrollContent: { paddingTop: 16 },
 
-    // Loading
-    centeredLoader: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    loadingText: {
-      fontSize: 14,
-      marginTop: 12,
-    },
+  // Loading
+  centeredLoader: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    fontSize: 14,
+    marginTop: 12,
+  },
 
-    // Empty
-    emptyState: {
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: 60,
-      paddingHorizontal: 32,
-    },
-    emptyTitle: {
-      fontSize: 18,
-      fontWeight: '700',
-      color: colors.text,
-      marginTop: 16,
-    },
-    emptySubtitle: {
-      fontSize: 14,
-      color: colors.textMuted,
-      textAlign: 'center',
-      marginTop: 8,
-      lineHeight: 20,
-    },
+  // Empty
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 32,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontFamily: FONTS.bodyBold,
+    color: BRAND.textPrimary,
+    marginTop: 16,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: BRAND.textMuted,
+    textAlign: 'center',
+    marginTop: 8,
+    lineHeight: 20,
+  },
 
-    // Season Pills
-    seasonPillsContainer: {
-      paddingHorizontal: 16,
-      gap: 8,
-      paddingBottom: 12,
-    },
-    seasonPill: {
-      paddingHorizontal: 18,
-      paddingVertical: 10,
-      borderRadius: 20,
-      borderWidth: 1,
-      borderColor: colors.border,
-      backgroundColor: colors.glassCard,
-    },
-    seasonPillText: {
-      fontSize: 14,
-      fontWeight: '500',
-      color: colors.textMuted,
-    },
+  // Season Pills
+  seasonPillsContainer: {
+    paddingHorizontal: 16,
+    gap: 8,
+    paddingBottom: 12,
+  },
+  seasonPill: {
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: BRAND.border,
+    backgroundColor: BRAND.white,
+  },
+  seasonPillText: {
+    fontSize: 14,
+    fontFamily: FONTS.bodyMedium,
+    color: BRAND.textMuted,
+  },
 
-    // Section
-    section: {
-      paddingHorizontal: 16,
-      marginBottom: 24,
-    },
-    sectionTitle: {
-      fontSize: 13,
-      fontWeight: '700',
-      color: colors.textMuted,
-      textTransform: 'uppercase',
-      letterSpacing: 1.2,
-      marginBottom: 12,
-    },
+  // Section
+  section: {
+    paddingHorizontal: 16,
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 13,
+    fontFamily: FONTS.bodyBold,
+    color: BRAND.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+    marginBottom: 12,
+  },
 
-    // Stat Cards Grid
-    statCardsGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 10,
-    },
-    statCard: {
-      width: '47%' as any,
-      borderWidth: 1,
-      borderRadius: 16,
-      padding: 14,
-      alignItems: 'center',
-      position: 'relative',
-      ...Platform.select({
-        ios: {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.1,
-          shadowRadius: 6,
-        },
-        android: { elevation: 3 },
-      }),
-    },
-    statCardIconWrap: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginBottom: 8,
-    },
-    statCardTotal: {
-      fontSize: 32,
-      fontWeight: '900',
-    },
-    statCardLabel: {
-      fontSize: 13,
-      fontWeight: '600',
-      marginTop: 2,
-    },
-    statCardFooter: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      marginTop: 6,
-    },
-    statCardAvg: {
-      fontSize: 12,
-      fontWeight: '600',
-    },
-    rankBadge: {
-      position: 'absolute',
-      top: 8,
-      right: 8,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-      borderRadius: 10,
-    },
-    rankBadgeText: {
-      fontSize: 11,
-      fontWeight: '800',
-    },
+  // Stat Cards Grid
+  statCardsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  statCard: {
+    width: '47%' as any,
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 14,
+    alignItems: 'center',
+    position: 'relative',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 6,
+      },
+      android: { elevation: 3 },
+    }),
+  },
+  statCardIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  statCardTotal: {
+    fontSize: 32,
+    fontFamily: FONTS.bodyExtraBold,
+  },
+  statCardLabel: {
+    fontSize: 13,
+    fontFamily: FONTS.bodySemiBold,
+    marginTop: 2,
+  },
+  statCardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 6,
+  },
+  statCardAvg: {
+    fontSize: 12,
+    fontFamily: FONTS.bodySemiBold,
+  },
+  rankBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  rankBadgeText: {
+    fontSize: 11,
+    fontFamily: FONTS.bodyExtraBold,
+  },
 
-    // Personal Bests
-    bestsCard: {
-      borderWidth: 1,
-      borderRadius: 16,
-      overflow: 'hidden',
-      ...Platform.select({
-        ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 6 },
-        android: { elevation: 3 },
-      }),
-    },
-    bestRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: 14,
-      paddingHorizontal: 16,
-      gap: 12,
-    },
-    bestInfo: {
-      flex: 1,
-    },
-    bestLabel: {
-      fontSize: 14,
-      fontWeight: '700',
-    },
-    bestMeta: {
-      fontSize: 12,
-      marginTop: 2,
-    },
-    bestValue: {
-      fontSize: 24,
-      fontWeight: '900',
-    },
+  // Personal Bests
+  bestsCard: {
+    borderWidth: 1,
+    borderRadius: 16,
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 6 },
+      android: { elevation: 3 },
+    }),
+  },
+  bestRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  bestInfo: {
+    flex: 1,
+  },
+  bestLabel: {
+    fontSize: 14,
+    fontFamily: FONTS.bodyBold,
+  },
+  bestMeta: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  bestValue: {
+    fontSize: 24,
+    fontFamily: FONTS.bodyExtraBold,
+  },
 
-    // Game History
-    gameRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      borderRadius: 14,
-      borderWidth: 1,
-      marginBottom: 8,
-      overflow: 'hidden',
-      paddingRight: 14,
-    },
-    gameRowAccent: {
-      width: 4,
-      alignSelf: 'stretch',
-    },
-    gameRowContent: {
-      flex: 1,
-      paddingVertical: 12,
-      paddingHorizontal: 14,
-    },
-    gameRowHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-    },
-    gameResultBadge: {
-      width: 24,
-      height: 24,
-      borderRadius: 12,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    gameResultText: {
-      fontSize: 12,
-      fontWeight: '900',
-    },
-    gameRowInfo: {
-      flex: 1,
-    },
-    gameRowOpponent: {
-      fontSize: 14,
-      fontWeight: '600',
-    },
-    gameRowDate: {
-      fontSize: 12,
-      marginTop: 1,
-    },
-    gameRowStats: {
-      fontSize: 12,
-      fontWeight: '600',
-      marginTop: 6,
-    },
+  // Game History
+  gameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 8,
+    overflow: 'hidden',
+    paddingRight: 14,
+  },
+  gameRowAccent: {
+    width: 4,
+    alignSelf: 'stretch',
+  },
+  gameRowContent: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  gameRowHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  gameResultBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  gameResultText: {
+    fontSize: 12,
+    fontFamily: FONTS.bodyExtraBold,
+  },
+  gameRowInfo: {
+    flex: 1,
+  },
+  gameRowOpponent: {
+    fontSize: 14,
+    fontFamily: FONTS.bodySemiBold,
+  },
+  gameRowDate: {
+    fontSize: 12,
+    marginTop: 1,
+  },
+  gameRowStats: {
+    fontSize: 12,
+    fontFamily: FONTS.bodySemiBold,
+    marginTop: 6,
+  },
 
-    // Skill Ratings
-    skillCard: {
-      borderWidth: 1,
-      borderRadius: 16,
-      padding: 16,
-      ...Platform.select({
-        ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 6 },
-        android: { elevation: 3 },
-      }),
-    },
-    skillRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 12,
-      gap: 10,
-    },
-    skillLabel: {
-      width: 80,
-      fontSize: 13,
-      fontWeight: '600',
-    },
-    skillBarTrack: {
-      flex: 1,
-      height: 8,
-      borderRadius: 4,
-      overflow: 'hidden',
-    },
-    skillBarFill: {
-      height: '100%',
-      borderRadius: 4,
-    },
-    skillValue: {
-      width: 40,
-      fontSize: 13,
-      fontWeight: '700',
-      textAlign: 'right',
-    },
-    skillTrend: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      borderTopWidth: 1,
-      paddingTop: 12,
-      marginTop: 4,
-    },
-    skillTrendText: {
-      fontSize: 13,
-      fontWeight: '600',
-      lineHeight: 20,
-    },
-    coachNoteBox: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      gap: 8,
-      borderTopWidth: 1,
-      paddingTop: 12,
-      marginTop: 8,
-    },
-    coachNoteText: {
-      flex: 1,
-      fontSize: 13,
-      fontStyle: 'italic',
-      lineHeight: 18,
-    },
+  // Skill Ratings
+  skillCard: {
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 16,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 6 },
+      android: { elevation: 3 },
+    }),
+  },
+  skillRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 10,
+  },
+  skillLabel: {
+    width: 80,
+    fontSize: 13,
+    fontFamily: FONTS.bodySemiBold,
+  },
+  skillBarTrack: {
+    flex: 1,
+    height: 8,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  skillBarFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  skillValue: {
+    width: 40,
+    fontSize: 13,
+    fontFamily: FONTS.bodyBold,
+    textAlign: 'right',
+  },
+  skillTrend: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    borderTopWidth: 1,
+    paddingTop: 12,
+    marginTop: 4,
+  },
+  skillTrendText: {
+    fontSize: 13,
+    fontFamily: FONTS.bodySemiBold,
+    lineHeight: 20,
+  },
+  coachNoteBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    borderTopWidth: 1,
+    paddingTop: 12,
+    marginTop: 8,
+  },
+  coachNoteText: {
+    flex: 1,
+    fontSize: 13,
+    fontStyle: 'italic',
+    lineHeight: 18,
+  },
 
-    // Drill-Down Modal
-    modalOverlay: {
-      flex: 1,
-      justifyContent: 'flex-end',
-      backgroundColor: 'rgba(0,0,0,0.5)',
-    },
-    modalContent: {
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
-      padding: 20,
-      maxHeight: '80%',
-    },
-    modalHandle: {
-      width: 40,
-      height: 4,
-      borderRadius: 2,
-      alignSelf: 'center',
-      marginBottom: 16,
-    },
-    modalHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 16,
-    },
-    modalStatIcon: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginRight: 12,
-    },
-    modalTitle: {
-      flex: 1,
-      fontSize: 20,
-      fontWeight: '800',
-    },
-    modalRankRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      paddingVertical: 10,
-      paddingHorizontal: 14,
-      borderRadius: 12,
-      borderWidth: 1,
-      marginBottom: 8,
-    },
-    modalRankText: {
-      fontSize: 15,
-      fontWeight: '700',
-    },
-    modalPBRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      paddingVertical: 10,
-      paddingHorizontal: 14,
-      borderRadius: 12,
-      borderWidth: 1,
-      marginBottom: 8,
-    },
-    modalPBText: {
-      fontSize: 14,
-      fontWeight: '700',
-    },
+  // Drill-Down Modal
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContent: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    maxHeight: '80%',
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalStatIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  modalTitle: {
+    flex: 1,
+    fontSize: 20,
+    fontFamily: FONTS.bodyExtraBold,
+  },
+  modalRankRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 8,
+  },
+  modalRankText: {
+    fontSize: 15,
+    fontFamily: FONTS.bodyBold,
+  },
+  modalPBRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 8,
+  },
+  modalPBText: {
+    fontSize: 14,
+    fontFamily: FONTS.bodyBold,
+  },
 
-    // Drill-Down Rows
-    drillDownRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: 10,
-      gap: 10,
-    },
-    drillDownLeft: {
-      width: 100,
-    },
-    drillDownOpponent: {
-      fontSize: 13,
-      fontWeight: '600',
-    },
-    drillDownDate: {
-      fontSize: 11,
-      marginTop: 1,
-    },
-    drillDownBarWrap: {
-      flex: 1,
-    },
-    drillDownBarTrack: {
-      height: 10,
-      borderRadius: 5,
-      overflow: 'hidden',
-    },
-    drillDownBarFill: {
-      height: '100%',
-      borderRadius: 5,
-    },
-    drillDownValue: {
-      width: 36,
-      fontSize: 16,
-      fontWeight: '700',
-      textAlign: 'right',
-    },
-  });
+  // Drill-Down Rows
+  drillDownRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    gap: 10,
+  },
+  drillDownLeft: {
+    width: 100,
+  },
+  drillDownOpponent: {
+    fontSize: 13,
+    fontFamily: FONTS.bodySemiBold,
+  },
+  drillDownDate: {
+    fontSize: 11,
+    marginTop: 1,
+  },
+  drillDownBarWrap: {
+    flex: 1,
+  },
+  drillDownBarTrack: {
+    height: 10,
+    borderRadius: 5,
+    overflow: 'hidden',
+  },
+  drillDownBarFill: {
+    height: '100%',
+    borderRadius: 5,
+  },
+  drillDownValue: {
+    width: 36,
+    fontSize: 16,
+    fontFamily: FONTS.bodyBold,
+    textAlign: 'right',
+  },
+});
