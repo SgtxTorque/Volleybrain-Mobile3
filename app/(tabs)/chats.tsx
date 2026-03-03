@@ -1,8 +1,9 @@
 import { useAuth } from '@/lib/auth';
-import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
+import { radii, shadows, spacing } from '@/lib/design-tokens';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
-import { useTheme } from '@/lib/theme';
+import { BRAND } from '@/theme/colors';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -33,12 +34,32 @@ type User = {
   account_type: string;
 };
 
+const getChannelIcon = (type: string) => {
+  switch (type) {
+    case 'team_chat': return 'people';
+    case 'player_chat': return 'basketball';
+    case 'dm': return 'person';
+    case 'group_dm': return 'people-circle';
+    case 'league_announcement': return 'megaphone';
+    default: return 'chatbubble';
+  }
+};
+
+const getChannelColor = (type: string) => {
+  switch (type) {
+    case 'team_chat': return BRAND.skyBlue;
+    case 'player_chat': return BRAND.success;
+    case 'dm': return BRAND.teal;
+    case 'league_announcement': return BRAND.warning;
+    default: return BRAND.textMuted;
+  }
+};
+
 export default function ChatsScreen() {
   const { profile } = useAuth();
   const { workingSeason } = useSeason();
-  const { colors } = useTheme();
   const router = useRouter();
-  
+
   const [channels, setChannels] = useState<Channel[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -47,7 +68,7 @@ export default function ChatsScreen() {
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<User[]>([]);
   const [searching, setSearching] = useState(false);
-  
+
   // New channel form
   const [newChannelName, setNewChannelName] = useState('');
   const [newChannelType, setNewChannelType] = useState('custom');
@@ -64,7 +85,7 @@ export default function ChatsScreen() {
 
   const fetchChannels = async () => {
     if (!profile || !workingSeason) return;
-    
+
     // Get all channels user is a member of
     const { data: memberChannels } = await supabase
       .from('channel_members')
@@ -217,7 +238,7 @@ export default function ChatsScreen() {
       setSearchResults([]);
       return;
     }
-    
+
     setSearching(true);
     const { data } = await supabase
       .from('profiles')
@@ -226,7 +247,7 @@ export default function ChatsScreen() {
       .in('account_type', ['parent', 'coach', 'admin'])
       .neq('id', profile?.id)
       .limit(20);
-    
+
     setSearchResults(data || []);
     setSearching(false);
   };
@@ -327,7 +348,7 @@ export default function ChatsScreen() {
 
   const createChannel = async () => {
     if (!newChannelName.trim() || !profile || !workingSeason) return;
-    
+
     setCreating(true);
     const { data: newChannel, error } = await supabase
       .from('chat_channels')
@@ -376,33 +397,12 @@ export default function ChatsScreen() {
     router.push({ pathname: '/chat/[id]', params: { id: newChannel.id } });
   };
 
-  const getChannelIcon = (type: string) => {
-    switch (type) {
-      case 'team_chat': return 'people';
-      case 'player_chat': return 'basketball';
-      case 'dm': return 'person';
-      case 'group_dm': return 'people-circle';
-      case 'league_announcement': return 'megaphone';
-      default: return 'chatbubble';
-    }
-  };
-
-  const getChannelColor = (type: string) => {
-    switch (type) {
-      case 'team_chat': return colors.info;
-      case 'player_chat': return colors.success;
-      case 'dm': return colors.primary;
-      case 'league_announcement': return colors.warning;
-      default: return colors.textMuted;
-    }
-  };
-
   const formatTime = (dateStr: string) => {
     const date = new Date(dateStr);
     const now = new Date();
     const diff = now.getTime() - date.getTime();
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    
+
     if (days === 0) {
       return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
     } else if (days === 1) {
@@ -422,54 +422,52 @@ export default function ChatsScreen() {
       return aPinned - bPinned;
     });
 
-  const s = createStyles(colors);
-
   return (
     <SafeAreaView style={s.container}>
       <View style={s.header}>
         <Text style={s.title}>Chats</Text>
         <View style={s.headerActions}>
           <TouchableOpacity style={s.headerBtn} onPress={() => setShowUserSearch(true)}>
-            <Ionicons name="person-add" size={22} color={colors.primary} />
+            <Ionicons name="person-add" size={22} color={BRAND.teal} />
           </TouchableOpacity>
           <TouchableOpacity style={s.headerBtn} onPress={() => setShowNewChat(true)}>
-            <Ionicons name="add-circle" size={26} color={colors.primary} />
+            <Ionicons name="add-circle" size={26} color={BRAND.teal} />
           </TouchableOpacity>
         </View>
       </View>
 
       <View style={s.searchContainer}>
-        <Ionicons name="search" size={18} color={colors.textMuted} />
+        <Ionicons name="search" size={18} color={BRAND.textMuted} />
         <TextInput
           style={s.searchInput}
           placeholder="Search chats..."
-          placeholderTextColor={colors.textMuted}
+          placeholderTextColor={BRAND.textMuted}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
         {searchQuery.length > 0 && (
           <TouchableOpacity onPress={() => setSearchQuery('')}>
-            <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+            <Ionicons name="close-circle" size={18} color={BRAND.textMuted} />
           </TouchableOpacity>
         )}
       </View>
 
-      <ScrollView 
-        style={s.scroll} 
+      <ScrollView
+        style={s.scroll}
         refreshControl={
-          <RefreshControl 
-            refreshing={refreshing} 
-            onRefresh={async () => { 
-              setRefreshing(true); 
-              await fetchChannels(); 
-              setRefreshing(false); 
-            }} 
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={async () => {
+              setRefreshing(true);
+              await fetchChannels();
+              setRefreshing(false);
+            }}
           />
         }
       >
         {filteredChannels.length === 0 ? (
           <View style={s.empty}>
-            <Ionicons name="chatbubbles-outline" size={64} color={colors.textMuted} />
+            <Ionicons name="chatbubbles-outline" size={64} color={BRAND.textMuted} />
             <Text style={s.emptyText}>No chats yet</Text>
             <Text style={s.emptySubtext}>Start a conversation or create a channel</Text>
           </View>
@@ -489,14 +487,14 @@ export default function ChatsScreen() {
                 {channel.avatar_url ? (
                   <Image source={{ uri: channel.avatar_url }} style={s.avatarImage} />
                 ) : (
-                  <Ionicons 
-                    name={getChannelIcon(channel.channel_type) as any} 
-                    size={24} 
-                    color={getChannelColor(channel.channel_type)} 
+                  <Ionicons
+                    name={getChannelIcon(channel.channel_type) as any}
+                    size={24}
+                    color={getChannelColor(channel.channel_type)}
                   />
                 )}
               </View>
-              
+
               <View style={s.channelInfo}>
                 <View style={s.channelHeader}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
@@ -507,7 +505,7 @@ export default function ChatsScreen() {
                     <Text style={s.messageTime}>{formatTime(channel.last_message.created_at)}</Text>
                   )}
                 </View>
-                
+
                 {typingMap[channel.id]?.length > 0 ? (
                   <Text style={s.typingPreview}>typing...</Text>
                 ) : channel.last_message ? (
@@ -537,7 +535,7 @@ export default function ChatsScreen() {
             <View style={s.modalHeader}>
               <Text style={s.modalTitle}>Create Channel</Text>
               <TouchableOpacity onPress={() => setShowNewChat(false)}>
-                <Ionicons name="close" size={24} color={colors.text} />
+                <Ionicons name="close" size={24} color={BRAND.textPrimary} />
               </TouchableOpacity>
             </View>
 
@@ -545,7 +543,7 @@ export default function ChatsScreen() {
             <TextInput
               style={s.input}
               placeholder="e.g., Coaches Corner"
-              placeholderTextColor={colors.textMuted}
+              placeholderTextColor={BRAND.textMuted}
               value={newChannelName}
               onChangeText={setNewChannelName}
             />
@@ -561,10 +559,10 @@ export default function ChatsScreen() {
                   style={[s.typeBtn, newChannelType === type.value && s.typeBtnSel]}
                   onPress={() => setNewChannelType(type.value)}
                 >
-                  <Ionicons 
-                    name={type.icon as any} 
-                    size={20} 
-                    color={newChannelType === type.value ? colors.primary : colors.textMuted} 
+                  <Ionicons
+                    name={type.icon as any}
+                    size={20}
+                    color={newChannelType === type.value ? BRAND.teal : BRAND.textMuted}
                   />
                   <Text style={[s.typeBtnTxt, newChannelType === type.value && s.typeBtnTxtSel]}>
                     {type.label}
@@ -575,17 +573,17 @@ export default function ChatsScreen() {
 
             <Text style={s.label}>Add Members</Text>
             <View style={s.searchContainer}>
-              <Ionicons name="search" size={18} color={colors.textMuted} />
+              <Ionicons name="search" size={18} color={BRAND.textMuted} />
               <TextInput
                 style={s.searchInput}
                 placeholder="Search by name or email..."
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={BRAND.textMuted}
                 value={memberSearchQuery}
                 onChangeText={(q) => { setMemberSearchQuery(q); searchMembersForChannel(q); }}
               />
               {memberSearchQuery.length > 0 && (
                 <TouchableOpacity onPress={() => { setMemberSearchQuery(''); setMemberSearchResults([]); }}>
-                  <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+                  <Ionicons name="close-circle" size={18} color={BRAND.textMuted} />
                 </TouchableOpacity>
               )}
             </View>
@@ -596,11 +594,11 @@ export default function ChatsScreen() {
                 {channelMembers.map((m) => (
                   <TouchableOpacity
                     key={m.id}
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.primary + '20', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16 }}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: BRAND.teal + '20', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16 }}
                     onPress={() => setChannelMembers(prev => prev.filter(p => p.id !== m.id))}
                   >
-                    <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>{m.full_name}</Text>
-                    <Ionicons name="close" size={14} color={colors.primary} />
+                    <Text style={{ color: BRAND.teal, fontSize: 13, fontFamily: FONTS.bodySemiBold }}>{m.full_name}</Text>
+                    <Ionicons name="close" size={14} color={BRAND.teal} />
                   </TouchableOpacity>
                 ))}
               </View>
@@ -612,21 +610,21 @@ export default function ChatsScreen() {
                 {memberSearchResults.map((u) => (
                   <TouchableOpacity
                     key={u.id}
-                    style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}
+                    style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: BRAND.border }}
                     onPress={() => {
                       setChannelMembers(prev => [...prev, u]);
                       setMemberSearchResults(prev => prev.filter(r => r.id !== u.id));
                       setMemberSearchQuery('');
                     }}
                   >
-                    <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colors.primary + '20', justifyContent: 'center', alignItems: 'center', marginRight: 10 }}>
-                      <Ionicons name="person" size={18} color={colors.primary} />
+                    <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: BRAND.teal + '20', justifyContent: 'center', alignItems: 'center', marginRight: 10 }}>
+                      <Ionicons name="person" size={18} color={BRAND.teal} />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>{u.full_name}</Text>
-                      <Text style={{ color: colors.textMuted, fontSize: 12 }}>{u.email}</Text>
+                      <Text style={{ color: BRAND.textPrimary, fontSize: 14, fontFamily: FONTS.bodySemiBold }}>{u.full_name}</Text>
+                      <Text style={{ color: BRAND.textMuted, fontSize: 12 }}>{u.email}</Text>
                     </View>
-                    <Ionicons name="add-circle" size={22} color={colors.primary} />
+                    <Ionicons name="add-circle" size={22} color={BRAND.teal} />
                   </TouchableOpacity>
                 ))}
               </ScrollView>
@@ -650,16 +648,16 @@ export default function ChatsScreen() {
             <View style={s.modalHeader}>
               <Text style={s.modalTitle}>New Message</Text>
               <TouchableOpacity onPress={() => { setShowUserSearch(false); setUserSearchQuery(''); setSearchResults([]); }}>
-                <Ionicons name="close" size={24} color={colors.text} />
+                <Ionicons name="close" size={24} color={BRAND.textPrimary} />
               </TouchableOpacity>
             </View>
 
             <View style={s.searchContainer}>
-              <Ionicons name="search" size={18} color={colors.textMuted} />
+              <Ionicons name="search" size={18} color={BRAND.textMuted} />
               <TextInput
                 style={s.searchInput}
                 placeholder="Search by name or email..."
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={BRAND.textMuted}
                 value={userSearchQuery}
                 onChangeText={(text) => {
                   setUserSearchQuery(text);
@@ -674,8 +672,8 @@ export default function ChatsScreen() {
                 <Text style={s.searchingText}>Searching...</Text>
               )}
               {searchResults.map(user => (
-                <TouchableOpacity 
-                  key={user.id} 
+                <TouchableOpacity
+                  key={user.id}
                   style={s.userResult}
                   onPress={() => startDM(user)}
                 >
@@ -688,7 +686,7 @@ export default function ChatsScreen() {
                     <Text style={s.userName}>{user.full_name}</Text>
                     <Text style={s.userType}>{user.account_type}</Text>
                   </View>
-                  <Ionicons name="chatbubble" size={20} color={colors.primary} />
+                  <Ionicons name="chatbubble" size={20} color={BRAND.teal} />
                 </TouchableOpacity>
               ))}
               {!searching && userSearchQuery.length >= 2 && searchResults.length === 0 && (
@@ -702,52 +700,52 @@ export default function ChatsScreen() {
   );
 }
 
-const createStyles = (colors: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: BRAND.offWhite },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: spacing.screenPadding, paddingVertical: 12 },
-  title: { ...displayTextStyle, fontSize: 28, color: colors.text },
+  title: { fontFamily: FONTS.display, textTransform: 'uppercase', letterSpacing: 0.8, fontSize: 28, color: BRAND.textPrimary },
   headerActions: { flexDirection: 'row', gap: 12 },
   headerBtn: { padding: 4 },
-  searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, marginHorizontal: 16, marginBottom: 12, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, gap: 8 },
-  searchInput: { flex: 1, fontSize: 16, color: colors.text },
+  searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: BRAND.white, marginHorizontal: 16, marginBottom: 12, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, gap: 8 },
+  searchInput: { flex: 1, fontSize: 16, color: BRAND.textPrimary },
   scroll: { flex: 1 },
   empty: { alignItems: 'center', padding: 60 },
-  emptyText: { color: colors.text, fontSize: 18, fontWeight: '600', marginTop: 16 },
-  emptySubtext: { color: colors.textMuted, fontSize: 14, marginTop: 4 },
+  emptyText: { color: BRAND.textPrimary, fontSize: 18, fontFamily: FONTS.bodySemiBold, marginTop: 16 },
+  emptySubtext: { color: BRAND.textMuted, fontSize: 14, marginTop: 4 },
   channelCard: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, marginHorizontal: 16, marginBottom: 8, backgroundColor: '#FFF', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   channelAvatar: { width: 52, height: 52, borderRadius: 26, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   avatarImage: { width: 52, height: 52, borderRadius: 26 },
   channelInfo: { flex: 1 },
   channelHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-  channelName: { fontSize: 16, fontWeight: '600', color: colors.text, flexShrink: 1 },
-  messageTime: { fontSize: 12, color: colors.textMuted },
-  lastMessage: { fontSize: 14, color: colors.textMuted },
-  senderName: { fontWeight: '500' },
-  noMessages: { fontSize: 14, color: colors.textMuted, fontStyle: 'italic' },
-  typingPreview: { fontSize: 14, color: colors.primary, fontStyle: 'italic' },
-  unreadBadge: { backgroundColor: colors.primary, minWidth: 22, height: 22, borderRadius: 11, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 6 },
-  unreadText: { color: colors.background, fontSize: 12, fontWeight: 'bold' },
+  channelName: { fontSize: 16, fontFamily: FONTS.bodySemiBold, color: BRAND.textPrimary, flexShrink: 1 },
+  messageTime: { fontSize: 12, color: BRAND.textMuted },
+  lastMessage: { fontSize: 14, color: BRAND.textMuted },
+  senderName: { fontFamily: FONTS.bodyMedium },
+  noMessages: { fontSize: 14, color: BRAND.textMuted, fontStyle: 'italic' },
+  typingPreview: { fontSize: 14, color: BRAND.teal, fontStyle: 'italic' },
+  unreadBadge: { backgroundColor: BRAND.teal, minWidth: 22, height: 22, borderRadius: 11, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 6 },
+  unreadText: { color: BRAND.offWhite, fontSize: 12, fontFamily: FONTS.bodyBold },
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-  modal: { backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '80%' },
+  modal: { backgroundColor: BRAND.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '80%' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  modalTitle: { fontSize: 20, fontWeight: 'bold', color: colors.text },
-  label: { fontSize: 12, color: colors.textMuted, fontWeight: '700', marginBottom: 8, marginTop: 12, textTransform: 'uppercase' as const, letterSpacing: 1 },
-  input: { backgroundColor: colors.background, borderRadius: 12, padding: 16, fontSize: 16, color: colors.text, borderWidth: 1, borderColor: colors.border },
+  modalTitle: { fontSize: 20, fontFamily: FONTS.bodyBold, color: BRAND.textPrimary },
+  label: { fontSize: 12, color: BRAND.textMuted, fontFamily: FONTS.bodyBold, marginBottom: 8, marginTop: 12, textTransform: 'uppercase' as const, letterSpacing: 1 },
+  input: { backgroundColor: BRAND.offWhite, borderRadius: 12, padding: 16, fontSize: 16, color: BRAND.textPrimary, borderWidth: 1, borderColor: BRAND.border },
   typeRow: { flexDirection: 'row', gap: 12 },
-  typeBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.background, padding: 14, borderRadius: 12, borderWidth: 1, borderColor: colors.border },
-  typeBtnSel: { borderColor: colors.primary, backgroundColor: colors.primary + '15' },
-  typeBtnTxt: { fontSize: 14, color: colors.textMuted },
-  typeBtnTxtSel: { color: colors.primary, fontWeight: '600' },
-  createBtn: { backgroundColor: colors.primary, padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 24 },
-  createBtnTxt: { color: colors.background, fontSize: 18, fontWeight: 'bold' },
+  typeBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: BRAND.offWhite, padding: 14, borderRadius: 12, borderWidth: 1, borderColor: BRAND.border },
+  typeBtnSel: { borderColor: BRAND.teal, backgroundColor: BRAND.teal + '15' },
+  typeBtnTxt: { fontSize: 14, color: BRAND.textMuted },
+  typeBtnTxtSel: { color: BRAND.teal, fontFamily: FONTS.bodySemiBold },
+  createBtn: { backgroundColor: BRAND.teal, padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 24 },
+  createBtnTxt: { color: BRAND.offWhite, fontSize: 18, fontFamily: FONTS.bodyBold },
   disabled: { opacity: 0.5 },
   searchResults: { maxHeight: 400 },
-  searchingText: { color: colors.textMuted, textAlign: 'center', padding: 20 },
-  userResult: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
-  userAvatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.border, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  userInitials: { color: colors.primary, fontSize: 16, fontWeight: 'bold' },
+  searchingText: { color: BRAND.textMuted, textAlign: 'center', padding: 20 },
+  userResult: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: BRAND.border },
+  userAvatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: BRAND.border, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  userInitials: { color: BRAND.teal, fontSize: 16, fontFamily: FONTS.bodyBold },
   userInfo: { flex: 1 },
-  userName: { fontSize: 16, fontWeight: '600', color: colors.text },
-  userType: { fontSize: 13, color: colors.textMuted, textTransform: 'capitalize' },
-  noResults: { color: colors.textMuted, textAlign: 'center', padding: 20 },
+  userName: { fontSize: 16, fontFamily: FONTS.bodySemiBold, color: BRAND.textPrimary },
+  userType: { fontSize: 13, color: BRAND.textMuted, textTransform: 'capitalize' },
+  noResults: { color: BRAND.textMuted, textAlign: 'center', padding: 20 },
 });

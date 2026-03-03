@@ -1,14 +1,15 @@
 import { useAuth } from '@/lib/auth';
-import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
+import { radii, shadows, spacing } from '@/lib/design-tokens';
 import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
-import { useTheme } from '@/lib/theme';
+import { BRAND } from '@/theme/colors';
+import { FONTS } from '@/theme/fonts';
 import AppHeaderBar from '@/components/ui/AppHeaderBar';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import {
   Alert,
   FlatList,
@@ -99,16 +100,24 @@ function getMessagePreview(msg?: Channel['last_message']): string {
   }
 }
 
+function getChannelColor(type: string): string {
+  switch (type) {
+    case 'team_chat': return BRAND.skyBlue;
+    case 'player_chat': return BRAND.success;
+    case 'dm': return BRAND.teal;
+    case 'league_announcement': return BRAND.warning;
+    default: return BRAND.textMuted;
+  }
+}
+
 // ===========================================================================
 // Component
 // ===========================================================================
 export default function CoachChatScreen() {
   const { profile } = useAuth();
   const { workingSeason } = useSeason();
-  const { colors } = useTheme();
   const { isAdmin } = usePermissions();
   const router = useRouter();
-  const s = useMemo(() => createStyles(colors), [colors]);
 
   // --- Channels ---
   const [channels, setChannels] = useState<Channel[]>([]);
@@ -585,29 +594,13 @@ export default function CoachChatScreen() {
   }, [fetchChannels]);
 
   // =========================================================================
-  // Channel color helper
-  // =========================================================================
-  const getChannelColor = useCallback(
-    (type: string) => {
-      switch (type) {
-        case 'team_chat': return colors.info || colors.primary;
-        case 'player_chat': return colors.success;
-        case 'dm': return colors.primary;
-        case 'league_announcement': return colors.warning;
-        default: return colors.textMuted;
-      }
-    },
-    [colors],
-  );
-
-  // =========================================================================
   // Render: list item
   // =========================================================================
   const renderItem = useCallback(
     ({ item }: { item: ListItem }) => {
       if (item.type === 'header') {
         return (
-          <Text style={[s.sectionLabel, { color: colors.textMuted }]}>
+          <Text style={s.sectionLabel}>
             {item.title.toUpperCase()}
           </Text>
         );
@@ -620,7 +613,7 @@ export default function CoachChatScreen() {
 
       return (
         <TouchableOpacity
-          style={[s.channelCard, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}
+          style={s.channelCard}
           activeOpacity={0.7}
           onPress={() => handleChannelPress(channel.id)}
           onLongPress={() =>
@@ -645,39 +638,39 @@ export default function CoachChatScreen() {
           <View style={s.channelInfo}>
             <View style={s.channelHeader}>
               <View style={s.nameRow}>
-                {isPinned && <Ionicons name="pin" size={12} color={colors.textMuted} style={{ marginRight: 4 }} />}
-                <Text style={[s.channelName, { color: colors.text }]} numberOfLines={1}>
+                {isPinned && <Ionicons name="pin" size={12} color={BRAND.textMuted} style={{ marginRight: 4 }} />}
+                <Text style={s.channelName} numberOfLines={1}>
                   {channel.name}
                 </Text>
               </View>
               {channel.last_message && (
-                <Text style={[s.messageTime, { color: colors.textMuted }]}>
+                <Text style={s.messageTime}>
                   {formatTime(channel.last_message.created_at)}
                 </Text>
               )}
             </View>
 
             {isTyping ? (
-              <Text style={[s.typingText, { color: colors.primary }]}>typing...</Text>
+              <Text style={s.typingText}>typing...</Text>
             ) : channel.last_message ? (
-              <Text style={[s.lastMessage, { color: colors.textMuted }]} numberOfLines={1}>
+              <Text style={s.lastMessage} numberOfLines={1}>
                 <Text style={s.senderName}>{channel.last_message.sender_name}: </Text>
                 {getMessagePreview(channel.last_message)}
               </Text>
             ) : (
-              <Text style={[s.noMessages, { color: colors.textMuted }]}>No messages yet</Text>
+              <Text style={s.noMessages}>No messages yet</Text>
             )}
           </View>
 
           {(channel.unread_count ?? 0) > 0 && (
-            <View style={[s.unreadBadge, { backgroundColor: colors.primary }]}>
+            <View style={s.unreadBadge}>
               <Text style={s.unreadText}>{channel.unread_count}</Text>
             </View>
           )}
         </TouchableOpacity>
       );
     },
-    [colors, pinnedIds, typingMap, getChannelColor, handleChannelPress, togglePin, s],
+    [pinnedIds, typingMap, handleChannelPress, togglePin],
   );
 
   // =========================================================================
@@ -685,9 +678,9 @@ export default function CoachChatScreen() {
   // =========================================================================
   const EmptyState = () => (
     <View style={s.emptyState}>
-      <Ionicons name="chatbubbles-outline" size={64} color={colors.textMuted} />
-      <Text style={[s.emptyTitle, { color: colors.text }]}>No conversations yet</Text>
-      <Text style={[s.emptySubtitle, { color: colors.textMuted }]}>
+      <Ionicons name="chatbubbles-outline" size={64} color={BRAND.textMuted} />
+      <Text style={s.emptyTitle}>No conversations yet</Text>
+      <Text style={s.emptySubtitle}>
         Start a conversation or send a blast to your team.
       </Text>
     </View>
@@ -697,22 +690,22 @@ export default function CoachChatScreen() {
   // Main render
   // =========================================================================
   return (
-    <SafeAreaView style={[s.container, { backgroundColor: colors.background }]} edges={['top']}>
+    <SafeAreaView style={s.container} edges={['top']}>
       <AppHeaderBar title="CHAT" showAvatar={false} showNotificationBell={false} />
 
       {/* Search bar */}
-      <View style={[s.searchContainer, { backgroundColor: colors.card }]}>
-        <Ionicons name="search" size={18} color={colors.textMuted} />
+      <View style={s.searchContainer}>
+        <Ionicons name="search" size={18} color={BRAND.textMuted} />
         <TextInput
-          style={[s.searchInput, { color: colors.text }]}
+          style={s.searchInput}
           placeholder="Search conversations..."
-          placeholderTextColor={colors.textMuted}
+          placeholderTextColor={BRAND.textMuted}
           value={searchQuery}
           onChangeText={onSearchChange}
         />
         {searchQuery.length > 0 && (
           <TouchableOpacity onPress={() => { setSearchQuery(''); setDebouncedQuery(''); }}>
-            <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+            <Ionicons name="close-circle" size={18} color={BRAND.textMuted} />
           </TouchableOpacity>
         )}
       </View>
@@ -724,7 +717,7 @@ export default function CoachChatScreen() {
         renderItem={renderItem}
         ListEmptyComponent={EmptyState}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BRAND.teal} />
         }
         contentContainerStyle={[s.listContent, listData.length === 0 && { flex: 1 }]}
         showsVerticalScrollIndicator={false}
@@ -753,7 +746,7 @@ export default function CoachChatScreen() {
             onPress={() => { setFabExpanded(false); setShowNewChannel(true); }}
           >
             <Text style={s.fabMenuLabel}>New Channel</Text>
-            <View style={[s.fabMenuIcon, { backgroundColor: colors.info || colors.primary }]}>
+            <View style={[s.fabMenuIcon, { backgroundColor: BRAND.skyBlue }]}>
               <Ionicons name="people" size={20} color="#FFF" />
             </View>
           </TouchableOpacity>
@@ -763,7 +756,7 @@ export default function CoachChatScreen() {
             onPress={() => { setFabExpanded(false); setShowDmModal(true); fetchOrgMembers(); }}
           >
             <Text style={s.fabMenuLabel}>New Message</Text>
-            <View style={[s.fabMenuIcon, { backgroundColor: colors.primary }]}>
+            <View style={[s.fabMenuIcon, { backgroundColor: BRAND.teal }]}>
               <Ionicons name="chatbubble" size={20} color="#FFF" />
             </View>
           </TouchableOpacity>
@@ -772,7 +765,7 @@ export default function CoachChatScreen() {
 
       {/* FAB button */}
       <TouchableOpacity
-        style={[s.fab, { backgroundColor: colors.primary }]}
+        style={s.fab}
         onPress={() => setFabExpanded(!fabExpanded)}
         activeOpacity={0.8}
       >
@@ -782,21 +775,21 @@ export default function CoachChatScreen() {
       {/* DM Modal */}
       <Modal visible={showDmModal} animationType="slide" transparent>
         <View style={s.overlay}>
-          <View style={[s.modal, { backgroundColor: colors.card }]}>
+          <View style={s.modal}>
             <View style={s.modalHandle} />
             <View style={s.modalHeader}>
-              <Text style={[s.modalTitle, { color: colors.text }]}>New Message</Text>
+              <Text style={s.modalTitle}>New Message</Text>
               <TouchableOpacity onPress={() => { setShowDmModal(false); setUserSearchQuery(''); setSearchResults([]); }}>
-                <Ionicons name="close" size={24} color={colors.text} />
+                <Ionicons name="close" size={24} color={BRAND.textPrimary} />
               </TouchableOpacity>
             </View>
 
-            <View style={[s.searchContainer, { backgroundColor: colors.background }]}>
-              <Ionicons name="search" size={18} color={colors.textMuted} />
+            <View style={s.searchContainerAlt}>
+              <Ionicons name="search" size={18} color={BRAND.textMuted} />
               <TextInput
-                style={[s.searchInput, { color: colors.text }]}
+                style={s.searchInput}
                 placeholder="Search by name or email..."
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={BRAND.textMuted}
                 value={userSearchQuery}
                 onChangeText={text => { setUserSearchQuery(text); searchUsers(text); }}
                 autoFocus
@@ -805,36 +798,36 @@ export default function CoachChatScreen() {
 
             <ScrollView style={s.dmResults} keyboardShouldPersistTaps="handled">
               {searching && (
-                <Text style={[s.searchingText, { color: colors.textMuted }]}>Searching...</Text>
+                <Text style={s.searchingText}>Searching...</Text>
               )}
               {/* Show search results when searching, otherwise show all org members */}
               {(userSearchQuery.length >= 2 ? searchResults : orgMembers).map(u => {
                 const roleColors: Record<string, string> = { admin: '#AF52DE', coach: '#0EA5E9', parent: '#22C55E' };
-                const roleColor = roleColors[u.account_type] || colors.textMuted;
+                const roleColor = roleColors[u.account_type] || BRAND.textMuted;
                 return (
-                  <TouchableOpacity key={u.id} style={[s.userRow, { borderBottomColor: colors.border }]} onPress={() => startDM(u)}>
-                    <View style={[s.userAvatar, { backgroundColor: colors.primary + '20' }]}>
-                      <Text style={[s.userInitials, { color: colors.primary }]}>
+                  <TouchableOpacity key={u.id} style={s.userRow} onPress={() => startDM(u)}>
+                    <View style={s.userAvatar}>
+                      <Text style={s.userInitials}>
                         {(u.full_name || '?').split(' ').map(n => n[0]).join('').slice(0, 2)}
                       </Text>
                     </View>
                     <View style={s.userInfo}>
-                      <Text style={[s.userName, { color: colors.text }]}>{u.full_name || 'Unknown'}</Text>
+                      <Text style={s.userName}>{u.full_name || 'Unknown'}</Text>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 1 }}>
                         <View style={{ backgroundColor: roleColor + '20', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
-                          <Text style={{ fontSize: 10, fontWeight: '700', color: roleColor, textTransform: 'capitalize' }}>{u.account_type}</Text>
+                          <Text style={{ fontSize: 10, fontFamily: FONTS.bodyBold, color: roleColor, textTransform: 'capitalize' }}>{u.account_type}</Text>
                         </View>
                       </View>
                     </View>
-                    <Ionicons name="chatbubble" size={20} color={colors.primary} />
+                    <Ionicons name="chatbubble" size={20} color={BRAND.teal} />
                   </TouchableOpacity>
                 );
               })}
               {!searching && userSearchQuery.length >= 2 && searchResults.length === 0 && (
-                <Text style={[s.noResults, { color: colors.textMuted }]}>No users found</Text>
+                <Text style={s.noResults}>No users found</Text>
               )}
               {userSearchQuery.length < 2 && orgMembers.length === 0 && (
-                <Text style={[s.searchingText, { color: colors.textMuted }]}>Loading members...</Text>
+                <Text style={s.searchingText}>Loading members...</Text>
               )}
             </ScrollView>
           </View>
@@ -844,25 +837,25 @@ export default function CoachChatScreen() {
       {/* Channel Creation Modal */}
       <Modal visible={showNewChannel} animationType="slide" transparent>
         <View style={s.overlay}>
-          <View style={[s.modal, { backgroundColor: colors.card }]}>
+          <View style={s.modal}>
             <View style={s.modalHandle} />
             <View style={s.modalHeader}>
-              <Text style={[s.modalTitle, { color: colors.text }]}>Create Channel</Text>
+              <Text style={s.modalTitle}>Create Channel</Text>
               <TouchableOpacity onPress={() => { setShowNewChannel(false); setNewChannelName(''); setChannelMembers([]); setMemberSearchQuery(''); setMemberSearchResults([]); }}>
-                <Ionicons name="close" size={24} color={colors.text} />
+                <Ionicons name="close" size={24} color={BRAND.textPrimary} />
               </TouchableOpacity>
             </View>
 
-            <Text style={[s.formLabel, { color: colors.textMuted }]}>Channel Name</Text>
+            <Text style={s.formLabel}>Channel Name</Text>
             <TextInput
-              style={[s.formInput, { color: colors.text, backgroundColor: colors.background, borderColor: colors.border }]}
+              style={s.formInput}
               placeholder="e.g., Coaches Corner"
-              placeholderTextColor={colors.textMuted}
+              placeholderTextColor={BRAND.textMuted}
               value={newChannelName}
               onChangeText={setNewChannelName}
             />
 
-            <Text style={[s.formLabel, { color: colors.textMuted }]}>Channel Type</Text>
+            <Text style={s.formLabel}>Channel Type</Text>
             <View style={s.typeRow}>
               {[
                 { value: 'custom', label: 'Custom', icon: 'chatbubble' },
@@ -870,30 +863,30 @@ export default function CoachChatScreen() {
               ].map(type => (
                 <TouchableOpacity
                   key={type.value}
-                  style={[s.typeBtn, { borderColor: colors.border }, newChannelType === type.value && { borderColor: colors.primary, backgroundColor: colors.primary + '10' }]}
+                  style={[s.typeBtn, newChannelType === type.value && s.typeBtnActive]}
                   onPress={() => setNewChannelType(type.value)}
                 >
-                  <Ionicons name={type.icon as any} size={20} color={newChannelType === type.value ? colors.primary : colors.textMuted} />
-                  <Text style={{ color: newChannelType === type.value ? colors.primary : colors.textMuted, fontWeight: '600', fontSize: 14, marginLeft: 6 }}>
+                  <Ionicons name={type.icon as any} size={20} color={newChannelType === type.value ? BRAND.teal : BRAND.textMuted} />
+                  <Text style={[s.typeBtnLabel, newChannelType === type.value && s.typeBtnLabelActive]}>
                     {type.label}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            <Text style={[s.formLabel, { color: colors.textMuted }]}>Add Members</Text>
-            <View style={[s.searchContainer, { backgroundColor: colors.background }]}>
-              <Ionicons name="search" size={18} color={colors.textMuted} />
+            <Text style={s.formLabel}>Add Members</Text>
+            <View style={s.searchContainerAlt}>
+              <Ionicons name="search" size={18} color={BRAND.textMuted} />
               <TextInput
-                style={[s.searchInput, { color: colors.text }]}
+                style={s.searchInput}
                 placeholder="Search by name or email..."
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={BRAND.textMuted}
                 value={memberSearchQuery}
                 onChangeText={q => { setMemberSearchQuery(q); searchMembersForChannel(q); }}
               />
               {memberSearchQuery.length > 0 && (
                 <TouchableOpacity onPress={() => { setMemberSearchQuery(''); setMemberSearchResults([]); }}>
-                  <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+                  <Ionicons name="close-circle" size={18} color={BRAND.textMuted} />
                 </TouchableOpacity>
               )}
             </View>
@@ -903,11 +896,11 @@ export default function CoachChatScreen() {
                 {channelMembers.map(m => (
                   <TouchableOpacity
                     key={m.id}
-                    style={[s.memberChip, { backgroundColor: colors.primary + '20' }]}
+                    style={s.memberChip}
                     onPress={() => setChannelMembers(prev => prev.filter(p => p.id !== m.id))}
                   >
-                    <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>{m.full_name}</Text>
-                    <Ionicons name="close" size={14} color={colors.primary} />
+                    <Text style={s.memberChipText}>{m.full_name}</Text>
+                    <Ionicons name="close" size={14} color={BRAND.teal} />
                   </TouchableOpacity>
                 ))}
               </View>
@@ -918,28 +911,28 @@ export default function CoachChatScreen() {
                 {memberSearchResults.map(u => (
                   <TouchableOpacity
                     key={u.id}
-                    style={[s.userRow, { borderBottomColor: colors.border }]}
+                    style={s.userRow}
                     onPress={() => {
                       setChannelMembers(prev => [...prev, u]);
                       setMemberSearchResults(prev => prev.filter(r => r.id !== u.id));
                       setMemberSearchQuery('');
                     }}
                   >
-                    <View style={[s.userAvatar, { backgroundColor: colors.primary + '20' }]}>
-                      <Ionicons name="person" size={18} color={colors.primary} />
+                    <View style={s.userAvatar}>
+                      <Ionicons name="person" size={18} color={BRAND.teal} />
                     </View>
                     <View style={s.userInfo}>
-                      <Text style={[s.userName, { color: colors.text }]}>{u.full_name}</Text>
-                      <Text style={[s.userRole, { color: colors.textMuted }]}>{u.email}</Text>
+                      <Text style={s.userName}>{u.full_name}</Text>
+                      <Text style={s.userRole}>{u.email}</Text>
                     </View>
-                    <Ionicons name="add-circle" size={22} color={colors.primary} />
+                    <Ionicons name="add-circle" size={22} color={BRAND.teal} />
                   </TouchableOpacity>
                 ))}
               </ScrollView>
             )}
 
             <TouchableOpacity
-              style={[s.createBtn, { backgroundColor: colors.primary }, creating && { opacity: 0.5 }]}
+              style={[s.createBtn, creating && { opacity: 0.5 }]}
               onPress={createChannel}
               disabled={creating}
             >
@@ -955,113 +948,134 @@ export default function CoachChatScreen() {
 // ===========================================================================
 // Styles
 // ===========================================================================
-function createStyles(colors: any) {
-  return StyleSheet.create({
-    container: { flex: 1 },
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: BRAND.offWhite },
 
-    // Search
-    searchContainer: {
-      flexDirection: 'row', alignItems: 'center',
-      marginHorizontal: spacing.screenPadding, marginBottom: 12,
-      paddingHorizontal: 12, paddingVertical: 10,
-      borderRadius: radii.card, gap: 8,
-    },
-    searchInput: { flex: 1, fontSize: 16 },
+  // Search
+  searchContainer: {
+    flexDirection: 'row', alignItems: 'center',
+    marginHorizontal: spacing.screenPadding, marginBottom: 12,
+    paddingHorizontal: 12, paddingVertical: 10,
+    borderRadius: radii.card, gap: 8,
+    backgroundColor: BRAND.white,
+  },
+  searchContainerAlt: {
+    flexDirection: 'row', alignItems: 'center',
+    marginHorizontal: 0, marginBottom: 12,
+    paddingHorizontal: 12, paddingVertical: 10,
+    borderRadius: radii.card, gap: 8,
+    backgroundColor: BRAND.offWhite,
+  },
+  searchInput: { flex: 1, fontSize: 16, fontFamily: FONTS.bodyLight, color: BRAND.textPrimary },
 
-    // List
-    listContent: { paddingBottom: 100 },
-    sectionLabel: {
-      fontSize: 11, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase',
-      paddingHorizontal: spacing.screenPadding, paddingTop: 14, paddingBottom: 6,
-    },
+  // List
+  listContent: { paddingBottom: 100 },
+  sectionLabel: {
+    fontSize: 11, fontFamily: FONTS.bodyBold, letterSpacing: 1, textTransform: 'uppercase',
+    paddingHorizontal: spacing.screenPadding, paddingTop: 14, paddingBottom: 6,
+    color: BRAND.textMuted,
+  },
 
-    // Channel card
-    channelCard: {
-      flexDirection: 'row', alignItems: 'center',
-      paddingHorizontal: 16, paddingVertical: 12,
-      marginHorizontal: spacing.screenPadding, marginBottom: 8,
-      borderRadius: radii.card, borderWidth: 1, ...shadows.card,
-    },
-    channelAvatar: { width: 52, height: 52, borderRadius: 26, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-    avatarImage: { width: 52, height: 52, borderRadius: 26 },
-    channelInfo: { flex: 1 },
-    channelHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
-    nameRow: { flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 },
-    channelName: { fontSize: 16, fontWeight: '600', flexShrink: 1 },
-    messageTime: { fontSize: 12 },
-    lastMessage: { fontSize: 14 },
-    senderName: { fontWeight: '500' },
-    noMessages: { fontSize: 14, fontStyle: 'italic' },
-    typingText: { fontSize: 14, fontStyle: 'italic' },
-    unreadBadge: { minWidth: 22, height: 22, borderRadius: 11, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 6, marginLeft: 8 },
-    unreadText: { color: '#FFFFFF', fontSize: 12, fontWeight: 'bold' },
+  // Channel card
+  channelCard: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 16, paddingVertical: 12,
+    marginHorizontal: spacing.screenPadding, marginBottom: 8,
+    borderRadius: radii.card, borderWidth: 1, ...shadows.card,
+    backgroundColor: BRAND.white, borderColor: BRAND.border,
+  },
+  channelAvatar: { width: 52, height: 52, borderRadius: 26, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  avatarImage: { width: 52, height: 52, borderRadius: 26 },
+  channelInfo: { flex: 1 },
+  channelHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 },
+  channelName: { fontSize: 16, fontFamily: FONTS.bodySemiBold, flexShrink: 1, color: BRAND.textPrimary },
+  messageTime: { fontSize: 12, fontFamily: FONTS.bodyLight, color: BRAND.textMuted },
+  lastMessage: { fontSize: 14, fontFamily: FONTS.bodyLight, color: BRAND.textMuted },
+  senderName: { fontFamily: FONTS.bodyMedium },
+  noMessages: { fontSize: 14, fontStyle: 'italic', fontFamily: FONTS.bodyLight, color: BRAND.textMuted },
+  typingText: { fontSize: 14, fontStyle: 'italic', fontFamily: FONTS.bodyLight, color: BRAND.teal },
+  unreadBadge: { minWidth: 22, height: 22, borderRadius: 11, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 6, marginLeft: 8, backgroundColor: BRAND.teal },
+  unreadText: { color: '#FFFFFF', fontSize: 12, fontFamily: FONTS.bodyBold },
 
-    // Empty state
-    emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },
-    emptyTitle: { fontSize: 18, fontWeight: '700', marginTop: 16, marginBottom: 6 },
-    emptySubtitle: { fontSize: 14, textAlign: 'center', lineHeight: 20 },
+  // Empty state
+  emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },
+  emptyTitle: { fontSize: 18, fontFamily: FONTS.bodyBold, marginTop: 16, marginBottom: 6, color: BRAND.textPrimary },
+  emptySubtitle: { fontSize: 14, textAlign: 'center', lineHeight: 20, fontFamily: FONTS.bodyLight, color: BRAND.textMuted },
 
-    // FAB
-    fab: {
-      position: 'absolute', bottom: 24, right: 24,
-      width: 56, height: 56, borderRadius: 28,
-      justifyContent: 'center', alignItems: 'center',
-      ...shadows.cardHover, zIndex: 20,
-    },
-    fabScrim: {
-      ...StyleSheet.absoluteFillObject,
-      backgroundColor: 'rgba(0,0,0,0.4)',
-      zIndex: 10,
-    },
-    fabMenu: {
-      position: 'absolute', bottom: 90, right: 24,
-      gap: 12, zIndex: 15,
-    },
-    fabMenuItem: {
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 10,
-    },
-    fabMenuIcon: {
-      width: 44, height: 44, borderRadius: 22,
-      justifyContent: 'center', alignItems: 'center',
-      ...shadows.card,
-    },
-    fabMenuLabel: {
-      fontSize: 14, fontWeight: '600', color: '#FFFFFF',
-      backgroundColor: 'rgba(0,0,0,0.75)',
-      paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16,
-      overflow: 'hidden',
-    },
+  // FAB
+  fab: {
+    position: 'absolute', bottom: 24, right: 24,
+    width: 56, height: 56, borderRadius: 28,
+    justifyContent: 'center', alignItems: 'center',
+    ...shadows.cardHover, zIndex: 20,
+    backgroundColor: BRAND.teal,
+  },
+  fabScrim: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    zIndex: 10,
+  },
+  fabMenu: {
+    position: 'absolute', bottom: 90, right: 24,
+    gap: 12, zIndex: 15,
+  },
+  fabMenuItem: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 10,
+  },
+  fabMenuIcon: {
+    width: 44, height: 44, borderRadius: 22,
+    justifyContent: 'center', alignItems: 'center',
+    ...shadows.card,
+  },
+  fabMenuLabel: {
+    fontSize: 14, fontFamily: FONTS.bodySemiBold, color: '#FFFFFF',
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16,
+    overflow: 'hidden',
+  },
 
-    // Modal
-    overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-    modal: { borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 24, paddingBottom: 24, paddingTop: 12, minHeight: '60%', maxHeight: '70%' },
-    modalHandle: {
-      width: 40, height: 4, borderRadius: 2, backgroundColor: colors.textMuted,
-      alignSelf: 'center', marginBottom: 16, opacity: 0.4,
-    },
-    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-    modalTitle: { fontSize: 20, fontWeight: 'bold' },
-    dmResults: { maxHeight: 400 },
-    searchingText: { textAlign: 'center', padding: 20 },
-    userRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1 },
-    userAvatar: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-    userInitials: { fontSize: 16, fontWeight: 'bold' },
-    userInfo: { flex: 1 },
-    userName: { fontSize: 16, fontWeight: '600' },
-    userRole: { fontSize: 13, textTransform: 'capitalize' },
-    noResults: { textAlign: 'center', padding: 20 },
+  // Modal
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  modal: { borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 24, paddingBottom: 24, paddingTop: 12, minHeight: '60%', maxHeight: '70%', backgroundColor: BRAND.white },
+  modalHandle: {
+    width: 40, height: 4, borderRadius: 2, backgroundColor: BRAND.textMuted,
+    alignSelf: 'center', marginBottom: 16, opacity: 0.4,
+  },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  modalTitle: { fontSize: 20, fontFamily: FONTS.bodyBold, color: BRAND.textPrimary },
+  dmResults: { maxHeight: 400 },
+  searchingText: { textAlign: 'center', padding: 20, fontFamily: FONTS.bodyLight, color: BRAND.textMuted },
+  userRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: BRAND.border },
+  userAvatar: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginRight: 12, backgroundColor: BRAND.teal + '20' },
+  userInitials: { fontSize: 16, fontFamily: FONTS.bodyBold, color: BRAND.teal },
+  userInfo: { flex: 1 },
+  userName: { fontSize: 16, fontFamily: FONTS.bodySemiBold, color: BRAND.textPrimary },
+  userRole: { fontSize: 13, textTransform: 'capitalize', fontFamily: FONTS.bodyLight, color: BRAND.textMuted },
+  noResults: { textAlign: 'center', padding: 20, fontFamily: FONTS.bodyLight, color: BRAND.textMuted },
 
-    // Channel creation form
-    formLabel: { fontSize: 12, fontWeight: '700', marginBottom: 8, marginTop: 12, textTransform: 'uppercase' as const, letterSpacing: 1 },
-    formInput: { borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, borderWidth: 1, marginBottom: 8 },
-    typeRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
-    typeBtn: {
-      flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-      paddingVertical: 12, borderRadius: 10, borderWidth: 2,
-    },
-    memberChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 },
-    memberChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16 },
-    createBtn: { paddingVertical: 14, borderRadius: 12, alignItems: 'center', marginTop: 12 },
-    createBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
-  });
-}
+  // Channel creation form
+  formLabel: { fontSize: 12, fontFamily: FONTS.bodyBold, marginBottom: 8, marginTop: 12, textTransform: 'uppercase' as const, letterSpacing: 1, color: BRAND.textMuted },
+  formInput: { borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, borderWidth: 1, marginBottom: 8, fontFamily: FONTS.bodyLight, color: BRAND.textPrimary, backgroundColor: BRAND.offWhite, borderColor: BRAND.border },
+  typeRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
+  typeBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    paddingVertical: 12, borderRadius: 10, borderWidth: 2,
+    borderColor: BRAND.border,
+  },
+  typeBtnActive: {
+    borderColor: BRAND.teal,
+    backgroundColor: BRAND.teal + '10',
+  },
+  typeBtnLabel: {
+    color: BRAND.textMuted, fontFamily: FONTS.bodySemiBold, fontSize: 14, marginLeft: 6,
+  },
+  typeBtnLabelActive: {
+    color: BRAND.teal,
+  },
+  memberChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 },
+  memberChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16, backgroundColor: BRAND.teal + '20' },
+  memberChipText: { color: BRAND.teal, fontSize: 13, fontFamily: FONTS.bodySemiBold },
+  createBtn: { paddingVertical: 14, borderRadius: 12, alignItems: 'center', marginTop: 12, backgroundColor: BRAND.teal },
+  createBtnText: { color: '#FFFFFF', fontSize: 16, fontFamily: FONTS.bodyBold },
+});

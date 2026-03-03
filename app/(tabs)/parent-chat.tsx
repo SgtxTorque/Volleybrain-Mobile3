@@ -1,13 +1,14 @@
 import { useAuth } from '@/lib/auth';
-import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
+import { radii, shadows, spacing } from '@/lib/design-tokens';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
-import { useTheme } from '@/lib/theme';
+import { BRAND } from '@/theme/colors';
+import { FONTS } from '@/theme/fonts';
 import AppHeaderBar from '@/components/ui/AppHeaderBar';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import {
   Alert,
   FlatList,
@@ -101,15 +102,23 @@ function getMessagePreview(msg?: Channel['last_message']): string {
   }
 }
 
+function getChannelColor(type: string): string {
+  switch (type) {
+    case 'team_chat': return BRAND.skyBlue;
+    case 'player_chat': return BRAND.success;
+    case 'dm': return BRAND.teal;
+    case 'league_announcement': return BRAND.warning;
+    default: return BRAND.textMuted;
+  }
+}
+
 // ===========================================================================
 // Component
 // ===========================================================================
 export default function ParentChatListScreen() {
   const { profile } = useAuth();
   const { workingSeason } = useSeason();
-  const { colors } = useTheme();
   const router = useRouter();
-  const s = useMemo(() => createStyles(colors), [colors]);
 
   // --- Channels ---
   const [channels, setChannels] = useState<Channel[]>([]);
@@ -441,29 +450,13 @@ export default function ParentChatListScreen() {
   }, [fetchChannels]);
 
   // =========================================================================
-  // Channel color helper
-  // =========================================================================
-  const getChannelColor = useCallback(
-    (type: string) => {
-      switch (type) {
-        case 'team_chat': return colors.info || colors.primary;
-        case 'player_chat': return colors.success;
-        case 'dm': return colors.primary;
-        case 'league_announcement': return colors.warning;
-        default: return colors.textMuted;
-      }
-    },
-    [colors],
-  );
-
-  // =========================================================================
   // Render: list item
   // =========================================================================
   const renderItem = useCallback(
     ({ item }: { item: ListItem }) => {
       if (item.type === 'header') {
         return (
-          <Text style={[s.sectionLabel, { color: colors.textMuted }]}>
+          <Text style={s.sectionLabel}>
             {item.title.toUpperCase()}
           </Text>
         );
@@ -476,7 +469,7 @@ export default function ParentChatListScreen() {
 
       return (
         <TouchableOpacity
-          style={[s.channelCard, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}
+          style={[s.channelCard, { backgroundColor: chColor + '20' }]}
           activeOpacity={0.7}
           onPress={() => router.push({ pathname: '/chat/[id]', params: { id: channel.id } } as any)}
           onLongPress={() =>
@@ -503,40 +496,40 @@ export default function ParentChatListScreen() {
           <View style={s.channelInfo}>
             <View style={s.channelHeader}>
               <View style={s.nameRow}>
-                {isPinned && <Ionicons name="pin" size={12} color={colors.textMuted} style={{ marginRight: 4 }} />}
-                <Text style={[s.channelName, { color: colors.text }]} numberOfLines={1}>
+                {isPinned && <Ionicons name="pin" size={12} color={BRAND.textMuted} style={{ marginRight: 4 }} />}
+                <Text style={s.channelName} numberOfLines={1}>
                   {channel.name}
                 </Text>
               </View>
               {channel.last_message && (
-                <Text style={[s.messageTime, { color: colors.textMuted }]}>
+                <Text style={s.messageTime}>
                   {formatTime(channel.last_message.created_at)}
                 </Text>
               )}
             </View>
 
             {isTyping ? (
-              <Text style={[s.typingText, { color: colors.primary }]}>typing...</Text>
+              <Text style={s.typingText}>typing...</Text>
             ) : channel.last_message ? (
-              <Text style={[s.lastMessage, { color: colors.textMuted }]} numberOfLines={1}>
+              <Text style={s.lastMessage} numberOfLines={1}>
                 <Text style={s.senderName}>{channel.last_message.sender_name}: </Text>
                 {getMessagePreview(channel.last_message)}
               </Text>
             ) : (
-              <Text style={[s.noMessages, { color: colors.textMuted }]}>No messages yet</Text>
+              <Text style={s.noMessages}>No messages yet</Text>
             )}
           </View>
 
           {/* Unread badge */}
           {(channel.unread_count ?? 0) > 0 && (
-            <View style={[s.unreadBadge, { backgroundColor: colors.primary }]}>
+            <View style={s.unreadBadge}>
               <Text style={s.unreadText}>{channel.unread_count}</Text>
             </View>
           )}
         </TouchableOpacity>
       );
     },
-    [colors, pinnedIds, typingMap, getChannelColor, router, togglePin, s],
+    [pinnedIds, typingMap, router, togglePin],
   );
 
   // =========================================================================
@@ -544,9 +537,9 @@ export default function ParentChatListScreen() {
   // =========================================================================
   const EmptyState = () => (
     <View style={s.emptyState}>
-      <Ionicons name="chatbubbles-outline" size={64} color={colors.textMuted} />
-      <Text style={[s.emptyTitle, { color: colors.text }]}>No conversations yet</Text>
-      <Text style={[s.emptySubtitle, { color: colors.textMuted }]}>
+      <Ionicons name="chatbubbles-outline" size={64} color={BRAND.textMuted} />
+      <Text style={s.emptyTitle}>No conversations yet</Text>
+      <Text style={s.emptySubtitle}>
         Your team chats will appear here once your child is assigned to a team.
       </Text>
     </View>
@@ -556,22 +549,22 @@ export default function ParentChatListScreen() {
   // Main render
   // =========================================================================
   return (
-    <SafeAreaView style={[s.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={s.container}>
       <AppHeaderBar title="CHAT" showAvatar={false} showNotificationBell={false} />
 
       {/* Search bar */}
-      <View style={[s.searchContainer, { backgroundColor: colors.card }]}>
-        <Ionicons name="search" size={18} color={colors.textMuted} />
+      <View style={s.searchContainer}>
+        <Ionicons name="search" size={18} color={BRAND.textMuted} />
         <TextInput
-          style={[s.searchInput, { color: colors.text }]}
+          style={s.searchInput}
           placeholder="Search conversations..."
-          placeholderTextColor={colors.textMuted}
+          placeholderTextColor={BRAND.textMuted}
           value={searchQuery}
           onChangeText={onSearchChange}
         />
         {searchQuery.length > 0 && (
           <TouchableOpacity onPress={() => { setSearchQuery(''); setDebouncedQuery(''); }}>
-            <Ionicons name="close-circle" size={18} color={colors.textMuted} />
+            <Ionicons name="close-circle" size={18} color={BRAND.textMuted} />
           </TouchableOpacity>
         )}
       </View>
@@ -583,7 +576,7 @@ export default function ParentChatListScreen() {
         renderItem={renderItem}
         ListEmptyComponent={EmptyState}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BRAND.teal} />
         }
         contentContainerStyle={[s.listContent, listData.length === 0 && { flex: 1 }]}
         showsVerticalScrollIndicator={false}
@@ -591,7 +584,7 @@ export default function ParentChatListScreen() {
 
       {/* FAB: New Message */}
       <TouchableOpacity
-        style={[s.fab, { backgroundColor: colors.primary }]}
+        style={s.fab}
         onPress={() => setShowDmModal(true)}
         activeOpacity={0.8}
       >
@@ -601,10 +594,10 @@ export default function ParentChatListScreen() {
       {/* DM Modal */}
       <Modal visible={showDmModal} animationType="slide" transparent>
         <View style={s.overlay}>
-          <View style={[s.modal, { backgroundColor: colors.card }]}>
+          <View style={s.modal}>
             <View style={s.modalHandle} />
             <View style={s.modalHeader}>
-              <Text style={[s.modalTitle, { color: colors.text }]}>New Message</Text>
+              <Text style={s.modalTitle}>New Message</Text>
               <TouchableOpacity
                 onPress={() => {
                   setShowDmModal(false);
@@ -612,16 +605,16 @@ export default function ParentChatListScreen() {
                   setSearchResults([]);
                 }}
               >
-                <Ionicons name="close" size={24} color={colors.text} />
+                <Ionicons name="close" size={24} color={BRAND.textPrimary} />
               </TouchableOpacity>
             </View>
 
-            <View style={[s.searchContainer, { backgroundColor: colors.background }]}>
-              <Ionicons name="search" size={18} color={colors.textMuted} />
+            <View style={s.modalSearchContainer}>
+              <Ionicons name="search" size={18} color={BRAND.textMuted} />
               <TextInput
-                style={[s.searchInput, { color: colors.text }]}
+                style={s.searchInput}
                 placeholder="Search by name or email..."
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={BRAND.textMuted}
                 value={userSearchQuery}
                 onChangeText={text => {
                   setUserSearchQuery(text);
@@ -633,12 +626,12 @@ export default function ParentChatListScreen() {
 
             <ScrollView style={s.dmResults} keyboardShouldPersistTaps="handled">
               {searching && (
-                <Text style={[s.searchingText, { color: colors.textMuted }]}>Searching...</Text>
+                <Text style={s.searchingText}>Searching...</Text>
               )}
               {searchResults.map(u => (
-                <TouchableOpacity key={u.id} style={[s.userRow, { borderBottomColor: colors.border }]} onPress={() => startDM(u)}>
-                  <View style={[s.userAvatar, { backgroundColor: colors.primary + '20' }]}>
-                    <Text style={[s.userInitials, { color: colors.primary }]}>
+                <TouchableOpacity key={u.id} style={s.userRow} onPress={() => startDM(u)}>
+                  <View style={s.userAvatar}>
+                    <Text style={s.userInitials}>
                       {u.full_name
                         .split(' ')
                         .map(n => n[0])
@@ -647,14 +640,14 @@ export default function ParentChatListScreen() {
                     </Text>
                   </View>
                   <View style={s.userInfo}>
-                    <Text style={[s.userName, { color: colors.text }]}>{u.full_name}</Text>
-                    <Text style={[s.userRole, { color: colors.textMuted }]}>{u.account_type}</Text>
+                    <Text style={s.userName}>{u.full_name}</Text>
+                    <Text style={s.userRole}>{u.account_type}</Text>
                   </View>
-                  <Ionicons name="chatbubble" size={20} color={colors.primary} />
+                  <Ionicons name="chatbubble" size={20} color={BRAND.teal} />
                 </TouchableOpacity>
               ))}
               {!searching && userSearchQuery.length >= 2 && searchResults.length === 0 && (
-                <Text style={[s.noResults, { color: colors.textMuted }]}>No users found</Text>
+                <Text style={s.noResults}>No users found</Text>
               )}
             </ScrollView>
           </View>
@@ -667,221 +660,254 @@ export default function ParentChatListScreen() {
 // ===========================================================================
 // Styles
 // ===========================================================================
-function createStyles(colors: any) {
-  return StyleSheet.create({
-    container: {
-      flex: 1,
-    },
+const s = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: BRAND.offWhite,
+  },
 
-    // --- Search ---
-    searchContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginHorizontal: spacing.screenPadding,
-      marginBottom: 12,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
-      borderRadius: radii.card,
-      gap: 8,
-    },
-    searchInput: {
-      flex: 1,
-      fontSize: 16,
-    },
+  // --- Search ---
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: spacing.screenPadding,
+    marginBottom: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: radii.card,
+    backgroundColor: BRAND.white,
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: BRAND.textPrimary,
+    fontFamily: FONTS.bodyMedium,
+  },
 
-    // --- List ---
-    listContent: {
-      paddingBottom: 100,
-    },
-    sectionLabel: {
-      fontSize: 11,
-      fontWeight: '700',
-      letterSpacing: 1,
-      textTransform: 'uppercase',
-      paddingHorizontal: spacing.screenPadding,
-      paddingTop: 14,
-      paddingBottom: 6,
-    },
+  // --- List ---
+  listContent: {
+    paddingBottom: 100,
+  },
+  sectionLabel: {
+    fontSize: 11,
+    fontFamily: FONTS.bodyBold,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    paddingHorizontal: spacing.screenPadding,
+    paddingTop: 14,
+    paddingBottom: 6,
+    color: BRAND.textMuted,
+  },
 
-    // --- Channel card ---
-    channelCard: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      marginHorizontal: spacing.screenPadding,
-      marginBottom: 8,
-      borderRadius: radii.card,
-      borderWidth: 1,
-      ...shadows.card,
-    },
-    channelAvatar: {
-      width: 52,
-      height: 52,
-      borderRadius: 26,
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginRight: 12,
-    },
-    avatarImage: {
-      width: 52,
-      height: 52,
-      borderRadius: 26,
-    },
-    channelInfo: {
-      flex: 1,
-    },
-    channelHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 4,
-    },
-    nameRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      flex: 1,
-      marginRight: 8,
-    },
-    channelName: {
-      fontSize: 16,
-      fontWeight: '600',
-      flexShrink: 1,
-    },
-    messageTime: {
-      fontSize: 12,
-    },
-    lastMessage: {
-      fontSize: 14,
-    },
-    senderName: {
-      fontWeight: '500',
-    },
-    noMessages: {
-      fontSize: 14,
-      fontStyle: 'italic',
-    },
-    typingText: {
-      fontSize: 14,
-      fontStyle: 'italic',
-    },
-    unreadBadge: {
-      minWidth: 22,
-      height: 22,
-      borderRadius: 11,
-      justifyContent: 'center',
-      alignItems: 'center',
-      paddingHorizontal: 6,
-      marginLeft: 8,
-    },
-    unreadText: {
-      color: '#FFFFFF',
-      fontSize: 12,
-      fontWeight: 'bold',
-    },
+  // --- Channel card ---
+  channelCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginHorizontal: spacing.screenPadding,
+    marginBottom: 8,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    backgroundColor: BRAND.white,
+    borderColor: BRAND.border,
+    ...shadows.card,
+  },
+  channelAvatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  avatarImage: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+  },
+  channelInfo: {
+    flex: 1,
+  },
+  channelHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
+  },
+  channelName: {
+    fontSize: 16,
+    fontFamily: FONTS.bodySemiBold,
+    flexShrink: 1,
+    color: BRAND.textPrimary,
+  },
+  messageTime: {
+    fontSize: 12,
+    color: BRAND.textMuted,
+  },
+  lastMessage: {
+    fontSize: 14,
+    color: BRAND.textMuted,
+  },
+  senderName: {
+    fontFamily: FONTS.bodyMedium,
+  },
+  noMessages: {
+    fontSize: 14,
+    fontStyle: 'italic',
+    color: BRAND.textMuted,
+  },
+  typingText: {
+    fontSize: 14,
+    fontStyle: 'italic',
+    color: BRAND.teal,
+  },
+  unreadBadge: {
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    marginLeft: 8,
+    backgroundColor: BRAND.teal,
+  },
+  unreadText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontFamily: FONTS.bodyBold,
+  },
 
-    // --- Empty state ---
-    emptyState: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingHorizontal: 40,
-    },
-    emptyTitle: {
-      fontSize: 18,
-      fontWeight: '700',
-      marginTop: 16,
-      marginBottom: 6,
-    },
-    emptySubtitle: {
-      fontSize: 14,
-      textAlign: 'center',
-      lineHeight: 20,
-    },
+  // --- Empty state ---
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 40,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontFamily: FONTS.bodyBold,
+    marginTop: 16,
+    marginBottom: 6,
+    color: BRAND.textPrimary,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+    color: BRAND.textMuted,
+  },
 
-    // --- FAB ---
-    fab: {
-      position: 'absolute',
-      bottom: 24,
-      right: 24,
-      width: 56,
-      height: 56,
-      borderRadius: 28,
-      justifyContent: 'center',
-      alignItems: 'center',
-      ...shadows.cardHover,
-    },
+  // --- FAB ---
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: BRAND.teal,
+    ...shadows.cardHover,
+  },
 
-    // --- DM Modal ---
-    overlay: {
-      flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.6)',
-      justifyContent: 'flex-end',
-    },
-    modal: {
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
-      padding: 24,
-      maxHeight: '80%',
-    },
-    modalHandle: {
-      width: 40,
-      height: 4,
-      borderRadius: 2,
-      backgroundColor: colors.textMuted,
-      alignSelf: 'center',
-      marginBottom: 16,
-      opacity: 0.4,
-    },
-    modalHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 16,
-    },
-    modalTitle: {
-      fontSize: 20,
-      fontWeight: 'bold',
-    },
-    dmResults: {
-      maxHeight: 400,
-    },
-    searchingText: {
-      textAlign: 'center',
-      padding: 20,
-    },
-    userRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: 12,
-      borderBottomWidth: 1,
-    },
-    userAvatar: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginRight: 12,
-    },
-    userInitials: {
-      fontSize: 16,
-      fontWeight: 'bold',
-    },
-    userInfo: {
-      flex: 1,
-    },
-    userName: {
-      fontSize: 16,
-      fontWeight: '600',
-    },
-    userRole: {
-      fontSize: 13,
-      textTransform: 'capitalize',
-    },
-    noResults: {
-      textAlign: 'center',
-      padding: 20,
-    },
-  });
-}
+  // --- DM Modal ---
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
+  },
+  modal: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    maxHeight: '80%',
+    backgroundColor: BRAND.white,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: BRAND.textMuted,
+    alignSelf: 'center',
+    marginBottom: 16,
+    opacity: 0.4,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontFamily: FONTS.bodyBold,
+    color: BRAND.textPrimary,
+  },
+  modalSearchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: radii.card,
+    backgroundColor: BRAND.offWhite,
+    gap: 8,
+  },
+  dmResults: {
+    maxHeight: 400,
+  },
+  searchingText: {
+    textAlign: 'center',
+    padding: 20,
+    color: BRAND.textMuted,
+  },
+  userRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: BRAND.border,
+  },
+  userAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    backgroundColor: BRAND.teal + '20',
+  },
+  userInitials: {
+    fontSize: 16,
+    fontFamily: FONTS.bodyBold,
+    color: BRAND.teal,
+  },
+  userInfo: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 16,
+    fontFamily: FONTS.bodySemiBold,
+    color: BRAND.textPrimary,
+  },
+  userRole: {
+    fontSize: 13,
+    textTransform: 'capitalize',
+    color: BRAND.textMuted,
+  },
+  noResults: {
+    textAlign: 'center',
+    padding: 20,
+    color: BRAND.textMuted,
+  },
+});
