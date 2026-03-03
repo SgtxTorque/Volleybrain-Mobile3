@@ -9,7 +9,8 @@ import {
 } from '@/lib/registration-config';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
-import { spacing, radii, shadows } from '@/lib/design-tokens';
+import { displayTextStyle, spacing, radii, shadows } from '@/lib/design-tokens';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -692,7 +693,7 @@ export default function RegistrationWizardScreen() {
       <SafeAreaView style={s.container} edges={['top', 'bottom']}>
         <ScrollView contentContainerStyle={s.successContainer}>
           <Image
-            source={require('@/assets/images/lynx-mascot.png')}
+            source={require('@/assets/images/mascot/celebrate.png')}
             style={s.successMascot}
             resizeMode="contain"
           />
@@ -815,7 +816,7 @@ export default function RegistrationWizardScreen() {
                         >
                           <View style={s.returningCardLeft}>
                             <View style={[s.checkbox, selected && { backgroundColor: accentColor, borderColor: accentColor }]}>
-                              {selected && <Ionicons name="checkmark" size={14} color="#FFF" />}
+                              {selected && <Ionicons name="checkmark" size={14} color={colors.background} />}
                             </View>
                             <View style={s.returningInfo}>
                               <Text style={s.returningName}>{player.first_name} {player.last_name}</Text>
@@ -927,7 +928,7 @@ export default function RegistrationWizardScreen() {
                     style={[s.childTab, activeChildIndex === idx && { backgroundColor: accentColor }]}
                     onPress={() => setActiveChildIndex(idx)}
                   >
-                    <Text style={[s.childTabText, activeChildIndex === idx && { color: '#FFF' }]}>
+                    <Text style={[s.childTabText, activeChildIndex === idx && { color: colors.background }]}>
                       {child.first_name || `Child ${idx + 1}`}
                     </Text>
                   </TouchableOpacity>
@@ -1148,13 +1149,13 @@ export default function RegistrationWizardScreen() {
                       style={[s.toggleBtn, !showMedicalFields && { backgroundColor: colors.border }]}
                       onPress={() => setShowMedicalFields(false)}
                     >
-                      <Text style={[s.toggleBtnText, !showMedicalFields && { fontWeight: '700' }]}>No</Text>
+                      <Text style={[s.toggleBtnText, !showMedicalFields && { fontFamily: FONTS.bodyBold }]}>No</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[s.toggleBtn, showMedicalFields && { backgroundColor: accentColor }]}
                       onPress={() => setShowMedicalFields(true)}
                     >
-                      <Text style={[s.toggleBtnText, showMedicalFields && { color: '#FFF', fontWeight: '700' }]}>Yes</Text>
+                      <Text style={[s.toggleBtnText, showMedicalFields && { color: colors.background, fontFamily: FONTS.bodyBold }]}>Yes</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -1230,7 +1231,7 @@ export default function RegistrationWizardScreen() {
                       activeOpacity={0.7}
                     >
                       <View style={[s.checkbox, accepted && { backgroundColor: accentColor, borderColor: accentColor }]}>
-                        {accepted && <Ionicons name="checkmark" size={14} color="#FFF" />}
+                        {accepted && <Ionicons name="checkmark" size={14} color={colors.background} />}
                       </View>
                       <Text style={s.waiverTitle}>
                         {waiver.title}
@@ -1388,11 +1389,11 @@ export default function RegistrationWizardScreen() {
               disabled={submitting}
             >
               {submitting ? (
-                <ActivityIndicator size="small" color="#000" />
+                <ActivityIndicator size="small" color={colors.background} />
               ) : (
                 <>
                   <Text style={s.nextButtonText}>{isLastStep ? 'Submit Registration' : 'Next'}</Text>
-                  <Ionicons name={isLastStep ? 'checkmark-circle' : 'arrow-forward'} size={18} color="#000" />
+                  <Ionicons name={isLastStep ? 'checkmark-circle' : 'arrow-forward'} size={18} color={colors.background} />
                 </>
               )}
             </TouchableOpacity>
@@ -1443,7 +1444,7 @@ export default function RegistrationWizardScreen() {
                       setPickerModal(prev => ({ ...prev, visible: false }));
                     }}
                   >
-                    <Text style={[s.modalOptionText, isSelected && { color: accentColor, fontWeight: '700' }]}>
+                    <Text style={[s.modalOptionText, isSelected && { color: accentColor, fontFamily: FONTS.bodyBold }]}>
                       {item.label}
                     </Text>
                     {isSelected && <Ionicons name="checkmark" size={20} color={accentColor} />}
@@ -1481,7 +1482,7 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   },
   errorTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: FONTS.bodyBold,
     color: colors.text,
   },
   errorText: {
@@ -1499,8 +1500,8 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   },
   retryBtnText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
+    fontFamily: FONTS.bodySemiBold,
+    color: colors.background,
   },
 
   // Header
@@ -1509,8 +1510,8 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    backgroundColor: colors.card,
+    borderBottomColor: colors.glassBorder,
+    backgroundColor: colors.glassCard,
   },
   backBtn: {
     width: 40,
@@ -1538,15 +1539,15 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   },
   orgLogoFallbackText: {
     fontSize: 20,
-    fontWeight: '800',
-    color: '#FFF',
+    fontFamily: FONTS.bodyExtraBold,
+    color: colors.background,
   },
   orgTextCol: {
     flex: 1,
   },
   orgName: {
     fontSize: 17,
-    fontWeight: '700',
+    fontFamily: FONTS.bodyBold,
     color: colors.text,
   },
   sportRow: {
@@ -1561,7 +1562,7 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   seasonLabel: {
     fontSize: 13,
     color: colors.textSecondary,
-    fontWeight: '500',
+    fontFamily: FONTS.bodySemiBold,
   },
   progressBarBg: {
     height: 6,
@@ -1578,7 +1579,7 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
     color: colors.textMuted,
     marginTop: 6,
     textAlign: 'center',
-    fontWeight: '500',
+    fontFamily: FONTS.bodySemiBold,
   },
 
   // Scroll content
@@ -1601,7 +1602,7 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: FONTS.bodyBold,
     color: colors.text,
   },
   sectionSubtitle: {
@@ -1612,10 +1613,10 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
 
   // Returning player cards
   returningCard: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.glassCard,
     borderRadius: radii.card,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.glassBorder,
     padding: 14,
     flexDirection: 'row',
     alignItems: 'center',
@@ -1642,7 +1643,7 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   },
   returningName: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
     color: colors.text,
   },
   returningDetail: {
@@ -1658,15 +1659,15 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   },
   returningBadgeText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: FONTS.bodyBold,
   },
 
   // New child cards
   newChildCard: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.glassCard,
     borderRadius: radii.card,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.glassBorder,
     padding: 14,
     gap: 10,
     ...shadows.card,
@@ -1678,7 +1679,7 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   },
   newChildLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
     color: colors.text,
   },
   newChildFields: {
@@ -1691,7 +1692,7 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   },
   fieldLabel: {
     fontSize: 13,
-    fontWeight: '500',
+    fontFamily: FONTS.bodySemiBold,
     color: colors.textSecondary,
   },
   required: {
@@ -1721,22 +1722,22 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   },
   addChildBtnText: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
   },
 
   // Fee preview
   feeCard: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.glassCard,
     borderRadius: radii.card,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.glassBorder,
     padding: 16,
     gap: 8,
     ...shadows.card,
   },
   feeTitle: {
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: FONTS.bodyBold,
     color: colors.text,
     marginBottom: 4,
   },
@@ -1752,7 +1753,7 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   feeAmount: {
     fontSize: 14,
     color: colors.text,
-    fontWeight: '500',
+    fontFamily: FONTS.bodySemiBold,
   },
   feeDivider: {
     height: 1,
@@ -1761,12 +1762,12 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   },
   feeTotalLabel: {
     fontSize: 15,
-    fontWeight: '700',
+    fontFamily: FONTS.bodyBold,
     color: colors.text,
   },
   feeTotalAmount: {
     fontSize: 16,
-    fontWeight: '800',
+    fontFamily: FONTS.bodyExtraBold,
     color: colors.text,
   },
   feeDisclaimer: {
@@ -1786,16 +1787,16 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   },
   selectionText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
     color: colors.textSecondary,
   },
 
   // Review step
   reviewSection: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.glassCard,
     borderRadius: radii.card,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.glassBorder,
     padding: 14,
     gap: 4,
     ...shadows.card,
@@ -1808,18 +1809,18 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   },
   reviewSectionTitle: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: FONTS.bodyBold,
     color: colors.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   editLink: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
   },
   reviewItem: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
     color: colors.text,
   },
   reviewDetail: {
@@ -1845,8 +1846,8 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
     marginBottom: 8,
   },
   successTitle: {
+    ...displayTextStyle,
     fontSize: 24,
-    fontWeight: '800',
     color: colors.text,
     textAlign: 'center',
   },
@@ -1870,10 +1871,10 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
 
   // Waiver cards
   waiverCard: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.glassCard,
     borderRadius: radii.card,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.glassBorder,
     padding: 14,
     gap: 10,
     ...shadows.card,
@@ -1885,7 +1886,7 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   },
   waiverTitle: {
     fontSize: 15,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
     color: colors.text,
     flex: 1,
   },
@@ -1918,10 +1919,10 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
 
   // Medical toggle
   medicalToggle: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.glassCard,
     borderRadius: radii.card,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.glassBorder,
     padding: 14,
     gap: 10,
   },
@@ -1958,13 +1959,13 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: colors.card,
+    backgroundColor: colors.glassCard,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.glassBorder,
   },
   childTabText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
     color: colors.text,
   },
 
@@ -1999,8 +2000,8 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   },
   datePickerDoneText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#000',
+    fontFamily: FONTS.bodySemiBold,
+    color: colors.background,
   },
 
   // Picker modal
@@ -2010,7 +2011,7 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalSheet: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.glassCard,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: '60%',
@@ -2022,11 +2023,11 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.glassBorder,
   },
   modalTitle: {
     fontSize: 17,
-    fontWeight: '700',
+    fontFamily: FONTS.bodyBold,
     color: colors.text,
   },
   modalList: {
@@ -2047,10 +2048,10 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
 
   // Placeholder (for remaining steps)
   stepPlaceholder: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.glassCard,
     borderRadius: radii.card,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.glassBorder,
     padding: 32,
     alignItems: 'center',
     gap: 8,
@@ -2058,7 +2059,7 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   },
   placeholderTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
     color: colors.text,
   },
   placeholderText: {
@@ -2073,8 +2074,8 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 8,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
-    backgroundColor: colors.card,
+    borderTopColor: colors.glassBorder,
+    backgroundColor: colors.glassCard,
   },
   footerButtons: {
     flexDirection: 'row',
@@ -2090,7 +2091,7 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   },
   backButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
     color: colors.text,
   },
   nextButton: {
@@ -2104,8 +2105,8 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   },
   nextButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#000',
+    fontFamily: FONTS.bodySemiBold,
+    color: colors.background,
   },
   poweredByRow: {
     flexDirection: 'row',
