@@ -1,6 +1,8 @@
 import { useAuth } from '@/lib/auth';
+import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -569,19 +571,19 @@ const createStyles = (colors: any) =>
       alignItems: 'center',
     },
     headerTitle: {
+      ...displayTextStyle,
       fontSize: 22,
-      fontWeight: '800',
       color: colors.text,
     },
 
     // Scroll
     scroll: { flex: 1 },
-    scrollContent: { paddingHorizontal: 16 },
+    scrollContent: { paddingHorizontal: spacing.screenPadding },
 
     // Section Title
     sectionTitle: {
       fontSize: 12,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
       color: colors.textMuted,
       marginBottom: 10,
       marginTop: 8,
@@ -594,17 +596,14 @@ const createStyles = (colors: any) =>
       backgroundColor: colors.glassCard,
       borderWidth: 1,
       borderColor: colors.glassBorder,
-      borderRadius: 16,
+      borderRadius: radii.card,
       padding: 16,
       marginBottom: 24,
-      ...Platform.select({
-        ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-        android: { elevation: 6 },
-      }),
+      ...shadows.card,
     },
     joinLabel: {
       fontSize: 14,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
       color: colors.text,
       marginBottom: 10,
     },
@@ -622,6 +621,7 @@ const createStyles = (colors: any) =>
       paddingVertical: 12,
       fontSize: 15,
       color: colors.text,
+      fontFamily: FONTS.bodyMedium,
     },
     joinBtn: {
       backgroundColor: colors.primary,
@@ -632,7 +632,7 @@ const createStyles = (colors: any) =>
     },
     joinBtnText: {
       color: '#000',
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
       fontSize: 15,
     },
 
@@ -657,7 +657,7 @@ const createStyles = (colors: any) =>
     },
     tabPillText: {
       fontSize: 13,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
       color: colors.textMuted,
     },
     tabPillTextActive: {
@@ -675,19 +675,20 @@ const createStyles = (colors: any) =>
       backgroundColor: colors.glassCard,
       borderWidth: 1,
       borderColor: colors.glassBorder,
-      borderRadius: 16,
+      borderRadius: radii.card,
       padding: 40,
       alignItems: 'center',
       gap: 10,
     },
     emptyTitle: {
       fontSize: 16,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
       color: colors.text,
     },
     emptySubtitle: {
       fontSize: 13,
       color: colors.textMuted,
+      fontFamily: FONTS.bodyMedium,
       textAlign: 'center',
       lineHeight: 18,
     },
@@ -697,13 +698,10 @@ const createStyles = (colors: any) =>
       backgroundColor: colors.glassCard,
       borderWidth: 1,
       borderColor: colors.glassBorder,
-      borderRadius: 16,
+      borderRadius: radii.card,
       padding: 16,
       marginBottom: 12,
-      ...Platform.select({
-        ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-        android: { elevation: 6 },
-      }),
+      ...shadows.card,
     },
     seasonCardHeader: {
       flexDirection: 'row',
@@ -722,12 +720,13 @@ const createStyles = (colors: any) =>
     },
     seasonName: {
       fontSize: 16,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
       color: colors.text,
     },
     orgName: {
       fontSize: 13,
       color: colors.textMuted,
+      fontFamily: FONTS.bodyMedium,
       marginTop: 2,
     },
     seasonCardMeta: {
@@ -748,7 +747,7 @@ const createStyles = (colors: any) =>
     },
     metaPillText: {
       fontSize: 12,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
       color: colors.textMuted,
     },
     earlyBirdBanner: {
@@ -762,7 +761,7 @@ const createStyles = (colors: any) =>
     },
     earlyBirdText: {
       fontSize: 12,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
       color: '#FF9500',
     },
 
@@ -771,13 +770,10 @@ const createStyles = (colors: any) =>
       backgroundColor: colors.glassCard,
       borderWidth: 1,
       borderColor: colors.glassBorder,
-      borderRadius: 16,
+      borderRadius: radii.card,
       padding: 16,
       marginBottom: 12,
-      ...Platform.select({
-        ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-        android: { elevation: 6 },
-      }),
+      ...shadows.card,
     },
     regCardHeader: {
       flexDirection: 'row',
@@ -799,21 +795,23 @@ const createStyles = (colors: any) =>
     },
     regInitialsText: {
       fontSize: 14,
-      fontWeight: '800',
+      fontFamily: FONTS.bodyExtraBold,
     },
     regPlayerName: {
       fontSize: 15,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
       color: colors.text,
     },
     regSeasonName: {
       fontSize: 13,
       color: colors.textSecondary,
+      fontFamily: FONTS.bodyMedium,
       marginTop: 1,
     },
     regOrgName: {
       fontSize: 12,
       color: colors.textMuted,
+      fontFamily: FONTS.bodyMedium,
       marginTop: 1,
     },
     statusBadge: {
@@ -826,11 +824,12 @@ const createStyles = (colors: any) =>
     },
     statusBadgeText: {
       fontSize: 11,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
     },
     regDate: {
       fontSize: 11,
       color: colors.textMuted,
+      fontFamily: FONTS.bodyMedium,
       marginTop: 10,
     },
   });
