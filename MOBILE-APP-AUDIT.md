@@ -1,6 +1,6 @@
-# LYNX Mobile App — Full Screen & Navigation Audit
+# LYNX — Full Mobile App Screen & Navigation Audit
 
-**Date:** 2026-03-02
+**Date:** 2026-03-02 (updated 2026-03-03)
 **Branch:** `feat/native-registration`
 **Commit:** `848543b` (Parent Home Scroll Phase 7)
 
@@ -8,31 +8,34 @@
 
 ## 1. Executive Summary
 
-| Metric | Count |
-|--------|-------|
-| Total route files | 82 |
-| Visible tabs | 5 (Home, Manage/GameDay/Schedule, Chat, More) |
-| Hidden tabs (drawer-accessible) | 19 |
-| Stack screens | 42 |
-| Auth screens | 7 |
-| Component files | 110+ |
-| Hooks | 9 |
-| Lib/context files | 25 |
-| DB tables (SCHEMA_REFERENCE) | 80+ |
-| **Broken navigation targets** | **5 (18 total references)** |
-| **Orphaned files** | **21 (1 route + 5 legacy dashboards + 6 modals/banners + 3 transitively orphaned + 6 coach-scroll)** |
-| **Dead code (legacy dashboards)** | **~5000+ lines** |
-| **"Coming Soon" stubs** | **18** |
-| **Web-only features (no mobile equiv)** | **15+** |
-| **Re-usable orphaned components** | **5 (ready to wire in)** |
+| Metric | Mobile | Web Admin |
+|--------|--------|-----------|
+| Total route/page files | 82 | 40 (35 static + 5 dynamic/redirect) |
+| Role-based views | 5 (Admin, Coach, Coach-Parent, Parent, Player) | 4 (Admin, Coach, Parent, Player) |
+| Visible tabs / nav groups | 5 tabs + GestureDrawer | HorizontalNavBar (4 role configs, 57 total nav items) |
+| Hidden tabs / stack screens | 19 hidden + 42 stack | N/A (all routes accessible via nav bar) |
+| Auth screens | 7 (welcome → pending-approval) | 2 (login + setup wizard) |
+| Component files | 110+ | 100+ (pages, sidebars, modals, widgets) |
+| Hooks | 9 | 5+ (useAppNavigate, useDocumentTitle, etc.) |
+| DB tables (SCHEMA_REFERENCE) | 80+ | 80+ (shared Supabase backend) |
+| **Broken navigation targets (mobile)** | **5 (18 total references)** | **0** |
+| **Orphaned files (mobile)** | **21** | **0** |
+| **Dead code (mobile legacy dashboards)** | **~5000+ lines** | **0 (src_backup exists)** |
+| **"Coming Soon" stubs (mobile)** | **18** | **~5 (mostly complete)** |
+| **Web-only features (no mobile equiv)** | **15+** | **—** |
+| **Re-usable orphaned components** | **5 (ready to wire in)** | **—** |
 
-**What's working:** All four role-based home scrolls (Admin, Coach, Parent, Player) render correctly with live Supabase data. Chat, schedule, payments, achievements, registration hub, team wall, game results, standings, lineup builder, and most settings screens are functional. The GestureDrawer provides access to hidden tabs.
+**What's working (Mobile):** All four role-based home scrolls (Admin, Coach, Parent, Player) render correctly with live Supabase data. Chat, schedule, payments, achievements, registration hub, team wall, game results, standings, lineup builder, and most settings screens are functional. The GestureDrawer provides access to hidden tabs.
 
-**What's broken:** 13 coach-scroll components navigate to `/(tabs)/coach-roster` which doesn't exist. `/team-hub` is referenced from old dashboards but has no route file. 3 navigation calls use incorrect path prefixes. The admin home has ~10 stub actions (Alert.alert "Coming Soon"). Player chat/shoutouts/challenges are entirely stubbed.
+**What's working (Web):** All 35 routes are properly registered and reachable. All 28 page imports in MainApp.jsx resolve correctly. Role-based dashboards (admin, coach, parent, player) are fully functional with 3-column layouts. No broken connections found.
+
+**What's broken (Mobile):** 13 coach-scroll components navigate to `/(tabs)/coach-roster` which doesn't exist. `/team-hub` is referenced from old dashboards but has no route file. 3 navigation calls use incorrect path prefixes. The admin home has ~10 stub actions (Alert.alert "Coming Soon"). Player chat/shoutouts/challenges are entirely stubbed.
+
+**Biggest gaps:** Mobile lacks player evaluations, bulk event creation, venue management, Stripe integration, data export, subscription management, organization settings, and advanced lineup builder — all exist on web. The web admin has no concept of push notification preferences or role-switching UI (auto-detected).
 
 ---
 
-## 2. File Tree
+## 2. Mobile File Tree
 
 ### Route Files (`app/`)
 
@@ -312,7 +315,7 @@ theme/
 
 ---
 
-## 3. Route Map
+## 3. Mobile Route Map
 
 ### Auth Routes (7 screens)
 
@@ -415,7 +418,7 @@ theme/
 
 ---
 
-## 4. Screen Inventory (Per Role)
+## 4. Mobile Screen Inventory (Per Role)
 
 ### 4A. Parent Home — `ParentHomeScroll.tsx`
 
@@ -545,7 +548,466 @@ theme/
 
 ---
 
-## 5. Feature Matrix — Web Admin vs Mobile
+## 5. Mobile Tap Target Map
+
+### 5A. Parent Home — `ParentHomeScroll`
+
+| Tap Target | Component | Navigates To | Working? |
+|------------|-----------|-------------|----------|
+| Day cell (calendar strip) | `DayStripCalendar` | Nowhere — no onPress | No |
+| Attention banner | `AttentionBanner` | `/(tabs)/parent-schedule` | Yes |
+| Event hero card body | `EventHeroCard` | `/(tabs)/parent-schedule` | Yes |
+| RSVP button on hero | `EventHeroCard` | Calls `data.rsvpHeroEvent('yes')` | Yes |
+| Directions button on hero | `EventHeroCard` | Native maps via `Linking.openURL` | Yes |
+| Secondary events text | `SecondaryEvents` | `/(tabs)/parent-schedule` | Yes |
+| Athlete card (per child) | `AthleteCard` | `/child-detail?playerId=${id}` | Yes |
+| Record card (metric grid) | `MetricGrid` | `/(tabs)/parent-schedule` | Yes |
+| Balance card (metric grid) | `MetricGrid` | `/family-payments` | Yes |
+| Progress card (metric grid) | `MetricGrid` | `/achievements` | Yes |
+| Chat card (metric grid) | `MetricGrid` | `/(tabs)/parent-chat` | Yes |
+| "View All" (team hub) | `TeamHubPreview` | `/(tabs)/parent-team-hub` | Yes |
+| Post row (team hub) | `TeamHubPreview` | `/(tabs)/parent-team-hub` | Yes |
+| Last game result (snapshot) | `SeasonSnapshot` | `/(tabs)/parent-schedule` | Yes |
+| Chat preview row | `FlatChatPreview` | `/(tabs)/parent-chat` | Yes |
+| "See All" badges | `RecentBadges` | `/achievements` | Yes |
+| Each badge pill | `RecentBadges` | `/achievements` | Yes |
+
+### 5B. Coach Home — `CoachHomeScroll`
+
+| Tap Target | Component | Navigates To | Working? |
+|------------|-----------|-------------|----------|
+| Bell icon | Header | `/notification` | Yes |
+| RoleSelector | Header | Role switch | Yes |
+| Team pills | Team selector | `data.selectTeam()` (filter) | Yes |
+| Checklist container | `PrepChecklist` | `/(tabs)/coach-schedule` | Yes |
+| "Roster" pill | `GamePlanCard` | `/(tabs)/coach-roster` | **BROKEN** — route doesn't exist |
+| "Lineup" pill | `GamePlanCard` | `/(tabs)/coach-roster` | **BROKEN** |
+| "Stats" pill | `GamePlanCard` | `/(tabs)/coach-schedule` | Yes |
+| "Attend." pill | `GamePlanCard` | `/(tabs)/coach-schedule` | Yes |
+| Missing RSVP names | `GamePlanCard` | `/(tabs)/coach-chat` | Yes |
+| "START GAME DAY MODE" | `GamePlanCard` | Alert "Coming Soon" | Stub |
+| Scouting context | `ScoutingContext` | `/(tabs)/coach-schedule` | Yes |
+| "Send a Blast" | `QuickActions` | `/(tabs)/coach-chat` | Yes |
+| "Build a Lineup" | `QuickActions` | `/(tabs)/coach-roster` | **BROKEN** |
+| "Give a Shoutout" | `QuickActions` | Alert "Coming Soon" | Stub |
+| "Review Stats" | `QuickActions` | `/(tabs)/coach-schedule` | Yes |
+| "Manage Roster" | `QuickActions` | `/(tabs)/coach-roster` | **BROKEN** |
+| "Create a Challenge" | `QuickActions` | Alert "Coming Soon" | Stub |
+| Shoutout nudge | `EngagementSection` | Alert "Coming Soon" | Stub |
+| Team health card | `TeamHealthCard` | `/(tabs)/coach-roster` | **BROKEN** |
+| "View Leaderboard" | `SeasonLeaderboardCard` | `/(tabs)/coach-roster` | **BROKEN** |
+| Evaluation item | `ActionItems` | `/(tabs)/coach-roster` | **BROKEN** |
+| Pending stats item | `ActionItems` | `/(tabs)/coach-schedule` | Yes |
+| "View All" (team hub) | `TeamHubPreviewCard` | `/(tabs)/coach-chat` | Yes |
+| Each post row | `TeamHubPreviewCard` | `/(tabs)/coach-chat` | Yes |
+| Each feed item | `ActivityFeed` | `/(tabs)/coach-roster` | **BROKEN** |
+| "View all" (feed) | `ActivityFeed` | `/(tabs)/coach-roster` | **BROKEN** |
+| "Continue Setup" | `SeasonSetupCard` | `/(tabs)/coach-schedule` | Yes |
+
+### 5C. Player Home — `PlayerHomeScroll`
+
+| Tap Target | Component | Navigates To | Working? |
+|------------|-----------|-------------|----------|
+| OVR badge | `HeroIdentityCard` | Alert "Full profile coming soon!" | Stub |
+| Photo thumbnails | `PhotoStrip` | Nowhere — no onPress | No |
+| RSVP button | `NextUpCard` | `data.sendRsvp('yes'/'no')` | Yes |
+| Chat peek row | `ChatPeek` | Nowhere — no onPress | No (stub) |
+| "Give props" row | `QuickPropsRow` | Alert "Coming Soon" | Stub |
+
+### 5D. Admin Home — `AdminHomeScroll`
+
+| Tap Target | Component | Navigates To | Working? |
+|------------|-----------|-------------|----------|
+| Search bar | `AdminHomeScroll` | Alert "Coming Soon" | Stub |
+| Queue action buttons | `SmartQueueCard` | Alert "Coming Soon" (all) | Stub |
+| Team health tiles | `TeamHealthTiles` | Nowhere — no onPress | No |
+| "Send All Reminders" | `PaymentSnapshot` | Alert "Coming Soon" | Stub |
+| "View Details" (payments) | `PaymentSnapshot` | Alert "Coming Soon" | Stub |
+| All 6 quick actions | `QuickActionsGrid` | Alert "Coming Soon" (all) | Stub |
+| "Assign Task" | `CoachSection` | Alert "Coming Soon" | Stub |
+| "View Calendar" | `UpcomingEvents` | Alert "Coming Soon" | Stub |
+| "Create Event" | `UpcomingEvents` | Alert "Coming Soon" | Stub |
+| "Start Setup" (season) | `AdminHomeScroll` | Alert "Coming Soon" | Stub |
+| "View more" (queue) | `AdminHomeScroll` | Nowhere — no onPress | No |
+
+---
+
+## 6. Mobile Broken / Missing / Orphaned Connections
+
+### 6A. CRITICAL — Non-Existent Route Targets
+
+**`/(tabs)/coach-roster` — DOES NOT EXIST (13 references)**
+
+There is no file `app/(tabs)/coach-roster.tsx` and no tab registered with that name.
+
+| File | Line | Context |
+|------|------|---------|
+| `components/coach-scroll/DevelopmentHint.tsx` | 67 | Navigation target |
+| `components/coach-scroll/ActivityFeed.tsx` | 126 | Feed item navigation |
+| `components/coach-scroll/ActivityFeed.tsx` | 137 | "View all" link |
+| `components/coach-scroll/ActionItems.tsx` | 66 | Evaluation item |
+| `components/coach-scroll/TopPerformers.tsx` | 41 | Performer row |
+| `components/coach-scroll/RosterAlerts.tsx` | 118 | Alert navigation |
+| `components/coach-scroll/TeamHealthCard.tsx` | 188 | Card + attention row |
+| `components/coach-scroll/SeasonLeaderboardCard.tsx` | 246 | "View Leaderboard" |
+| `components/coach-scroll/QuickActions.tsx` | 22, 25 | "Build a Lineup", "Manage Roster" |
+| `components/coach-scroll/GamePlanCard.tsx` | 47, 48, 53 | "Roster", "Lineup" pills |
+
+**Fix:** Create `app/(tabs)/coach-roster.tsx` (could re-export `players.tsx`) OR change all references to `/(tabs)/players`.
+
+---
+
+**`/team-hub` — DOES NOT EXIST (2 references)**
+
+| File | Line | Context |
+|------|------|---------|
+| `components/CoachDashboard.tsx` | 1131 | `router.push('/team-hub' as any)` |
+| `components/ParentDashboard.tsx` | 1811 | `router.push('/team-hub' as any)` |
+
+**Fix:** Change to `/(tabs)/coach-team-hub` for coach and `/(tabs)/parent-team-hub` for parent.
+
+### 6B. HIGH — Incorrect Path Prefixes
+
+**`/chats` missing `/(tabs)/` prefix**
+- `app/my-kids.tsx:368` — `router.push('/chats' as any)`
+- No `app/chats.tsx` exists at root. Fix: `/(tabs)/chats`.
+
+**`/schedule` missing `/(tabs)/` prefix**
+- `app/my-kids.tsx:360` — `router.push('/schedule' as any)`
+- No `app/schedule.tsx` at root. Fix: `/(tabs)/schedule`.
+
+**`/players` missing `/(tabs)/` prefix**
+- `components/AdminDashboard.tsx:1258` — `router.push('/players')`
+- No `app/players.tsx` at root. Fix: `/(tabs)/players`.
+
+### 6C. Orphaned Files (21 total)
+
+**Route files:**
+
+| File | Issue |
+|------|-------|
+| `app/game-day-parent.tsx` | **Fully orphaned** — no references anywhere in codebase |
+
+**Legacy dashboards (replaced by *HomeScroll, imported but never rendered by DashboardRouter):**
+
+| File | Replaced By | ~Lines |
+|------|-------------|--------|
+| `components/AdminDashboard.tsx` | `AdminHomeScroll.tsx` | ~1400 |
+| `components/CoachDashboard.tsx` | `CoachHomeScroll.tsx` | ~1667 |
+| `components/ParentDashboard.tsx` | `ParentHomeScroll.tsx` | ~700 |
+| `components/PlayerDashboard.tsx` | `PlayerHomeScroll.tsx` | ~large |
+| `components/CoachParentDashboard.tsx` | `CoachHomeScroll.tsx` | ~large |
+
+> Note: `DashboardRouter.tsx` still imports all 5 legacy dashboards but its `switch` statement exclusively renders `*HomeScroll` variants. These are **~5000+ lines of dead code**.
+
+**Modals & banners (not imported anywhere):**
+
+| File | What It Does | Re-use Potential |
+|------|-------------|------------------|
+| `components/ParentOnboardingModal.tsx` | 5-slide welcome walkthrough for new parents | HIGH — complete, just needs mounting |
+| `components/LevelUpCelebrationModal.tsx` | Full-screen level-up celebration animation | HIGH — complete, just needs a trigger |
+| `components/ShareRegistrationModal.tsx` | QR code + copy link + share sheet | HIGH — complete, just needs an import |
+| `components/RegistrationBanner.tsx` | CTA banner for open registrations | HIGH — simple, just needs a parent |
+| `components/ReenrollmentBanner.tsx` | Self-contained re-enrollment modal (720 lines) | HIGH — self-triggering, just needs mounting |
+| `components/AppDrawer.tsx` | Legacy modal-based drawer | NONE — superseded by `GestureDrawer.tsx` |
+
+**Transitively orphaned (only consumer is orphaned):**
+
+| File | Only Consumer |
+|------|--------------|
+| `components/SquadComms.tsx` | `PlayerDashboard.tsx` (orphaned) |
+| `components/AnnouncementBanner.tsx` | `ParentDashboard.tsx` (orphaned) |
+
+**Admin/payments component:**
+
+| File | Issue |
+|------|-------|
+| `components/payments-admin.tsx` | **Never imported** — `payments.tsx` tab has its own inline implementation |
+
+**Coach-scroll components (replaced during redesigns):**
+
+| File | Replaced By |
+|------|-------------|
+| `components/coach-scroll/DevelopmentHint.tsx` | `ActionItems.tsx` |
+| `components/coach-scroll/PendingStatsNudge.tsx` | `ActionItems.tsx` |
+| `components/coach-scroll/SeasonScoreboard.tsx` | `SeasonLeaderboardCard.tsx` |
+| `components/coach-scroll/TopPerformers.tsx` | `SeasonLeaderboardCard.tsx` |
+| `components/coach-scroll/TeamPulse.tsx` | `TeamHealthCard.tsx` |
+| `components/coach-scroll/RosterAlerts.tsx` | `TeamHealthCard.tsx` |
+
+### 6D. "Coming Soon" Stubs (18 total)
+
+| Component | What's Stubbed |
+|-----------|---------------|
+| `admin-scroll/UpcomingEvents.tsx` | "View Calendar", "Create Event" |
+| `admin-scroll/SmartQueueCard.tsx` | All action buttons (dynamic routes) |
+| `admin-scroll/QuickActionsGrid.tsx` | All 6 action tiles |
+| `admin-scroll/PaymentSnapshot.tsx` | "Send All Reminders", "View Details" |
+| `admin-scroll/CoachSection.tsx` | "Assign Task" |
+| `AdminHomeScroll.tsx` | Search bar, "Start Setup" |
+| `coach-scroll/QuickActions.tsx` | "Give a Shoutout", "Create a Challenge" |
+| `coach-scroll/EngagementSection.tsx` | Shoutout nudge |
+| `coach-scroll/GamePlanCard.tsx` | "START GAME DAY MODE" |
+| `player-scroll/QuickPropsRow.tsx` | "Give props" |
+| `player-scroll/ActiveChallengeCard.tsx` | Entire card (always null) |
+| `player-scroll/ChatPeek.tsx` | "Chat coming soon" |
+| `player-scroll/HeroIdentityCard.tsx` | OVR badge tap |
+| `standings.tsx` | "Leaderboards Coming Soon" |
+
+### 6E. Empty / No-Op Handlers
+
+| File | Line | Type |
+|------|------|------|
+| `components/EmergencyContactModal.tsx` | 61 | Card touch sink (intentional) |
+| `components/GameCompletionWizard.tsx` | 484 | Card touch sink (intentional) |
+| `app/registration-hub.tsx` | 1816 | Modal backdrop blocker (intentional) |
+| `components/parent-scroll/DayStripCalendar.tsx` | — | Day cells have TouchableOpacity but no onPress |
+| `components/player-scroll/PhotoStrip.tsx` | — | Photo thumbnails have TouchableOpacity but no onPress |
+| `components/player-scroll/ChatPeek.tsx` | — | Row has TouchableOpacity but no onPress |
+
+### 6F. TODO / FIXME Items
+
+| File | Line | Comment |
+|------|------|---------|
+| `components/coach-scroll/GamePlanCard.tsx` | 118 | `// TODO: Navigate to chat/DM with missing player's parent when built` |
+| `components/coach-scroll/GamePlanCard.tsx` | 134 | `// TODO: Navigate to Game Day Command Center when built` |
+| `app/(tabs)/schedule.tsx` | 152 | `// TODO: Implement when organization_venues table is created` |
+
+### 6G. Drawer-Only Routes (Valid but Less Discoverable)
+
+These screens are reachable only through the GestureDrawer menu — not from any home screen tap target:
+
+- `/coach-availability` — also in coach-my-stuff
+- `/coach-profile` — drawer + AppDrawer
+- `/web-features` — drawer (4 webOnly items + 1 general)
+- `/coach-directory` — drawer only
+- `/(tabs)/admin-chat` — hidden tab, never navigated to from anywhere
+
+---
+
+## 7. Web Admin Route Registry + Sidebar Nav Audit
+
+### 7A. Route Registry (`src/lib/routes.js`)
+
+The web admin centralizes all routing in `src/lib/routes.js` with a ROUTES object mapping page IDs to URL paths, plus helper functions `getPathForPage()`, `getPageIdFromPath()`, and `useAppNavigate()`.
+
+**35 Static Routes:**
+
+| Page ID | URL Path | Component |
+|---------|----------|-----------|
+| dashboard | /dashboard | DashboardPage / CoachDashboard / ParentDashboard / PlayerDashboard (role-dependent) |
+| teams | /teams | TeamsPage |
+| coaches | /coaches | CoachesPage |
+| registrations | /registrations | RegistrationsPage |
+| jerseys | /jerseys | JerseysPage |
+| schedule | /schedule | SchedulePage |
+| attendance | /attendance | AttendancePage |
+| payments | /payments | PaymentsPage / ParentPaymentsPage (role-dependent) |
+| coach-availability | /schedule/availability | CoachAvailabilityPage |
+| roster | /roster | RosterManagerPage |
+| gameprep | /gameprep | GamePrepPage |
+| standings | /standings | TeamStandingsPage |
+| leaderboards | /leaderboards | SeasonLeaderboardsPage |
+| chats | /chats | ChatsPage |
+| blasts | /blasts | BlastsPage |
+| notifications | /notifications | NotificationsPage |
+| reports | /reports | ReportsPage |
+| registration-funnel | /reports/funnel | RegistrationFunnelPage |
+| season-archives | /archives | SeasonArchivePage |
+| org-directory | /directory | OrgDirectoryPage |
+| achievements | /achievements | AchievementsCatalogPage |
+| my-profile | /profile | MyProfilePage |
+| messages | /messages | ParentMessagesPage |
+| invite | /invite | InviteFriendsPage |
+| my-stuff | /my-stuff | MyStuffPage |
+| seasons | /settings/seasons | SeasonsPage |
+| templates | /settings/templates | RegistrationTemplatesPage |
+| waivers | /settings/waivers | WaiversPage |
+| paymentsetup | /settings/payment-setup | PaymentSetupPage |
+| organization | /settings/organization | OrganizationPage |
+| data-export | /settings/data-export | DataExportPage |
+| subscription | /settings/subscription | SubscriptionPage |
+| platform-admin | /platform/admin | PlatformAdminPage |
+| platform-analytics | /platform/analytics | PlatformAnalyticsPage |
+| platform-subscriptions | /platform/subscriptions | PlatformSubscriptionsPage |
+
+**3 Dynamic Route Patterns:**
+- `teamwall-{id}` → `/teams/{id}` (TeamWallRoute wrapper)
+- `player-{id}` → `/parent/player/{id}` (ParentPlayerCardRoute)
+- `player-profile-{id}` → `/parent/player/{id}/profile` (PlayerProfileRoute)
+
+**2 Redirect Routes:**
+- `/` → redirects to `/dashboard`
+- `*` (catch-all) → redirects to `/dashboard`
+
+### 7B. Navigation Architecture
+
+> **Important:** The web admin does NOT use traditional left sidebars for primary navigation. The spec references `AdminLeftSidebar.jsx`, `CoachLeftSidebar.jsx`, etc. — these exist but function as **dashboard sidebar panels** (org stats, quick actions, needs attention), not primary navigation. Primary navigation uses a **HorizontalNavBar** component (defined in `MainApp.jsx` lines 500-767) with role-specific dropdown menu groups.
+
+#### HorizontalNavBar — Admin (7 groups, 28 items)
+
+| Group | Items |
+|-------|-------|
+| **Dashboard** | Dashboard |
+| **People** | Teams, Coaches |
+| **Operations** | Registrations, Jerseys, Schedule, Attendance, Payments, Coach Availability |
+| **Game Day** | Game Prep, Standings, Leaderboards |
+| **Communication** | Chats, Blasts, Notifications |
+| **Insights** | Reports, Registration Funnel, Season Archives, Org Directory |
+| **Setup** | Seasons, Templates, Waivers, Payment Setup, Organization, Data Export, Subscription |
+
+#### HorizontalNavBar — Coach (6 groups, 14 items)
+
+| Group | Items |
+|-------|-------|
+| **Dashboard** | Dashboard |
+| **My Teams** | Roster, Team Walls (dynamic per team) |
+| **Schedule** | Schedule |
+| **Game Day** | Game Prep, Attendance, Standings, Leaderboards |
+| **Communication** | Chats, Blasts |
+| **My Stuff** | Coach Availability, Season Archives, Org Directory |
+
+#### HorizontalNavBar — Parent (5 groups, 8 items)
+
+| Group | Items |
+|-------|-------|
+| **Home** | Dashboard |
+| **My Players** | Child cards (dynamic per child) |
+| **Social** | Chats, Team Hub (team walls) |
+| **Payments** | Payments |
+| **My Stuff** | My Stuff, Season Archives, Org Directory |
+
+#### HorizontalNavBar — Player (5 groups, 7 items)
+
+| Group | Items |
+|-------|-------|
+| **Home** | Dashboard |
+| **My Team** | Team Walls (dynamic per team) |
+| **Schedule** | Schedule |
+| **Achievements** | Achievements |
+| **My Stuff** | Leaderboards, Standings, My Stuff |
+
+### 7C. Dashboard Sidebar Panels
+
+The web admin uses role-specific sidebar components within dashboards (not for primary navigation):
+
+| File | Role | Content |
+|------|------|---------|
+| `OrgSidebar.jsx` | Admin dashboard | Org card + stats, onboarding progress, needs attention (regs/payments/waivers), quick actions (regs/payments/invite/blast), recent badges |
+| `AdminLeftSidebar.jsx` | Admin dashboard | Org identity, stats (players/teams/coaches), collections progress, needs attention, quick actions (same as OrgSidebar — appears to be an alternate version) |
+| `CoachLeftSidebar.jsx` | Coach dashboard | Team header + stats (players/teams/win%), onboarding journey, needs attention, quick actions (attendance/message/warmup/shoutout/hub/chat) |
+| `ParentLeftSidebar.jsx` | Parent dashboard | Org header, stats (players/seasons/teams), payment status card, priority items (payments/waivers/RSVPs), quick actions (calendar/hub/register/payments), badge progress |
+| `PlayerProfileSidebar.jsx` | Player dashboard | Player hero + XP/level bar, streak indicator, season stats preview (kills/aces/digs/assists with rankings), quick links (hub/leaderboards/trophies/standings) |
+| `LiveActivitySidebar.jsx` | Admin right panel | Live activity feed (up to 8 items), upcoming events preview (up to 4) |
+| `ActionItemsSidebar.jsx` | Parent right panel | Slide-out action items grouped by type (payments/waivers/RSVPs/games), inline RSVP modal |
+
+### 7D. Cross-Reference: Routes vs Nav vs Files
+
+**All 35 routes in `routes.js` have:**
+- ✅ A corresponding `<Route>` component in `MainApp.jsx`
+- ✅ A valid page component file that exists and imports correctly
+- ✅ At least one nav bar item or dashboard link that reaches it
+
+**Routes in `MainApp.jsx` NOT in `routes.js`:**
+- `/teams/:teamId` — handled by dynamic `getPathForPage('teamwall-{id}')` pattern
+- `/parent/player/:playerId` — handled by dynamic `getPathForPage('player-{id}')` pattern
+- `/parent/player/:playerId/profile` — handled by dynamic `getPathForPage('player-profile-{id}')` pattern
+- `/` and `*` — redirect routes, not page IDs
+
+**Sidebar nav items that use callbacks instead of page IDs:**
+- Coach: "Message Parents" → `onShowCoachBlast()`, "Start Warmup" → `onShowWarmupTimer()`, "Give Shoutout" → `onShowShoutout()`, "Team Hub" → `navigateToTeamWall()`, "Team Chat" → `openTeamChat()`
+- Parent: "Team Hub" → `navigateToTeamWall()`, "Register" → `onShowAddChild()`
+- Player: "Team Hub" → `navigateToTeamWall()`
+
+---
+
+## 8. Web Admin Broken Connections + Feature Status
+
+### 8A. Broken Connections
+
+**Result: NO broken connections found.**
+
+All 28 page imports in `MainApp.jsx` resolve correctly:
+- All named exports verified via index.js barrel files
+- All direct imports (PlatformAdminPage, NotificationsPage, MyProfilePage, etc.) resolve to real files
+- All `getPathForPage()` calls reference valid page IDs
+- All `onNavigate` callbacks in sidebar components use valid page IDs from `routes.js`
+
+**Potential risk (not currently broken):**
+- No route-level auth guards — all routes render unconditionally. Authorization is delegated to individual page components.
+- Platform admin routes (`/platform/*`) only check `isPlatformAdmin` in the nav bar UI, not at the route level.
+
+### 8B. Web Admin Feature Status
+
+#### ✅ Full (16 pages — working end-to-end with real data)
+
+| Page | Key Features |
+|------|-------------|
+| `DashboardPage` (Admin) | Seasonal stats, financial summaries, registration tracking, payment analysis, team filtering, 3-column layout with OrgSidebar + LiveActivitySidebar |
+| `CoachDashboard` | Team data, roster, events, stats, RSVP tracking, performance grids, command center, CoachLeftSidebar |
+| `ParentDashboard` | Child management, payment modals, calendar events, priority engine, ParentLeftSidebar + ActionItemsSidebar |
+| `PlayerDashboard` | Season stats, achievements, team info, leaderboards, PlayerProfileSidebar |
+| `SchedulePage` | Full calendar (month/week/day/list), event CRUD, lineup builder, game completion, RSVP tracking |
+| `GamePrepPage` | Game management, lineups, attendance, stats entry, game completion workflow |
+| `PaymentsPage` | Payment tracking, fee generation, CSV export, per-player breakdowns |
+| `RegistrationsPage` | Approve/deny/waitlist, player details modal, edit capabilities, funnel tracking |
+| `TeamsPage` | Team CRUD, roster sync, unrostered player panel, player assignment |
+| `BlastsPage` | Announcement creation, delivery tracking, read receipts |
+| `ChatsPage` | Real-time chat channels, team/parent messaging, unread counts |
+| `SeasonLeaderboardsPage` | Multiple stat leaderboards (kills, aces, digs, blocks, assists, hitting %, serve %) |
+| `CoachesPage` | Coach management, profile editing |
+| `PaymentSetupPage` | Stripe/Venmo/Zelle/Cash App setup, test connection |
+| `TeamStandingsPage` | Team records and standings |
+| `LoginPage` | Google/Apple OAuth + email/password authentication |
+
+#### ⚠️ Partial (11 pages — render with real data but incomplete features)
+
+| Page | Status |
+|------|--------|
+| `PlayerStatsPage` | Stats display works, category config needs completion |
+| `PublicRegistrationPage` | Multi-step form works, prefill logic complete, funnel tracking may have edge cases |
+| `RosterManagerPage` | Exists and imported, file readable |
+| `AttendancePage` | Exists and imported, file readable |
+| `OrganizationPage` | Org settings management |
+| `RegistrationTemplatesPage` | Template management for registration forms |
+| `SeasonsPage` | Season CRUD (create/edit/delete) |
+| `WaiversPage` | Waiver management |
+| `NotificationsPage` | Notification preferences |
+| `DataExportPage` | CSV export functionality |
+| `SubscriptionPage` | Subscription tier management |
+
+#### 🔧 Stub (20 pages/components — exist but minimal)
+
+| Page | Notes |
+|------|-------|
+| `DashboardWidgetsExample` | Demo widgets, not production |
+| `SetupWizard` (Auth) | Initial setup flow |
+| `JerseysPage` | Jersey/size management |
+| `PlatformAdminPage` | Platform-level admin tools |
+| `PlatformSubscriptionsPage` | Multi-tenant subscriptions |
+| `PlatformAnalyticsPage` | Platform analytics |
+| `MyProfilePage` | User profile editing |
+| `MyStuffPage` | Parent personal items |
+| `OrgDirectoryPage` | Public org listing |
+| `TeamWallPage` | Team social wall/feed |
+| `ParentPlayerCardPage` | Parent view of child stats |
+| `PlayerProfilePage` | Detailed player profile |
+| `ReportsPage` | Reporting tools |
+| `RegistrationFunnelPage` | Registration funnel analytics |
+| `SeasonArchivePage` | Past season archival |
+| `ParentPaymentsPage` | Parent payment history |
+| `ParentMessagesPage` | Parent message center |
+| `InviteFriendsPage` | Friend invite system |
+| `AchievementsCatalogPage` | Achievement definitions and catalog |
+| `CoachAvailabilityPage` | Coach availability surveys |
+
+#### Backup Directory
+
+`src_backup/` contains pre-redesign files: `Dashboard.jsx`, `OrganizationSetupWizard.jsx`, etc. These are historical backups and not active code.
+
+---
+
+## 9. Feature Matrix — Web Admin vs Mobile vs Neither (THE KEY DELIVERABLE)
 
 | Feature | Web Admin | Mobile | Notes |
 |---------|-----------|--------|-------|
@@ -632,9 +1094,10 @@ theme/
 | Reports & analytics | ✅ Multi-category | ✅ `season-reports.tsx` | Mobile simpler |
 | Data export | ✅ Full backup | ❌ None | **Web only** |
 | Subscription management | ✅ Plan tiers | ❌ None | **Web only** |
+| Platform admin panel | ✅ Full (orgs, analytics, subscriptions) | ❌ None | **Web only** |
 | **Account & Settings** | | | |
 | Profile editing | ✅ Full + photo | ✅ `profile.tsx` | Both functional |
-| Role switching | N/A | ✅ `RoleSelector` | Mobile only (web auto-detects) |
+| Role switching | ✅ Role switcher dropdown | ✅ `RoleSelector` | Both functional (web in nav bar, mobile in drawer) |
 | Theme/dark mode | ✅ Full | ✅ `useTheme()` | Both functional |
 | Invite friends | ✅ Invite page | ✅ `invite-friends.tsx` | Both functional |
 
@@ -655,296 +1118,69 @@ theme/
 13. Data export / full backup
 14. Subscription management
 15. Coach background check tracking
+16. Platform admin panel (multi-org management)
+
+### Summary: Mobile-Only Features (No Web Equivalent)
+
+1. Notification preferences screen
+2. GestureDrawer swipe navigation
+3. Velocity-sensitive scroll animations (parent/player homes)
+4. Auto-hiding tab bar
+5. Native RSVP inline buttons on hero cards
+6. Native maps integration (directions)
 
 ---
 
-## 6. Tap Target Map
-
-### 6A. Parent Home — `ParentHomeScroll`
-
-| Tap Target | Component | Navigates To | Working? |
-|------------|-----------|-------------|----------|
-| Day cell (calendar strip) | `DayStripCalendar` | Nowhere — no onPress | No |
-| Attention banner | `AttentionBanner` | `/(tabs)/parent-schedule` | Yes |
-| Event hero card body | `EventHeroCard` | `/(tabs)/parent-schedule` | Yes |
-| RSVP button on hero | `EventHeroCard` | Calls `data.rsvpHeroEvent('yes')` | Yes |
-| Directions button on hero | `EventHeroCard` | Native maps via `Linking.openURL` | Yes |
-| Secondary events text | `SecondaryEvents` | `/(tabs)/parent-schedule` | Yes |
-| Athlete card (per child) | `AthleteCard` | `/child-detail?playerId=${id}` | Yes |
-| Record card (metric grid) | `MetricGrid` | `/(tabs)/parent-schedule` | Yes |
-| Balance card (metric grid) | `MetricGrid` | `/family-payments` | Yes |
-| Progress card (metric grid) | `MetricGrid` | `/achievements` | Yes |
-| Chat card (metric grid) | `MetricGrid` | `/(tabs)/parent-chat` | Yes |
-| "View All" (team hub) | `TeamHubPreview` | `/(tabs)/parent-team-hub` | Yes |
-| Post row (team hub) | `TeamHubPreview` | `/(tabs)/parent-team-hub` | Yes |
-| Last game result (snapshot) | `SeasonSnapshot` | `/(tabs)/parent-schedule` | Yes |
-| Chat preview row | `FlatChatPreview` | `/(tabs)/parent-chat` | Yes |
-| "See All" badges | `RecentBadges` | `/achievements` | Yes |
-| Each badge pill | `RecentBadges` | `/achievements` | Yes |
-
-### 6B. Coach Home — `CoachHomeScroll`
-
-| Tap Target | Component | Navigates To | Working? |
-|------------|-----------|-------------|----------|
-| Bell icon | Header | `/notification` | Yes |
-| RoleSelector | Header | Role switch | Yes |
-| Team pills | Team selector | `data.selectTeam()` (filter) | Yes |
-| Checklist container | `PrepChecklist` | `/(tabs)/coach-schedule` | Yes |
-| "Roster" pill | `GamePlanCard` | `/(tabs)/coach-roster` | **BROKEN** — route doesn't exist |
-| "Lineup" pill | `GamePlanCard` | `/(tabs)/coach-roster` | **BROKEN** |
-| "Stats" pill | `GamePlanCard` | `/(tabs)/coach-schedule` | Yes |
-| "Attend." pill | `GamePlanCard` | `/(tabs)/coach-schedule` | Yes |
-| Missing RSVP names | `GamePlanCard` | `/(tabs)/coach-chat` | Yes |
-| "START GAME DAY MODE" | `GamePlanCard` | Alert "Coming Soon" | Stub |
-| Scouting context | `ScoutingContext` | `/(tabs)/coach-schedule` | Yes |
-| "Send a Blast" | `QuickActions` | `/(tabs)/coach-chat` | Yes |
-| "Build a Lineup" | `QuickActions` | `/(tabs)/coach-roster` | **BROKEN** |
-| "Give a Shoutout" | `QuickActions` | Alert "Coming Soon" | Stub |
-| "Review Stats" | `QuickActions` | `/(tabs)/coach-schedule` | Yes |
-| "Manage Roster" | `QuickActions` | `/(tabs)/coach-roster` | **BROKEN** |
-| "Create a Challenge" | `QuickActions` | Alert "Coming Soon" | Stub |
-| Shoutout nudge | `EngagementSection` | Alert "Coming Soon" | Stub |
-| Team health card | `TeamHealthCard` | `/(tabs)/coach-roster` | **BROKEN** |
-| "View Leaderboard" | `SeasonLeaderboardCard` | `/(tabs)/coach-roster` | **BROKEN** |
-| Evaluation item | `ActionItems` | `/(tabs)/coach-roster` | **BROKEN** |
-| Pending stats item | `ActionItems` | `/(tabs)/coach-schedule` | Yes |
-| "View All" (team hub) | `TeamHubPreviewCard` | `/(tabs)/coach-chat` | Yes |
-| Each post row | `TeamHubPreviewCard` | `/(tabs)/coach-chat` | Yes |
-| Each feed item | `ActivityFeed` | `/(tabs)/coach-roster` | **BROKEN** |
-| "View all" (feed) | `ActivityFeed` | `/(tabs)/coach-roster` | **BROKEN** |
-| "Continue Setup" | `SeasonSetupCard` | `/(tabs)/coach-schedule` | Yes |
-
-### 6C. Player Home — `PlayerHomeScroll`
-
-| Tap Target | Component | Navigates To | Working? |
-|------------|-----------|-------------|----------|
-| OVR badge | `HeroIdentityCard` | Alert "Full profile coming soon!" | Stub |
-| Photo thumbnails | `PhotoStrip` | Nowhere — no onPress | No |
-| RSVP button | `NextUpCard` | `data.sendRsvp('yes'/'no')` | Yes |
-| Chat peek row | `ChatPeek` | Nowhere — no onPress | No (stub) |
-| "Give props" row | `QuickPropsRow` | Alert "Coming Soon" | Stub |
-
-### 6D. Admin Home — `AdminHomeScroll`
-
-| Tap Target | Component | Navigates To | Working? |
-|------------|-----------|-------------|----------|
-| Search bar | `AdminHomeScroll` | Alert "Coming Soon" | Stub |
-| Queue action buttons | `SmartQueueCard` | Alert "Coming Soon" (all) | Stub |
-| Team health tiles | `TeamHealthTiles` | Nowhere — no onPress | No |
-| "Send All Reminders" | `PaymentSnapshot` | Alert "Coming Soon" | Stub |
-| "View Details" (payments) | `PaymentSnapshot` | Alert "Coming Soon" | Stub |
-| All 6 quick actions | `QuickActionsGrid` | Alert "Coming Soon" (all) | Stub |
-| "Assign Task" | `CoachSection` | Alert "Coming Soon" | Stub |
-| "View Calendar" | `UpcomingEvents` | Alert "Coming Soon" | Stub |
-| "Create Event" | `UpcomingEvents` | Alert "Coming Soon" | Stub |
-| "Start Setup" (season) | `AdminHomeScroll` | Alert "Coming Soon" | Stub |
-| "View more" (queue) | `AdminHomeScroll` | Nowhere — no onPress | No |
-
----
-
-## 7. Broken / Missing / Orphaned Connections
-
-### 7A. CRITICAL — Non-Existent Route Targets
-
-**`/(tabs)/coach-roster` — DOES NOT EXIST (13 references)**
-
-There is no file `app/(tabs)/coach-roster.tsx` and no tab registered with that name.
-
-| File | Line | Context |
-|------|------|---------|
-| `components/coach-scroll/DevelopmentHint.tsx` | 67 | Navigation target |
-| `components/coach-scroll/ActivityFeed.tsx` | 126 | Feed item navigation |
-| `components/coach-scroll/ActivityFeed.tsx` | 137 | "View all" link |
-| `components/coach-scroll/ActionItems.tsx` | 66 | Evaluation item |
-| `components/coach-scroll/TopPerformers.tsx` | 41 | Performer row |
-| `components/coach-scroll/RosterAlerts.tsx` | 118 | Alert navigation |
-| `components/coach-scroll/TeamHealthCard.tsx` | 188 | Card + attention row |
-| `components/coach-scroll/SeasonLeaderboardCard.tsx` | 246 | "View Leaderboard" |
-| `components/coach-scroll/QuickActions.tsx` | 22, 25 | "Build a Lineup", "Manage Roster" |
-| `components/coach-scroll/GamePlanCard.tsx` | 47, 48, 53 | "Roster", "Lineup" pills |
-
-**Fix:** Create `app/(tabs)/coach-roster.tsx` (could re-export `players.tsx`) OR change all references to `/(tabs)/players`.
-
----
-
-**`/team-hub` — DOES NOT EXIST (2 references)**
-
-| File | Line | Context |
-|------|------|---------|
-| `components/CoachDashboard.tsx` | 1131 | `router.push('/team-hub' as any)` |
-| `components/ParentDashboard.tsx` | 1811 | `router.push('/team-hub' as any)` |
-
-**Fix:** Change to `/(tabs)/coach-team-hub` for coach and `/(tabs)/parent-team-hub` for parent.
-
-### 7B. HIGH — Incorrect Path Prefixes
-
-**`/chats` missing `/(tabs)/` prefix**
-- `app/my-kids.tsx:368` — `router.push('/chats' as any)`
-- No `app/chats.tsx` exists at root. Fix: `/(tabs)/chats`.
-
-**`/schedule` missing `/(tabs)/` prefix**
-- `app/my-kids.tsx:360` — `router.push('/schedule' as any)`
-- No `app/schedule.tsx` at root. Fix: `/(tabs)/schedule`.
-
-**`/players` missing `/(tabs)/` prefix**
-- `components/AdminDashboard.tsx:1258` — `router.push('/players')`
-- No `app/players.tsx` at root. Fix: `/(tabs)/players`.
-
-### 7C. Orphaned Files (21 total)
-
-**Route files:**
-
-| File | Issue |
-|------|-------|
-| `app/game-day-parent.tsx` | **Fully orphaned** — no references anywhere in codebase |
-
-**Legacy dashboards (replaced by *HomeScroll, imported but never rendered by DashboardRouter):**
-
-| File | Replaced By | ~Lines |
-|------|-------------|--------|
-| `components/AdminDashboard.tsx` | `AdminHomeScroll.tsx` | ~1400 |
-| `components/CoachDashboard.tsx` | `CoachHomeScroll.tsx` | ~1667 |
-| `components/ParentDashboard.tsx` | `ParentHomeScroll.tsx` | ~700 |
-| `components/PlayerDashboard.tsx` | `PlayerHomeScroll.tsx` | ~large |
-| `components/CoachParentDashboard.tsx` | `CoachHomeScroll.tsx` | ~large |
-
-> Note: `DashboardRouter.tsx` still imports all 5 legacy dashboards but its `switch` statement exclusively renders `*HomeScroll` variants. These are **~5000+ lines of dead code**.
-
-**Modals & banners (not imported anywhere):**
-
-| File | What It Does | Re-use Potential |
-|------|-------------|------------------|
-| `components/ParentOnboardingModal.tsx` | 5-slide welcome walkthrough for new parents | HIGH — complete, just needs mounting |
-| `components/LevelUpCelebrationModal.tsx` | Full-screen level-up celebration animation | HIGH — complete, just needs a trigger |
-| `components/ShareRegistrationModal.tsx` | QR code + copy link + share sheet | HIGH — complete, just needs an import |
-| `components/RegistrationBanner.tsx` | CTA banner for open registrations | HIGH — simple, just needs a parent |
-| `components/ReenrollmentBanner.tsx` | Self-contained re-enrollment modal (720 lines) | HIGH — self-triggering, just needs mounting |
-| `components/AppDrawer.tsx` | Legacy modal-based drawer | NONE — superseded by `GestureDrawer.tsx` |
-
-**Transitively orphaned (only consumer is orphaned):**
-
-| File | Only Consumer |
-|------|--------------|
-| `components/SquadComms.tsx` | `PlayerDashboard.tsx` (orphaned) |
-| `components/AnnouncementBanner.tsx` | `ParentDashboard.tsx` (orphaned) |
-
-**Admin/payments component:**
-
-| File | Issue |
-|------|-------|
-| `components/payments-admin.tsx` | **Never imported** — `payments.tsx` tab has its own inline implementation |
-
-**Coach-scroll components (replaced during redesigns):**
-
-| File | Replaced By |
-|------|-------------|
-| `components/coach-scroll/DevelopmentHint.tsx` | `ActionItems.tsx` |
-| `components/coach-scroll/PendingStatsNudge.tsx` | `ActionItems.tsx` |
-| `components/coach-scroll/SeasonScoreboard.tsx` | `SeasonLeaderboardCard.tsx` |
-| `components/coach-scroll/TopPerformers.tsx` | `SeasonLeaderboardCard.tsx` |
-| `components/coach-scroll/TeamPulse.tsx` | `TeamHealthCard.tsx` |
-| `components/coach-scroll/RosterAlerts.tsx` | `TeamHealthCard.tsx` |
-
-### 7D. "Coming Soon" Stubs (18 total)
-
-| Component | What's Stubbed |
-|-----------|---------------|
-| `admin-scroll/UpcomingEvents.tsx` | "View Calendar", "Create Event" |
-| `admin-scroll/SmartQueueCard.tsx` | All action buttons (dynamic routes) |
-| `admin-scroll/QuickActionsGrid.tsx` | All 6 action tiles |
-| `admin-scroll/PaymentSnapshot.tsx` | "Send All Reminders", "View Details" |
-| `admin-scroll/CoachSection.tsx` | "Assign Task" |
-| `AdminHomeScroll.tsx` | Search bar, "Start Setup" |
-| `coach-scroll/QuickActions.tsx` | "Give a Shoutout", "Create a Challenge" |
-| `coach-scroll/EngagementSection.tsx` | Shoutout nudge |
-| `coach-scroll/GamePlanCard.tsx` | "START GAME DAY MODE" |
-| `player-scroll/QuickPropsRow.tsx` | "Give props" |
-| `player-scroll/ActiveChallengeCard.tsx` | Entire card (always null) |
-| `player-scroll/ChatPeek.tsx` | "Chat coming soon" |
-| `player-scroll/HeroIdentityCard.tsx` | OVR badge tap |
-| `standings.tsx` | "Leaderboards Coming Soon" |
-
-### 7E. Empty / No-Op Handlers
-
-| File | Line | Type |
-|------|------|------|
-| `components/EmergencyContactModal.tsx` | 61 | Card touch sink (intentional) |
-| `components/GameCompletionWizard.tsx` | 484 | Card touch sink (intentional) |
-| `app/registration-hub.tsx` | 1816 | Modal backdrop blocker (intentional) |
-| `components/parent-scroll/DayStripCalendar.tsx` | — | Day cells have TouchableOpacity but no onPress |
-| `components/player-scroll/PhotoStrip.tsx` | — | Photo thumbnails have TouchableOpacity but no onPress |
-| `components/player-scroll/ChatPeek.tsx` | — | Row has TouchableOpacity but no onPress |
-
-### 7F. TODO / FIXME Items
-
-| File | Line | Comment |
-|------|------|---------|
-| `components/coach-scroll/GamePlanCard.tsx` | 118 | `// TODO: Navigate to chat/DM with missing player's parent when built` |
-| `components/coach-scroll/GamePlanCard.tsx` | 134 | `// TODO: Navigate to Game Day Command Center when built` |
-| `app/(tabs)/schedule.tsx` | 152 | `// TODO: Implement when organization_venues table is created` |
-
-### 7G. Drawer-Only Routes (Valid but Less Discoverable)
-
-These screens are reachable only through the GestureDrawer menu — not from any home screen tap target:
-
-- `/coach-availability` — also in coach-my-stuff
-- `/coach-profile` — drawer + AppDrawer
-- `/web-features` — drawer (4 webOnly items + 1 general)
-- `/coach-directory` — drawer only
-- `/(tabs)/admin-chat` — hidden tab, never navigated to from anywhere
-
----
-
-## 8. Full-Screen Experience Recommendations
+## 10. Full-Screen Experience Recommendations
 
 ### CRITICAL Priority
 
-| Screen | Purpose | Roles | Current State | Complexity |
-|--------|---------|-------|---------------|------------|
-| Coach Roster Tab | View/manage roster, evaluations, player details | Coach | **DOES NOT EXIST** — 13 broken refs | Simple (can re-export `players.tsx`) |
-| Admin Quick Actions | Create Event, Send Reminder, Blast All, etc. | Admin | All 6 are stubs | Multi-step per action |
-| Admin Smart Queue Actions | Navigate to registration, payments, waivers | Admin | All action buttons are stubs | Routing fix |
+| Screen | Purpose | Roles | Current State | Complexity | Depends On |
+|--------|---------|-------|---------------|------------|------------|
+| Coach Roster Tab | View/manage roster, evaluations, player details | Coach | **DOES NOT EXIST** — 13 broken refs | Simple (can re-export `players.tsx`) | Nothing |
+| Admin Quick Actions | Create Event, Send Reminder, Blast All, etc. | Admin | All 6 are stubs | Multi-step per action | Existing screens (route wiring) |
+| Admin Smart Queue Actions | Navigate to registration, payments, waivers | Admin | All action buttons are stubs | Routing fix | Existing screens |
 
 ### HIGH Priority
 
-| Screen | Purpose | Roles | Current State | Complexity |
-|--------|---------|-------|---------------|------------|
-| Game Day Command Center | Live coaching during games | Coach | TODO + stub | Heavy interaction |
-| Admin Calendar/Schedule | View and manage events across all teams | Admin | "Coming Soon" stub | Medium (can wire to existing schedule) |
-| Admin Payment Management | Send reminders, view details | Admin | "Coming Soon" stubs | Medium |
-| Player Chat | Player access to team chat | Player | "Coming Soon" stub | Simple (can wire to existing chat) |
-| Shoutout Flow | Give/receive shoutouts | Coach, Player | Components exist, not wired | Medium (needs DB tables) |
-| Leaderboards | Season leaderboards by stat category | Coach, Player | "Coming Soon" in standings | Medium |
+| Screen | Purpose | Roles | Current State | Complexity | Depends On |
+|--------|---------|-------|---------------|------------|------------|
+| Game Day Command Center | Live coaching during games | Coach | TODO + stub | Heavy interaction | Lineup builder, stats entry |
+| Admin Calendar/Schedule | View and manage events across all teams | Admin | "Coming Soon" stub | Medium (can wire to existing schedule) | Schedule tab |
+| Admin Payment Management | Send reminders, view details | Admin | "Coming Soon" stubs | Medium | Payments tab |
+| Player Chat | Player access to team chat | Player | "Coming Soon" stub | Simple (can wire to existing chat) | Chat system |
+| Shoutout Flow | Give/receive shoutouts | Coach, Player | Components exist, not wired | Medium (needs DB tables) | Engagement system |
+| Leaderboards | Season leaderboards by stat category | Coach, Player | "Coming Soon" in standings | Medium | Stats aggregation |
 
 ### MEDIUM Priority
 
-| Screen | Purpose | Roles | Current State | Complexity |
-|--------|---------|-------|---------------|------------|
-| Challenge System | Create and participate in challenges | Coach, Player | Components exist, tables don't | Heavy (needs DB + engine) |
-| Player Evaluations | Coach rates player skills | Coach | Web only | Multi-step form |
-| Admin Season Setup Wizard | Guided setup for new seasons | Admin | "Coming Soon" | Multi-step wizard |
-| Bulk Event Creation | Create recurring practices/games | Coach, Admin | Web only | Multi-step form |
-| Payment Reminders | Send payment reminders | Admin | "Coming Soon" | Simple |
-| Admin Search | Search across all entities | Admin | "Coming Soon" | Medium |
-| DayStrip Calendar Taps | Navigate to day's events on tap | Parent | No handler | Simple fix |
-| Photo Strip Taps | Open photo viewer on tap | Player | No handler | Simple fix |
+| Screen | Purpose | Roles | Current State | Complexity | Depends On |
+|--------|---------|-------|---------------|------------|------------|
+| Challenge System | Create and participate in challenges | Coach, Player | Components exist, tables don't | Heavy (needs DB + engine) | Engagement system |
+| Player Evaluations | Coach rates player skills | Coach | Web only | Multi-step form | Player profiles |
+| Admin Season Setup Wizard | Guided setup for new seasons | Admin | "Coming Soon" | Multi-step wizard | Season settings |
+| Bulk Event Creation | Create recurring practices/games | Coach, Admin | Web only | Multi-step form | Schedule |
+| Payment Reminders | Send payment reminders | Admin | "Coming Soon" | Simple | Payments |
+| Admin Search | Search across all entities | Admin | "Coming Soon" | Medium | All data sources |
+| DayStrip Calendar Taps | Navigate to day's events on tap | Parent | No handler | Simple fix | Parent schedule |
+| Photo Strip Taps | Open photo viewer on tap | Player | No handler | Simple fix | PhotoViewer |
 
 ### LOW Priority
 
-| Screen | Purpose | Roles | Current State | Complexity |
-|--------|---------|-------|---------------|------------|
-| Venue Manager | CRUD for venues | Admin | Web only | Simple CRUD |
-| Player Goals & Notes | Track development | Coach | Web only | Medium |
-| Volunteer Assignment | Assign parents to roles | Admin, Coach | Web only | Medium |
-| Schedule Poster | Generate shareable graphics | Coach | Web only | Heavy (graphics) |
-| Stripe Integration | Online payments | Admin, Parent | Web only | Heavy (payment flow) |
-| Push Notification Admin | Send/manage push notifications | Admin | Web only | Medium |
-| Data Export | Full backup | Admin | Web only | Medium |
-| Organization Settings | Org profile, venues, admins | Admin | Redirects to web | Medium |
-| Registration Form Builder | Template editor | Admin | Redirects to web | Heavy (form builder) |
-| Advanced Lineup Builder | Extended lineup features | Coach | Web only | Heavy |
-| Coach Background Checks | Track clearance status | Admin | Web only | Simple CRUD |
+| Screen | Purpose | Roles | Current State | Complexity | Depends On |
+|--------|---------|-------|---------------|------------|------------|
+| Venue Manager | CRUD for venues | Admin | Web only | Simple CRUD | Organization settings |
+| Player Goals & Notes | Track development | Coach | Web only | Medium | Player profiles |
+| Volunteer Assignment | Assign parents to roles | Admin, Coach | Web only | Medium | Events |
+| Schedule Poster | Generate shareable graphics | Coach | Web only | Heavy (graphics) | Schedule |
+| Stripe Integration | Online payments | Admin, Parent | Web only | Heavy (payment flow) | Payments |
+| Push Notification Admin | Send/manage push notifications | Admin | Web only | Medium | Notification system |
+| Data Export | Full backup | Admin | Web only | Medium | All data |
+| Organization Settings | Org profile, venues, admins | Admin | Redirects to web | Medium | Auth |
+| Registration Form Builder | Template editor | Admin | Redirects to web | Heavy (form builder) | Registration system |
+| Advanced Lineup Builder | Extended lineup features | Coach | Web only | Heavy | Lineup builder |
+| Coach Background Checks | Track clearance status | Admin | Web only | Simple CRUD | Coach management |
 
 ---
 
-*This audit is the foundation for every build decision going forward. Generated 2026-03-02.*
+*This audit is the foundation for every build decision going forward. Generated 2026-03-02, updated 2026-03-03.*
