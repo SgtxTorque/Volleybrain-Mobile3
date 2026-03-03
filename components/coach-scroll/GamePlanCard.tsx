@@ -3,7 +3,7 @@
  * Dark navy card with quick action buttons and RSVP summary.
  */
 import React from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
@@ -131,8 +131,7 @@ export default function GamePlanCard({ event, rsvpSummary }: Props) {
           style={styles.gameDayBtn}
           activeOpacity={0.8}
           onPress={() => {
-            // TODO: Navigate to Game Day Command Center when built
-            Alert.alert('Coming Soon', 'Game Day Mode is coming in a future update.');
+            router.push(`/game-day-command?eventId=${event.id}` as any);
           }}
         >
           <Text style={styles.gameDayBtnText}>START GAME DAY MODE</Text>
