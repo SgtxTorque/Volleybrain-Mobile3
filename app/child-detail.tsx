@@ -2,7 +2,8 @@ import { getSportDisplay, getPositionInfo } from '@/constants/sport-display';
 import { useAuth } from '@/lib/auth';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
-import { useTheme } from '@/lib/theme';
+import { BRAND } from '@/theme/colors';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -86,7 +87,6 @@ const SCROLL_THRESHOLD = PANEL_COLLAPSED_TOP - SCREEN_HEIGHT * 0.30;
 // =============================================================================
 
 export default function ChildDetailScreen() {
-  const { colors } = useTheme();
   const { user } = useAuth();
   const { workingSeason } = useSeason();
   const router = useRouter();
@@ -113,7 +113,7 @@ export default function ChildDetailScreen() {
   const insets = useSafeAreaInsets();
   const scrollY = useRef(new Animated.Value(0)).current;
 
-  const s = createStyles(colors);
+  // styles at bottom of file
   const sportDisplay = useMemo(() => getSportDisplay(sportName), [sportName]);
   const posInfo = useMemo(() => getPositionInfo(player?.position, sportName), [player?.position, sportName]);
 
@@ -366,7 +366,7 @@ export default function ChildDetailScreen() {
     return `${(player.first_name || '').charAt(0)}${(player.last_name || '').charAt(0)}`.toUpperCase();
   };
 
-  const teamColor = team?.color || colors.primary;
+  const teamColor = team?.color || BRAND.teal;
   const isActive = ['active', 'rostered'].includes(registrationStatus);
 
   // ---------------------------------------------------------------------------
@@ -375,10 +375,10 @@ export default function ChildDetailScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={[s.safeArea, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={[s.safeArea, { backgroundColor: BRAND.offWhite }]}>
         <View style={s.centerContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={[s.loadingText, { color: colors.textMuted }]}>Loading player...</Text>
+          <ActivityIndicator size="large" color={BRAND.teal} />
+          <Text style={[s.loadingText, { color: BRAND.textMuted }]}>Loading player...</Text>
         </View>
       </SafeAreaView>
     );
@@ -386,20 +386,20 @@ export default function ChildDetailScreen() {
 
   if (error || !player) {
     return (
-      <SafeAreaView style={[s.safeArea, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={[s.safeArea, { backgroundColor: BRAND.offWhite }]}>
         <View style={s.backHeader}>
           <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
-            <Ionicons name="arrow-back" size={24} color={colors.text} />
+            <Ionicons name="arrow-back" size={24} color={BRAND.textPrimary} />
           </TouchableOpacity>
         </View>
         <View style={s.centerContainer}>
-          <Ionicons name="alert-circle-outline" size={48} color={colors.danger} />
-          <Text style={[s.errorTitle, { color: colors.danger }]}>Something went wrong</Text>
-          <Text style={[s.errorMessage, { color: colors.textMuted }]}>
+          <Ionicons name="alert-circle-outline" size={48} color={BRAND.coral} />
+          <Text style={[s.errorTitle, { color: BRAND.coral }]}>Something went wrong</Text>
+          <Text style={[s.errorMessage, { color: BRAND.textMuted }]}>
             {error || 'Player not found.'}
           </Text>
           <TouchableOpacity
-            style={[s.retryBtn, { backgroundColor: colors.primary }]}
+            style={[s.retryBtn, { backgroundColor: BRAND.teal }]}
             onPress={() => {
               setLoading(true);
               setError(null);
@@ -423,51 +423,51 @@ export default function ChildDetailScreen() {
       <View style={s.tabContent}>
         {/* What's New Card */}
         <View style={s.sectionBlock}>
-          <Text style={[s.sectionLabel, { color: colors.textMuted }]}>WHAT'S NEW</Text>
+          <Text style={[s.sectionLabel, { color: BRAND.textMuted }]}>WHAT'S NEW</Text>
           {upcomingEvents.length > 0 ? (
-            <View style={[s.glassCard, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}>
+            <View style={[s.glassCard, { backgroundColor: BRAND.white, borderColor: BRAND.border }]}>
               <View style={s.whatsNewHeader}>
                 <View style={[
                   s.eventTypeBadge,
-                  { backgroundColor: (upcomingEvents[0].event_type === 'game' ? colors.danger : colors.info) + '20' },
+                  { backgroundColor: (upcomingEvents[0].event_type === 'game' ? BRAND.coral : BRAND.skyBlue) + '20' },
                 ]}>
                   <Text style={[
                     s.eventTypeBadgeText,
-                    { color: upcomingEvents[0].event_type === 'game' ? colors.danger : colors.info },
+                    { color: upcomingEvents[0].event_type === 'game' ? BRAND.coral : BRAND.skyBlue },
                   ]}>
                     {upcomingEvents[0].event_type === 'game' ? 'GAME' : 'PRACTICE'}
                   </Text>
                 </View>
-                <Text style={[s.countdownText, { color: colors.primary }]}>
+                <Text style={[s.countdownText, { color: BRAND.teal }]}>
                   {getCountdownText(upcomingEvents[0].event_date)}
                 </Text>
               </View>
-              <Text style={[s.whatsNewTitle, { color: colors.text }]}>
+              <Text style={[s.whatsNewTitle, { color: BRAND.textPrimary }]}>
                 {upcomingEvents[0].event_type === 'game' && upcomingEvents[0].opponent
                   ? `vs ${upcomingEvents[0].opponent}`
                   : upcomingEvents[0].title}
               </Text>
               <View style={s.whatsNewMeta}>
-                <Ionicons name="calendar-outline" size={14} color={colors.textMuted} />
-                <Text style={[s.whatsNewMetaText, { color: colors.textMuted }]}>
+                <Ionicons name="calendar-outline" size={14} color={BRAND.textMuted} />
+                <Text style={[s.whatsNewMetaText, { color: BRAND.textMuted }]}>
                   {formatDate(upcomingEvents[0].event_date)}
                   {upcomingEvents[0].start_time ? ` at ${formatTime(upcomingEvents[0].start_time)}` : ''}
                 </Text>
               </View>
               {upcomingEvents[0].location && (
                 <View style={s.whatsNewMeta}>
-                  <Ionicons name="location-outline" size={14} color={colors.textMuted} />
-                  <Text style={[s.whatsNewMetaText, { color: colors.textMuted }]}>
+                  <Ionicons name="location-outline" size={14} color={BRAND.textMuted} />
+                  <Text style={[s.whatsNewMetaText, { color: BRAND.textMuted }]}>
                     {upcomingEvents[0].location}
                   </Text>
                 </View>
               )}
             </View>
           ) : (
-            <View style={[s.glassCard, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}>
+            <View style={[s.glassCard, { backgroundColor: BRAND.white, borderColor: BRAND.border }]}>
               <View style={s.emptyState}>
-                <Ionicons name="checkmark-circle" size={28} color={colors.success} />
-                <Text style={[s.emptyStateText, { color: colors.textMuted }]}>No upcoming events</Text>
+                <Ionicons name="checkmark-circle" size={28} color={BRAND.success} />
+                <Text style={[s.emptyStateText, { color: BRAND.textMuted }]}>No upcoming events</Text>
               </View>
             </View>
           )}
@@ -476,23 +476,23 @@ export default function ChildDetailScreen() {
         {/* Season Record Card */}
         {standings && (
           <View style={s.sectionBlock}>
-            <Text style={[s.sectionLabel, { color: colors.textMuted }]}>SEASON RECORD</Text>
-            <View style={[s.glassCard, s.recordCard, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}>
+            <Text style={[s.sectionLabel, { color: BRAND.textMuted }]}>SEASON RECORD</Text>
+            <View style={[s.glassCard, s.recordCard, { backgroundColor: BRAND.white, borderColor: BRAND.border }]}>
               <View style={s.recordItem}>
-                <Text style={[s.recordNumber, { color: colors.success }]}>{standings.wins}</Text>
-                <Text style={[s.recordLabel, { color: colors.textMuted }]}>W</Text>
+                <Text style={[s.recordNumber, { color: BRAND.success }]}>{standings.wins}</Text>
+                <Text style={[s.recordLabel, { color: BRAND.textMuted }]}>W</Text>
               </View>
-              <View style={[s.recordDivider, { backgroundColor: colors.glassBorder }]} />
+              <View style={[s.recordDivider, { backgroundColor: BRAND.border }]} />
               <View style={s.recordItem}>
-                <Text style={[s.recordNumber, { color: colors.danger }]}>{standings.losses}</Text>
-                <Text style={[s.recordLabel, { color: colors.textMuted }]}>L</Text>
+                <Text style={[s.recordNumber, { color: BRAND.coral }]}>{standings.losses}</Text>
+                <Text style={[s.recordLabel, { color: BRAND.textMuted }]}>L</Text>
               </View>
               {(standings.ties > 0) && (
                 <>
-                  <View style={[s.recordDivider, { backgroundColor: colors.glassBorder }]} />
+                  <View style={[s.recordDivider, { backgroundColor: BRAND.border }]} />
                   <View style={s.recordItem}>
-                    <Text style={[s.recordNumber, { color: colors.warning }]}>{standings.ties}</Text>
-                    <Text style={[s.recordLabel, { color: colors.textMuted }]}>T</Text>
+                    <Text style={[s.recordNumber, { color: BRAND.warning }]}>{standings.ties}</Text>
+                    <Text style={[s.recordLabel, { color: BRAND.textMuted }]}>T</Text>
                   </View>
                 </>
               )}
@@ -502,9 +502,9 @@ export default function ChildDetailScreen() {
 
         {/* Quick Stats 2x2 Grid */}
         <View style={s.sectionBlock}>
-          <Text style={[s.sectionLabel, { color: colors.textMuted }]}>QUICK STATS</Text>
+          <Text style={[s.sectionLabel, { color: BRAND.textMuted }]}>QUICK STATS</Text>
           <View style={s.quickStatsGrid}>
-            {renderQuickStatCard('trophy-outline', 'Games', stats?.games_played ?? 0, colors.primary)}
+            {renderQuickStatCard('trophy-outline', 'Games', stats?.games_played ?? 0, BRAND.teal)}
             {sportDisplay.primaryStats.slice(0, 3).map((st) =>
               renderQuickStatCard(
                 (st.ionicon + '-outline') as string,
@@ -519,12 +519,12 @@ export default function ChildDetailScreen() {
 
         {/* Pride Moment */}
         <View style={s.sectionBlock}>
-          <Text style={[s.sectionLabel, { color: colors.textMuted }]}>PRIDE MOMENT</Text>
-          <View style={[s.glassCard, s.prideCard, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}>
-            <View style={[s.prideIconWrap, { backgroundColor: colors.primary + '15' }]}>
-              <Ionicons name={prideMoment.icon as any} size={24} color={colors.primary} />
+          <Text style={[s.sectionLabel, { color: BRAND.textMuted }]}>PRIDE MOMENT</Text>
+          <View style={[s.glassCard, s.prideCard, { backgroundColor: BRAND.white, borderColor: BRAND.border }]}>
+            <View style={[s.prideIconWrap, { backgroundColor: BRAND.teal + '15' }]}>
+              <Ionicons name={prideMoment.icon as any} size={24} color={BRAND.teal} />
             </View>
-            <Text style={[s.prideText, { color: colors.text }]}>{prideMoment.text}</Text>
+            <Text style={[s.prideText, { color: BRAND.textPrimary }]}>{prideMoment.text}</Text>
           </View>
         </View>
       </View>
@@ -532,10 +532,10 @@ export default function ChildDetailScreen() {
   };
 
   const renderQuickStatCard = (icon: string, label: string, value: number, color: string, key?: string) => (
-    <View key={key || label} style={[s.quickStatCard, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}>
+    <View key={key || label} style={[s.quickStatCard, { backgroundColor: BRAND.white, borderColor: BRAND.border }]}>
       <Ionicons name={icon as any} size={18} color={color} />
-      <Text style={[s.quickStatValue, { color: colors.text }]}>{value}</Text>
-      <Text style={[s.quickStatLabel, { color: colors.textMuted }]}>{label}</Text>
+      <Text style={[s.quickStatValue, { color: BRAND.textPrimary }]}>{value}</Text>
+      <Text style={[s.quickStatLabel, { color: BRAND.textMuted }]}>{label}</Text>
     </View>
   );
 
@@ -577,25 +577,25 @@ export default function ChildDetailScreen() {
     return (
       <View style={s.tabContent}>
         <View style={s.sectionBlock}>
-          <Text style={[s.sectionLabel, { color: colors.textMuted }]}>STAT BREAKDOWN</Text>
+          <Text style={[s.sectionLabel, { color: BRAND.textMuted }]}>STAT BREAKDOWN</Text>
           {statRows.map((row) => (
             <View
               key={row.label}
-              style={[s.glassCard, s.statRow, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}
+              style={[s.glassCard, s.statRow, { backgroundColor: BRAND.white, borderColor: BRAND.border }]}
             >
               <View style={s.statRowHeader}>
                 <View style={s.statRowLeft}>
                   <Ionicons name={row.icon as any} size={16} color={row.color} />
-                  <Text style={[s.statRowLabel, { color: colors.text }]}>{row.label}</Text>
+                  <Text style={[s.statRowLabel, { color: BRAND.textPrimary }]}>{row.label}</Text>
                 </View>
                 <View style={s.statRowRight}>
-                  <Text style={[s.statRowValue, { color: colors.text }]}>{row.value}</Text>
-                  <Text style={[s.statRowAvg, { color: colors.textMuted }]}>
+                  <Text style={[s.statRowValue, { color: BRAND.textPrimary }]}>{row.value}</Text>
+                  <Text style={[s.statRowAvg, { color: BRAND.textMuted }]}>
                     {getPerGame(row.value)}/g
                   </Text>
                 </View>
               </View>
-              <View style={[s.progressBarBg, { backgroundColor: colors.glassBorder }]}>
+              <View style={[s.progressBarBg, { backgroundColor: BRAND.border }]}>
                 <View
                   style={[
                     s.progressBarFill,
@@ -612,15 +612,15 @@ export default function ChildDetailScreen() {
 
         {/* Bottom summary cards */}
         <View style={s.sectionBlock}>
-          <Text style={[s.sectionLabel, { color: colors.textMuted }]}>SUMMARY</Text>
+          <Text style={[s.sectionLabel, { color: BRAND.textMuted }]}>SUMMARY</Text>
           <View style={s.summaryRow}>
-            <View style={[s.summaryCard, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}>
-              <Text style={[s.summaryValue, { color: colors.primary }]}>{stats?.total_points ?? 0}</Text>
-              <Text style={[s.summaryLabel, { color: colors.textMuted }]}>Total Points</Text>
+            <View style={[s.summaryCard, { backgroundColor: BRAND.white, borderColor: BRAND.border }]}>
+              <Text style={[s.summaryValue, { color: BRAND.teal }]}>{stats?.total_points ?? 0}</Text>
+              <Text style={[s.summaryLabel, { color: BRAND.textMuted }]}>Total Points</Text>
             </View>
-            <View style={[s.summaryCard, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}>
-              <Text style={[s.summaryValue, { color: colors.info }]}>{stats?.games_played ?? 0}</Text>
-              <Text style={[s.summaryLabel, { color: colors.textMuted }]}>Games</Text>
+            <View style={[s.summaryCard, { backgroundColor: BRAND.white, borderColor: BRAND.border }]}>
+              <Text style={[s.summaryValue, { color: BRAND.skyBlue }]}>{stats?.games_played ?? 0}</Text>
+              <Text style={[s.summaryLabel, { color: BRAND.textMuted }]}>Games</Text>
             </View>
           </View>
         </View>
@@ -632,37 +632,37 @@ export default function ChildDetailScreen() {
     <View style={s.tabContent}>
       {/* Upcoming Events */}
       <View style={s.sectionBlock}>
-        <Text style={[s.sectionLabel, { color: colors.textMuted }]}>UPCOMING</Text>
+        <Text style={[s.sectionLabel, { color: BRAND.textMuted }]}>UPCOMING</Text>
         {upcomingEvents.length === 0 ? (
-          <View style={[s.glassCard, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}>
+          <View style={[s.glassCard, { backgroundColor: BRAND.white, borderColor: BRAND.border }]}>
             <View style={s.emptyState}>
-              <Ionicons name="calendar-outline" size={28} color={colors.textMuted} />
-              <Text style={[s.emptyStateText, { color: colors.textMuted }]}>No upcoming events</Text>
+              <Ionicons name="calendar-outline" size={28} color={BRAND.textMuted} />
+              <Text style={[s.emptyStateText, { color: BRAND.textMuted }]}>No upcoming events</Text>
             </View>
           </View>
         ) : (
           upcomingEvents.map((event) => (
             <View
               key={event.id}
-              style={[s.glassCard, s.scheduleCard, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}
+              style={[s.glassCard, s.scheduleCard, { backgroundColor: BRAND.white, borderColor: BRAND.border }]}
             >
               <View style={s.scheduleCardTop}>
                 <View style={[
                   s.eventTypeBadge,
-                  { backgroundColor: (event.event_type === 'game' ? colors.danger : colors.info) + '20' },
+                  { backgroundColor: (event.event_type === 'game' ? BRAND.coral : BRAND.skyBlue) + '20' },
                 ]}>
                   <Text style={[
                     s.eventTypeBadgeText,
-                    { color: event.event_type === 'game' ? colors.danger : colors.info },
+                    { color: event.event_type === 'game' ? BRAND.coral : BRAND.skyBlue },
                   ]}>
                     {event.event_type === 'game' ? 'GAME' : 'PRACTICE'}
                   </Text>
                 </View>
-                <Text style={[s.scheduleDate, { color: colors.textMuted }]}>
+                <Text style={[s.scheduleDate, { color: BRAND.textMuted }]}>
                   {formatDate(event.event_date)}
                 </Text>
               </View>
-              <Text style={[s.scheduleTitle, { color: colors.text }]}>
+              <Text style={[s.scheduleTitle, { color: BRAND.textPrimary }]}>
                 {event.event_type === 'game' && event.opponent
                   ? `vs ${event.opponent}`
                   : event.title}
@@ -670,16 +670,16 @@ export default function ChildDetailScreen() {
               <View style={s.scheduleMeta}>
                 {event.start_time && (
                   <View style={s.scheduleMetaRow}>
-                    <Ionicons name="time-outline" size={13} color={colors.textMuted} />
-                    <Text style={[s.scheduleMetaText, { color: colors.textMuted }]}>
+                    <Ionicons name="time-outline" size={13} color={BRAND.textMuted} />
+                    <Text style={[s.scheduleMetaText, { color: BRAND.textMuted }]}>
                       {formatTime(event.start_time)}
                     </Text>
                   </View>
                 )}
                 {event.location && (
                   <View style={s.scheduleMetaRow}>
-                    <Ionicons name="location-outline" size={13} color={colors.textMuted} />
-                    <Text style={[s.scheduleMetaText, { color: colors.textMuted }]}>
+                    <Ionicons name="location-outline" size={13} color={BRAND.textMuted} />
+                    <Text style={[s.scheduleMetaText, { color: BRAND.textMuted }]}>
                       {event.location}
                     </Text>
                   </View>
@@ -693,32 +693,32 @@ export default function ChildDetailScreen() {
       {/* Recent Games with Results */}
       {recentGames.length > 0 && (
         <View style={s.sectionBlock}>
-          <Text style={[s.sectionLabel, { color: colors.textMuted }]}>RECENT RESULTS</Text>
+          <Text style={[s.sectionLabel, { color: BRAND.textMuted }]}>RECENT RESULTS</Text>
           {recentGames.map((game) => (
             <View
               key={game.id}
-              style={[s.glassCard, s.recentGameCard, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}
+              style={[s.glassCard, s.recentGameCard, { backgroundColor: BRAND.white, borderColor: BRAND.border }]}
             >
               <View style={[
                 s.resultBadge,
-                { backgroundColor: (game.game_result === 'win' ? colors.success : colors.danger) + '20' },
+                { backgroundColor: (game.game_result === 'win' ? BRAND.success : BRAND.coral) + '20' },
               ]}>
                 <Text style={[
                   s.resultBadgeText,
-                  { color: game.game_result === 'win' ? colors.success : colors.danger },
+                  { color: game.game_result === 'win' ? BRAND.success : BRAND.coral },
                 ]}>
                   {game.game_result === 'win' ? 'W' : 'L'}
                 </Text>
               </View>
               <View style={s.recentGameInfo}>
-                <Text style={[s.recentGameTitle, { color: colors.text }]}>
+                <Text style={[s.recentGameTitle, { color: BRAND.textPrimary }]}>
                   {game.opponent ? `vs ${game.opponent}` : game.title}
                 </Text>
-                <Text style={[s.recentGameDate, { color: colors.textMuted }]}>
+                <Text style={[s.recentGameDate, { color: BRAND.textMuted }]}>
                   {formatDate(game.event_date)}
                 </Text>
               </View>
-              <Text style={[s.recentGameScore, { color: colors.text }]}>
+              <Text style={[s.recentGameScore, { color: BRAND.textPrimary }]}>
                 {game.our_score ?? 0}-{game.opponent_score ?? 0}
               </Text>
             </View>
@@ -731,18 +731,18 @@ export default function ChildDetailScreen() {
   const renderAchievementsTab = () => (
     <View style={s.tabContent}>
       <View style={s.sectionBlock}>
-        <Text style={[s.sectionLabel, { color: colors.textMuted }]}>
+        <Text style={[s.sectionLabel, { color: BRAND.textMuted }]}>
           EARNED BADGES
         </Text>
-        <Text style={[s.achievementCount, { color: colors.textSecondary }]}>
+        <Text style={[s.achievementCount, { color: BRAND.textSecondary }]}>
           {achievements.length} of {totalAchievements} earned
         </Text>
 
         {achievements.length === 0 ? (
-          <View style={[s.glassCard, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}>
+          <View style={[s.glassCard, { backgroundColor: BRAND.white, borderColor: BRAND.border }]}>
             <View style={s.emptyState}>
-              <Ionicons name="medal-outline" size={28} color={colors.textMuted} />
-              <Text style={[s.emptyStateText, { color: colors.textMuted }]}>
+              <Ionicons name="medal-outline" size={28} color={BRAND.textMuted} />
+              <Text style={[s.emptyStateText, { color: BRAND.textMuted }]}>
                 No badges earned yet. Keep playing!
               </Text>
             </View>
@@ -752,14 +752,14 @@ export default function ChildDetailScreen() {
             {achievements.map((ach) => (
               <View
                 key={ach.id}
-                style={[s.achievementCard, { backgroundColor: colors.glassCard, borderColor: colors.glassBorder }]}
+                style={[s.achievementCard, { backgroundColor: BRAND.white, borderColor: BRAND.border }]}
               >
                 <Text style={s.achievementEmoji}>{ach.icon || '🏅'}</Text>
-                <Text style={[s.achievementName, { color: colors.text }]} numberOfLines={2}>
+                <Text style={[s.achievementName, { color: BRAND.textPrimary }]} numberOfLines={2}>
                   {ach.name}
                 </Text>
                 {ach.earned_at && (
-                  <Text style={[s.achievementDate, { color: colors.textMuted }]}>
+                  <Text style={[s.achievementDate, { color: BRAND.textMuted }]}>
                     {new Date(ach.earned_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                   </Text>
                 )}
@@ -770,17 +770,17 @@ export default function ChildDetailScreen() {
 
         {/* View All Button */}
         <TouchableOpacity
-          style={[s.viewAllBtn, { borderColor: colors.primary }]}
+          style={[s.viewAllBtn, { borderColor: BRAND.teal }]}
           onPress={() => router.push('/achievements' as any)}
           activeOpacity={0.7}
         >
-          <Text style={[s.viewAllBtnText, { color: colors.primary }]}>View All Achievements</Text>
-          <Ionicons name="arrow-forward" size={16} color={colors.primary} />
+          <Text style={[s.viewAllBtnText, { color: BRAND.teal }]}>View All Achievements</Text>
+          <Ionicons name="arrow-forward" size={16} color={BRAND.teal} />
         </TouchableOpacity>
 
         {/* Shoutout Stats */}
         {playerId && (
-          <ShoutoutProfileSection playerId={playerId} colors={colors} />
+          <ShoutoutProfileSection playerId={playerId} />
         )}
       </View>
     </View>
@@ -816,7 +816,7 @@ export default function ChildDetailScreen() {
   });
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    <View style={{ flex: 1, backgroundColor: BRAND.offWhite }}>
       {/* ================================================================ */}
       {/* STATIC BACKGROUND PHOTO — absolute, full screen                  */}
       {/* ================================================================ */}
@@ -824,7 +824,7 @@ export default function ChildDetailScreen() {
         <Image source={{ uri: heroImageUrl }} style={s.fullScreenPhoto} resizeMode="cover" />
       ) : (
         <LinearGradient
-          colors={[teamColor + '60', teamColor + '20', colors.background]}
+          colors={[teamColor + '60', teamColor + '20', BRAND.offWhite]}
           style={s.fullScreenPhoto}
           start={{ x: 0, y: 0 }}
           end={{ x: 0.5, y: 1 }}
@@ -912,31 +912,31 @@ export default function ChildDetailScreen() {
         <View style={{ height: PANEL_COLLAPSED_TOP }} />
 
         {/* Content panel with rounded top */}
-        <View style={[s.contentPanel, { backgroundColor: colors.background }]}>
+        <View style={[s.contentPanel, { backgroundColor: BRAND.offWhite }]}>
           {/* Drag handle indicator */}
           <View style={s.dragHandle}>
-            <View style={[s.dragHandleBar, { backgroundColor: colors.textMuted }]} />
+            <View style={[s.dragHandleBar, { backgroundColor: BRAND.textMuted }]} />
           </View>
 
           {/* Tab navigation */}
-          <View style={[s.tabBar, { borderBottomColor: colors.glassBorder }]}>
+          <View style={[s.tabBar, { borderBottomColor: BRAND.border }]}>
             {tabs.map((tab) => {
               const isTabActive = activeTab === tab.key;
               return (
                 <TouchableOpacity
                   key={tab.key}
-                  style={[s.tabItem, isTabActive && { borderBottomColor: colors.primary }]}
+                  style={[s.tabItem, isTabActive && { borderBottomColor: BRAND.teal }]}
                   onPress={() => setActiveTab(tab.key)}
                   activeOpacity={0.7}
                 >
                   <Ionicons
                     name={tab.icon as any}
                     size={18}
-                    color={isTabActive ? colors.primary : colors.textMuted}
+                    color={isTabActive ? BRAND.teal : BRAND.textMuted}
                   />
                   <Text style={[
                     s.tabLabel,
-                    { color: isTabActive ? colors.primary : colors.textMuted },
+                    { color: isTabActive ? BRAND.teal : BRAND.textMuted },
                     isTabActive && s.tabLabelActive,
                   ]}>
                     {tab.label}
@@ -974,530 +974,529 @@ export default function ChildDetailScreen() {
 // STYLES
 // =============================================================================
 
-const createStyles = (colors: any) =>
-  StyleSheet.create({
-    safeArea: {
-      flex: 1,
-    },
-    centerContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      gap: 12,
-      padding: 20,
-    },
-    loadingText: {
-      fontSize: 15,
-      marginTop: 8,
-    },
-    errorTitle: {
-      fontSize: 18,
-      fontWeight: '700',
-      marginTop: 8,
-    },
-    errorMessage: {
-      fontSize: 14,
-      textAlign: 'center',
-      paddingHorizontal: 32,
-    },
-    retryBtn: {
-      marginTop: 16,
-      paddingHorizontal: 24,
-      paddingVertical: 12,
-      borderRadius: 12,
-    },
-    retryBtnText: {
-      color: '#000',
-      fontWeight: '700',
-      fontSize: 15,
-    },
-    backHeader: {
-      paddingHorizontal: 16,
-      paddingTop: 8,
-    },
-    backBtn: {
-      width: 40,
-      height: 40,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
+const s = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+    padding: 20,
+  },
+  loadingText: {
+    fontSize: 15,
+    marginTop: 8,
+  },
+  errorTitle: {
+    fontSize: 18,
+    fontFamily: FONTS.bodyBold,
+    marginTop: 8,
+  },
+  errorMessage: {
+    fontSize: 14,
+    textAlign: 'center',
+    paddingHorizontal: 32,
+  },
+  retryBtn: {
+    marginTop: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  retryBtnText: {
+    color: '#000',
+    fontFamily: FONTS.bodyBold,
+    fontSize: 15,
+  },
+  backHeader: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 
-    // ========== IMMERSIVE HERO ==========
-    fullScreenPhoto: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      width: SCREEN_WIDTH,
-      height: SCREEN_HEIGHT,
-    },
-    fallbackInitialsContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    fallbackInitialsText: {
-      fontSize: 80,
-      fontWeight: '900',
-      color: 'rgba(255,255,255,0.25)',
-      letterSpacing: 4,
-    },
-    cameraBtn: {
-      position: 'absolute' as const,
-      top: 60,
-      right: 16,
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: 'rgba(0,0,0,0.5)',
-      justifyContent: 'center' as const,
-      alignItems: 'center' as const,
-      zIndex: 20,
-    },
-    photoBottomGradient: {
-      position: 'absolute',
-      left: 0,
-      right: 0,
-      height: 200,
-    },
-    photoOverlayInfo: {
-      position: 'absolute',
-      left: 20,
-      right: 20,
-      zIndex: 10,
-    },
-    overlayPlayerName: {
-      fontSize: 36,
-      fontWeight: '900',
-      color: '#FFFFFF',
-      letterSpacing: -0.5,
-      textShadowColor: 'rgba(0,0,0,0.6)',
-      textShadowOffset: { width: 0, height: 2 },
-      textShadowRadius: 8,
-    },
-    overlayTeamName: {
-      fontSize: 18,
-      fontWeight: '700',
-      color: '#FFFFFF',
-      marginTop: 4,
-      textShadowColor: 'rgba(0,0,0,0.5)',
-      textShadowOffset: { width: 0, height: 1 },
-      textShadowRadius: 4,
-    },
-    overlayPillsRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 6,
-      marginTop: 10,
-    },
-    overlayPill: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: 10,
-      backgroundColor: 'rgba(255,255,255,0.2)',
-      gap: 4,
-    },
-    overlayPillText: {
-      fontSize: 12,
-      fontWeight: '700',
-      color: '#FFFFFF',
-      textShadowColor: 'rgba(0,0,0,0.3)',
-      textShadowOffset: { width: 0, height: 1 },
-      textShadowRadius: 2,
-    },
-    statusDot: {
-      width: 6,
-      height: 6,
-      borderRadius: 3,
-    },
-    contentPanel: {
-      minHeight: SCREEN_HEIGHT,
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
-      paddingTop: 4,
-      ...Platform.select({
-        ios: { shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-        android: { elevation: 8 },
-      }),
-    },
-    dragHandle: {
-      alignItems: 'center',
-      paddingVertical: 8,
-    },
-    dragHandleBar: {
-      width: 40,
-      height: 4,
-      borderRadius: 2,
-      opacity: 0.4,
-    },
-    floatingBackBtn: {
-      position: 'absolute',
-      left: 16,
-      zIndex: 100,
-    },
-    backBtnCircle: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: 'rgba(0,0,0,0.4)',
-      justifyContent: 'center',
-      alignItems: 'center',
-      ...Platform.select({
-        ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4 },
-        android: { elevation: 4 },
-      }),
-    },
+  // ========== IMMERSIVE HERO ==========
+  fullScreenPhoto: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
+  },
+  fallbackInitialsContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fallbackInitialsText: {
+    fontSize: 80,
+    fontFamily: FONTS.bodyExtraBold,
+    color: 'rgba(255,255,255,0.25)',
+    letterSpacing: 4,
+  },
+  cameraBtn: {
+    position: 'absolute' as const,
+    top: 60,
+    right: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    zIndex: 20,
+  },
+  photoBottomGradient: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 200,
+  },
+  photoOverlayInfo: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    zIndex: 10,
+  },
+  overlayPlayerName: {
+    fontSize: 36,
+    fontFamily: FONTS.bodyExtraBold,
+    color: '#FFFFFF',
+    letterSpacing: -0.5,
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 8,
+  },
+  overlayTeamName: {
+    fontSize: 18,
+    fontFamily: FONTS.bodyBold,
+    color: '#FFFFFF',
+    marginTop: 4,
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
+  overlayPillsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 10,
+  },
+  overlayPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    gap: 4,
+  },
+  overlayPillText: {
+    fontSize: 12,
+    fontFamily: FONTS.bodyBold,
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  contentPanel: {
+    minHeight: SCREEN_HEIGHT,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 4,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.15, shadowRadius: 12 },
+      android: { elevation: 8 },
+    }),
+  },
+  dragHandle: {
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  dragHandleBar: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    opacity: 0.4,
+  },
+  floatingBackBtn: {
+    position: 'absolute',
+    left: 16,
+    zIndex: 100,
+  },
+  backBtnCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4 },
+      android: { elevation: 4 },
+    }),
+  },
 
-    // ========== TAB BAR ==========
-    tabBar: {
-      flexDirection: 'row',
-      borderBottomWidth: 1,
-      marginHorizontal: 20,
-      marginTop: 8,
-    },
-    tabItem: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 5,
-      paddingVertical: 12,
-      borderBottomWidth: 2,
-      borderBottomColor: 'transparent',
-    },
-    tabLabel: {
-      fontSize: 12,
-      fontWeight: '600',
-    },
-    tabLabelActive: {
-      fontWeight: '700',
-    },
+  // ========== TAB BAR ==========
+  tabBar: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    marginHorizontal: 20,
+    marginTop: 8,
+  },
+  tabItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    paddingVertical: 12,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  tabLabel: {
+    fontSize: 12,
+    fontFamily: FONTS.bodySemiBold,
+  },
+  tabLabelActive: {
+    fontFamily: FONTS.bodyBold,
+  },
 
-    // ========== TAB CONTENT ==========
-    tabContent: {
-      paddingHorizontal: 20,
-      paddingTop: 20,
-    },
+  // ========== TAB CONTENT ==========
+  tabContent: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
 
-    // ========== SECTION ==========
-    sectionBlock: {
-      marginBottom: 24,
-    },
-    sectionLabel: {
-      fontSize: 12,
-      fontWeight: '700',
-      textTransform: 'uppercase' as const,
-      letterSpacing: 2,
-      marginBottom: 12,
-    },
+  // ========== SECTION ==========
+  sectionBlock: {
+    marginBottom: 24,
+  },
+  sectionLabel: {
+    fontSize: 12,
+    fontFamily: FONTS.bodyBold,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 2,
+    marginBottom: 12,
+  },
 
-    // ========== GLASS CARD ==========
-    glassCard: {
-      borderRadius: 16,
-      borderWidth: 1,
-      padding: 16,
-      marginBottom: 8,
-      ...Platform.select({
-        ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-        android: { elevation: 4 },
-      }),
-    },
+  // ========== GLASS CARD ==========
+  glassCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 8,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
+      android: { elevation: 4 },
+    }),
+  },
 
-    // ========== OVERVIEW TAB ==========
-    whatsNewHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: 10,
-    },
-    eventTypeBadge: {
-      paddingHorizontal: 10,
-      paddingVertical: 4,
-      borderRadius: 8,
-    },
-    eventTypeBadgeText: {
-      fontSize: 11,
-      fontWeight: '800',
-      letterSpacing: 1,
-    },
-    countdownText: {
-      fontSize: 14,
-      fontWeight: '700',
-    },
-    whatsNewTitle: {
-      fontSize: 18,
-      fontWeight: '700',
-      marginBottom: 8,
-    },
-    whatsNewMeta: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      marginTop: 4,
-    },
-    whatsNewMetaText: {
-      fontSize: 13,
-    },
-    recordCard: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: 20,
-    },
-    recordItem: {
-      alignItems: 'center',
-      paddingHorizontal: 24,
-    },
-    recordNumber: {
-      fontSize: 36,
-      fontWeight: '900',
-      letterSpacing: -1,
-    },
-    recordLabel: {
-      fontSize: 14,
-      fontWeight: '600',
-      marginTop: 2,
-    },
-    recordDivider: {
-      width: 1,
-      height: 40,
-    },
-    quickStatsGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 10,
-    },
-    quickStatCard: {
-      width: (SCREEN_WIDTH - 50) / 2,
-      borderRadius: 16,
-      borderWidth: 1,
-      padding: 16,
-      alignItems: 'center',
-      gap: 6,
-      flexGrow: 1,
-      ...Platform.select({
-        ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-        android: { elevation: 4 },
-      }),
-    },
-    quickStatValue: {
-      fontSize: 28,
-      fontWeight: '800',
-      letterSpacing: -0.5,
-    },
-    quickStatLabel: {
-      fontSize: 12,
-      fontWeight: '600',
-    },
-    prideCard: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 14,
-    },
-    prideIconWrap: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    prideText: {
-      flex: 1,
-      fontSize: 15,
-      lineHeight: 22,
-      fontWeight: '500',
-    },
+  // ========== OVERVIEW TAB ==========
+  whatsNewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  eventTypeBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  eventTypeBadgeText: {
+    fontSize: 11,
+    fontFamily: FONTS.bodyExtraBold,
+    letterSpacing: 1,
+  },
+  countdownText: {
+    fontSize: 14,
+    fontFamily: FONTS.bodyBold,
+  },
+  whatsNewTitle: {
+    fontSize: 18,
+    fontFamily: FONTS.bodyBold,
+    marginBottom: 8,
+  },
+  whatsNewMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 4,
+  },
+  whatsNewMetaText: {
+    fontSize: 13,
+  },
+  recordCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+  },
+  recordItem: {
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  recordNumber: {
+    fontSize: 36,
+    fontFamily: FONTS.bodyExtraBold,
+    letterSpacing: -1,
+  },
+  recordLabel: {
+    fontSize: 14,
+    fontFamily: FONTS.bodySemiBold,
+    marginTop: 2,
+  },
+  recordDivider: {
+    width: 1,
+    height: 40,
+  },
+  quickStatsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  quickStatCard: {
+    width: (SCREEN_WIDTH - 50) / 2,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    alignItems: 'center',
+    gap: 6,
+    flexGrow: 1,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
+      android: { elevation: 4 },
+    }),
+  },
+  quickStatValue: {
+    fontSize: 28,
+    fontFamily: FONTS.bodyExtraBold,
+    letterSpacing: -0.5,
+  },
+  quickStatLabel: {
+    fontSize: 12,
+    fontFamily: FONTS.bodySemiBold,
+  },
+  prideCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  prideIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  prideText: {
+    flex: 1,
+    fontSize: 15,
+    lineHeight: 22,
+    fontFamily: FONTS.bodyMedium,
+  },
 
-    // ========== STATS TAB ==========
-    statRow: {
-      marginBottom: 10,
-    },
-    statRowHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 10,
-    },
-    statRowLeft: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-    },
-    statRowRight: {
-      flexDirection: 'row',
-      alignItems: 'baseline',
-      gap: 8,
-    },
-    statRowLabel: {
-      fontSize: 15,
-      fontWeight: '600',
-    },
-    statRowValue: {
-      fontSize: 20,
-      fontWeight: '800',
-    },
-    statRowAvg: {
-      fontSize: 12,
-      fontWeight: '500',
-    },
-    progressBarBg: {
-      height: 6,
-      borderRadius: 3,
-      overflow: 'hidden',
-    },
-    progressBarFill: {
-      height: '100%',
-      borderRadius: 3,
-    },
-    summaryRow: {
-      flexDirection: 'row',
-      gap: 10,
-    },
-    summaryCard: {
-      flex: 1,
-      borderRadius: 16,
-      borderWidth: 1,
-      padding: 20,
-      alignItems: 'center',
-      gap: 4,
-      ...Platform.select({
-        ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-        android: { elevation: 4 },
-      }),
-    },
-    summaryValue: {
-      fontSize: 28,
-      fontWeight: '800',
-    },
-    summaryLabel: {
-      fontSize: 12,
-      fontWeight: '600',
-    },
+  // ========== STATS TAB ==========
+  statRow: {
+    marginBottom: 10,
+  },
+  statRowHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  statRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  statRowRight: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 8,
+  },
+  statRowLabel: {
+    fontSize: 15,
+    fontFamily: FONTS.bodySemiBold,
+  },
+  statRowValue: {
+    fontSize: 20,
+    fontFamily: FONTS.bodyExtraBold,
+  },
+  statRowAvg: {
+    fontSize: 12,
+    fontFamily: FONTS.bodyMedium,
+  },
+  progressBarBg: {
+    height: 6,
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  summaryCard: {
+    flex: 1,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 20,
+    alignItems: 'center',
+    gap: 4,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
+      android: { elevation: 4 },
+    }),
+  },
+  summaryValue: {
+    fontSize: 28,
+    fontFamily: FONTS.bodyExtraBold,
+  },
+  summaryLabel: {
+    fontSize: 12,
+    fontFamily: FONTS.bodySemiBold,
+  },
 
-    // ========== SCHEDULE TAB ==========
-    scheduleCard: {
-      marginBottom: 10,
-    },
-    scheduleCardTop: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: 8,
-    },
-    scheduleDate: {
-      fontSize: 13,
-      fontWeight: '500',
-    },
-    scheduleTitle: {
-      fontSize: 16,
-      fontWeight: '700',
-      marginBottom: 8,
-    },
-    scheduleMeta: {
-      gap: 4,
-    },
-    scheduleMetaRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-    },
-    scheduleMetaText: {
-      fontSize: 13,
-    },
-    recentGameCard: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: 8,
-      gap: 12,
-    },
-    resultBadge: {
-      width: 40,
-      height: 40,
-      borderRadius: 12,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    resultBadgeText: {
-      fontSize: 18,
-      fontWeight: '800',
-    },
-    recentGameInfo: {
-      flex: 1,
-    },
-    recentGameTitle: {
-      fontSize: 15,
-      fontWeight: '600',
-    },
-    recentGameDate: {
-      fontSize: 12,
-      marginTop: 2,
-    },
-    recentGameScore: {
-      fontSize: 18,
-      fontWeight: '700',
-    },
+  // ========== SCHEDULE TAB ==========
+  scheduleCard: {
+    marginBottom: 10,
+  },
+  scheduleCardTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  scheduleDate: {
+    fontSize: 13,
+    fontFamily: FONTS.bodyMedium,
+  },
+  scheduleTitle: {
+    fontSize: 16,
+    fontFamily: FONTS.bodyBold,
+    marginBottom: 8,
+  },
+  scheduleMeta: {
+    gap: 4,
+  },
+  scheduleMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  scheduleMetaText: {
+    fontSize: 13,
+  },
+  recentGameCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 12,
+  },
+  resultBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  resultBadgeText: {
+    fontSize: 18,
+    fontFamily: FONTS.bodyExtraBold,
+  },
+  recentGameInfo: {
+    flex: 1,
+  },
+  recentGameTitle: {
+    fontSize: 15,
+    fontFamily: FONTS.bodySemiBold,
+  },
+  recentGameDate: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  recentGameScore: {
+    fontSize: 18,
+    fontFamily: FONTS.bodyBold,
+  },
 
-    // ========== ACHIEVEMENTS TAB ==========
-    achievementCount: {
-      fontSize: 14,
-      fontWeight: '500',
-      marginBottom: 16,
-    },
-    achievementsGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 10,
-    },
-    achievementCard: {
-      width: (SCREEN_WIDTH - 60) / 3,
-      borderRadius: 16,
-      borderWidth: 1,
-      padding: 14,
-      alignItems: 'center',
-      gap: 6,
-      ...Platform.select({
-        ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
-        android: { elevation: 4 },
-      }),
-    },
-    achievementEmoji: {
-      fontSize: 28,
-    },
-    achievementName: {
-      fontSize: 11,
-      fontWeight: '600',
-      textAlign: 'center',
-    },
-    achievementDate: {
-      fontSize: 10,
-      fontWeight: '500',
-    },
-    viewAllBtn: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 6,
-      marginTop: 20,
-      paddingVertical: 14,
-      borderRadius: 14,
-      borderWidth: 1,
-    },
-    viewAllBtnText: {
-      fontSize: 15,
-      fontWeight: '600',
-    },
+  // ========== ACHIEVEMENTS TAB ==========
+  achievementCount: {
+    fontSize: 14,
+    fontFamily: FONTS.bodyMedium,
+    marginBottom: 16,
+  },
+  achievementsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  achievementCard: {
+    width: (SCREEN_WIDTH - 60) / 3,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 14,
+    alignItems: 'center',
+    gap: 6,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
+      android: { elevation: 4 },
+    }),
+  },
+  achievementEmoji: {
+    fontSize: 28,
+  },
+  achievementName: {
+    fontSize: 11,
+    fontFamily: FONTS.bodySemiBold,
+    textAlign: 'center',
+  },
+  achievementDate: {
+    fontSize: 10,
+    fontFamily: FONTS.bodyMedium,
+  },
+  viewAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 20,
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  viewAllBtnText: {
+    fontSize: 15,
+    fontFamily: FONTS.bodySemiBold,
+  },
 
-    // ========== EMPTY STATE ==========
-    emptyState: {
-      paddingVertical: 20,
-      alignItems: 'center',
-      gap: 8,
-    },
-    emptyStateText: {
-      fontSize: 14,
-      textAlign: 'center',
-    },
-  });
+  // ========== EMPTY STATE ==========
+  emptyState: {
+    paddingVertical: 20,
+    alignItems: 'center',
+    gap: 8,
+  },
+  emptyStateText: {
+    fontSize: 14,
+    textAlign: 'center',
+  },
+});
