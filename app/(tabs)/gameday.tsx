@@ -12,7 +12,8 @@ import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { useSport } from '@/lib/sport';
 import { supabase } from '@/lib/supabase';
-import { useTheme } from '@/lib/theme';
+import { BRAND } from '@/theme/colors';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -112,7 +113,6 @@ const locationTypeConfig: Record<string, { label: string; color: string; icon: s
 // GAME DAY SCREEN
 // ═══════════════════════════════════════════════════════════
 export default function GameDayScreen() {
-  const { colors } = useTheme();
   const { workingSeason } = useSeason();
   const { activeSport } = useSport();
   const { user, profile } = useAuth();
@@ -134,7 +134,7 @@ export default function GameDayScreen() {
   const [selectedEvent, setSelectedEvent] = useState<ScheduleEvent | null>(null);
   const [showEventModal, setShowEventModal] = useState(false);
 
-  const s = useMemo(() => createStyles(colors), [colors]);
+  const s = styles;
 
   // ─── Data Fetching ─────────────────────────────────────
   const fetchData = useCallback(async () => {
@@ -324,9 +324,9 @@ export default function GameDayScreen() {
       <SafeAreaView style={s.container} edges={['top']}>
         <AppHeaderBar title="GAME DAY" showLogo={false} showNotificationBell={false} showAvatar={false} />
         <View style={s.emptyCenter}>
-          <Ionicons name="flash-outline" size={64} color={colors.textMuted} />
-          <Text style={[s.emptyTitle, { color: colors.textMuted }]}>Pick Your Season</Text>
-          <Text style={[s.emptySubtitle, { color: colors.textMuted }]}>
+          <Ionicons name="flash-outline" size={64} color={BRAND.textMuted} />
+          <Text style={[s.emptyTitle, { color: BRAND.textMuted }]}>Pick Your Season</Text>
+          <Text style={[s.emptySubtitle, { color: BRAND.textMuted }]}>
             Select a season to see your Game Day dashboard.
           </Text>
         </View>
@@ -339,10 +339,10 @@ export default function GameDayScreen() {
     return (
       <SafeAreaView style={s.container} edges={['top']}>
         <AppHeaderBar title="GAME DAY" showLogo={false} showNotificationBell={false} showAvatar={false} />
-        <View style={{ marginHorizontal: 16, marginTop: 16, height: 260, borderRadius: radii.card, backgroundColor: colors.bgSecondary }} />
+        <View style={{ marginHorizontal: 16, marginTop: 16, height: 260, borderRadius: radii.card, backgroundColor: BRAND.warmGray }} />
         <View style={{ marginHorizontal: 16, marginTop: 16, gap: 10 }}>
           {[1, 2].map(i => (
-            <View key={i} style={{ height: 80, borderRadius: radii.card, backgroundColor: colors.bgSecondary, opacity: 0.6 }} />
+            <View key={i} style={{ height: 80, borderRadius: radii.card, backgroundColor: BRAND.warmGray, opacity: 0.6 }} />
           ))}
         </View>
       </SafeAreaView>
@@ -362,7 +362,7 @@ export default function GameDayScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BRAND.skyBlue} />
         }
         contentContainerStyle={{ paddingBottom: 120 }}
       >
@@ -498,11 +498,11 @@ export default function GameDayScreen() {
                       <Ionicons name={typeConf.icon as any} size={18} color={typeConf.color} />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={[s.eventCardTitle, { color: colors.text }]} numberOfLines={1}>
+                      <Text style={[s.eventCardTitle, { color: BRAND.textPrimary }]} numberOfLines={1}>
                         {event.title}
                       </Text>
                       {(event.opponent_name || event.opponent) && (
-                        <Text style={[s.eventCardOpponent, { color: colors.textMuted }]}>
+                        <Text style={[s.eventCardOpponent, { color: BRAND.textMuted }]}>
                           vs {event.opponent_name || event.opponent}
                         </Text>
                       )}
@@ -518,15 +518,15 @@ export default function GameDayScreen() {
                   </View>
 
                   <View style={s.eventCardMeta}>
-                    <Ionicons name="calendar-outline" size={11} color={colors.textMuted} />
-                    <Text style={[s.eventCardMetaText, { color: colors.textMuted }]}>
+                    <Ionicons name="calendar-outline" size={11} color={BRAND.textMuted} />
+                    <Text style={[s.eventCardMetaText, { color: BRAND.textMuted }]}>
                       {formatEventDate(event.event_date)} {'\u00B7'} {formatTime(event.start_time)}
                     </Text>
                   </View>
 
                   {rsvp && (
                     <View style={s.eventCardRsvp}>
-                      <Text style={{ color: '#14B8A6', fontSize: 12, fontWeight: '600' }}>
+                      <Text style={{ color: '#14B8A6', fontSize: 12, fontFamily: FONTS.bodySemiBold }}>
                         {rsvp.yes} going
                       </Text>
                       {rsvp.maybe > 0 && (
@@ -535,7 +535,7 @@ export default function GameDayScreen() {
                         </Text>
                       )}
                       {rsvp.pending > 0 && (
-                        <Text style={{ color: colors.textMuted, fontSize: 12 }}>
+                        <Text style={{ color: BRAND.textMuted, fontSize: 12 }}>
                           {rsvp.pending} pending
                         </Text>
                       )}
@@ -568,7 +568,7 @@ export default function GameDayScreen() {
                     ]}
                   />
                 </View>
-                <Text style={[s.progressLabel, { color: colors.textMuted }]}>
+                <Text style={[s.progressLabel, { color: BRAND.textMuted }]}>
                   Game {seasonStats.completedGames} of {seasonStats.totalGames}
                 </Text>
               </View>
@@ -576,17 +576,17 @@ export default function GameDayScreen() {
               <View style={s.statsRow}>
                 <View style={s.statItem}>
                   <Text style={[s.statValue, { color: '#22C55E' }]}>{seasonStats.wins}</Text>
-                  <Text style={[s.statLabel, { color: colors.textMuted }]}>Won</Text>
+                  <Text style={[s.statLabel, { color: BRAND.textMuted }]}>Won</Text>
                 </View>
-                <View style={[s.statDivider, { backgroundColor: colors.glassBorder }]} />
+                <View style={[s.statDivider, { backgroundColor: BRAND.cardBorder }]} />
                 <View style={s.statItem}>
                   <Text style={[s.statValue, { color: '#D94F4F' }]}>{seasonStats.losses}</Text>
-                  <Text style={[s.statLabel, { color: colors.textMuted }]}>Lost</Text>
+                  <Text style={[s.statLabel, { color: BRAND.textMuted }]}>Lost</Text>
                 </View>
-                <View style={[s.statDivider, { backgroundColor: colors.glassBorder }]} />
+                <View style={[s.statDivider, { backgroundColor: BRAND.cardBorder }]} />
                 <View style={s.statItem}>
                   <Text style={[s.statValue, { color: '#14B8A6' }]}>{seasonStats.winPct}%</Text>
-                  <Text style={[s.statLabel, { color: colors.textMuted }]}>Win %</Text>
+                  <Text style={[s.statLabel, { color: BRAND.textMuted }]}>Win %</Text>
                 </View>
               </View>
             </Card>
@@ -601,14 +601,14 @@ export default function GameDayScreen() {
           <View style={s.overviewRow}>
             <Card onPress={() => router.push('/standings' as any)} style={{ flex: 1 }}>
               <View style={s.overviewCardInner}>
-                <Ionicons name="trophy-outline" size={28} color={colors.primary} />
-                <Text style={[s.overviewCardLabel, { color: colors.text }]}>Standings</Text>
+                <Ionicons name="trophy-outline" size={28} color={BRAND.skyBlue} />
+                <Text style={[s.overviewCardLabel, { color: BRAND.textPrimary }]}>Standings</Text>
               </View>
             </Card>
             <Card onPress={() => router.push('/season-archives' as any)} style={{ flex: 1 }}>
               <View style={s.overviewCardInner}>
-                <Ionicons name="archive-outline" size={28} color={colors.primary} />
-                <Text style={[s.overviewCardLabel, { color: colors.text }]}>Season History</Text>
+                <Ionicons name="archive-outline" size={28} color={BRAND.skyBlue} />
+                <Text style={[s.overviewCardLabel, { color: BRAND.textPrimary }]}>Season History</Text>
               </View>
             </Card>
           </View>
@@ -628,7 +628,7 @@ export default function GameDayScreen() {
               .sort()
               .map((dateKey) => (
                 <View key={dateKey} style={{ marginBottom: 12, paddingHorizontal: 16 }}>
-                  <Text style={[s.dateGroupHeader, { color: colors.text }]}>
+                  <Text style={[s.dateGroupHeader, { color: BRAND.textPrimary }]}>
                     {formatDateHeader(dateKey)}
                   </Text>
                   {groupedUpcoming[dateKey].map((event) => {
@@ -645,17 +645,17 @@ export default function GameDayScreen() {
                             <Ionicons name={typeConf.icon as any} size={16} color={typeConf.color} />
                           </View>
                           <View style={{ flex: 1 }}>
-                            <Text style={[s.compactTitle, { color: colors.text }]} numberOfLines={1}>
+                            <Text style={[s.compactTitle, { color: BRAND.textPrimary }]} numberOfLines={1}>
                               {event.title}
                             </Text>
-                            <Text style={[s.compactMeta, { color: colors.textMuted }]}>
+                            <Text style={[s.compactMeta, { color: BRAND.textMuted }]}>
                               {formatTime(event.start_time)}
                               {event.venue_name || event.location
                                 ? ` \u00B7 ${event.venue_name || event.location}`
                                 : ''}
                             </Text>
                           </View>
-                          <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                          <Ionicons name="chevron-forward" size={16} color={BRAND.textMuted} />
                         </View>
                       </Card>
                     );
@@ -667,8 +667,8 @@ export default function GameDayScreen() {
                 style={s.viewAllBtn}
                 onPress={() => router.push('/(tabs)/schedule' as any)}
               >
-                <Text style={[s.viewAllBtnText, { color: colors.primary }]}>View Full Schedule</Text>
-                <Ionicons name="arrow-forward" size={16} color={colors.primary} />
+                <Text style={[s.viewAllBtnText, { color: BRAND.skyBlue }]}>View Full Schedule</Text>
+                <Ionicons name="arrow-forward" size={16} color={BRAND.skyBlue} />
               </TouchableOpacity>
             )}
           </View>
@@ -713,10 +713,10 @@ export default function GameDayScreen() {
                         />
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={[s.compactTitle, { color: colors.text }]} numberOfLines={1}>
+                        <Text style={[s.compactTitle, { color: BRAND.textPrimary }]} numberOfLines={1}>
                           vs {game.opponent_name || game.opponent || 'TBD'}
                         </Text>
-                        <Text style={[s.compactMeta, { color: colors.textMuted }]}>
+                        <Text style={[s.compactMeta, { color: BRAND.textMuted }]}>
                           {formatEventDate(game.event_date)}
                           {team ? ` \u00B7 ${team.name}` : ''}
                         </Text>
@@ -763,7 +763,7 @@ export default function GameDayScreen() {
                     <View style={[s.coachToolIcon, { backgroundColor: tool.color + '20' }]}>
                       <Ionicons name={tool.icon as any} size={24} color={tool.color} />
                     </View>
-                    <Text style={[s.coachToolLabel, { color: colors.text }]}>{tool.label}</Text>
+                    <Text style={[s.coachToolLabel, { color: BRAND.textPrimary }]}>{tool.label}</Text>
                   </View>
                 </Card>
               ))}
@@ -788,11 +788,10 @@ export default function GameDayScreen() {
 // ═══════════════════════════════════════════════════════════
 // STYLES
 // ═══════════════════════════════════════════════════════════
-const createStyles = (colors: any) =>
-  StyleSheet.create({
+const styles = StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: BRAND.offWhite,
     },
 
     // ─── Sections ────────────────────────────────
@@ -820,7 +819,7 @@ const createStyles = (colors: any) =>
     },
     heroBadgeText: {
       fontSize: 9,
-      fontWeight: '800',
+      fontFamily: FONTS.bodyExtraBold,
       color: '#FFF',
       textTransform: 'uppercase',
       letterSpacing: 0.5,
@@ -835,7 +834,7 @@ const createStyles = (colors: any) =>
     heroCountdown: {
       color: '#14B8A6',
       fontSize: 12,
-      fontWeight: '800',
+      fontFamily: FONTS.bodyExtraBold,
       textTransform: 'uppercase',
       letterSpacing: 2,
       marginBottom: 2,
@@ -849,7 +848,7 @@ const createStyles = (colors: any) =>
     heroOpponent: {
       color: 'rgba(255,255,255,0.9)',
       fontSize: 16,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
       marginBottom: 8,
     },
     heroMetaRow: {
@@ -880,7 +879,7 @@ const createStyles = (colors: any) =>
     heroActionPrimaryText: {
       color: '#FFF',
       fontSize: 13,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
     },
     heroActionSecondary: {
       flex: 1,
@@ -897,7 +896,7 @@ const createStyles = (colors: any) =>
     heroActionSecondaryText: {
       color: '#FFF',
       fontSize: 13,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
     },
 
     // ─── Empty Hero ──────────────────────────────
@@ -942,7 +941,7 @@ const createStyles = (colors: any) =>
     },
     eventCardTitle: {
       fontSize: 15,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
     },
     eventCardOpponent: {
       fontSize: 13,
@@ -963,7 +962,7 @@ const createStyles = (colors: any) =>
       marginTop: 8,
       paddingTop: 8,
       borderTopWidth: 1,
-      borderTopColor: colors.glassBorder,
+      borderTopColor: BRAND.cardBorder,
     },
 
     // ─── Season Progress ─────────────────────────
@@ -974,7 +973,7 @@ const createStyles = (colors: any) =>
       height: 8,
       borderRadius: 4,
       overflow: 'hidden' as const,
-      backgroundColor: colors.glassBorder,
+      backgroundColor: BRAND.cardBorder,
       marginBottom: 6,
     },
     progressBarFill: {
@@ -984,7 +983,7 @@ const createStyles = (colors: any) =>
     },
     progressLabel: {
       fontSize: 12,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
     },
     statsRow: {
       flexDirection: 'row',
@@ -1001,7 +1000,7 @@ const createStyles = (colors: any) =>
     },
     statLabel: {
       fontSize: 10,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
       marginTop: 2,
       textTransform: 'uppercase',
       letterSpacing: 0.5,
@@ -1025,7 +1024,7 @@ const createStyles = (colors: any) =>
     },
     overviewCardLabel: {
       fontSize: 13,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
     },
 
     // ─── Compact rows (upcoming + results) ───────
@@ -1043,7 +1042,7 @@ const createStyles = (colors: any) =>
     },
     compactTitle: {
       fontSize: 14,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
     },
     compactMeta: {
       fontSize: 12,
@@ -1051,7 +1050,7 @@ const createStyles = (colors: any) =>
     },
     resultScore: {
       fontSize: 16,
-      fontWeight: '800',
+      fontFamily: FONTS.bodyExtraBold,
     },
 
     // ─── Upcoming date group ─────────────────────
@@ -1070,7 +1069,7 @@ const createStyles = (colors: any) =>
     },
     viewAllBtnText: {
       fontSize: 14,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
     },
 
     // ─── Coach Tools ─────────────────────────────
@@ -1087,7 +1086,7 @@ const createStyles = (colors: any) =>
     },
     coachToolLabel: {
       fontSize: 11,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
       textAlign: 'center',
     },
 
@@ -1108,6 +1107,6 @@ const createStyles = (colors: any) =>
       textAlign: 'center',
       marginTop: 8,
       lineHeight: 20,
-      color: colors.textMuted,
+      color: BRAND.textMuted,
     },
-  });
+});

@@ -1,7 +1,8 @@
 import { useAuth } from '@/lib/auth';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
-import { useTheme } from '@/lib/theme';
+import { BRAND } from '@/theme/colors';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -80,13 +81,12 @@ const formatTime = (t: string | null) => {
 // ============================================================================
 
 export default function GamePrepWizardScreen() {
-  const { colors } = useTheme();
   const { user } = useAuth();
   const { workingSeason } = useSeason();
   const router = useRouter();
   const params = useLocalSearchParams<{ eventId?: string; teamId?: string }>();
 
-  const s = createStyles(colors);
+  const s = styles;
 
   // Core state
   const [step, setStep] = useState<WizardStep>(1);
@@ -519,7 +519,7 @@ export default function GamePrepWizardScreen() {
           <View style={s.headerBtn} />
         </View>
         <View style={s.loadingWrap}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={BRAND.skyBlue} />
         </View>
       </SafeAreaView>
     );
@@ -544,7 +544,7 @@ export default function GamePrepWizardScreen() {
           <Text style={s.emptyTitle}>No Upcoming Games</Text>
           <Text style={s.emptySubtext}>No games found to prepare for.</Text>
           <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-            <Text style={[s.backBtnText, { color: colors.primary }]}>Go Back</Text>
+            <Text style={[s.backBtnText, { color: BRAND.skyBlue }]}>Go Back</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -599,7 +599,7 @@ export default function GamePrepWizardScreen() {
                     <Text
                       style={[
                         s.progressNum,
-                        isActive && { color: colors.primary },
+                        isActive && { color: BRAND.skyBlue },
                       ]}
                     >
                       {st.num}
@@ -609,7 +609,7 @@ export default function GamePrepWizardScreen() {
                 <Text
                   style={[
                     s.progressLabel,
-                    isActive && { color: '#fff', fontWeight: '700' },
+                    isActive && { color: '#fff', fontFamily: FONTS.bodyBold },
                     isCompleted && { color: '#10B981' },
                   ]}
                 >
@@ -691,11 +691,11 @@ export default function GamePrepWizardScreen() {
           activeOpacity={0.7}
         >
           {sendingReminder ? (
-            <ActivityIndicator size="small" color={colors.primary} />
+            <ActivityIndicator size="small" color={BRAND.skyBlue} />
           ) : (
-            <Ionicons name="notifications-outline" size={18} color={colors.primary} />
+            <Ionicons name="notifications-outline" size={18} color={BRAND.skyBlue} />
           )}
-          <Text style={[s.reminderBtnText, { color: colors.primary }]}>
+          <Text style={[s.reminderBtnText, { color: BRAND.skyBlue }]}>
             {sendingReminder
               ? 'Sending...'
               : `Send Reminder to ${rsvpSummary.noResponse} Non-Responder${rsvpSummary.noResponse !== 1 ? 's' : ''}`}
@@ -772,7 +772,7 @@ export default function GamePrepWizardScreen() {
           <Text style={s.footerSecondaryText}>Skip</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[s.footerPrimary, { backgroundColor: colors.primary }]}
+          style={[s.footerPrimary, { backgroundColor: BRAND.skyBlue }]}
           onPress={() => {
             setStepsCompleted(prev => ({ ...prev, 1: true }));
             handleEnterStep2();
@@ -795,19 +795,19 @@ export default function GamePrepWizardScreen() {
       {/* Summary Bar */}
       <View style={s.attendSummaryBar}>
         <View style={s.attendSummaryItem}>
-          <View style={[s.summaryDot, { backgroundColor: colors.success }]} />
+          <View style={[s.summaryDot, { backgroundColor: BRAND.success }]} />
           <Text style={s.attendSummaryText}>
             {attendanceSummary.present}/{attendanceSummary.total} Present
           </Text>
         </View>
         <View style={s.attendDivider} />
         <View style={s.attendSummaryItem}>
-          <View style={[s.summaryDot, { backgroundColor: colors.danger }]} />
+          <View style={[s.summaryDot, { backgroundColor: BRAND.error }]} />
           <Text style={s.attendSummaryText}>{attendanceSummary.absent} Absent</Text>
         </View>
         <View style={s.attendDivider} />
         <View style={s.attendSummaryItem}>
-          <View style={[s.summaryDot, { backgroundColor: colors.warning }]} />
+          <View style={[s.summaryDot, { backgroundColor: BRAND.warning }]} />
           <Text style={s.attendSummaryText}>{attendanceSummary.late} Late</Text>
         </View>
       </View>
@@ -815,8 +815,8 @@ export default function GamePrepWizardScreen() {
       {/* Mark All */}
       <View style={s.quickActionsRow}>
         <TouchableOpacity style={s.markAllBtn} onPress={markAllPresent}>
-          <Ionicons name="checkmark-done" size={18} color={colors.success} />
-          <Text style={[s.markAllBtnText, { color: colors.success }]}>Mark All Present</Text>
+          <Ionicons name="checkmark-done" size={18} color={BRAND.success} />
+          <Text style={[s.markAllBtnText, { color: BRAND.success }]}>Mark All Present</Text>
         </TouchableOpacity>
       </View>
 
@@ -848,8 +848,8 @@ export default function GamePrepWizardScreen() {
                   )}
                   {insight && (
                     <View style={s.insightRow}>
-                      <Ionicons name="warning" size={12} color={colors.warning} />
-                      <Text style={[s.insightText, { color: colors.warning }]}>{insight}</Text>
+                      <Ionicons name="warning" size={12} color={BRAND.warning} />
+                      <Text style={[s.insightText, { color: BRAND.warning }]}>{insight}</Text>
                     </View>
                   )}
                 </View>
@@ -864,7 +864,7 @@ export default function GamePrepWizardScreen() {
                   <Ionicons
                     name="checkmark"
                     size={20}
-                    color={status === 'present' ? '#fff' : colors.success}
+                    color={status === 'present' ? '#fff' : BRAND.success}
                   />
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -874,7 +874,7 @@ export default function GamePrepWizardScreen() {
                   <Ionicons
                     name="close"
                     size={20}
-                    color={status === 'absent' ? '#fff' : colors.danger}
+                    color={status === 'absent' ? '#fff' : BRAND.error}
                   />
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -884,7 +884,7 @@ export default function GamePrepWizardScreen() {
                   <Ionicons
                     name="time"
                     size={20}
-                    color={status === 'late' ? '#fff' : colors.warning}
+                    color={status === 'late' ? '#fff' : BRAND.warning}
                   />
                 </TouchableOpacity>
               </View>
@@ -900,7 +900,7 @@ export default function GamePrepWizardScreen() {
           <Text style={s.footerSecondaryText}>Back</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[s.footerPrimary, { backgroundColor: colors.primary }]}
+          style={[s.footerPrimary, { backgroundColor: BRAND.skyBlue }]}
           onPress={saveAttendance}
           disabled={savingAttendance}
           activeOpacity={0.7}
@@ -932,7 +932,7 @@ export default function GamePrepWizardScreen() {
           {/* Available Players Card */}
           <View style={s.lineupCard}>
             <View style={s.lineupCardHeader}>
-              <Ionicons name="people" size={20} color={colors.primary} />
+              <Ionicons name="people" size={20} color={BRAND.skyBlue} />
               <Text style={s.lineupCardTitle}>Available Players</Text>
             </View>
             <Text style={s.lineupCardSubtitle}>
@@ -977,12 +977,12 @@ export default function GamePrepWizardScreen() {
                   </Text>
                 </View>
                 <TouchableOpacity
-                  style={[s.lineupActionBtn, { borderColor: colors.primary }]}
+                  style={[s.lineupActionBtn, { borderColor: BRAND.skyBlue }]}
                   onPress={openLineupBuilder}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name="create-outline" size={18} color={colors.primary} />
-                  <Text style={[s.lineupActionBtnText, { color: colors.primary }]}>
+                  <Ionicons name="create-outline" size={18} color={BRAND.skyBlue} />
+                  <Text style={[s.lineupActionBtnText, { color: BRAND.skyBlue }]}>
                     Edit Lineup
                   </Text>
                 </TouchableOpacity>
@@ -991,7 +991,7 @@ export default function GamePrepWizardScreen() {
               <>
                 <Text style={s.lineupCardSubtitle}>No lineup set yet</Text>
                 <TouchableOpacity
-                  style={[s.lineupActionBtn, { backgroundColor: colors.primary, borderColor: colors.primary }]}
+                  style={[s.lineupActionBtn, { backgroundColor: BRAND.skyBlue, borderColor: BRAND.skyBlue }]}
                   onPress={openLineupBuilder}
                   activeOpacity={0.7}
                 >
@@ -1023,7 +1023,7 @@ export default function GamePrepWizardScreen() {
             <Text style={s.footerSecondaryText}>Back</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[s.footerPrimary, { backgroundColor: allDone ? '#10B981' : colors.primary }]}
+            style={[s.footerPrimary, { backgroundColor: allDone ? '#10B981' : BRAND.skyBlue }]}
             onPress={handleDone}
             activeOpacity={0.7}
           >
@@ -1064,7 +1064,7 @@ export default function GamePrepWizardScreen() {
       {/* Saving Overlay */}
       {savingAttendance && (
         <View style={s.savingOverlay}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={BRAND.skyBlue} />
           <Text style={s.savingText}>Saving attendance...</Text>
         </View>
       )}
@@ -1076,11 +1076,10 @@ export default function GamePrepWizardScreen() {
 // STYLES
 // ============================================================================
 
-const createStyles = (colors: any) =>
-  StyleSheet.create({
+const styles = StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: BRAND.surfaceDark,
     },
 
     // Header
@@ -1102,7 +1101,7 @@ const createStyles = (colors: any) =>
     },
     headerTitle: {
       fontSize: 20,
-      fontWeight: '800',
+      fontFamily: FONTS.bodyExtraBold,
       color: '#fff',
       letterSpacing: 2,
     },
@@ -1121,7 +1120,7 @@ const createStyles = (colors: any) =>
     },
     emptyTitle: {
       fontSize: 20,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
       color: '#94A3B8',
       marginTop: 16,
     },
@@ -1138,7 +1137,7 @@ const createStyles = (colors: any) =>
     },
     backBtnText: {
       fontSize: 16,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
     },
 
     // Event Info Bar
@@ -1148,16 +1147,16 @@ const createStyles = (colors: any) =>
       justifyContent: 'space-between',
       paddingHorizontal: 16,
       paddingVertical: 10,
-      backgroundColor: colors.glassCard,
+      backgroundColor: BRAND.surfaceCard,
       borderBottomWidth: 1,
-      borderBottomColor: colors.glassBorder,
+      borderBottomColor: BRAND.cardBorder,
     },
     eventInfoLeft: {
       flex: 1,
     },
     eventOpponent: {
       fontSize: 16,
-      fontWeight: '800',
+      fontFamily: FONTS.bodyExtraBold,
       color: '#fff',
     },
     eventMetaRow: {
@@ -1178,7 +1177,7 @@ const createStyles = (colors: any) =>
     },
     stepBadgeText: {
       fontSize: 12,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
       color: '#94A3B8',
     },
 
@@ -1215,7 +1214,7 @@ const createStyles = (colors: any) =>
       borderColor: '#334155',
     },
     progressCircleActive: {
-      borderColor: colors.primary,
+      borderColor: BRAND.skyBlue,
       backgroundColor: 'rgba(59, 130, 246, 0.15)',
     },
     progressCircleCompleted: {
@@ -1224,12 +1223,12 @@ const createStyles = (colors: any) =>
     },
     progressNum: {
       fontSize: 12,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
       color: '#64748B',
     },
     progressLabel: {
       fontSize: 10,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
       color: '#64748B',
       letterSpacing: 0.5,
     },
@@ -1240,14 +1239,14 @@ const createStyles = (colors: any) =>
       marginTop: 8,
       marginBottom: 12,
       padding: 16,
-      backgroundColor: colors.glassCard,
+      backgroundColor: BRAND.surfaceCard,
       borderRadius: 14,
       borderWidth: 1,
-      borderColor: colors.glassBorder,
+      borderColor: BRAND.cardBorder,
     },
     summaryHeadline: {
       fontSize: 15,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
       color: '#CBD5E1',
       marginBottom: 10,
     },
@@ -1268,7 +1267,7 @@ const createStyles = (colors: any) =>
     },
     summaryChipText: {
       fontSize: 13,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
       color: '#94A3B8',
     },
 
@@ -1288,17 +1287,17 @@ const createStyles = (colors: any) =>
     },
     reminderBtnText: {
       fontSize: 14,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
     },
 
     // Player Card (shared across steps)
     playerCard: {
-      backgroundColor: colors.glassCard,
+      backgroundColor: BRAND.surfaceCard,
       borderRadius: 14,
       padding: 14,
       marginBottom: 8,
       borderWidth: 1,
-      borderColor: colors.glassBorder,
+      borderColor: BRAND.cardBorder,
     },
     playerInfo: {
       flexDirection: 'row',
@@ -1321,12 +1320,12 @@ const createStyles = (colors: any) =>
     },
     jerseyText: {
       fontSize: 18,
-      fontWeight: '900',
+      fontFamily: FONTS.bodyExtraBold,
       color: '#94A3B8',
     },
     playerName: {
       fontSize: 16,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
       color: '#CBD5E1',
     },
     playerPosition: {
@@ -1346,7 +1345,7 @@ const createStyles = (colors: any) =>
     },
     rsvpBadgeText: {
       fontSize: 11,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
     },
 
     // Attendance Summary (Step 2)
@@ -1356,9 +1355,9 @@ const createStyles = (colors: any) =>
       justifyContent: 'center',
       paddingVertical: 14,
       paddingHorizontal: 16,
-      backgroundColor: colors.glassCard,
+      backgroundColor: BRAND.surfaceCard,
       borderBottomWidth: 1,
-      borderBottomColor: colors.glassBorder,
+      borderBottomColor: BRAND.cardBorder,
     },
     attendSummaryItem: {
       flexDirection: 'row',
@@ -1367,7 +1366,7 @@ const createStyles = (colors: any) =>
     },
     attendSummaryText: {
       fontSize: 13,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
       color: '#CBD5E1',
     },
     attendDivider: {
@@ -1397,7 +1396,7 @@ const createStyles = (colors: any) =>
     },
     markAllBtnText: {
       fontSize: 13,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
     },
 
     // Status Buttons (Step 2)
@@ -1418,16 +1417,16 @@ const createStyles = (colors: any) =>
       borderColor: 'rgba(255, 255, 255, 0.06)',
     },
     statusBtnPresent: {
-      backgroundColor: colors.success,
-      borderColor: colors.success,
+      backgroundColor: BRAND.success,
+      borderColor: BRAND.success,
     },
     statusBtnAbsent: {
-      backgroundColor: colors.danger,
-      borderColor: colors.danger,
+      backgroundColor: BRAND.error,
+      borderColor: BRAND.error,
     },
     statusBtnLate: {
-      backgroundColor: colors.warning,
-      borderColor: colors.warning,
+      backgroundColor: BRAND.warning,
+      borderColor: BRAND.warning,
     },
 
     // Insight Row (Step 2)
@@ -1439,17 +1438,17 @@ const createStyles = (colors: any) =>
     },
     insightText: {
       fontSize: 11,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
     },
 
     // Lineup Cards (Step 3)
     lineupCard: {
-      backgroundColor: colors.glassCard,
+      backgroundColor: BRAND.surfaceCard,
       borderRadius: 14,
       padding: 16,
       marginBottom: 12,
       borderWidth: 1,
-      borderColor: colors.glassBorder,
+      borderColor: BRAND.cardBorder,
     },
     lineupCardHeader: {
       flexDirection: 'row',
@@ -1459,7 +1458,7 @@ const createStyles = (colors: any) =>
     },
     lineupCardTitle: {
       fontSize: 16,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
       color: '#CBD5E1',
     },
     lineupCardSubtitle: {
@@ -1489,7 +1488,7 @@ const createStyles = (colors: any) =>
     },
     avatarText: {
       fontSize: 12,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
       color: '#94A3B8',
     },
     lineupStatusBadge: {
@@ -1500,7 +1499,7 @@ const createStyles = (colors: any) =>
     },
     lineupStatusText: {
       fontSize: 14,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
       color: '#10B981',
     },
     lineupActionBtn: {
@@ -1514,7 +1513,7 @@ const createStyles = (colors: any) =>
     },
     lineupActionBtnText: {
       fontSize: 15,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
     },
 
     // Completion Card
@@ -1529,7 +1528,7 @@ const createStyles = (colors: any) =>
     },
     completionTitle: {
       fontSize: 18,
-      fontWeight: '800',
+      fontFamily: FONTS.bodyExtraBold,
       color: '#10B981',
       marginTop: 8,
     },
@@ -1548,8 +1547,8 @@ const createStyles = (colors: any) =>
       paddingHorizontal: 16,
       paddingVertical: 12,
       borderTopWidth: 1,
-      borderTopColor: colors.glassBorder,
-      backgroundColor: colors.glassCard,
+      borderTopColor: BRAND.cardBorder,
+      backgroundColor: BRAND.surfaceCard,
     },
     footerSecondary: {
       flexDirection: 'row',
@@ -1560,7 +1559,7 @@ const createStyles = (colors: any) =>
     },
     footerSecondaryText: {
       fontSize: 15,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
       color: '#94A3B8',
     },
     footerPrimary: {
@@ -1573,7 +1572,7 @@ const createStyles = (colors: any) =>
     },
     footerPrimaryText: {
       fontSize: 15,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
       color: '#fff',
     },
 
@@ -1590,7 +1589,7 @@ const createStyles = (colors: any) =>
     },
     savingText: {
       fontSize: 16,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
       color: '#fff',
       marginTop: 12,
     },

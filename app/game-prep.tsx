@@ -7,7 +7,8 @@ import { useAuth } from '@/lib/auth';
 import { useSeason } from '@/lib/season';
 import { useSport } from '@/lib/sport';
 import { supabase } from '@/lib/supabase';
-import { useTheme } from '@/lib/theme';
+import { BRAND } from '@/theme/colors';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
@@ -125,7 +126,7 @@ const DETAILED_STAT_FIELDS: { key: DetailedStatKey; label: string; color: string
 // ============================================================================
 
 export default function GamePrepScreen() {
-  const { colors } = useTheme();
+
   const { user } = useAuth();
   const { workingSeason } = useSeason();
   const { activeSport } = useSport();
@@ -1225,7 +1226,7 @@ export default function GamePrepScreen() {
         {/* Games */}
         <ScrollView style={gs.gamesList} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
           {loadingGames ? (
-            <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
+            <ActivityIndicator size="large" color={BRAND.skyBlue} style={{ marginTop: 40 }} />
           ) : games.length === 0 ? (
             <View style={gs.emptyState}>
               <Ionicons name="calendar-outline" size={64} color="#334155" />
@@ -1329,7 +1330,7 @@ export default function GamePrepScreen() {
                         <Text style={gs.startBtnText}>
                           {isToday ? 'START GAME DAY' : 'ENTER GAME DAY'}
                         </Text>
-                        <Ionicons name="play" size={16} color={colors.primary} />
+                        <Ionicons name="play" size={16} color={BRAND.skyBlue} />
                       </View>
                     )}
 
@@ -1675,7 +1676,7 @@ export default function GamePrepScreen() {
               )}
 
               {isActive && (
-                <Ionicons name="radio-button-on" size={20} color={colors.primary} />
+                <Ionicons name="radio-button-on" size={20} color={BRAND.skyBlue} />
               )}
             </TouchableOpacity>
           );
@@ -1722,19 +1723,19 @@ const gs = StyleSheet.create({
   // Header
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 60, paddingBottom: 12, backgroundColor: '#0D1117' },
   headerBtn: { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { fontSize: 28, fontWeight: '800', color: '#fff', letterSpacing: 2 },
+  headerTitle: { fontSize: 28, fontFamily: FONTS.bodyExtraBold, color: '#fff', letterSpacing: 2 },
 
   // Team Tabs
   teamTabs: { maxHeight: 50, backgroundColor: '#0D1117', borderBottomWidth: 1, borderBottomColor: '#1E293B' },
   teamTab: { paddingHorizontal: 20, paddingVertical: 12, marginRight: 8, borderRadius: 8 },
   teamTabActive: { backgroundColor: '#F97316' + '25', borderBottomWidth: 2, borderBottomColor: '#F97316' },
-  teamTabText: { fontSize: 14, fontWeight: '600', color: '#64748B' },
+  teamTabText: { fontSize: 14, fontFamily: FONTS.bodySemiBold, color: '#64748B' },
   teamTabTextActive: { color: '#F97316' },
 
   // Game List
   gamesList: { flex: 1 },
   emptyState: { alignItems: 'center', paddingTop: 60 },
-  emptyTitle: { fontSize: 20, fontWeight: '700', color: '#94A3B8', marginTop: 16 },
+  emptyTitle: { fontSize: 20, fontFamily: FONTS.bodyBold, color: '#94A3B8', marginTop: 16 },
   emptySubtext: { fontSize: 14, color: '#64748B', marginTop: 4 },
 
   // Game Card
@@ -1742,109 +1743,109 @@ const gs = StyleSheet.create({
   gameCardToday: { borderColor: '#FF3B3B40', backgroundColor: '#1A0D0D' },
   gameCardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   gameCardDate: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  gameDateText: { fontSize: 13, fontWeight: '700', color: '#94A3B8', letterSpacing: 1 },
+  gameDateText: { fontSize: 13, fontFamily: FONTS.bodyBold, color: '#94A3B8', letterSpacing: 1 },
   gameTimeText: { fontSize: 13, color: '#64748B' },
-  gameOpponent: { fontSize: 22, fontWeight: '800', color: '#fff', marginBottom: 10 },
+  gameOpponent: { fontSize: 22, fontFamily: FONTS.bodyExtraBold, color: '#fff', marginBottom: 10 },
   gameCardBottom: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   gameLocation: { flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1 },
   gameLocationText: { fontSize: 12, color: '#64748B' },
   homeBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
   homeBadgeHome: { backgroundColor: '#10B98120' },
   homeBadgeAway: { backgroundColor: '#F5660020' },
-  homeBadgeText: { fontSize: 10, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.5 },
+  homeBadgeText: { fontSize: 10, fontFamily: FONTS.bodyBold, color: '#94A3B8', letterSpacing: 0.5 },
   completedBadge: { backgroundColor: '#10B98120', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
-  completedBadgeText: { fontSize: 10, fontWeight: '700', color: '#10B981', letterSpacing: 0.5 },
+  completedBadgeText: { fontSize: 10, fontFamily: FONTS.bodyBold, color: '#10B981', letterSpacing: 0.5 },
   liveBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FF3B3B20', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
   liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#FF3B3B' },
-  liveBadgeText: { fontSize: 10, fontWeight: '700', color: '#FF3B3B', letterSpacing: 0.5 },
+  liveBadgeText: { fontSize: 10, fontFamily: FONTS.bodyBold, color: '#FF3B3B', letterSpacing: 0.5 },
   // Lineup Badge & Set Lineup Button
   lineupBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#10B98120', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
-  lineupBadgeText: { fontSize: 9, fontWeight: '700', color: '#10B981', letterSpacing: 0.5 },
+  lineupBadgeText: { fontSize: 9, fontFamily: FONTS.bodyBold, color: '#10B981', letterSpacing: 0.5 },
   setLineupBtnWrap: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 10, paddingVertical: 10, borderRadius: 10, backgroundColor: '#6366F115', borderWidth: 1, borderColor: '#6366F140' },
-  setLineupBtnText: { fontSize: 12, fontWeight: '800', color: '#6366F1', letterSpacing: 0.5 },
+  setLineupBtnText: { fontSize: 12, fontFamily: FONTS.bodyExtraBold, color: '#6366F1', letterSpacing: 0.5 },
 
   startBtnWrap: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#1E293B' },
-  startBtnText: { fontSize: 14, fontWeight: '800', color: '#F97316', letterSpacing: 1 },
+  startBtnText: { fontSize: 14, fontFamily: FONTS.bodyExtraBold, color: '#F97316', letterSpacing: 1 },
   scoreDisplay: { marginTop: 10, alignItems: 'center' },
-  finalScore: { fontSize: 18, fontWeight: '800', color: '#64748B' },
+  finalScore: { fontSize: 18, fontFamily: FONTS.bodyExtraBold, color: '#64748B' },
   viewRecapWrap: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#1E293B' },
-  viewRecapText: { fontSize: 12, fontWeight: '800', color: '#6366F1', letterSpacing: 0.5 },
+  viewRecapText: { fontSize: 12, fontFamily: FONTS.bodyExtraBold, color: '#6366F1', letterSpacing: 0.5 },
   enterStatsBtnWrap: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 8, paddingVertical: 10, borderRadius: 10, backgroundColor: '#F59E0B15', borderWidth: 1, borderColor: '#F59E0B40' },
-  enterStatsBtnText: { fontSize: 12, fontWeight: '800', color: '#F59E0B', letterSpacing: 0.5 },
+  enterStatsBtnText: { fontSize: 12, fontFamily: FONTS.bodyExtraBold, color: '#F59E0B', letterSpacing: 0.5 },
 
   // ====== LIVE MODE ======
   liveHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingTop: 56, paddingBottom: 8, backgroundColor: '#0D1117' },
   liveHeaderCenter: { alignItems: 'center' },
-  liveHeaderTitle: { fontSize: 16, fontWeight: '800', color: '#fff', letterSpacing: 1 },
-  liveSetIndicator: { fontSize: 12, fontWeight: '700', color: '#F97316', letterSpacing: 1, marginTop: 2 },
+  liveHeaderTitle: { fontSize: 16, fontFamily: FONTS.bodyExtraBold, color: '#fff', letterSpacing: 1 },
+  liveSetIndicator: { fontSize: 12, fontFamily: FONTS.bodyBold, color: '#F97316', letterSpacing: 1, marginTop: 2 },
   endGameBtn: { backgroundColor: '#EF444430', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: '#EF444460' },
-  endGameBtnText: { fontSize: 14, fontWeight: '800', color: '#EF4444', letterSpacing: 1 },
+  endGameBtnText: { fontSize: 14, fontFamily: FONTS.bodyExtraBold, color: '#EF4444', letterSpacing: 1 },
 
   // Scoreboard
   scoreboard: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, backgroundColor: '#0D1117', borderBottomWidth: 1, borderBottomColor: '#1E293B' },
   scoreColumn: { flex: 1, alignItems: 'center' },
-  teamLabel: { fontSize: 12, fontWeight: '700', color: '#64748B', letterSpacing: 2, marginBottom: 4 },
+  teamLabel: { fontSize: 12, fontFamily: FONTS.bodyBold, color: '#64748B', letterSpacing: 2, marginBottom: 4 },
   scoreTouchZone: { width: 110, height: 110, borderRadius: 20, backgroundColor: 'rgba(30, 41, 59, 0.7)', borderWidth: 2, borderColor: 'rgba(255, 255, 255, 0.08)', justifyContent: 'center', alignItems: 'center' },
-  bigScore: { fontSize: 56, fontWeight: '900', color: '#fff' },
+  bigScore: { fontSize: 56, fontFamily: FONTS.bodyExtraBold, color: '#fff' },
   undoBtn: { marginTop: 8, padding: 8 },
   scoreCenter: { width: 100, alignItems: 'center' },
-  setLabel: { fontSize: 14, fontWeight: '800', color: '#F97316', letterSpacing: 1, marginBottom: 8 },
+  setLabel: { fontSize: 14, fontFamily: FONTS.bodyExtraBold, color: '#F97316', letterSpacing: 1, marginBottom: 8 },
   setHistory: { gap: 2, marginBottom: 8 },
   setHistoryItem: { backgroundColor: '#1E293B', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 },
-  setHistoryText: { fontSize: 10, color: '#94A3B8', fontWeight: '600' },
-  setsWon: { fontSize: 24, fontWeight: '900', color: '#fff' },
-  setsWonLabel: { fontSize: 10, fontWeight: '700', color: '#64748B', letterSpacing: 1, marginBottom: 8 },
+  setHistoryText: { fontSize: 10, color: '#94A3B8', fontFamily: FONTS.bodySemiBold },
+  setsWon: { fontSize: 24, fontFamily: FONTS.bodyExtraBold, color: '#fff' },
+  setsWonLabel: { fontSize: 10, fontFamily: FONTS.bodyBold, color: '#64748B', letterSpacing: 1, marginBottom: 8 },
   endSetBtn: { backgroundColor: '#F9731620', borderWidth: 1, borderColor: '#F9731640', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12 },
-  endSetBtnText: { fontSize: 11, fontWeight: '800', color: '#F97316', letterSpacing: 0.5 },
+  endSetBtnText: { fontSize: 11, fontFamily: FONTS.bodyExtraBold, color: '#F97316', letterSpacing: 0.5 },
 
   // Stat Buttons
   statButtonsRow: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 8, paddingVertical: 6, gap: 6, backgroundColor: '#0D1117' },
   statBtn: { minWidth: 46, alignItems: 'center', justifyContent: 'center', paddingVertical: 10, paddingHorizontal: 4, borderRadius: 12, backgroundColor: 'rgba(30, 41, 59, 0.7)', borderWidth: 1, flexGrow: 1 },
   statBtnDisabled: { opacity: 0.4 },
-  statBtnLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 0.5, marginTop: 2 },
+  statBtnLabel: { fontSize: 10, fontFamily: FONTS.bodyExtraBold, letterSpacing: 0.5, marginTop: 2 },
 
   // Roster
   rosterScroll: { flex: 1, backgroundColor: '#0A0E1A' },
-  rosterTitle: { fontSize: 12, fontWeight: '700', color: '#64748B', letterSpacing: 1.5, textTransform: 'uppercase', textAlign: 'center', paddingVertical: 10 },
+  rosterTitle: { fontSize: 12, fontFamily: FONTS.bodyBold, color: '#64748B', letterSpacing: 1.5, textTransform: 'uppercase', textAlign: 'center', paddingVertical: 10 },
   playerRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#1E293B10' },
   playerRowActive: { backgroundColor: '#F9731615' },
   playerPhoto: { width: 44, height: 44, borderRadius: 22, marginRight: 12 },
   playerJersey: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#1E293B', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  playerJerseyText: { fontSize: 18, fontWeight: '900', color: '#94A3B8', textAlign: 'center' },
+  playerJerseyText: { fontSize: 18, fontFamily: FONTS.bodyExtraBold, color: '#94A3B8', textAlign: 'center' },
   playerInfo: { flex: 1 },
-  playerName: { fontSize: 16, fontWeight: '700', color: '#CBD5E1' },
+  playerName: { fontSize: 16, fontFamily: FONTS.bodyBold, color: '#CBD5E1' },
   playerNameActive: { color: '#F97316' },
   playerPos: { fontSize: 12, color: '#64748B', marginTop: 2 },
   miniStats: { flexDirection: 'row', gap: 6, marginRight: 8 },
-  miniStat: { fontSize: 10, fontWeight: '700' },
+  miniStat: { fontSize: 10, fontFamily: FONTS.bodyBold },
 
   // Pending Stats Badge
   pendingStatsBadge: { backgroundColor: '#F59E0B20', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
-  pendingStatsBadgeText: { fontSize: 10, fontWeight: '700', color: '#F59E0B', letterSpacing: 0.5 },
+  pendingStatsBadgeText: { fontSize: 10, fontFamily: FONTS.bodyBold, color: '#F59E0B', letterSpacing: 0.5 },
 
   // Header right group
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   undoLastBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#1E293B', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#334155' },
-  undoHint: { fontSize: 9, fontWeight: '700', color: '#F97316', maxWidth: 60 },
+  undoHint: { fontSize: 9, fontFamily: FONTS.bodyBold, color: '#F97316', maxWidth: 60 },
 
   // Bench
   benchRow: { backgroundColor: '#0D1117', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#1E293B' },
-  benchLabel: { fontSize: 9, fontWeight: '700', color: '#475569', letterSpacing: 1.5, textAlign: 'center', marginBottom: 4 },
+  benchLabel: { fontSize: 9, fontFamily: FONTS.bodyBold, color: '#475569', letterSpacing: 1.5, textAlign: 'center', marginBottom: 4 },
   benchSlot: { alignItems: 'center', width: 52, gap: 2 },
   benchSlotActive: { opacity: 1, backgroundColor: '#F9731615', borderRadius: 8, padding: 2 },
   benchPhoto: { width: 36, height: 36, borderRadius: 18 },
   benchJersey: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#1E293B', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#334155' },
-  benchJerseyText: { fontSize: 14, fontWeight: '900', color: '#94A3B8' },
-  benchName: { fontSize: 8, fontWeight: '700', color: '#64748B', textAlign: 'center', width: 48 },
+  benchJerseyText: { fontSize: 14, fontFamily: FONTS.bodyExtraBold, color: '#94A3B8' },
+  benchName: { fontSize: 8, fontFamily: FONTS.bodyBold, color: '#64748B', textAlign: 'center', width: 48 },
 
   // Quick Stats Panel
   quickStatsBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 8, backgroundColor: '#0D1117', borderBottomWidth: 1, borderBottomColor: '#1E293B' },
   quickStatsTeam: { flex: 1 },
-  quickStatsLabel: { fontSize: 9, fontWeight: '700', color: '#475569', letterSpacing: 1, marginBottom: 2 },
+  quickStatsLabel: { fontSize: 9, fontFamily: FONTS.bodyBold, color: '#475569', letterSpacing: 1, marginBottom: 2 },
   quickStatsMini: { flexDirection: 'row', gap: 8 },
-  qsMini: { fontSize: 12, fontWeight: '800' },
+  qsMini: { fontSize: 12, fontFamily: FONTS.bodyExtraBold },
   quickStatsHot: { alignItems: 'flex-end' },
-  quickStatsHotName: { fontSize: 13, fontWeight: '800', color: '#F97316' },
+  quickStatsHotName: { fontSize: 13, fontFamily: FONTS.bodyExtraBold, color: '#F97316' },
 
   // Set Navigation Tabs
   setTabsRow: { backgroundColor: '#0D1117', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#1E293B' },
@@ -1853,55 +1854,55 @@ const gs = StyleSheet.create({
   setTabLost: { backgroundColor: '#EF4444' },
   setTabCurrent: { backgroundColor: 'transparent', borderWidth: 1, borderColor: '#F97316' },
   setTabViewing: { borderWidth: 2, borderColor: '#fff' },
-  setTabText: { fontSize: 12, fontWeight: '800', color: '#94A3B8', letterSpacing: 0.5 },
+  setTabText: { fontSize: 12, fontFamily: FONTS.bodyExtraBold, color: '#94A3B8', letterSpacing: 0.5 },
 
   // Serving Indicator + Rally Buttons
   servingCard: { marginHorizontal: 8, marginVertical: 4, borderRadius: 12, padding: 10, backgroundColor: 'rgba(30, 41, 59, 0.7)', borderWidth: 1 },
   servingCardUs: { borderColor: '#10B98160' },
   servingCardThem: { borderColor: '#EF444460' },
   servingHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-  servingLabel: { fontSize: 12, fontWeight: '800', letterSpacing: 1 },
+  servingLabel: { fontSize: 12, fontFamily: FONTS.bodyExtraBold, letterSpacing: 1 },
   serverInfo: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 },
   serverPhoto: { width: 24, height: 24, borderRadius: 12 },
   serverJersey: { width: 24, height: 24, borderRadius: 12, backgroundColor: '#1E293B', justifyContent: 'center', alignItems: 'center' },
-  serverJerseyText: { fontSize: 10, fontWeight: '900', color: '#F97316' },
-  serverName: { fontSize: 12, fontWeight: '700', color: '#CBD5E1' },
+  serverJerseyText: { fontSize: 10, fontFamily: FONTS.bodyExtraBold, color: '#F97316' },
+  serverName: { fontSize: 12, fontFamily: FONTS.bodyBold, color: '#CBD5E1' },
   rallyRow: { flexDirection: 'row', gap: 6 },
   serveErrBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, backgroundColor: '#EF444420', borderWidth: 1, borderColor: '#EF444440' },
-  serveErrText: { fontSize: 10, fontWeight: '800', color: '#EF4444' },
+  serveErrText: { fontSize: 10, fontFamily: FONTS.bodyExtraBold, color: '#EF4444' },
   aceBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, backgroundColor: '#A855F720', borderWidth: 1, borderColor: '#A855F740' },
-  aceBtnText: { fontSize: 10, fontWeight: '800', color: '#A855F7' },
+  aceBtnText: { fontSize: 10, fontFamily: FONTS.bodyExtraBold, color: '#A855F7' },
   wonRallyBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 8, borderRadius: 10, backgroundColor: '#10B981' },
-  wonRallyText: { fontSize: 11, fontWeight: '800', color: '#000' },
+  wonRallyText: { fontSize: 11, fontFamily: FONTS.bodyExtraBold, color: '#000' },
   lostRallyBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 8, borderRadius: 10, backgroundColor: '#EF4444' },
-  lostRallyText: { fontSize: 11, fontWeight: '800', color: '#fff' },
+  lostRallyText: { fontSize: 11, fontFamily: FONTS.bodyExtraBold, color: '#fff' },
 
   // ====== STATS ENTRY MODE ======
   seProgressBar: { height: 4, backgroundColor: '#1E293B', marginHorizontal: 16, borderRadius: 2, marginTop: 8 },
   seProgressFill: { height: '100%', backgroundColor: '#F97316', borderRadius: 2 },
-  seProgressText: { fontSize: 12, fontWeight: '600', color: '#64748B', textAlign: 'center', marginTop: 6, marginBottom: 4 },
+  seProgressText: { fontSize: 12, fontFamily: FONTS.bodySemiBold, color: '#64748B', textAlign: 'center', marginTop: 6, marginBottom: 4 },
 
   sePlayerHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 24, backgroundColor: 'rgba(30, 41, 59, 0.7)', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.08)' },
   seJersey: { width: 56, height: 56, borderRadius: 14, backgroundColor: '#1E293B', justifyContent: 'center', alignItems: 'center', marginRight: 16 },
-  seJerseyText: { fontSize: 26, fontWeight: '900', color: '#F97316' },
-  sePlayerName: { fontSize: 22, fontWeight: '800', color: '#fff' },
+  seJerseyText: { fontSize: 26, fontFamily: FONTS.bodyExtraBold, color: '#F97316' },
+  sePlayerName: { fontSize: 22, fontFamily: FONTS.bodyExtraBold, color: '#fff' },
   sePlayerPos: { fontSize: 14, color: '#64748B', marginTop: 2 },
 
   seStatGrid: { gap: 8 },
   seStatRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(30, 41, 59, 0.5)', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.05)' },
-  seStatLabel: { fontSize: 16, fontWeight: '700', width: 80 },
+  seStatLabel: { fontSize: 16, fontFamily: FONTS.bodyBold, width: 80 },
   seStatControls: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8 },
   seStatDecBtn: { width: 40, height: 40, borderRadius: 10, backgroundColor: '#1E293B', justifyContent: 'center', alignItems: 'center' },
-  seStatInput: { width: 60, height: 44, fontSize: 28, fontWeight: '900', textAlign: 'center', backgroundColor: '#0D1117', borderRadius: 10, borderWidth: 1, borderColor: '#1E293B' },
+  seStatInput: { width: 60, height: 44, fontSize: 28, fontFamily: FONTS.bodyExtraBold, textAlign: 'center', backgroundColor: '#0D1117', borderRadius: 10, borderWidth: 1, borderColor: '#1E293B' },
   seStatIncBtn: { width: 40, height: 40, borderRadius: 10, backgroundColor: 'rgba(30, 41, 59, 0.7)', justifyContent: 'center', alignItems: 'center', borderWidth: 1 },
 
   seNavButtons: { flexDirection: 'row', gap: 10, marginTop: 24 },
   seNavBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 16, borderRadius: 14 },
   seNavBtnSecondary: { backgroundColor: '#1E293B' },
-  seNavBtnSecondaryText: { fontSize: 15, fontWeight: '600', color: '#94A3B8' },
+  seNavBtnSecondaryText: { fontSize: 15, fontFamily: FONTS.bodySemiBold, color: '#94A3B8' },
   seNavBtnPrimary: { backgroundColor: '#F97316' },
-  seNavBtnPrimaryText: { fontSize: 15, fontWeight: '800', color: '#000' },
+  seNavBtnPrimaryText: { fontSize: 15, fontFamily: FONTS.bodyExtraBold, color: '#000' },
   seNavBtnSave: { backgroundColor: '#10B981' },
   seSkipBtn: { paddingHorizontal: 16, paddingVertical: 16, justifyContent: 'center', alignItems: 'center' },
-  seSkipBtnText: { fontSize: 14, fontWeight: '600', color: '#64748B', textDecorationLine: 'underline' },
+  seSkipBtnText: { fontSize: 14, fontFamily: FONTS.bodySemiBold, color: '#64748B', textDecorationLine: 'underline' },
 });
