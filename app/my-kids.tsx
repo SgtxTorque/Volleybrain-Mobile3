@@ -357,7 +357,7 @@ export default function MyKidsScreen() {
                   <View style={s.childActions}>
                     <TouchableOpacity
                       style={s.childActionBtn}
-                      onPress={() => router.push('/schedule' as any)}
+                      onPress={() => router.push('/(tabs)/schedule' as any)}
                     >
                       <Ionicons name="calendar-outline" size={18} color={colors.primary} />
                       <Text style={s.childActionText}>Schedule</Text>
@@ -365,7 +365,7 @@ export default function MyKidsScreen() {
 
                     <TouchableOpacity
                       style={s.childActionBtn}
-                      onPress={() => router.push('/chats' as any)}
+                      onPress={() => router.push('/(tabs)/chats' as any)}
                     >
                       <Ionicons name="chatbubbles-outline" size={18} color={colors.success} />
                       <Text style={s.childActionText}>Team Chat</Text>

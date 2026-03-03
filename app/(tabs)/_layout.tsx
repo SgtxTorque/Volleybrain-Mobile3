@@ -280,6 +280,7 @@ export default function TabLayout() {
       <Tabs.Screen name="admin-my-stuff" options={{ href: null }} />
       <Tabs.Screen name="schedule" options={{ href: null }} />
       <Tabs.Screen name="messages" options={{ href: null }} />
+      <Tabs.Screen name="coach-roster" options={{ href: null }} />
       <Tabs.Screen name="players" options={{ href: null }} />
       <Tabs.Screen name="teams" options={{ href: null }} />
       <Tabs.Screen name="coaches" options={{ href: null }} />

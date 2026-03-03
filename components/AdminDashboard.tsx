@@ -1255,7 +1255,7 @@ export default function AdminDashboard() {
 
                 <TouchableOpacity
                   style={s.inviteOption}
-                  onPress={() => { setShowInviteModal(false); router.push('/players'); }}
+                  onPress={() => { setShowInviteModal(false); router.push('/(tabs)/players' as any); }}
                 >
                   <View style={[s.inviteOptionIcon, { backgroundColor: '#AF52DE20' }]}>
                     <Ionicons name="create" size={28} color="#AF52DE" />

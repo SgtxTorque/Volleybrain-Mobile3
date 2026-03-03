@@ -1128,7 +1128,7 @@ export default function CoachDashboard() {
         onViewAllTrophies={() => {
           setShowCelebration(false);
           if (user?.id) markAchievementsSeen(user.id);
-          router.push('/team-hub' as any);
+          router.push('/(tabs)/coach-team-hub' as any);
         }}
         themeColors={{
           bg: colors.background,

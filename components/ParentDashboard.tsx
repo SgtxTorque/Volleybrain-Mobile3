@@ -1808,7 +1808,7 @@ export default function ParentDashboard() {
         onViewAllTrophies={() => {
           setShowCelebration(false);
           if (user?.id) markAchievementsSeen(user.id);
-          router.push('/team-hub' as any);
+          router.push('/(tabs)/parent-team-hub' as any);
         }}
         themeColors={{
           bg: colors.background,
