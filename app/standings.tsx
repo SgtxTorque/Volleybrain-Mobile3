@@ -1,11 +1,12 @@
 import { useAuth } from '@/lib/auth';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
-import { useTheme } from '@/lib/theme';
+import { BRAND } from '@/theme/colors';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Platform,
@@ -53,7 +54,6 @@ const MEDAL_COLORS = ['#FFD700', '#C0C0C0', '#CD7F32'];
 // ============================================
 
 export default function StandingsScreen() {
-  const { colors } = useTheme();
   const { user, profile } = useAuth();
   const { workingSeason } = useSeason();
   const router = useRouter();
@@ -73,8 +73,6 @@ export default function StandingsScreen() {
 
   // Leaderboard refresh trigger (increment to force re-fetch)
   const [lbRefreshTrigger, setLbRefreshTrigger] = useState(0);
-
-  const s = useMemo(() => createStyles(colors), [colors]);
 
   // -----------------------------------------------
   // Load team standings
@@ -284,7 +282,7 @@ export default function StandingsScreen() {
     if (loading) {
       return (
         <View style={s.centeredLoader}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={BRAND.teal} />
           <Text style={s.loadingText}>Loading standings...</Text>
         </View>
       );
@@ -293,7 +291,7 @@ export default function StandingsScreen() {
     if (!workingSeason) {
       return (
         <View style={s.emptyState}>
-          <Ionicons name="calendar-outline" size={48} color={colors.textMuted} />
+          <Ionicons name="calendar-outline" size={48} color={BRAND.textMuted} />
           <Text style={s.emptyTitle}>No Active Season</Text>
           <Text style={s.emptySubtitle}>Select a season to view standings.</Text>
         </View>
@@ -303,7 +301,7 @@ export default function StandingsScreen() {
     if (standings.length === 0) {
       return (
         <View style={s.emptyState}>
-          <Ionicons name="podium-outline" size={48} color={colors.textMuted} />
+          <Ionicons name="podium-outline" size={48} color={BRAND.textMuted} />
           <Text style={s.emptyTitle}>No Teams Yet</Text>
           <Text style={s.emptySubtitle}>Once teams are added, standings will appear here.</Text>
         </View>
@@ -329,7 +327,7 @@ export default function StandingsScreen() {
           const rank = index + 1;
           const medal = getRankDisplay(rank);
           const isTopThree = rank <= 3;
-          const rowBg = index % 2 === 0 ? 'transparent' : colors.glassBorder;
+          const rowBg = index % 2 === 0 ? 'transparent' : BRAND.border;
 
           return (
             <View
@@ -349,7 +347,7 @@ export default function StandingsScreen() {
               </View>
               <View style={s.teamCol}>
                 <View style={s.teamNameRow}>
-                  <View style={[s.teamColorDot, { backgroundColor: team.color || colors.textMuted }]} />
+                  <View style={[s.teamColorDot, { backgroundColor: team.color || BRAND.textMuted }]} />
                   <Text style={s.teamName} numberOfLines={1}>{team.name}</Text>
                 </View>
               </View>
@@ -372,8 +370,8 @@ export default function StandingsScreen() {
                 <Text
                   style={[
                     s.statValue,
-                    team.pointDiff > 0 && { color: colors.success },
-                    team.pointDiff < 0 && { color: colors.danger },
+                    team.pointDiff > 0 && { color: BRAND.success },
+                    team.pointDiff < 0 && { color: BRAND.coral },
                   ]}
                 >
                   {team.pointDiff > 0 ? '+' : ''}{team.pointDiff}
@@ -394,7 +392,7 @@ export default function StandingsScreen() {
       {/* Header */}
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+          <Ionicons name="arrow-back" size={24} color={BRAND.textPrimary} />
         </TouchableOpacity>
         <View style={s.headerCenter}>
           <Text style={s.headerTitle}>STANDINGS</Text>
@@ -418,7 +416,7 @@ export default function StandingsScreen() {
               <Text style={[s.mainTabText, isActive && s.mainTabTextActive]}>
                 {tab.label}
               </Text>
-              {isActive && <View style={[s.mainTabIndicator, { backgroundColor: colors.primary }]} />}
+              {isActive && <View style={[s.mainTabIndicator, { backgroundColor: BRAND.teal }]} />}
             </TouchableOpacity>
           );
         })}
@@ -432,8 +430,8 @@ export default function StandingsScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={colors.primary}
-            colors={[colors.primary]}
+            tintColor={BRAND.teal}
+            colors={[BRAND.teal]}
           />
         }
         showsVerticalScrollIndicator={false}
@@ -453,7 +451,7 @@ export default function StandingsScreen() {
           />
         ) : (
           <View style={s.emptyState}>
-            <Ionicons name="calendar-outline" size={48} color={colors.textMuted} />
+            <Ionicons name="calendar-outline" size={48} color={BRAND.textMuted} />
             <Text style={s.emptyTitle}>No Active Season</Text>
             <Text style={s.emptySubtitle}>Select a season to view leaderboards.</Text>
           </View>
@@ -468,200 +466,199 @@ export default function StandingsScreen() {
 // STYLES
 // ============================================
 
-const createStyles = (colors: any) =>
-  StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: 'transparent',
-    },
+const s = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
 
-    // Header
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: 16,
-      paddingVertical: 14,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    backBtn: {
-      width: 40,
-      height: 40,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    headerCenter: {
-      alignItems: 'center',
-    },
-    headerTitle: {
-      fontSize: 28,
-      fontWeight: '800',
-      color: colors.text,
-      letterSpacing: 2,
-    },
-    headerSeason: {
-      fontSize: 12,
-      color: colors.textMuted,
-      marginTop: 2,
-    },
+  // Header
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: BRAND.border,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerCenter: {
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontFamily: FONTS.bodyExtraBold,
+    color: BRAND.textPrimary,
+    letterSpacing: 2,
+  },
+  headerSeason: {
+    fontSize: 12,
+    color: BRAND.textMuted,
+    marginTop: 2,
+  },
 
-    // Main Tab Bar
-    mainTabBar: {
-      flexDirection: 'row',
-      backgroundColor: colors.glassCard,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.glassBorder,
-    },
-    mainTab: {
-      flex: 1,
-      paddingVertical: 14,
-      alignItems: 'center',
-      position: 'relative',
-    },
-    mainTabActive: {},
-    mainTabText: {
-      fontSize: 14,
-      fontWeight: '500',
-      color: colors.textMuted,
-    },
-    mainTabTextActive: {
-      color: colors.primary,
-      fontWeight: '700',
-    },
-    mainTabIndicator: {
-      position: 'absolute',
-      bottom: 0,
-      left: '20%',
-      right: '20%',
-      height: 3,
-      borderTopLeftRadius: 3,
-      borderTopRightRadius: 3,
-    },
+  // Main Tab Bar
+  mainTabBar: {
+    flexDirection: 'row',
+    backgroundColor: BRAND.white,
+    borderBottomWidth: 1,
+    borderBottomColor: BRAND.border,
+  },
+  mainTab: {
+    flex: 1,
+    paddingVertical: 14,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  mainTabActive: {},
+  mainTabText: {
+    fontSize: 14,
+    fontFamily: FONTS.bodyMedium,
+    color: BRAND.textMuted,
+  },
+  mainTabTextActive: {
+    color: BRAND.teal,
+    fontFamily: FONTS.bodyBold,
+  },
+  mainTabIndicator: {
+    position: 'absolute',
+    bottom: 0,
+    left: '20%',
+    right: '20%',
+    height: 3,
+    borderTopLeftRadius: 3,
+    borderTopRightRadius: 3,
+  },
 
-    // Scroll
-    scroll: {
-      flex: 1,
-    },
-    scrollContent: {
-      paddingTop: 16,
-    },
+  // Scroll
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingTop: 16,
+  },
 
-    // Loading / Empty
-    centeredLoader: {
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: 60,
-    },
-    loadingText: {
-      fontSize: 14,
-      color: colors.textMuted,
-      marginTop: 12,
-    },
-    emptyState: {
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: 60,
-      paddingHorizontal: 32,
-    },
-    emptyTitle: {
-      fontSize: 18,
-      fontWeight: '700',
-      color: colors.text,
-      marginTop: 16,
-    },
-    emptySubtitle: {
-      fontSize: 14,
-      color: colors.textMuted,
-      textAlign: 'center',
-      marginTop: 8,
-      lineHeight: 20,
-    },
+  // Loading / Empty
+  centeredLoader: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: BRAND.textMuted,
+    marginTop: 12,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 32,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontFamily: FONTS.bodyBold,
+    color: BRAND.textPrimary,
+    marginTop: 16,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: BRAND.textMuted,
+    textAlign: 'center',
+    marginTop: 8,
+    lineHeight: 20,
+  },
 
-    // ==========================================
-    // STANDINGS TABLE
-    // ==========================================
-    standingsContainer: {
-      marginHorizontal: 12,
-      backgroundColor: colors.glassCard,
-      borderWidth: 1,
-      borderColor: colors.glassBorder,
-      borderRadius: 16,
-      overflow: 'hidden',
-      ...Platform.select({
-        ios: {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.15,
-          shadowRadius: 12,
-        },
-        android: {
-          elevation: 6,
-        },
-      }),
-    },
-    tableHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: 12,
-      paddingHorizontal: 12,
-      backgroundColor: colors.bgSecondary,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    tableHeaderText: {
-      fontSize: 11,
-      fontWeight: '700',
-      color: colors.textMuted,
-      textTransform: 'uppercase',
-      letterSpacing: 1,
-      textAlign: 'center',
-    },
-    tableRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: 12,
-      paddingHorizontal: 12,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: colors.glassBorder,
-    },
+  // ==========================================
+  // STANDINGS TABLE
+  // ==========================================
+  standingsContainer: {
+    marginHorizontal: 12,
+    backgroundColor: BRAND.white,
+    borderWidth: 1,
+    borderColor: BRAND.border,
+    borderRadius: 16,
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 6,
+      },
+    }),
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    backgroundColor: BRAND.warmGray,
+    borderBottomWidth: 1,
+    borderBottomColor: BRAND.border,
+  },
+  tableHeaderText: {
+    fontSize: 11,
+    fontFamily: FONTS.bodyBold,
+    color: BRAND.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    textAlign: 'center',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: BRAND.border,
+  },
 
-    // Column sizing
-    rankCol: { width: 30, alignItems: 'center', justifyContent: 'center' },
-    teamCol: { flex: 1, paddingLeft: 8 },
-    statCol: { width: 32, alignItems: 'center' },
-    pctCol: { width: 46, alignItems: 'center' },
-    diffCol: { width: 40, alignItems: 'flex-end' },
+  // Column sizing
+  rankCol: { width: 30, alignItems: 'center', justifyContent: 'center' },
+  teamCol: { flex: 1, paddingLeft: 8 },
+  statCol: { width: 32, alignItems: 'center' },
+  pctCol: { width: 46, alignItems: 'center' },
+  diffCol: { width: 40, alignItems: 'flex-end' },
 
-    // Row content
-    rankText: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: colors.textMuted,
-    },
-    teamNameRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    teamColorDot: {
-      width: 10,
-      height: 10,
-      borderRadius: 5,
-      marginRight: 8,
-    },
-    teamName: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: colors.text,
-      flex: 1,
-    },
-    statValue: {
-      fontSize: 13,
-      fontWeight: '500',
-      color: colors.textSecondary,
-    },
-    statValueHighlight: {
-      color: colors.text,
-      fontWeight: '700',
-    },
-  });
+  // Row content
+  rankText: {
+    fontSize: 14,
+    fontFamily: FONTS.bodySemiBold,
+    color: BRAND.textMuted,
+  },
+  teamNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  teamColorDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 8,
+  },
+  teamName: {
+    fontSize: 14,
+    fontFamily: FONTS.bodySemiBold,
+    color: BRAND.textPrimary,
+    flex: 1,
+  },
+  statValue: {
+    fontSize: 13,
+    fontFamily: FONTS.bodyMedium,
+    color: BRAND.textSecondary,
+  },
+  statValueHighlight: {
+    color: BRAND.textPrimary,
+    fontFamily: FONTS.bodyBold,
+  },
+});
