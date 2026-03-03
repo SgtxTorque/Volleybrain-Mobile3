@@ -1,9 +1,9 @@
 /**
- * UpcomingEvents — Flat list of next events across all teams.
- * Tier 2 section.
+ * UpcomingEvents — Tier 2 flat list of next events across all teams.
+ * Phase 5: structured event rows, "View Calendar" link, "Create Event" CTA when empty.
  */
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 import type { UpcomingEvent } from '@/hooks/useAdminHomeData';
@@ -15,8 +15,7 @@ type Props = {
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00');
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
-  return `${days[d.getDay()]} ${months[d.getMonth()]}/${d.getDate()}`;
+  return `${days[d.getDay()]} ${d.getMonth() + 1}/${d.getDate()}`;
 }
 
 function formatTime(time: string | null): string {
@@ -31,39 +30,63 @@ function formatEventType(type: string): string {
   return type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
 }
 
+function EventRow({ event }: { event: UpcomingEvent }) {
+  const typeLabel = event.opponent_name
+    ? `${formatEventType(event.event_type)} vs ${event.opponent_name}`
+    : formatEventType(event.event_type);
+
+  return (
+    <View style={styles.eventRow}>
+      <View style={styles.dateCol}>
+        <Text style={styles.dateText}>{formatDate(event.event_date)}</Text>
+      </View>
+      <View style={styles.detailCol}>
+        <Text style={styles.typeText} numberOfLines={1}>{typeLabel}</Text>
+        <View style={styles.metaRow}>
+          <Text style={[styles.teamText, event.team_color ? { color: event.team_color } : null]}>
+            {event.team_name}
+          </Text>
+          {event.start_time ? (
+            <>
+              <Text style={styles.separator}>{'\u00B7'}</Text>
+              <Text style={styles.timeText}>{formatTime(event.start_time)}</Text>
+            </>
+          ) : null}
+        </View>
+      </View>
+    </View>
+  );
+}
+
 export default function UpcomingEvents({ events }: Props) {
   return (
     <View style={styles.wrap}>
       <View style={styles.headerRow}>
         <Text style={styles.sectionHeader}>UPCOMING</Text>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() =>
+            Alert.alert('Coming Soon', 'Calendar view will be available in a future update.')
+          }
+        >
+          <Text style={styles.viewCalendar}>View Calendar {'\u203A'}</Text>
+        </TouchableOpacity>
       </View>
 
       {events.length === 0 ? (
-        <Text style={styles.emptyText}>No upcoming events.</Text>
+        <View style={styles.emptyWrap}>
+          <Text style={styles.emptyText}>No upcoming events.</Text>
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={() =>
+              Alert.alert('Coming Soon', 'Event creation will be available in a future update.')
+            }
+          >
+            <Text style={styles.createEventText}>Create Event {'\u203A'}</Text>
+          </TouchableOpacity>
+        </View>
       ) : (
-        events.map((e) => (
-          <View key={e.id} style={styles.eventRow}>
-            <Text style={styles.dateText}>{formatDate(e.event_date)}</Text>
-            <Text style={styles.separator}>{'\u00B7'}</Text>
-            <Text style={styles.typeText}>{formatEventType(e.event_type)}</Text>
-            {e.opponent_name ? (
-              <>
-                <Text style={styles.separator}>vs</Text>
-                <Text style={styles.opponentText}>{e.opponent_name}</Text>
-              </>
-            ) : null}
-            <Text style={styles.separator}>{'\u00B7'}</Text>
-            <Text style={[styles.teamText, e.team_color ? { color: e.team_color } : null]}>
-              {e.team_name}
-            </Text>
-            {e.start_time ? (
-              <>
-                <Text style={styles.separator}>{'\u00B7'}</Text>
-                <Text style={styles.timeText}>{formatTime(e.start_time)}</Text>
-              </>
-            ) : null}
-          </View>
-        ))
+        events.map((e) => <EventRow key={e.id} event={e} />)
       )}
     </View>
   );
@@ -86,45 +109,66 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     color: BRAND.textFaint,
   },
+  viewCalendar: {
+    fontFamily: FONTS.bodyMedium,
+    fontSize: 12,
+    color: BRAND.skyBlue,
+  },
+  emptyWrap: {
+    alignItems: 'center',
+    paddingVertical: 12,
+    gap: 8,
+  },
   emptyText: {
     fontFamily: FONTS.bodyMedium,
     fontSize: 13,
     color: BRAND.textMuted,
   },
+  createEventText: {
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 13,
+    color: BRAND.skyBlue,
+  },
   eventRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginBottom: 8,
-    flexWrap: 'wrap',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+    gap: 12,
+  },
+  dateCol: {
+    width: 72,
   },
   dateText: {
     fontFamily: FONTS.bodySemiBold,
     fontSize: 13,
     color: BRAND.textPrimary,
   },
-  separator: {
-    fontSize: 12,
-    color: BRAND.textFaint,
+  detailCol: {
+    flex: 1,
   },
   typeText: {
     fontFamily: FONTS.bodyMedium,
     fontSize: 13,
     color: BRAND.textPrimary,
+    marginBottom: 2,
   },
-  opponentText: {
-    fontFamily: FONTS.bodyMedium,
-    fontSize: 13,
-    color: BRAND.textPrimary,
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   teamText: {
     fontFamily: FONTS.bodySemiBold,
-    fontSize: 13,
+    fontSize: 12,
     color: BRAND.skyBlue,
+  },
+  separator: {
+    fontSize: 10,
+    color: BRAND.textFaint,
   },
   timeText: {
     fontFamily: FONTS.bodyMedium,
-    fontSize: 13,
+    fontSize: 12,
     color: BRAND.textMuted,
   },
 });
