@@ -29,7 +29,7 @@ const ACTIONS = [
 
 const ACTION_ROUTES: Record<string, string> = {
   createEvent: '/(tabs)/admin-schedule',
-  quickSchedule: '/(tabs)/admin-schedule',
+  quickSchedule: '/bulk-event-create',
   sendReminder: '/blast-composer',
   blastAll: '/blast-composer',
   addPlayer: '/registration-hub',
