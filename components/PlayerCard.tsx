@@ -14,6 +14,9 @@ import {
   View,
 } from 'react-native';
 import EmergencyContactModal from './EmergencyContactModal';
+import { BRAND } from '@/theme/colors';
+import { FONTS } from '@/theme/fonts';
+import { radii } from '@/lib/design-tokens';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -59,8 +62,8 @@ export default function PlayerCard({ player, onPress, size = 'medium', teamLogoU
   const [showEmergencyModal, setShowEmergencyModal] = useState(false);
 
   const posInfo = getPositionInfo(player.position, player.sport_name);
-  const positionColor = posInfo?.color || colors.primary;
-  const teamColor = player.team_color || (isDark ? '#1a1a2e' : '#2a2a4a');
+  const positionColor = posInfo?.color || BRAND.skyBlue;
+  const teamColor = player.team_color || BRAND.navy;
   const jerseyNumber = player.jersey_number;
   const hasPhoto = player.photo_url && player.photo_url.length > 0;
   const hasMedicalAlert = !!(player.medical_conditions || player.allergies);
@@ -72,7 +75,7 @@ export default function PlayerCard({ player, onPress, size = 'medium', teamLogoU
     <TouchableOpacity style={s.card} onPress={onPress} activeOpacity={0.9}>
       {/* Background Gradient */}
       <LinearGradient
-        colors={[teamColor, isDark ? '#0a0a12' : '#1a1a2e']}
+        colors={[teamColor, BRAND.surfaceDark]}
         style={s.gradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -99,7 +102,7 @@ export default function PlayerCard({ player, onPress, size = 'medium', teamLogoU
       {/* Jersey Number - Top Right */}
       {jerseyNumber && (
         <View style={s.numberContainer}>
-          <Text style={[s.numberText, { color: teamColor === '#1a1a2e' ? colors.primary : teamColor }]}>
+          <Text style={[s.numberText, { color: teamColor === BRAND.navy ? BRAND.skyBlue : teamColor }]}>
             {jerseyNumber}
           </Text>
         </View>
@@ -118,7 +121,7 @@ export default function PlayerCard({ player, onPress, size = 'medium', teamLogoU
             <Image source={getPlayerPlaceholder()} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' }} resizeMode="cover" />
             {/* Jersey number badge on silhouette if no position shown */}
             {!player.position && jerseyNumber && (
-              <View style={[s.silhouetteNumber, { backgroundColor: colors.primary }]}>
+              <View style={[s.silhouetteNumber, { backgroundColor: BRAND.skyBlue }]}>
                 <Text style={s.silhouetteNumberText}>{jerseyNumber}</Text>
               </View>
             )}
@@ -139,7 +142,7 @@ export default function PlayerCard({ player, onPress, size = 'medium', teamLogoU
       {/* Medical Alert Indicator */}
       {hasMedicalAlert && (
         <View style={s.medicalAlert}>
-          <Ionicons name="alert-circle" size={size === 'small' ? 14 : 16} color="#FF6B6B" />
+          <Ionicons name="alert-circle" size={size === 'small' ? 14 : 16} color={BRAND.coral} />
         </View>
       )}
 
@@ -181,7 +184,7 @@ const createStyles = (colors: any, isDark: boolean, size: 'small' | 'medium' | '
     card: {
       width: dimensions.width,
       height: dimensions.height,
-      borderRadius: 14,
+      borderRadius: radii.card,
       overflow: 'hidden',
       position: 'relative',
       shadowColor: '#000',
@@ -216,8 +219,8 @@ const createStyles = (colors: any, isDark: boolean, size: 'small' | 'medium' | '
       zIndex: 10,
     },
     positionText: {
+      fontFamily: FONTS.bodyExtraBold,
       fontSize: size === 'small' ? 9 : 10,
-      fontWeight: '800',
       color: '#000',
       letterSpacing: 0.5,
     },
@@ -291,8 +294,8 @@ const createStyles = (colors: any, isDark: boolean, size: 'small' | 'medium' | '
       alignItems: 'center',
     },
     playerName: {
+      fontFamily: FONTS.bodyBold,
       fontSize: size === 'small' ? 11 : 13,
-      fontWeight: '700',
       color: '#fff',
       flex: 1,
     },

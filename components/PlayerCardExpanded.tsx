@@ -72,16 +72,16 @@ type PlayerCardExpandedProps = {
 };
 
 const badgeIcons: Record<string, { icon: string; color: string; name: string }> = {
-  'mvp': { icon: 'trophy', color: '#FFD700', name: 'MVP' },
-  'best_server': { icon: 'flash', color: '#FF6B6B', name: 'Best Server' },
-  'best_passer': { icon: 'shield-checkmark', color: '#4ECDC4', name: 'Best Passer' },
-  'most_improved': { icon: 'trending-up', color: '#96CEB4', name: 'Most Improved' },
-  'team_spirit': { icon: 'heart', color: '#FF69B4', name: 'Team Spirit' },
-  'most_energy': { icon: 'flame', color: '#FF9F43', name: 'Most Energy' },
-  'hustle': { icon: 'footsteps', color: '#45B7D1', name: 'Hustle Award' },
-  'leadership': { icon: 'star', color: '#9B59B6', name: 'Leadership' },
-  'clutch_player': { icon: 'diamond', color: '#E74C3C', name: 'Clutch Player' },
-  'defensive_wall': { icon: 'hand-left', color: '#2ECC71', name: 'Defensive Wall' },
+  'mvp': { icon: 'trophy', color: '#E9C46A', name: 'MVP' },
+  'best_server': { icon: 'flash', color: '#E76F51', name: 'Best Server' },
+  'best_passer': { icon: 'shield-checkmark', color: '#2A9D8F', name: 'Best Passer' },
+  'most_improved': { icon: 'trending-up', color: '#4BB9EC', name: 'Most Improved' },
+  'team_spirit': { icon: 'heart', color: '#E76F51', name: 'Team Spirit' },
+  'most_energy': { icon: 'flame', color: '#E9C46A', name: 'Most Energy' },
+  'hustle': { icon: 'footsteps', color: '#4BB9EC', name: 'Hustle Award' },
+  'leadership': { icon: 'star', color: '#2A9D8F', name: 'Leadership' },
+  'clutch_player': { icon: 'diamond', color: '#E76F51', name: 'Clutch Player' },
+  'defensive_wall': { icon: 'hand-left', color: '#2A9D8F', name: 'Defensive Wall' },
 };
 
 export default function PlayerCardExpanded({ player, visible, onClose, onUpdate }: PlayerCardExpandedProps) {
@@ -398,18 +398,18 @@ export default function PlayerCardExpanded({ player, visible, onClose, onUpdate 
                       color={st.color}
                     />
                   ))}
-                  <StatBox label="GAMES" value={stats.games_played ?? 0} color="#A29BFE" />
+                  <StatBox label="GAMES" value={stats.games_played ?? 0} color="#4BB9EC" />
                 </View>
               )}
 
               {activeTab === 'skills' && isVolleyball && (
                 <View style={s.skillsList}>
-                  <SkillBar label="Passing" value={skills.passing} color="#4ECDC4" />
-                  <SkillBar label="Serving" value={skills.serving} color="#FF6B6B" />
-                  <SkillBar label="Hitting" value={skills.hitting} color="#FF9F43" />
-                  <SkillBar label="Blocking" value={skills.blocking} color="#45B7D1" />
-                  <SkillBar label="Setting" value={skills.setting} color="#96CEB4" />
-                  <SkillBar label="Defense" value={skills.defense} color="#DDA0DD" />
+                  <SkillBar label="Passing" value={skills.passing} color="#2A9D8F" />
+                  <SkillBar label="Serving" value={skills.serving} color="#35AEA0" />
+                  <SkillBar label="Hitting" value={skills.hitting} color="#3FBFB2" />
+                  <SkillBar label="Blocking" value={skills.blocking} color="#4BB9EC" />
+                  <SkillBar label="Setting" value={skills.setting} color="#3AA8D8" />
+                  <SkillBar label="Defense" value={skills.defense} color="#2A97C5" />
                 </View>
               )}
 
