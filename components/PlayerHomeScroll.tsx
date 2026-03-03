@@ -21,9 +21,11 @@ import {
   StatusBar,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -80,6 +82,7 @@ type Props = {
 
 export default function PlayerHomeScroll({ playerId, playerName: externalName, onSwitchChild }: Props) {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { scrollY, scrollHandler } = useScrollAnimations();
   const data = usePlayerHomeData(playerId);
 
@@ -248,6 +251,17 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           personalBest={data.personalBest}
         />
 
+        {/* ─── 9b. LEADERBOARD LINK ──────────────────────────── */}
+        <TouchableOpacity
+          style={styles.leaderboardLink}
+          onPress={() => router.push('/standings' as any)}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.leaderboardLinkText}>
+            {'\u{1F3C6}'} See where you rank
+          </Text>
+        </TouchableOpacity>
+
         {/* ─── 10. CLOSING MASCOT + XP CALLBACK ──────────────── */}
         <ClosingMascot
           xpToNext={data.xpToNext}
@@ -352,5 +366,18 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: PLAYER_THEME.textPrimary,
+  },
+  leaderboardLink: {
+    alignSelf: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  leaderboardLinkText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: PLAYER_THEME.accent,
+    letterSpacing: 0.3,
   },
 });

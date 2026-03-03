@@ -243,7 +243,7 @@ export default function SeasonLeaderboardCard({
           <TouchableOpacity
             style={styles.viewLink}
             activeOpacity={0.7}
-            onPress={() => router.push('/(tabs)/coach-roster' as any)}
+            onPress={() => router.push('/standings' as any)}
           >
             <Text style={styles.viewLinkText}>View Leaderboard {'\u2192'}</Text>
           </TouchableOpacity>
