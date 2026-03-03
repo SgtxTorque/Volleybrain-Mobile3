@@ -20,9 +20,11 @@
 | Lib/context files | 25 |
 | DB tables (SCHEMA_REFERENCE) | 80+ |
 | **Broken navigation targets** | **5 (18 total references)** |
-| **Orphaned route files** | **1 (game-day-parent.tsx)** |
+| **Orphaned files** | **21 (1 route + 5 legacy dashboards + 6 modals/banners + 3 transitively orphaned + 6 coach-scroll)** |
+| **Dead code (legacy dashboards)** | **~5000+ lines** |
 | **"Coming Soon" stubs** | **18** |
 | **Web-only features (no mobile equiv)** | **15+** |
+| **Re-usable orphaned components** | **5 (ready to wire in)** |
 
 **What's working:** All four role-based home scrolls (Admin, Coach, Parent, Player) render correctly with live Supabase data. Chat, schedule, payments, achievements, registration hub, team wall, game results, standings, lineup builder, and most settings screens are functional. The GestureDrawer provides access to hidden tabs.
 
@@ -788,18 +790,60 @@ There is no file `app/(tabs)/coach-roster.tsx` and no tab registered with that n
 - `components/AdminDashboard.tsx:1258` — `router.push('/players')`
 - No `app/players.tsx` at root. Fix: `/(tabs)/players`.
 
-### 7C. Orphaned Files
+### 7C. Orphaned Files (21 total)
+
+**Route files:**
 
 | File | Issue |
 |------|-------|
 | `app/game-day-parent.tsx` | **Fully orphaned** — no references anywhere in codebase |
-| `components/payments-admin.tsx` | **Never imported** — dead component |
-| `components/coach-scroll/DevelopmentHint.tsx` | Replaced by `ActionItems.tsx` — still in codebase but not used |
-| `components/coach-scroll/PendingStatsNudge.tsx` | Replaced by `ActionItems.tsx` |
-| `components/coach-scroll/SeasonScoreboard.tsx` | Replaced by `SeasonLeaderboardCard.tsx` |
-| `components/coach-scroll/TopPerformers.tsx` | Replaced by `SeasonLeaderboardCard.tsx` |
-| `components/coach-scroll/TeamPulse.tsx` | Replaced by `TeamHealthCard.tsx` |
-| `components/coach-scroll/RosterAlerts.tsx` | Replaced by `TeamHealthCard.tsx` |
+
+**Legacy dashboards (replaced by *HomeScroll, imported but never rendered by DashboardRouter):**
+
+| File | Replaced By | ~Lines |
+|------|-------------|--------|
+| `components/AdminDashboard.tsx` | `AdminHomeScroll.tsx` | ~1400 |
+| `components/CoachDashboard.tsx` | `CoachHomeScroll.tsx` | ~1667 |
+| `components/ParentDashboard.tsx` | `ParentHomeScroll.tsx` | ~700 |
+| `components/PlayerDashboard.tsx` | `PlayerHomeScroll.tsx` | ~large |
+| `components/CoachParentDashboard.tsx` | `CoachHomeScroll.tsx` | ~large |
+
+> Note: `DashboardRouter.tsx` still imports all 5 legacy dashboards but its `switch` statement exclusively renders `*HomeScroll` variants. These are **~5000+ lines of dead code**.
+
+**Modals & banners (not imported anywhere):**
+
+| File | What It Does | Re-use Potential |
+|------|-------------|------------------|
+| `components/ParentOnboardingModal.tsx` | 5-slide welcome walkthrough for new parents | HIGH — complete, just needs mounting |
+| `components/LevelUpCelebrationModal.tsx` | Full-screen level-up celebration animation | HIGH — complete, just needs a trigger |
+| `components/ShareRegistrationModal.tsx` | QR code + copy link + share sheet | HIGH — complete, just needs an import |
+| `components/RegistrationBanner.tsx` | CTA banner for open registrations | HIGH — simple, just needs a parent |
+| `components/ReenrollmentBanner.tsx` | Self-contained re-enrollment modal (720 lines) | HIGH — self-triggering, just needs mounting |
+| `components/AppDrawer.tsx` | Legacy modal-based drawer | NONE — superseded by `GestureDrawer.tsx` |
+
+**Transitively orphaned (only consumer is orphaned):**
+
+| File | Only Consumer |
+|------|--------------|
+| `components/SquadComms.tsx` | `PlayerDashboard.tsx` (orphaned) |
+| `components/AnnouncementBanner.tsx` | `ParentDashboard.tsx` (orphaned) |
+
+**Admin/payments component:**
+
+| File | Issue |
+|------|-------|
+| `components/payments-admin.tsx` | **Never imported** — `payments.tsx` tab has its own inline implementation |
+
+**Coach-scroll components (replaced during redesigns):**
+
+| File | Replaced By |
+|------|-------------|
+| `components/coach-scroll/DevelopmentHint.tsx` | `ActionItems.tsx` |
+| `components/coach-scroll/PendingStatsNudge.tsx` | `ActionItems.tsx` |
+| `components/coach-scroll/SeasonScoreboard.tsx` | `SeasonLeaderboardCard.tsx` |
+| `components/coach-scroll/TopPerformers.tsx` | `SeasonLeaderboardCard.tsx` |
+| `components/coach-scroll/TeamPulse.tsx` | `TeamHealthCard.tsx` |
+| `components/coach-scroll/RosterAlerts.tsx` | `TeamHealthCard.tsx` |
 
 ### 7D. "Coming Soon" Stubs (18 total)
 
