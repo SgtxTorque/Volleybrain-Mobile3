@@ -1,9 +1,9 @@
 import { useAuth } from '@/lib/auth';
-import { displayTextStyle, fontSizes, radii, shadows, spacing } from '@/lib/design-tokens';
 import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
-import { useTheme } from '@/lib/theme';
+import { BRAND } from '@/theme/colors';
+import { FONTS } from '@/theme/fonts';
 import EventCard, { ScheduleEvent } from '@/components/EventCard';
 import EventDetailModal from '@/components/EventDetailModal';
 import AppHeaderBar from '@/components/ui/AppHeaderBar';
@@ -19,6 +19,7 @@ import {
   Alert,
   Dimensions,
   FlatList,
+  Image,
   Linking,
   Modal,
   Platform,
@@ -98,12 +99,10 @@ function formatTimeLabel(date: Date): string {
 // Component
 // ===========================================================================
 export default function CoachScheduleScreen() {
-  const { colors } = useTheme();
   const { user, profile } = useAuth();
   const { workingSeason } = useSeason();
   const { isCoach, isAdmin } = usePermissions();
   const router = useRouter();
-  const s = useMemo(() => createStyles(colors), [colors]);
 
   // --- Teams ---
   const [teams, setTeams] = useState<CoachTeam[]>([]);
@@ -168,7 +167,7 @@ export default function CoachScheduleScreen() {
           .eq('season_id', workingSeason.id)
           .order('name');
         const result = (allTeams || []).map(t => ({
-          id: t.id, name: t.name, color: t.color || colors.primary,
+          id: t.id, name: t.name, color: t.color || BRAND.teal,
         }));
         setTeams(result);
         if (result.length > 0 && !newEvent.team_id) {
@@ -204,7 +203,7 @@ export default function CoachScheduleScreen() {
           const { data: allTeams } = await supabase
             .from('teams').select('id, name, color, season_id')
             .eq('season_id', workingSeason.id).order('name');
-          const result = (allTeams || []).map(t => ({ id: t.id, name: t.name, color: t.color || colors.primary }));
+          const result = (allTeams || []).map(t => ({ id: t.id, name: t.name, color: t.color || BRAND.teal }));
           setTeams(result);
           if (result.length > 0 && !newEvent.team_id) {
             setNewEvent(prev => ({ ...prev, team_id: result[0].id }));
@@ -217,7 +216,7 @@ export default function CoachScheduleScreen() {
         .filter(t => (t.teams as any)?.season_id === workingSeason.id)
         .map(t => {
           const team = t.teams as any;
-          return { id: team.id, name: team.name, color: team.color || colors.primary };
+          return { id: team.id, name: team.name, color: team.color || BRAND.teal };
         });
 
       setTeams(seasonTeams);
@@ -227,7 +226,7 @@ export default function CoachScheduleScreen() {
     } catch (err) {
       if (__DEV__) console.error('[CoachSchedule] fetchCoachTeams error:', err);
     }
-  }, [user?.id, workingSeason?.id, colors.primary, isAdmin]);
+  }, [user?.id, workingSeason?.id, isAdmin]);
 
   // =========================================================================
   // Data: fetch events with batched RSVPs
@@ -595,11 +594,11 @@ export default function CoachScheduleScreen() {
               style={s.dayCell}
               activeOpacity={0.7}
             >
-              <Text style={[s.dayLabel, isToday && { color: colors.primary }]}>
+              <Text style={[s.dayLabel, isToday && { color: BRAND.teal }]}>
                 {WEEKDAYS_SHORT[i]}
               </Text>
               <View style={[s.dayNumber, isSelected && s.daySelected, !isSelected && isToday && s.dayToday]}>
-                <Text style={[s.dayNumberText, isSelected && s.daySelectedText, !isSelected && isToday && { color: colors.primary }]}>
+                <Text style={[s.dayNumberText, isSelected && s.daySelectedText, !isSelected && isToday && { color: BRAND.teal }]}>
                   {date.getDate()}
                 </Text>
               </View>
@@ -646,7 +645,7 @@ export default function CoachScheduleScreen() {
           activeOpacity={0.7}
         >
           <View style={[s.dayNumber, isSelected && s.daySelected, !isSelected && isToday && s.dayToday]}>
-            <Text style={[s.dayNumberText, isSelected && s.daySelectedText, !isSelected && isToday && { color: colors.primary }]}>
+            <Text style={[s.dayNumberText, isSelected && s.daySelectedText, !isSelected && isToday && { color: BRAND.teal }]}>
               {day}
             </Text>
           </View>
@@ -689,12 +688,12 @@ export default function CoachScheduleScreen() {
     const isGame = event.event_type === 'game';
     const isExpanded = expandedEvents.has(event.id);
     const teamObj = teams.find(t => t.id === event.team_id);
-    const typeBadgeColor = isGame ? '#D94F4F' : event.event_type === 'practice' ? colors.primary : '#AF52DE';
+    const typeBadgeColor = isGame ? BRAND.coral : event.event_type === 'practice' ? BRAND.teal : '#AF52DE';
     const time = event.start_time ? new Date('2000-01-01T' + event.start_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }) : '';
 
     return (
       <View style={s.eventRowWrapper}>
-        {/* Compact row — always visible */}
+        {/* Compact row -- always visible */}
         <TouchableOpacity style={s.compactRow} onPress={() => toggleExpand(event.id)} activeOpacity={0.7}>
           {/* Date block */}
           <View style={s.compactDate}>
@@ -712,13 +711,13 @@ export default function CoachScheduleScreen() {
             </View>
             {teamObj && (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
-                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: teamObj.color || colors.primary }} />
+                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: teamObj.color || BRAND.teal }} />
                 <Text style={s.compactTeam} numberOfLines={1}>{teamObj.name}</Text>
               </View>
             )}
           </View>
           {/* Expand chevron */}
-          <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textMuted} />
+          <Ionicons name={isExpanded ? 'chevron-up' : 'chevron-down'} size={18} color={BRAND.textMuted} />
         </TouchableOpacity>
 
         {/* Expanded detail */}
@@ -729,43 +728,43 @@ export default function CoachScheduleScreen() {
               <TouchableOpacity style={s.rsvpSummaryBar} onPress={() => { setSelectedEvent(event); setShowDetailModal(true); }} activeOpacity={0.7}>
                 <View style={s.rsvpCounts}>
                   <View style={s.rsvpCountItem}>
-                    <Ionicons name="checkmark-circle" size={14} color="#22C55E" />
-                    <Text style={[s.rsvpCountText, { color: colors.textMuted }]}>{rsvp.yes} going</Text>
+                    <Ionicons name="checkmark-circle" size={14} color={BRAND.success} />
+                    <Text style={s.rsvpCountText}>{rsvp.yes} going</Text>
                   </View>
                   <View style={s.rsvpCountItem}>
-                    <Ionicons name="help-circle" size={14} color="#E8913A" />
-                    <Text style={[s.rsvpCountText, { color: colors.textMuted }]}>{rsvp.maybe} maybe</Text>
+                    <Ionicons name="help-circle" size={14} color={BRAND.warning} />
+                    <Text style={s.rsvpCountText}>{rsvp.maybe} maybe</Text>
                   </View>
                   <View style={s.rsvpCountItem}>
-                    <Ionicons name="close-circle" size={14} color="#D94F4F" />
-                    <Text style={[s.rsvpCountText, { color: colors.textMuted }]}>{rsvp.no} out</Text>
+                    <Ionicons name="close-circle" size={14} color={BRAND.coral} />
+                    <Text style={s.rsvpCountText}>{rsvp.no} out</Text>
                   </View>
                   {rsvp.pending > 0 && (
                     <View style={s.rsvpCountItem}>
-                      <Ionicons name="time" size={14} color={colors.textMuted} />
-                      <Text style={[s.rsvpCountText, { color: colors.textMuted }]}>{rsvp.pending}</Text>
+                      <Ionicons name="time" size={14} color={BRAND.textMuted} />
+                      <Text style={s.rsvpCountText}>{rsvp.pending}</Text>
                     </View>
                   )}
                 </View>
-                <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                <Ionicons name="chevron-forward" size={16} color={BRAND.textMuted} />
               </TouchableOpacity>
             )}
             {/* Action buttons */}
             <View style={s.actionRow}>
               {(event.venue_address || event.venue_name || event.location) && (
                 <TouchableOpacity onPress={() => openDirections(event)} style={s.actionBtn} activeOpacity={0.7}>
-                  <Ionicons name="navigate-outline" size={16} color={colors.primary} />
-                  <Text style={[s.actionBtnText, { color: colors.primary }]}>Directions</Text>
+                  <Ionicons name="navigate-outline" size={16} color={BRAND.teal} />
+                  <Text style={[s.actionBtnText, { color: BRAND.teal }]}>Directions</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity onPress={() => addToCalendar(event)} style={s.actionBtn} activeOpacity={0.7}>
-                <Ionicons name="calendar-outline" size={16} color={colors.primary} />
-                <Text style={[s.actionBtnText, { color: colors.primary }]}>Add to Cal</Text>
+                <Ionicons name="calendar-outline" size={16} color={BRAND.teal} />
+                <Text style={[s.actionBtnText, { color: BRAND.teal }]}>Add to Cal</Text>
               </TouchableOpacity>
               {isGame && (
                 <TouchableOpacity onPress={() => router.push(`/game-prep-wizard?eventId=${event.id}&teamId=${event.team_id}` as any)} style={s.actionBtn} activeOpacity={0.7}>
-                  <Ionicons name="clipboard-outline" size={16} color="#D94F4F" />
-                  <Text style={[s.actionBtnText, { color: '#D94F4F' }]}>Game Prep</Text>
+                  <Ionicons name="clipboard-outline" size={16} color={BRAND.coral} />
+                  <Text style={[s.actionBtnText, { color: BRAND.coral }]}>Game Prep</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -776,15 +775,19 @@ export default function CoachScheduleScreen() {
   };
 
   // =========================================================================
-  // Render: empty state
+  // Render: empty state (SleepLynx mascot)
   // =========================================================================
   const EmptyState = () => (
     <View style={s.emptyState}>
-      <Ionicons name="calendar-outline" size={64} color={colors.textMuted} />
-      <Text style={[s.emptyTitle, { color: colors.text }]}>
-        {hasUserSelectedDate ? 'No events today' : 'No events this week'}
+      <Image
+        source={require('@/assets/images/mascot/SleepLynx.png')}
+        style={s.emptyMascot}
+        resizeMode="contain"
+      />
+      <Text style={s.emptyTitle}>
+        {hasUserSelectedDate ? 'Free day! No events scheduled.' : 'No events this week'}
       </Text>
-      <Text style={[s.emptySubtitle, { color: colors.textMuted }]}>
+      <Text style={s.emptySubtitle}>
         Tap + to create a new event
       </Text>
     </View>
@@ -795,10 +798,10 @@ export default function CoachScheduleScreen() {
   // =========================================================================
   if (loading) {
     return (
-      <SafeAreaView style={[s.container, { backgroundColor: colors.background }]} edges={['top']}>
+      <SafeAreaView style={s.container} edges={['top']}>
         <AppHeaderBar title="SCHEDULE" showAvatar={false} showNotificationBell={false} />
         <View style={s.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={BRAND.teal} />
         </View>
       </SafeAreaView>
     );
@@ -808,24 +811,24 @@ export default function CoachScheduleScreen() {
   // Main render
   // =========================================================================
   return (
-    <SafeAreaView style={[s.container, { backgroundColor: colors.background }]} edges={['top']}>
+    <SafeAreaView style={s.container} edges={['top']}>
       <AppHeaderBar title="SCHEDULE" showAvatar={false} showNotificationBell={false} />
 
       {/* Calendar */}
-      <View style={[s.calendarCard, { backgroundColor: colors.glassCard, borderBottomColor: colors.glassBorder }]}>
+      <View style={s.calendarCard}>
         <View style={s.calendarHeader}>
           <TouchableOpacity onPress={calendarExpanded ? goToPreviousMonth : goToPreviousWeek} style={s.navArrow}>
-            <Ionicons name="chevron-back" size={20} color={colors.text} />
+            <Ionicons name="chevron-back" size={20} color={BRAND.textPrimary} />
           </TouchableOpacity>
           <TouchableOpacity onPress={resetToToday}>
-            <Text style={[s.calendarHeaderText, { color: colors.text }]}>{headerLabel}</Text>
+            <Text style={s.calendarHeaderText}>{headerLabel}</Text>
           </TouchableOpacity>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <TouchableOpacity onPress={calendarExpanded ? goToNextMonth : goToNextWeek} style={s.navArrow}>
-              <Ionicons name="chevron-forward" size={20} color={colors.text} />
+              <Ionicons name="chevron-forward" size={20} color={BRAND.textPrimary} />
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setCalendarExpanded(!calendarExpanded)} style={s.toggleBtn}>
-              <Ionicons name={calendarExpanded ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textMuted} />
+              <Ionicons name={calendarExpanded ? 'chevron-up' : 'chevron-down'} size={18} color={BRAND.textMuted} />
             </TouchableOpacity>
           </View>
         </View>
@@ -834,17 +837,17 @@ export default function CoachScheduleScreen() {
 
       {/* Team filter dropdown */}
       {teamFilterTabs.length > 0 && (
-        <View style={{ paddingHorizontal: spacing.screenPadding, marginBottom: 8 }}>
+        <View style={{ paddingHorizontal: 16, marginBottom: 8 }}>
           <TouchableOpacity
             style={s.teamFilterBtn}
             onPress={() => { setTeamFilterSearch(''); setShowTeamFilterSheet(true); }}
             activeOpacity={0.7}
           >
-            <View style={[s.teamFilterDot, { backgroundColor: activeTeamFilter === 'all' ? colors.primary : (teams.find(t => t.id === activeTeamFilter)?.color || colors.primary) }]} />
+            <View style={[s.teamFilterDot, { backgroundColor: activeTeamFilter === 'all' ? BRAND.teal : (teams.find(t => t.id === activeTeamFilter)?.color || BRAND.teal) }]} />
             <Text style={s.teamFilterBtnText} numberOfLines={1}>
               {activeTeamFilter === 'all' ? 'All Teams' : (teams.find(t => t.id === activeTeamFilter)?.name || 'All Teams')}
             </Text>
-            <Ionicons name="chevron-down" size={16} color={colors.textMuted} />
+            <Ionicons name="chevron-down" size={16} color={BRAND.textMuted} />
           </TouchableOpacity>
         </View>
       )}
@@ -856,7 +859,7 @@ export default function CoachScheduleScreen() {
         renderItem={renderEventRow}
         ListEmptyComponent={EmptyState}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BRAND.teal} />
         }
         contentContainerStyle={[s.listContent, filteredEvents.length === 0 && { flex: 1 }]}
         showsVerticalScrollIndicator={false}
@@ -864,11 +867,11 @@ export default function CoachScheduleScreen() {
 
       {/* FAB: Create Event */}
       <TouchableOpacity
-        style={[s.fab, { backgroundColor: colors.primary }]}
+        style={s.fab}
         onPress={() => setShowAddModal(true)}
         activeOpacity={0.8}
       >
-        <Ionicons name="add" size={28} color="#FFFFFF" />
+        <Ionicons name="add" size={28} color={BRAND.white} />
       </TouchableOpacity>
 
       {/* Team Filter Bottom Sheet */}
@@ -880,21 +883,21 @@ export default function CoachScheduleScreen() {
             <TextInput
               style={s.sheetSearch}
               placeholder="Search teams..."
-              placeholderTextColor={colors.textMuted}
+              placeholderTextColor={BRAND.textMuted}
               value={teamFilterSearch}
               onChangeText={setTeamFilterSearch}
             />
             <ScrollView style={{ maxHeight: 300 }}>
               <TouchableOpacity style={s.sheetRow} onPress={() => { setActiveTeamFilter('all'); setShowTeamFilterSheet(false); }}>
-                <View style={[s.teamFilterDot, { backgroundColor: colors.primary }]} />
-                <Text style={[s.sheetRowText, activeTeamFilter === 'all' && { fontWeight: '700', color: colors.primary }]}>All Teams</Text>
-                {activeTeamFilter === 'all' && <Ionicons name="checkmark-circle" size={20} color={colors.primary} />}
+                <View style={[s.teamFilterDot, { backgroundColor: BRAND.teal }]} />
+                <Text style={[s.sheetRowText, activeTeamFilter === 'all' && { fontFamily: FONTS.bodyBold, color: BRAND.teal }]}>All Teams</Text>
+                {activeTeamFilter === 'all' && <Ionicons name="checkmark-circle" size={20} color={BRAND.teal} />}
               </TouchableOpacity>
               {teams.filter(t => !teamFilterSearch || t.name.toLowerCase().includes(teamFilterSearch.toLowerCase())).map(t => (
                 <TouchableOpacity key={t.id} style={s.sheetRow} onPress={() => { setActiveTeamFilter(t.id); setShowTeamFilterSheet(false); }}>
-                  <View style={[s.teamFilterDot, { backgroundColor: t.color || colors.primary }]} />
-                  <Text style={[s.sheetRowText, activeTeamFilter === t.id && { fontWeight: '700', color: colors.primary }]}>{t.name}</Text>
-                  {activeTeamFilter === t.id && <Ionicons name="checkmark-circle" size={20} color={colors.primary} />}
+                  <View style={[s.teamFilterDot, { backgroundColor: t.color || BRAND.teal }]} />
+                  <Text style={[s.sheetRowText, activeTeamFilter === t.id && { fontFamily: FONTS.bodyBold, color: BRAND.teal }]}>{t.name}</Text>
+                  {activeTeamFilter === t.id && <Ionicons name="checkmark-circle" size={20} color={BRAND.teal} />}
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -914,24 +917,24 @@ export default function CoachScheduleScreen() {
 
       {/* Create Event Modal */}
       <Modal visible={showAddModal} animationType="slide" presentationStyle="pageSheet">
-        <SafeAreaView style={{ flex: 1, backgroundColor: colors.card }}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: BRAND.white }}>
           <View style={s.modalHeader}>
             <TouchableOpacity onPress={() => { setShowAddModal(false); resetForm(); }}>
-              <Text style={{ color: colors.textMuted, fontSize: 16 }}>Cancel</Text>
+              <Text style={{ color: BRAND.textMuted, fontSize: 16, fontFamily: FONTS.bodyMedium }}>Cancel</Text>
             </TouchableOpacity>
-            <Text style={[s.modalTitle, { color: colors.text }]}>Add Event</Text>
+            <Text style={s.modalTitle}>Add Event</Text>
             <TouchableOpacity onPress={handleAddEvent} disabled={creating}>
-              <Text style={{ color: creating ? colors.textMuted : colors.primary, fontSize: 16, fontWeight: '600' }}>
+              <Text style={{ color: creating ? BRAND.textMuted : BRAND.teal, fontSize: 16, fontFamily: FONTS.bodySemiBold }}>
                 {creating ? 'Saving...' : 'Save'}
               </Text>
             </TouchableOpacity>
           </View>
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
-            <Text style={[s.formLabel, { color: colors.textMuted }]}>EVENT TYPE</Text>
+            <Text style={s.formLabel}>EVENT TYPE</Text>
             <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
               {[
-                { key: 'game', label: 'Game', icon: 'trophy', color: '#D94F4F' },
-                { key: 'practice', label: 'Practice', icon: 'fitness', color: '#14B8A6' },
+                { key: 'game', label: 'Game', icon: 'trophy', color: BRAND.coral },
+                { key: 'practice', label: 'Practice', icon: 'fitness', color: BRAND.teal },
                 { key: 'event', label: 'Event', icon: 'calendar', color: '#2C5F7C' },
               ].map(type => (
                 <TouchableOpacity
@@ -940,67 +943,67 @@ export default function CoachScheduleScreen() {
                   style={[s.typeBtn, newEvent.event_type === type.key && { backgroundColor: type.color + '20', borderColor: type.color }]}
                 >
                   <Ionicons name={type.icon as any} size={24} color={type.color} />
-                  <Text style={{ color: type.color, marginTop: 6, fontWeight: '600' }}>{type.label}</Text>
+                  <Text style={{ color: type.color, marginTop: 6, fontFamily: FONTS.bodySemiBold }}>{type.label}</Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            <Text style={[s.formLabel, { color: colors.textMuted }]}>TEAM</Text>
+            <Text style={s.formLabel}>TEAM</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 20 }}>
               {teams.map(team => (
                 <TouchableOpacity
                   key={team.id}
                   onPress={() => setNewEvent(prev => ({ ...prev, team_id: team.id }))}
-                  style={[s.teamChip, newEvent.team_id === team.id && { backgroundColor: (team.color || colors.primary) + '20', borderColor: team.color || colors.primary }]}
+                  style={[s.teamChip, newEvent.team_id === team.id && { backgroundColor: (team.color || BRAND.teal) + '20', borderColor: team.color || BRAND.teal }]}
                 >
-                  <Text style={{ color: newEvent.team_id === team.id ? (team.color || colors.primary) : colors.text, fontWeight: newEvent.team_id === team.id ? '600' : '400' }}>
+                  <Text style={{ color: newEvent.team_id === team.id ? (team.color || BRAND.teal) : BRAND.textPrimary, fontFamily: newEvent.team_id === team.id ? FONTS.bodySemiBold : FONTS.bodyLight }}>
                     {team.name}
                   </Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
 
-            <Text style={[s.formLabel, { color: colors.textMuted }]}>TITLE</Text>
+            <Text style={s.formLabel}>TITLE</Text>
             <TextInput
               value={newEvent.title}
               onChangeText={text => setNewEvent(prev => ({ ...prev, title: text }))}
               placeholder="Event title..."
-              placeholderTextColor={colors.textMuted}
-              style={[s.input, { color: colors.text, backgroundColor: colors.background, borderColor: colors.border }]}
+              placeholderTextColor={BRAND.textMuted}
+              style={s.input}
             />
 
-            <Text style={[s.formLabel, { color: colors.textMuted }]}>DATE</Text>
-            <TouchableOpacity onPress={() => setShowDatePicker(true)} style={[s.pickerBtn, { backgroundColor: colors.background, borderColor: colors.border }]}>
-              <Ionicons name="calendar" size={20} color={colors.primary} />
-              <Text style={[s.pickerBtnText, { color: colors.text }]}>{formatDateLabel(newEvent.event_date)}</Text>
-              <Ionicons name="chevron-down" size={20} color={colors.textMuted} />
+            <Text style={s.formLabel}>DATE</Text>
+            <TouchableOpacity onPress={() => setShowDatePicker(true)} style={s.pickerBtn}>
+              <Ionicons name="calendar" size={20} color={BRAND.teal} />
+              <Text style={s.pickerBtnText}>{formatDateLabel(newEvent.event_date)}</Text>
+              <Ionicons name="chevron-down" size={20} color={BRAND.textMuted} />
             </TouchableOpacity>
 
             <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
               <View style={{ flex: 1 }}>
-                <Text style={[s.formLabel, { color: colors.textMuted }]}>START TIME</Text>
-                <TouchableOpacity onPress={() => setShowTimePicker(true)} style={[s.pickerBtn, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                  <Ionicons name="time" size={20} color={colors.primary} />
-                  <Text style={[s.pickerBtnText, { color: colors.text }]}>{formatTimeLabel(newEvent.event_time)}</Text>
+                <Text style={s.formLabel}>START TIME</Text>
+                <TouchableOpacity onPress={() => setShowTimePicker(true)} style={s.pickerBtn}>
+                  <Ionicons name="time" size={20} color={BRAND.teal} />
+                  <Text style={s.pickerBtnText}>{formatTimeLabel(newEvent.event_time)}</Text>
                 </TouchableOpacity>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[s.formLabel, { color: colors.textMuted }]}>END TIME</Text>
-                <TouchableOpacity onPress={() => setShowEndTimePicker(true)} style={[s.pickerBtn, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                  <Ionicons name="time-outline" size={20} color={colors.primary} />
-                  <Text style={[s.pickerBtnText, { color: colors.text }]}>{formatTimeLabel(newEvent.end_time)}</Text>
+                <Text style={s.formLabel}>END TIME</Text>
+                <TouchableOpacity onPress={() => setShowEndTimePicker(true)} style={s.pickerBtn}>
+                  <Ionicons name="time-outline" size={20} color={BRAND.teal} />
+                  <Text style={s.pickerBtnText}>{formatTimeLabel(newEvent.end_time)}</Text>
                 </TouchableOpacity>
               </View>
             </View>
 
             {newEvent.event_type === 'game' && (
               <>
-                <Text style={[s.formLabel, { color: colors.textMuted }]}>LOCATION TYPE</Text>
+                <Text style={s.formLabel}>LOCATION TYPE</Text>
                 <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16 }}>
                   {[
-                    { key: 'home', label: 'Home', icon: 'home', color: '#4ECDC4' },
-                    { key: 'away', label: 'Away', icon: 'airplane', color: '#FF6B6B' },
-                    { key: 'neutral', label: 'Neutral', icon: 'location', color: '#96CEB4' },
+                    { key: 'home', label: 'Home', icon: 'home', color: BRAND.teal },
+                    { key: 'away', label: 'Away', icon: 'airplane', color: BRAND.coral },
+                    { key: 'neutral', label: 'Neutral', icon: 'location', color: BRAND.goldBrand },
                   ].map(loc => (
                     <TouchableOpacity
                       key={loc.key}
@@ -1008,55 +1011,55 @@ export default function CoachScheduleScreen() {
                       style={[s.locBtn, newEvent.location_type === loc.key && { backgroundColor: loc.color + '20', borderColor: loc.color }]}
                     >
                       <Ionicons name={loc.icon as any} size={18} color={loc.color} />
-                      <Text style={{ color: loc.color, fontWeight: '600', fontSize: 13 }}>{loc.label}</Text>
+                      <Text style={{ color: loc.color, fontFamily: FONTS.bodySemiBold, fontSize: 13 }}>{loc.label}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
 
-                <Text style={[s.formLabel, { color: colors.textMuted }]}>OPPONENT</Text>
+                <Text style={s.formLabel}>OPPONENT</Text>
                 <TextInput
                   value={newEvent.opponent_name}
                   onChangeText={text => setNewEvent(prev => ({ ...prev, opponent_name: text }))}
                   placeholder="Opponent team name..."
-                  placeholderTextColor={colors.textMuted}
-                  style={[s.input, { color: colors.text, backgroundColor: colors.background, borderColor: colors.border }]}
+                  placeholderTextColor={BRAND.textMuted}
+                  style={s.input}
                 />
 
-                <Text style={[s.formLabel, { color: colors.textMuted }]}>ARRIVAL TIME</Text>
-                <TouchableOpacity onPress={() => setShowArrivalTimePicker(true)} style={[s.pickerBtn, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                  <Ionicons name="alarm" size={20} color="#FFB347" />
-                  <Text style={[s.pickerBtnText, { color: colors.text }]}>{formatTimeLabel(newEvent.arrival_time)}</Text>
+                <Text style={s.formLabel}>ARRIVAL TIME</Text>
+                <TouchableOpacity onPress={() => setShowArrivalTimePicker(true)} style={s.pickerBtn}>
+                  <Ionicons name="alarm" size={20} color={BRAND.goldBrand} />
+                  <Text style={s.pickerBtnText}>{formatTimeLabel(newEvent.arrival_time)}</Text>
                 </TouchableOpacity>
               </>
             )}
 
-            <Text style={[s.formLabel, { color: colors.textMuted }]}>VENUE / LOCATION</Text>
+            <Text style={s.formLabel}>VENUE / LOCATION</Text>
             <TextInput
               value={newEvent.venue_name}
               onChangeText={text => setNewEvent(prev => ({ ...prev, venue_name: text, location: text }))}
               placeholder="Gym or facility name..."
-              placeholderTextColor={colors.textMuted}
-              style={[s.input, { color: colors.text, backgroundColor: colors.background, borderColor: colors.border }]}
+              placeholderTextColor={BRAND.textMuted}
+              style={s.input}
             />
 
-            <Text style={[s.formLabel, { color: colors.textMuted }]}>ADDRESS</Text>
+            <Text style={s.formLabel}>ADDRESS</Text>
             <TextInput
               value={newEvent.venue_address}
               onChangeText={text => setNewEvent(prev => ({ ...prev, venue_address: text }))}
               placeholder="Full address..."
-              placeholderTextColor={colors.textMuted}
+              placeholderTextColor={BRAND.textMuted}
               multiline
-              style={[s.input, { color: colors.text, backgroundColor: colors.background, borderColor: colors.border, minHeight: 60 }]}
+              style={[s.input, { minHeight: 60 }]}
             />
 
-            <Text style={[s.formLabel, { color: colors.textMuted }]}>NOTES</Text>
+            <Text style={s.formLabel}>NOTES</Text>
             <TextInput
               value={newEvent.notes}
               onChangeText={text => setNewEvent(prev => ({ ...prev, notes: text }))}
               placeholder="Additional notes..."
-              placeholderTextColor={colors.textMuted}
+              placeholderTextColor={BRAND.textMuted}
               multiline
-              style={[s.input, { color: colors.text, backgroundColor: colors.background, borderColor: colors.border, minHeight: 80, marginBottom: 40 }]}
+              style={[s.input, { minHeight: 80, marginBottom: 40 }]}
             />
           </ScrollView>
 
@@ -1097,115 +1100,243 @@ export default function CoachScheduleScreen() {
 // ===========================================================================
 // Styles
 // ===========================================================================
-function createStyles(colors: any) {
-  return StyleSheet.create({
-    container: { flex: 1 },
-    loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+const SHADOW_CARD = Platform.select({
+  ios: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2.2 },
+    shadowOpacity: 0.088,
+    shadowRadius: 13.2,
+  },
+  android: {
+    elevation: 3.3,
+  },
+})!;
 
-    // Calendar card
-    calendarCard: { borderBottomWidth: 1, paddingBottom: 8 },
-    calendarHeader: {
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-      paddingHorizontal: spacing.screenPadding, paddingVertical: 8,
-    },
-    calendarHeaderText: { ...displayTextStyle, fontSize: fontSizes.sectionHeader },
-    navArrow: { padding: 8 },
-    toggleBtn: { padding: 8, marginLeft: 2 },
+const SHADOW_CARD_HOVER = Platform.select({
+  ios: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4.4 },
+    shadowOpacity: 0.132,
+    shadowRadius: 17.6,
+  },
+  android: {
+    elevation: 5.5,
+  },
+})!;
 
-    // Week strip
-    weekRow: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 8, paddingBottom: 4 },
-    dayCell: { width: DAY_CELL_SIZE, alignItems: 'center', paddingVertical: 4 },
-    dayLabel: { fontSize: 10, fontWeight: '600', color: colors.textMuted, textTransform: 'uppercase', marginBottom: 4 },
-    dayNumber: { width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
-    dayNumberText: { fontSize: 14, fontWeight: '600', color: colors.text },
-    daySelected: { backgroundColor: colors.primary },
-    daySelectedText: { color: '#FFFFFF' },
-    dayToday: { borderWidth: 1.5, borderColor: colors.primary },
-    dotRow: { flexDirection: 'row', gap: 3, marginTop: 4, height: 6, justifyContent: 'center' },
-    dot: { width: 5, height: 5, borderRadius: 2.5 },
+const s = StyleSheet.create({
+  container: { flex: 1, backgroundColor: BRAND.offWhite },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
-    // Month grid
-    weekdayHeaderRow: { flexDirection: 'row', paddingHorizontal: 8, marginBottom: 4 },
-    weekdayHeaderCell: { width: DAY_CELL_SIZE, alignItems: 'center' },
-    monthGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 8 },
-    monthDayCell: { width: DAY_CELL_SIZE, height: DAY_CELL_SIZE * 0.9, alignItems: 'center', justifyContent: 'center' },
+  // Calendar card
+  calendarCard: {
+    backgroundColor: BRAND.white,
+    borderBottomWidth: 1,
+    borderBottomColor: BRAND.border,
+    paddingBottom: 8,
+  },
+  calendarHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingVertical: 8,
+  },
+  calendarHeaderText: {
+    fontFamily: FONTS.display,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    fontSize: 15,
+    color: BRAND.textPrimary,
+  },
+  navArrow: { padding: 8 },
+  toggleBtn: { padding: 8, marginLeft: 2 },
 
-    // Event list
-    listContent: { paddingHorizontal: spacing.screenPadding, paddingBottom: 100, paddingTop: 8 },
-    eventRowWrapper: {
-      marginBottom: 12, backgroundColor: colors.glassCard, borderRadius: radii.card,
-      borderWidth: 1, borderColor: colors.glassBorder, overflow: 'hidden', ...shadows.card,
-    },
+  // Week strip
+  weekRow: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 8, paddingBottom: 4 },
+  dayCell: { width: DAY_CELL_SIZE, alignItems: 'center', paddingVertical: 4 },
+  dayLabel: {
+    fontSize: 10,
+    fontFamily: FONTS.bodySemiBold,
+    color: BRAND.textMuted,
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  dayNumber: { width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+  dayNumberText: { fontSize: 14, fontFamily: FONTS.bodySemiBold, color: BRAND.textPrimary },
+  daySelected: { backgroundColor: BRAND.teal },
+  daySelectedText: { color: BRAND.white },
+  dayToday: { borderWidth: 1.5, borderColor: BRAND.teal },
+  dotRow: { flexDirection: 'row', gap: 3, marginTop: 4, height: 6, justifyContent: 'center' },
+  dot: { width: 5, height: 5, borderRadius: 2.5 },
 
-    // RSVP summary bar
-    rsvpSummaryBar: {
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-      paddingHorizontal: 12, paddingVertical: 8, borderTopWidth: 1, borderTopColor: colors.glassBorder,
-    },
-    rsvpCounts: { flexDirection: 'row', gap: 12 },
-    rsvpCountItem: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-    rsvpCountText: { fontSize: 11, fontWeight: '500' },
+  // Month grid
+  weekdayHeaderRow: { flexDirection: 'row', paddingHorizontal: 8, marginBottom: 4 },
+  weekdayHeaderCell: { width: DAY_CELL_SIZE, alignItems: 'center' },
+  monthGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 8 },
+  monthDayCell: { width: DAY_CELL_SIZE, height: DAY_CELL_SIZE * 0.9, alignItems: 'center', justifyContent: 'center' },
 
-    // Action row
-    actionRow: { flexDirection: 'row', gap: 16, paddingHorizontal: 12, paddingTop: 2, paddingBottom: 10 },
-    actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-    actionBtnText: { fontSize: 12, fontWeight: '500' },
+  // Event list
+  listContent: { paddingHorizontal: 16, paddingBottom: 100, paddingTop: 8 },
+  eventRowWrapper: {
+    marginBottom: 12,
+    backgroundColor: BRAND.white,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: BRAND.border,
+    overflow: 'hidden',
+    ...SHADOW_CARD,
+  },
 
-    // Empty state
-    emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
-    emptyTitle: { fontSize: 18, fontWeight: '700', marginTop: 12, marginBottom: 4 },
-    emptySubtitle: { fontSize: 14 },
+  // RSVP summary bar
+  rsvpSummaryBar: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 12, paddingVertical: 8, borderTopWidth: 1, borderTopColor: BRAND.border,
+  },
+  rsvpCounts: { flexDirection: 'row', gap: 12 },
+  rsvpCountItem: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  rsvpCountText: { fontSize: 11, fontFamily: FONTS.bodyMedium, color: BRAND.textMuted },
 
-    // FAB
-    fab: {
-      position: 'absolute', bottom: 24, right: 24, width: 56, height: 56,
-      borderRadius: 28, justifyContent: 'center', alignItems: 'center', ...shadows.cardHover,
-    },
+  // Action row
+  actionRow: { flexDirection: 'row', gap: 16, paddingHorizontal: 12, paddingTop: 2, paddingBottom: 10 },
+  actionBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  actionBtnText: { fontSize: 12, fontFamily: FONTS.bodyMedium },
 
-    // Modal
-    modalHeader: {
-      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-      padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.card,
-    },
-    modalTitle: { fontSize: 18, fontWeight: 'bold' },
-    formLabel: { fontSize: 12, fontWeight: '700', marginBottom: 8, marginTop: 12, textTransform: 'uppercase' as const, letterSpacing: 1 },
-    input: { borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, borderWidth: 1, marginBottom: 16 },
-    pickerBtn: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, padding: 14, borderWidth: 1, marginBottom: 16, gap: 10 },
-    pickerBtnText: { flex: 1, fontSize: 16 },
-    typeBtn: { flex: 1, padding: 14, backgroundColor: colors.card, borderRadius: 12, borderWidth: 2, borderColor: colors.border, alignItems: 'center' },
-    teamChip: { paddingHorizontal: 16, paddingVertical: 10, backgroundColor: colors.card, borderRadius: 8, borderWidth: 2, borderColor: colors.border, marginRight: 10 },
-    locBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 12, backgroundColor: colors.card, borderRadius: 8, borderWidth: 2, borderColor: colors.border, gap: 6 },
+  // Empty state
+  emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
+  emptyMascot: { width: 120, height: 120, marginBottom: 8 },
+  emptyTitle: {
+    fontSize: 18,
+    fontFamily: FONTS.bodyBold,
+    color: BRAND.textPrimary,
+    marginTop: 12,
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  emptySubtitle: { fontSize: 14, fontFamily: FONTS.bodyMedium, color: BRAND.textMuted },
 
-    // Team filter dropdown (FIX 10)
-    teamFilterBtn: {
-      backgroundColor: colors.glassCard, borderRadius: radii.card, borderWidth: 1, borderColor: colors.glassBorder,
-      flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10, gap: 8,
-    },
-    teamFilterDot: { width: 10, height: 10, borderRadius: 5 },
-    teamFilterBtnText: { flex: 1, fontSize: 14, fontWeight: '600', color: colors.text },
+  // FAB
+  fab: {
+    position: 'absolute', bottom: 24, right: 24, width: 56, height: 56,
+    borderRadius: 28, justifyContent: 'center', alignItems: 'center',
+    backgroundColor: BRAND.teal,
+    ...SHADOW_CARD_HOVER,
+  },
 
-    // Team filter sheet
-    sheetOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-    sheetContent: { backgroundColor: colors.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, paddingBottom: 40 },
-    sheetHandle: { width: 36, height: 4, borderRadius: 2, backgroundColor: colors.textMuted, opacity: 0.4, alignSelf: 'center' as const, marginBottom: 16 },
-    sheetTitle: { ...displayTextStyle, fontSize: 18, color: colors.text, textAlign: 'center' as const, marginBottom: 16 },
-    sheetSearch: { backgroundColor: colors.background, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: colors.text, marginBottom: 12, borderWidth: 1, borderColor: colors.border },
-    sheetRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.glassBorder, gap: 10 },
-    sheetRowText: { flex: 1, fontSize: 15, fontWeight: '500', color: colors.text },
+  // Modal
+  modalHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    padding: 16, borderBottomWidth: 1, borderBottomColor: BRAND.border, backgroundColor: BRAND.white,
+  },
+  modalTitle: { fontSize: 18, fontFamily: FONTS.bodyBold, color: BRAND.textPrimary },
+  formLabel: {
+    fontSize: 12,
+    fontFamily: FONTS.bodyBold,
+    color: BRAND.textMuted,
+    marginBottom: 8,
+    marginTop: 12,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 1,
+  },
+  input: {
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 16,
+    fontFamily: FONTS.bodyMedium,
+    borderWidth: 1,
+    marginBottom: 16,
+    color: BRAND.textPrimary,
+    backgroundColor: BRAND.offWhite,
+    borderColor: BRAND.border,
+  },
+  pickerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    marginBottom: 16,
+    gap: 10,
+    backgroundColor: BRAND.offWhite,
+    borderColor: BRAND.border,
+  },
+  pickerBtnText: { flex: 1, fontSize: 16, fontFamily: FONTS.bodyMedium, color: BRAND.textPrimary },
+  typeBtn: {
+    flex: 1, padding: 14, backgroundColor: BRAND.white, borderRadius: 12,
+    borderWidth: 2, borderColor: BRAND.border, alignItems: 'center',
+  },
+  teamChip: {
+    paddingHorizontal: 16, paddingVertical: 10, backgroundColor: BRAND.white,
+    borderRadius: 8, borderWidth: 2, borderColor: BRAND.border, marginRight: 10,
+  },
+  locBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    padding: 12, backgroundColor: BRAND.white, borderRadius: 8, borderWidth: 2,
+    borderColor: BRAND.border, gap: 6,
+  },
 
-    // Compact event card (FIX 11)
-    compactRow: {
-      flexDirection: 'row', alignItems: 'center', padding: 12, gap: 10,
-    },
-    compactDate: { width: 40, alignItems: 'center' },
-    compactDay: { ...displayTextStyle, fontSize: 20, color: colors.text, lineHeight: 22 },
-    compactMonth: { fontSize: 10, fontWeight: '600', color: colors.textMuted, textTransform: 'uppercase' as const },
-    compactCenter: { flex: 1 },
-    compactBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-    compactBadgeText: { fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
-    compactTime: { fontSize: 12, fontWeight: '500', color: colors.textMuted },
-    compactOpponent: { fontSize: 13, fontWeight: '600', color: colors.text },
-    compactTeam: { fontSize: 12, fontWeight: '500', color: colors.text },
-    expandedSection: { borderTopWidth: 1, borderTopColor: colors.glassBorder },
-  });
-}
+  // Team filter dropdown
+  teamFilterBtn: {
+    backgroundColor: BRAND.white, borderRadius: 16, borderWidth: 1, borderColor: BRAND.border,
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10, gap: 8,
+  },
+  teamFilterDot: { width: 10, height: 10, borderRadius: 5 },
+  teamFilterBtnText: {
+    flex: 1, fontSize: 14, fontFamily: FONTS.bodySemiBold, color: BRAND.textPrimary,
+  },
+
+  // Team filter sheet
+  sheetOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  sheetContent: {
+    backgroundColor: BRAND.white, borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    padding: 24, paddingBottom: 40,
+  },
+  sheetHandle: {
+    width: 36, height: 4, borderRadius: 2, backgroundColor: BRAND.textMuted,
+    opacity: 0.4, alignSelf: 'center' as const, marginBottom: 16,
+  },
+  sheetTitle: {
+    fontFamily: FONTS.display,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    fontSize: 18,
+    color: BRAND.textPrimary,
+    textAlign: 'center' as const,
+    marginBottom: 16,
+  },
+  sheetSearch: {
+    backgroundColor: BRAND.offWhite, borderRadius: 12, paddingHorizontal: 14,
+    paddingVertical: 10, fontSize: 14, fontFamily: FONTS.bodyMedium,
+    color: BRAND.textPrimary, marginBottom: 12, borderWidth: 1, borderColor: BRAND.border,
+  },
+  sheetRow: {
+    flexDirection: 'row', alignItems: 'center', paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: BRAND.border, gap: 10,
+  },
+  sheetRowText: {
+    flex: 1, fontSize: 15, fontFamily: FONTS.bodyMedium, color: BRAND.textPrimary,
+  },
+
+  // Compact event card
+  compactRow: {
+    flexDirection: 'row', alignItems: 'center', padding: 12, gap: 10,
+  },
+  compactDate: { width: 40, alignItems: 'center' },
+  compactDay: {
+    fontFamily: FONTS.display,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    fontSize: 20,
+    color: BRAND.textPrimary,
+    lineHeight: 22,
+  },
+  compactMonth: {
+    fontSize: 10, fontFamily: FONTS.bodySemiBold,
+    color: BRAND.textMuted, textTransform: 'uppercase' as const,
+  },
+  compactCenter: { flex: 1 },
+  compactBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+  compactBadgeText: { fontSize: 9, fontFamily: FONTS.bodyExtraBold, letterSpacing: 0.5 },
+  compactTime: { fontSize: 12, fontFamily: FONTS.bodyMedium, color: BRAND.textMuted },
+  compactOpponent: { fontSize: 13, fontFamily: FONTS.bodySemiBold, color: BRAND.textPrimary },
+  compactTeam: { fontSize: 12, fontFamily: FONTS.bodyMedium, color: BRAND.textPrimary },
+  expandedSection: { borderTopWidth: 1, borderTopColor: BRAND.border },
+});

@@ -1,8 +1,9 @@
 import { useAuth } from '@/lib/auth';
-import { displayTextStyle, fontSizes, radii, shadows, spacing } from '@/lib/design-tokens';
+import { radii, shadows, spacing } from '@/lib/design-tokens';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
-import { useTheme } from '@/lib/theme';
+import { BRAND } from '@/theme/colors';
+import { FONTS } from '@/theme/fonts';
 import EventCard, { ScheduleEvent } from '@/components/EventCard';
 import EventDetailModal from '@/components/EventDetailModal';
 import AppHeaderBar from '@/components/ui/AppHeaderBar';
@@ -16,6 +17,7 @@ import {
   Alert,
   Dimensions,
   FlatList,
+  Image,
   Linking,
   Platform,
   RefreshControl,
@@ -110,10 +112,8 @@ const RSVP_CONFIG = {
 // Component
 // ===========================================================================
 export default function ParentScheduleScreen() {
-  const { colors } = useTheme();
   const { user, profile } = useAuth();
   const { workingSeason } = useSeason();
-  const s = useMemo(() => createStyles(colors), [colors]);
 
   // --- Children & teams ---
   const [children, setChildren] = useState<ChildInfo[]>([]);
@@ -190,7 +190,7 @@ export default function ParentScheduleScreen() {
               last_name: player.last_name,
               team_id: String(team.id),
               team_name: team.name || '',
-              team_color: team.color || colors.primary,
+              team_color: team.color || BRAND.teal,
             });
           }
         });
@@ -200,7 +200,7 @@ export default function ParentScheduleScreen() {
     } catch (err) {
       if (__DEV__) console.error('[ParentSchedule] fetchChildren error:', err);
     }
-  }, [user?.id, profile?.email, colors.primary]);
+  }, [user?.id, profile?.email]);
 
   // =========================================================================
   // Data: fetch events for range
@@ -547,7 +547,7 @@ export default function ParentScheduleScreen() {
               style={s.dayCell}
               activeOpacity={0.7}
             >
-              <Text style={[s.dayLabel, isToday && { color: colors.primary }]}>
+              <Text style={[s.dayLabel, isToday && { color: BRAND.teal }]}>
                 {WEEKDAYS_SHORT[i]}
               </Text>
               <View
@@ -561,7 +561,7 @@ export default function ParentScheduleScreen() {
                   style={[
                     s.dayNumberText,
                     isSelected && s.daySelectedText,
-                    !isSelected && isToday && { color: colors.primary },
+                    !isSelected && isToday && { color: BRAND.teal },
                   ]}
                 >
                   {date.getDate()}
@@ -622,7 +622,7 @@ export default function ParentScheduleScreen() {
               style={[
                 s.dayNumberText,
                 isSelected && s.daySelectedText,
-                !isSelected && isToday && { color: colors.primary },
+                !isSelected && isToday && { color: BRAND.teal },
               ]}
             >
               {day}
@@ -682,7 +682,7 @@ export default function ParentScheduleScreen() {
           return (
             <View key={child.id} style={s.rsvpRow}>
               {children.length > 1 && (
-                <Text style={[s.rsvpChildLabel, { color: colors.textSecondary }]}>{child.first_name}:</Text>
+                <Text style={s.rsvpChildLabel}>{child.first_name}:</Text>
               )}
               {(['yes', 'no', 'maybe'] as const).map(status => {
                 const cfg = RSVP_CONFIG[status];
@@ -693,12 +693,12 @@ export default function ParentScheduleScreen() {
                     onPress={() => handleRsvpTap(event.id, child.id, status)}
                     style={[
                       s.rsvpChip,
-                      { borderColor: isActive ? cfg.color : colors.border, backgroundColor: isActive ? cfg.color + '18' : colors.card },
+                      { borderColor: isActive ? cfg.color : BRAND.border, backgroundColor: isActive ? cfg.color + '18' : BRAND.white },
                     ]}
                     activeOpacity={0.7}
                   >
-                    <Ionicons name={cfg.icon} size={14} color={isActive ? cfg.color : colors.textMuted} />
-                    <Text style={[s.rsvpChipText, { color: isActive ? cfg.color : colors.textMuted }]}>{cfg.label}</Text>
+                    <Ionicons name={cfg.icon} size={14} color={isActive ? cfg.color : BRAND.textMuted} />
+                    <Text style={[s.rsvpChipText, { color: isActive ? cfg.color : BRAND.textMuted }]}>{cfg.label}</Text>
                   </TouchableOpacity>
                 );
               })}
@@ -710,13 +710,13 @@ export default function ParentScheduleScreen() {
         <View style={s.actionRow}>
           {(event.venue_address || event.venue_name || event.location) && (
             <TouchableOpacity onPress={() => openDirections(event)} style={s.actionBtn} activeOpacity={0.7}>
-              <Ionicons name="navigate-outline" size={16} color={colors.primary} />
-              <Text style={[s.actionBtnText, { color: colors.primary }]}>Directions</Text>
+              <Ionicons name="navigate-outline" size={16} color={BRAND.teal} />
+              <Text style={s.actionBtnText}>Directions</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity onPress={() => addToCalendar(event)} style={s.actionBtn} activeOpacity={0.7}>
-            <Ionicons name="calendar-outline" size={16} color={colors.primary} />
-            <Text style={[s.actionBtnText, { color: colors.primary }]}>Add to Cal</Text>
+            <Ionicons name="calendar-outline" size={16} color={BRAND.teal} />
+            <Text style={s.actionBtnText}>Add to Cal</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -724,15 +724,17 @@ export default function ParentScheduleScreen() {
   };
 
   // =========================================================================
-  // Render: empty state
+  // Render: empty state (SleepLynx mascot)
   // =========================================================================
   const EmptyState = () => (
     <View style={s.emptyState}>
-      <Text style={s.emptyEmoji}>🏖️</Text>
-      <Text style={[s.emptyTitle, { color: colors.text }]}>
-        {hasUserSelectedDate ? 'No events today' : 'No events this week'}
-      </Text>
-      <Text style={[s.emptySubtitle, { color: colors.textMuted }]}>Enjoy the time off!</Text>
+      <Image
+        source={require('@/assets/images/mascot/SleepLynx.png')}
+        style={s.emptyMascot}
+        resizeMode="contain"
+      />
+      <Text style={s.emptyTitle}>Free day!</Text>
+      <Text style={s.emptySubtitle}>No events scheduled.</Text>
     </View>
   );
 
@@ -741,10 +743,10 @@ export default function ParentScheduleScreen() {
   // =========================================================================
   if (loading) {
     return (
-      <SafeAreaView style={[s.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={s.container}>
         <AppHeaderBar title="SCHEDULE" showAvatar={false} showNotificationBell={false} />
         <View style={s.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={BRAND.teal} />
         </View>
       </SafeAreaView>
     );
@@ -754,27 +756,27 @@ export default function ParentScheduleScreen() {
   // Main render
   // =========================================================================
   return (
-    <SafeAreaView style={[s.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView style={s.container}>
       <AppHeaderBar title="SCHEDULE" showAvatar={false} showNotificationBell={false} />
 
       {/* ===== Calendar ===== */}
-      <View style={[s.calendarCard, { backgroundColor: colors.glassCard, borderBottomColor: colors.glassBorder }]}>
+      <View style={s.calendarCard}>
         {/* Nav header */}
         <View style={s.calendarHeader}>
           <TouchableOpacity onPress={calendarExpanded ? goToPreviousMonth : goToPreviousWeek} style={s.navArrow}>
-            <Ionicons name="chevron-back" size={20} color={colors.text} />
+            <Ionicons name="chevron-back" size={20} color={BRAND.textPrimary} />
           </TouchableOpacity>
 
           <TouchableOpacity onPress={resetToToday}>
-            <Text style={[s.calendarHeaderText, { color: colors.text }]}>{headerLabel}</Text>
+            <Text style={s.calendarHeaderText}>{headerLabel}</Text>
           </TouchableOpacity>
 
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <TouchableOpacity onPress={calendarExpanded ? goToNextMonth : goToNextWeek} style={s.navArrow}>
-              <Ionicons name="chevron-forward" size={20} color={colors.text} />
+              <Ionicons name="chevron-forward" size={20} color={BRAND.textPrimary} />
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setCalendarExpanded(!calendarExpanded)} style={s.toggleBtn}>
-              <Ionicons name={calendarExpanded ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textMuted} />
+              <Ionicons name={calendarExpanded ? 'chevron-up' : 'chevron-down'} size={18} color={BRAND.textMuted} />
             </TouchableOpacity>
           </View>
         </View>
@@ -794,7 +796,7 @@ export default function ParentScheduleScreen() {
         renderItem={renderEventRow}
         ListEmptyComponent={EmptyState}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BRAND.teal} />
         }
         contentContainerStyle={[s.listContent, filteredEvents.length === 0 && { flex: 1 }]}
         showsVerticalScrollIndicator={false}
@@ -815,196 +817,206 @@ export default function ParentScheduleScreen() {
 // ===========================================================================
 // Styles
 // ===========================================================================
-function createStyles(colors: any) {
-  return StyleSheet.create({
-    container: {
-      flex: 1,
-    },
-    loadingContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
+const s = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: BRAND.offWhite,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 
-    // --- Calendar card ---
-    calendarCard: {
-      borderBottomWidth: 1,
-      paddingBottom: 8,
-    },
-    calendarHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: spacing.screenPadding,
-      paddingVertical: 8,
-    },
-    calendarHeaderText: {
-      ...displayTextStyle,
-      fontSize: fontSizes.sectionHeader,
-    },
-    navArrow: {
-      padding: 8,
-    },
-    toggleBtn: {
-      padding: 8,
-      marginLeft: 2,
-    },
+  // --- Calendar card ---
+  calendarCard: {
+    backgroundColor: BRAND.white,
+    borderBottomWidth: 1,
+    borderBottomColor: BRAND.border,
+    paddingBottom: 8,
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.screenPadding,
+    paddingVertical: 8,
+  },
+  calendarHeaderText: {
+    fontFamily: FONTS.display,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    fontSize: 15,
+    color: BRAND.textPrimary,
+  },
+  navArrow: {
+    padding: 8,
+  },
+  toggleBtn: {
+    padding: 8,
+    marginLeft: 2,
+  },
 
-    // --- Week strip ---
-    weekRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-around',
-      paddingHorizontal: 8,
-      paddingBottom: 4,
-    },
-    dayCell: {
-      width: DAY_CELL_SIZE,
-      alignItems: 'center',
-      paddingVertical: 4,
-    },
-    dayLabel: {
-      fontSize: 10,
-      fontWeight: '600',
-      color: colors.textMuted,
-      textTransform: 'uppercase',
-      marginBottom: 4,
-    },
-    dayNumber: {
-      width: 32,
-      height: 32,
-      borderRadius: 16,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    dayNumberText: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: colors.text,
-    },
-    daySelected: {
-      backgroundColor: colors.primary,
-    },
-    daySelectedText: {
-      color: '#FFFFFF',
-    },
-    dayToday: {
-      borderWidth: 1.5,
-      borderColor: colors.primary,
-    },
-    dotRow: {
-      flexDirection: 'row',
-      gap: 3,
-      marginTop: 4,
-      height: 6,
-      justifyContent: 'center',
-    },
-    dot: {
-      width: 5,
-      height: 5,
-      borderRadius: 2.5,
-    },
+  // --- Week strip ---
+  weekRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingHorizontal: 8,
+    paddingBottom: 4,
+  },
+  dayCell: {
+    width: DAY_CELL_SIZE,
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  dayLabel: {
+    fontSize: 10,
+    fontFamily: FONTS.bodySemiBold,
+    color: BRAND.textMuted,
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  dayNumber: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dayNumberText: {
+    fontSize: 14,
+    fontFamily: FONTS.bodySemiBold,
+    color: BRAND.textPrimary,
+  },
+  daySelected: {
+    backgroundColor: BRAND.teal,
+  },
+  daySelectedText: {
+    color: BRAND.white,
+  },
+  dayToday: {
+    borderWidth: 1.5,
+    borderColor: BRAND.teal,
+  },
+  dotRow: {
+    flexDirection: 'row',
+    gap: 3,
+    marginTop: 4,
+    height: 6,
+    justifyContent: 'center',
+  },
+  dot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+  },
 
-    // --- Month grid ---
-    weekdayHeaderRow: {
-      flexDirection: 'row',
-      paddingHorizontal: 8,
-      marginBottom: 4,
-    },
-    weekdayHeaderCell: {
-      width: DAY_CELL_SIZE,
-      alignItems: 'center',
-    },
-    monthGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      paddingHorizontal: 8,
-    },
-    monthDayCell: {
-      width: DAY_CELL_SIZE,
-      height: DAY_CELL_SIZE * 0.9,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
+  // --- Month grid ---
+  weekdayHeaderRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 8,
+    marginBottom: 4,
+  },
+  weekdayHeaderCell: {
+    width: DAY_CELL_SIZE,
+    alignItems: 'center',
+  },
+  monthGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 8,
+  },
+  monthDayCell: {
+    width: DAY_CELL_SIZE,
+    height: DAY_CELL_SIZE * 0.9,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
-    // --- Event list ---
-    listContent: {
-      paddingHorizontal: spacing.screenPadding,
-      paddingBottom: 100,
-      paddingTop: 8,
-    },
-    eventRowWrapper: {
-      marginBottom: 12,
-      backgroundColor: colors.glassCard,
-      borderRadius: radii.card,
-      borderWidth: 1,
-      borderColor: colors.glassBorder,
-      overflow: 'hidden',
-      ...shadows.card,
-    },
+  // --- Event list ---
+  listContent: {
+    paddingHorizontal: spacing.screenPadding,
+    paddingBottom: 100,
+    paddingTop: 8,
+  },
+  eventRowWrapper: {
+    marginBottom: 12,
+    backgroundColor: BRAND.white,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: BRAND.border,
+    overflow: 'hidden',
+    ...shadows.card,
+  },
 
-    // --- Inline RSVP ---
-    rsvpRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      gap: 6,
-    },
-    rsvpChildLabel: {
-      fontSize: 12,
-      fontWeight: '600',
-      marginRight: 2,
-    },
-    rsvpChip: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: radii.badge,
-      borderWidth: 1,
-      gap: 4,
-    },
-    rsvpChipText: {
-      fontSize: 11,
-      fontWeight: '600',
-    },
+  // --- Inline RSVP ---
+  rsvpRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    gap: 6,
+  },
+  rsvpChildLabel: {
+    fontSize: 12,
+    fontFamily: FONTS.bodySemiBold,
+    color: BRAND.textMuted,
+    marginRight: 2,
+  },
+  rsvpChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: radii.badge,
+    borderWidth: 1,
+    gap: 4,
+  },
+  rsvpChipText: {
+    fontSize: 11,
+    fontFamily: FONTS.bodySemiBold,
+  },
 
-    // --- Action buttons ---
-    actionRow: {
-      flexDirection: 'row',
-      gap: 16,
-      paddingHorizontal: 12,
-      paddingTop: 2,
-      paddingBottom: 10,
-    },
-    actionBtn: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-    },
-    actionBtnText: {
-      fontSize: 12,
-      fontWeight: '500',
-    },
+  // --- Action buttons ---
+  actionRow: {
+    flexDirection: 'row',
+    gap: 16,
+    paddingHorizontal: 12,
+    paddingTop: 2,
+    paddingBottom: 10,
+  },
+  actionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  actionBtnText: {
+    fontSize: 12,
+    fontFamily: FONTS.bodyMedium,
+    color: BRAND.teal,
+  },
 
-    // --- Empty state ---
-    emptyState: {
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: 60,
-    },
-    emptyEmoji: {
-      fontSize: 48,
-      marginBottom: 12,
-    },
-    emptyTitle: {
-      fontSize: 18,
-      fontWeight: '700',
-      marginBottom: 4,
-    },
-    emptySubtitle: {
-      fontSize: 14,
-    },
-  });
-}
+  // --- Empty state ---
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  emptyMascot: {
+    width: 120,
+    height: 120,
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontFamily: FONTS.bodyBold,
+    color: BRAND.textPrimary,
+    marginBottom: 4,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    fontFamily: FONTS.bodyMedium,
+    color: BRAND.textMuted,
+  },
+});
