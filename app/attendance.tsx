@@ -1,7 +1,8 @@
 import { useAuth } from '@/lib/auth';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
-import { useTheme } from '@/lib/theme';
+import { BRAND } from '@/theme/colors';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -62,7 +63,6 @@ type AttendanceStatus = 'present' | 'absent' | 'late' | null;
 // ============================================================================
 
 export default function AttendanceScreen() {
-  const { colors } = useTheme();
   const { user, profile } = useAuth();
   const { workingSeason } = useSeason();
   const router = useRouter();
@@ -78,7 +78,7 @@ export default function AttendanceScreen() {
   const [attendance, setAttendance] = useState<Record<string, AttendanceStatus>>({});
   const [saving, setSaving] = useState(false);
 
-  const s = createStyles(colors);
+  const s = styles;
 
   // ============================================================================
   // DATA LOADING
@@ -358,7 +358,7 @@ export default function AttendanceScreen() {
       case 'tournament':
         return '#A855F7';
       default:
-        return colors.primary;
+        return BRAND.skyBlue;
     }
   };
 
@@ -392,7 +392,7 @@ export default function AttendanceScreen() {
           <Text style={s.sectionLabel}>SELECT AN EVENT</Text>
 
           {loadingEvents ? (
-            <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
+            <ActivityIndicator size="large" color={BRAND.skyBlue} style={{ marginTop: 40 }} />
           ) : events.length === 0 ? (
             <View style={s.emptyState}>
               <Ionicons name="calendar-outline" size={64} color="#334155" />
@@ -403,7 +403,7 @@ export default function AttendanceScreen() {
             </View>
           ) : (
             events.map(event => {
-              const teamColor = (event.teams as any)?.color || colors.primary;
+              const teamColor = (event.teams as any)?.color || BRAND.skyBlue;
               const teamName = (event.teams as any)?.name || 'Unknown Team';
               const typeColor = getEventTypeColor(event.event_type);
               const isToday = event.event_date === new Date().toISOString().split('T')[0];
@@ -461,7 +461,7 @@ export default function AttendanceScreen() {
 
                   <View style={s.selectBtnWrap}>
                     <Text style={s.selectBtnText}>TAKE ATTENDANCE</Text>
-                    <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+                    <Ionicons name="chevron-forward" size={16} color={BRAND.skyBlue} />
                   </View>
                 </TouchableOpacity>
               );
@@ -498,25 +498,25 @@ export default function AttendanceScreen() {
       </View>
 
       {loadingRoster ? (
-        <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
+        <ActivityIndicator size="large" color={BRAND.skyBlue} style={{ marginTop: 40 }} />
       ) : (
         <>
           {/* Summary Bar */}
           <View style={s.summaryBar}>
             <View style={s.summaryItem}>
-              <View style={[s.summaryDot, { backgroundColor: colors.success }]} />
+              <View style={[s.summaryDot, { backgroundColor: BRAND.success }]} />
               <Text style={s.summaryText}>
                 {presentCount}/{totalPlayers} Present
               </Text>
             </View>
             <View style={s.summaryDivider} />
             <View style={s.summaryItem}>
-              <View style={[s.summaryDot, { backgroundColor: colors.danger }]} />
+              <View style={[s.summaryDot, { backgroundColor: BRAND.error }]} />
               <Text style={s.summaryText}>{absentCount} Absent</Text>
             </View>
             <View style={s.summaryDivider} />
             <View style={s.summaryItem}>
-              <View style={[s.summaryDot, { backgroundColor: colors.warning }]} />
+              <View style={[s.summaryDot, { backgroundColor: BRAND.warning }]} />
               <Text style={s.summaryText}>{lateCount} Late</Text>
             </View>
           </View>
@@ -537,8 +537,8 @@ export default function AttendanceScreen() {
               }}
               disabled={saving}
             >
-              <Ionicons name="checkmark-done" size={18} color={colors.success} />
-              <Text style={[s.markAllBtnText, { color: colors.success }]}>
+              <Ionicons name="checkmark-done" size={18} color={BRAND.success} />
+              <Text style={[s.markAllBtnText, { color: BRAND.success }]}>
                 Mark All Present
               </Text>
             </TouchableOpacity>
@@ -596,7 +596,7 @@ export default function AttendanceScreen() {
                         <Ionicons
                           name="checkmark"
                           size={20}
-                          color={status === 'present' ? '#fff' : colors.success}
+                          color={status === 'present' ? '#fff' : BRAND.success}
                         />
                       </TouchableOpacity>
 
@@ -611,7 +611,7 @@ export default function AttendanceScreen() {
                         <Ionicons
                           name="close"
                           size={20}
-                          color={status === 'absent' ? '#fff' : colors.danger}
+                          color={status === 'absent' ? '#fff' : BRAND.error}
                         />
                       </TouchableOpacity>
 
@@ -626,7 +626,7 @@ export default function AttendanceScreen() {
                         <Ionicons
                           name="time"
                           size={20}
-                          color={status === 'late' ? '#fff' : colors.warning}
+                          color={status === 'late' ? '#fff' : BRAND.warning}
                         />
                       </TouchableOpacity>
                     </View>
@@ -641,7 +641,7 @@ export default function AttendanceScreen() {
       {/* Saving Overlay */}
       {saving && (
         <View style={s.savingOverlay}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={BRAND.skyBlue} />
           <Text style={s.savingText}>Saving...</Text>
         </View>
       )}
@@ -653,8 +653,7 @@ export default function AttendanceScreen() {
 // STYLES
 // ============================================================================
 
-const createStyles = (colors: any) =>
-  StyleSheet.create({
+const styles = StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: 'transparent',
@@ -679,19 +678,19 @@ const createStyles = (colors: any) =>
     },
     headerTitle: {
       fontSize: 24,
-      fontWeight: '800',
+      fontFamily: FONTS.bodyExtraBold,
       color: '#fff',
       letterSpacing: 2,
     },
     headerTitleSmall: {
       fontSize: 12,
-      fontWeight: '700',
-      color: colors.primary,
+      fontFamily: FONTS.bodyBold,
+      color: BRAND.skyBlue,
       letterSpacing: 1.5,
     },
     headerSubtitle: {
       fontSize: 16,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
       color: '#fff',
       marginTop: 2,
     },
@@ -699,7 +698,7 @@ const createStyles = (colors: any) =>
     // Section label
     sectionLabel: {
       fontSize: 12,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
       color: '#64748B',
       letterSpacing: 1.5,
       marginBottom: 16,
@@ -712,7 +711,7 @@ const createStyles = (colors: any) =>
     },
     emptyTitle: {
       fontSize: 20,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
       color: '#94A3B8',
       marginTop: 16,
     },
@@ -725,12 +724,12 @@ const createStyles = (colors: any) =>
 
     // Event Card
     eventCard: {
-      backgroundColor: colors.glassCard,
+      backgroundColor: BRAND.surfaceCard,
       borderRadius: 16,
       padding: 16,
       marginBottom: 12,
       borderWidth: 1,
-      borderColor: colors.glassBorder,
+      borderColor: BRAND.cardBorder,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.15,
@@ -754,7 +753,7 @@ const createStyles = (colors: any) =>
     },
     eventDateText: {
       fontSize: 13,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
       color: '#94A3B8',
       letterSpacing: 1,
     },
@@ -772,12 +771,12 @@ const createStyles = (colors: any) =>
     },
     eventTypeText: {
       fontSize: 10,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
       letterSpacing: 0.5,
     },
     eventTitle: {
       fontSize: 18,
-      fontWeight: '800',
+      fontFamily: FONTS.bodyExtraBold,
       color: '#fff',
       marginBottom: 10,
     },
@@ -801,7 +800,7 @@ const createStyles = (colors: any) =>
     },
     teamBadgeText: {
       fontSize: 12,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
     },
     locationWrap: {
       flexDirection: 'row',
@@ -826,8 +825,8 @@ const createStyles = (colors: any) =>
     },
     selectBtnText: {
       fontSize: 14,
-      fontWeight: '800',
-      color: colors.primary,
+      fontFamily: FONTS.bodyExtraBold,
+      color: BRAND.skyBlue,
       letterSpacing: 1,
     },
 
@@ -838,9 +837,9 @@ const createStyles = (colors: any) =>
       justifyContent: 'center',
       paddingVertical: 14,
       paddingHorizontal: 16,
-      backgroundColor: colors.glassCard,
+      backgroundColor: BRAND.surfaceCard,
       borderBottomWidth: 1,
-      borderBottomColor: colors.glassBorder,
+      borderBottomColor: BRAND.cardBorder,
     },
     summaryItem: {
       flexDirection: 'row',
@@ -854,7 +853,7 @@ const createStyles = (colors: any) =>
     },
     summaryText: {
       fontSize: 13,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
       color: '#CBD5E1',
     },
     summaryDivider: {
@@ -884,17 +883,17 @@ const createStyles = (colors: any) =>
     },
     markAllBtnText: {
       fontSize: 13,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
     },
 
     // Player Card
     playerCard: {
-      backgroundColor: colors.glassCard,
+      backgroundColor: BRAND.surfaceCard,
       borderRadius: 14,
       padding: 14,
       marginBottom: 8,
       borderWidth: 1,
-      borderColor: colors.glassBorder,
+      borderColor: BRAND.cardBorder,
     },
     playerInfo: {
       flexDirection: 'row',
@@ -918,12 +917,12 @@ const createStyles = (colors: any) =>
     },
     jerseyText: {
       fontSize: 18,
-      fontWeight: '900',
+      fontFamily: FONTS.bodyExtraBold,
       color: '#94A3B8',
     },
     playerName: {
       fontSize: 16,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
       color: '#CBD5E1',
     },
     playerPosition: {
@@ -949,16 +948,16 @@ const createStyles = (colors: any) =>
       borderColor: 'rgba(255, 255, 255, 0.06)',
     },
     statusBtnPresent: {
-      backgroundColor: colors.success,
-      borderColor: colors.success,
+      backgroundColor: BRAND.success,
+      borderColor: BRAND.success,
     },
     statusBtnAbsent: {
-      backgroundColor: colors.danger,
-      borderColor: colors.danger,
+      backgroundColor: BRAND.error,
+      borderColor: BRAND.error,
     },
     statusBtnLate: {
-      backgroundColor: colors.warning,
-      borderColor: colors.warning,
+      backgroundColor: BRAND.warning,
+      borderColor: BRAND.warning,
     },
 
     // Saving overlay
@@ -974,7 +973,7 @@ const createStyles = (colors: any) =>
     },
     savingText: {
       fontSize: 16,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
       color: '#fff',
       marginTop: 12,
     },
