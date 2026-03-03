@@ -1,5 +1,6 @@
 import EmergencyContactModal from '@/components/EmergencyContactModal';
 import GameCompletionWizard, { type GameCompletionResult } from '@/components/GameCompletionWizard';
+import GiveShoutoutModal from '@/components/GiveShoutoutModal';
 import VolleyballCourt, { type CourtSlot } from '@/components/VolleyballCourt';
 import { checkAndUnlockAchievements } from '@/lib/achievement-engine';
 import { useAuth } from '@/lib/auth';
@@ -150,6 +151,7 @@ export default function GamePrepScreen() {
   const [currentSet, setCurrentSet] = useState(0);
   const [saving, setSaving] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
+  const [showPostGameShoutout, setShowPostGameShoutout] = useState(false);
 
   // Mission Control state
   const [currentRotation, setCurrentRotation] = useState(0);
@@ -837,17 +839,49 @@ export default function GamePrepScreen() {
         );
       };
 
+      const showShoutoutPrompt = () => {
+        // Find top performer from live stats
+        const topPlayer = roster.reduce<{ id: string; name: string; total: number } | null>((best, p) => {
+          const s = playerStats[p.id];
+          if (!s) return best;
+          const total = s.kills + s.aces + s.digs + s.blocks + s.assists;
+          if (!best || total > best.total) {
+            return { id: p.id, name: `${p.first_name} ${p.last_name}`, total };
+          }
+          return best;
+        }, null);
+
+        if (topPlayer && topPlayer.total > 0) {
+          Alert.alert(
+            'Shout out a standout?',
+            `${topPlayer.name} put up big numbers. Recognize them?`,
+            [
+              { text: 'Skip', style: 'cancel', onPress: showStatsPrompt },
+              {
+                text: 'Give Shoutout',
+                onPress: () => {
+                  setShowPostGameShoutout(true);
+                  showStatsPrompt();
+                },
+              },
+            ]
+          );
+        } else {
+          showStatsPrompt();
+        }
+      };
+
       // Prompt to share game recap to team wall
       Alert.alert(
         'Share Game Recap?',
         'Post the game result to the team wall for parents and players to see.',
         [
-          { text: 'Skip', style: 'cancel', onPress: showStatsPrompt },
+          { text: 'Skip', style: 'cancel', onPress: showShoutoutPrompt },
           {
             text: 'Share',
             onPress: () => {
               postGameRecapToWall(result, activeGame);
-              showStatsPrompt();
+              showShoutoutPrompt();
             },
           },
         ]
@@ -1665,6 +1699,14 @@ export default function GamePrepScreen() {
         liveSetScores={setScores}
         livePlayerStats={playerStats}
         sportName={activeSport?.name || 'volleyball'}
+      />
+
+      {/* Post-Game Shoutout Modal */}
+      <GiveShoutoutModal
+        visible={showPostGameShoutout}
+        teamId={activeGame?.team_id ?? ''}
+        onClose={() => setShowPostGameShoutout(false)}
+        onSuccess={() => setShowPostGameShoutout(false)}
       />
     </View>
   );

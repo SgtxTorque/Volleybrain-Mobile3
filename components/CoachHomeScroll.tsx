@@ -202,6 +202,25 @@ export default function CoachHomeScroll() {
     return missing.length > 0;
   }, [data.rsvpSummary]);
 
+  // Suggested player for shoutout nudge
+  const suggestedPlayer = useMemo(() => {
+    if (!data.topPerformers || data.topPerformers.length === 0) return null;
+    // Find the player with the highest kills, aces, or digs
+    const best = [...data.topPerformers].sort((a, b) => {
+      const aMax = Math.max(a.total_kills, a.total_aces, a.total_digs);
+      const bMax = Math.max(b.total_kills, b.total_aces, b.total_digs);
+      return bMax - aMax;
+    })[0];
+    if (!best) return null;
+    const stats = [
+      { stat: 'kills', value: best.total_kills },
+      { stat: 'aces', value: best.total_aces },
+      { stat: 'digs', value: best.total_digs },
+    ].sort((a, b) => b.value - a.value);
+    if (stats[0].value <= 0) return null;
+    return { name: best.player_name, stat: stats[0].stat, value: stats[0].value };
+  }, [data.topPerformers]);
+
   // ─── Refresh ──
   const onRefresh = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -456,7 +475,10 @@ export default function CoachHomeScroll() {
 
         {/* ─── 6. ENGAGEMENT NUDGE (Tier 3 — 1 line max) ── ↕ 24px ── */}
         <View style={{ marginBottom: 24 }}>
-          <EngagementSection onGiveShoutout={() => setShowShoutoutModal(true)} />
+          <EngagementSection
+            onGiveShoutout={() => setShowShoutoutModal(true)}
+            suggestedPlayer={suggestedPlayer}
+          />
         </View>
 
         {/* ─── 7. TEAM HEALTH CARD (Tier 1.5 — dots + bars) ── ↕ 20px ── */}
