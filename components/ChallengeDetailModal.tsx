@@ -4,7 +4,8 @@
 
 import { fetchChallengeDetail, optInToChallenge, type ChallengeWithParticipants } from '@/lib/challenge-service';
 import { useAuth } from '@/lib/auth';
-import { useTheme } from '@/lib/theme';
+import { BRAND } from '@/theme/colors';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -59,9 +60,7 @@ function getInitials(name: string): string {
 // =============================================================================
 
 export default function ChallengeDetailModal({ visible, challengeId, onClose, onOptInSuccess }: Props) {
-  const { colors } = useTheme();
   const { user } = useAuth();
-  const s = useMemo(() => createStyles(colors), [colors]);
 
   const [challenge, setChallenge] = useState<ChallengeWithParticipants | null>(null);
   const [loading, setLoading] = useState(true);
@@ -103,24 +102,24 @@ export default function ChallengeDetailModal({ visible, challengeId, onClose, on
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <SafeAreaView style={[s.container, { backgroundColor: colors.background }]}>
+      <SafeAreaView style={[s.container, { backgroundColor: BRAND.offWhite }]}>
         {/* Header */}
-        <View style={[s.header, { borderBottomColor: colors.glassBorder }]}>
+        <View style={[s.header, { borderBottomColor: BRAND.border }]}>
           <TouchableOpacity onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-            <Ionicons name="close" size={24} color={colors.text} />
+            <Ionicons name="close" size={24} color={BRAND.textPrimary} />
           </TouchableOpacity>
-          <Text style={[s.headerTitle, { color: colors.text }]}>Challenge Details</Text>
+          <Text style={[s.headerTitle, { color: BRAND.textPrimary }]}>Challenge Details</Text>
           <View style={{ width: 24 }} />
         </View>
 
         {loading ? (
           <View style={s.centered}>
-            <ActivityIndicator size="large" color={colors.primary} />
+            <ActivityIndicator size="large" color={BRAND.teal} />
           </View>
         ) : !challenge ? (
           <View style={s.centered}>
-            <Ionicons name="alert-circle-outline" size={48} color={colors.textMuted} />
-            <Text style={[s.emptyText, { color: colors.textMuted }]}>Challenge not found</Text>
+            <Ionicons name="alert-circle-outline" size={48} color={BRAND.textMuted} />
+            <Text style={[s.emptyText, { color: BRAND.textMuted }]}>Challenge not found</Text>
           </View>
         ) : (
           <FlatList
@@ -141,29 +140,29 @@ export default function ChallengeDetailModal({ visible, challengeId, onClose, on
                     <Text style={[s.timerText, { color: '#F59E0B' }]}>{timeLeft}</Text>
                   </View>
 
-                  <Text style={[s.challengeTitle, { color: colors.text }]}>{challenge.title}</Text>
+                  <Text style={[s.challengeTitle, { color: BRAND.textPrimary }]}>{challenge.title}</Text>
 
                   {challenge.description && (
-                    <Text style={[s.challengeDesc, { color: colors.textSecondary }]}>
+                    <Text style={[s.challengeDesc, { color: BRAND.textSecondary }]}>
                       {challenge.description}
                     </Text>
                   )}
 
                   {/* Meta row */}
                   <View style={s.metaRow}>
-                    <View style={[s.metaPill, { backgroundColor: colors.secondary }]}>
+                    <View style={[s.metaPill, { backgroundColor: BRAND.warmGray }]}>
                       <Ionicons
                         name={isTeam ? 'people' : 'person'}
                         size={12}
-                        color={colors.textMuted}
+                        color={BRAND.textMuted}
                       />
-                      <Text style={[s.metaText, { color: colors.textMuted }]}>
+                      <Text style={[s.metaText, { color: BRAND.textMuted }]}>
                         {isTeam ? 'Team Goal' : 'Individual'}
                       </Text>
                     </View>
-                    <View style={[s.metaPill, { backgroundColor: colors.secondary }]}>
-                      <Ionicons name="flag" size={12} color={colors.textMuted} />
-                      <Text style={[s.metaText, { color: colors.textMuted }]}>
+                    <View style={[s.metaPill, { backgroundColor: BRAND.warmGray }]}>
+                      <Ionicons name="flag" size={12} color={BRAND.textMuted} />
+                      <Text style={[s.metaText, { color: BRAND.textMuted }]}>
                         Target: {challenge.target_value}
                       </Text>
                     </View>
@@ -175,9 +174,9 @@ export default function ChallengeDetailModal({ visible, challengeId, onClose, on
 
                   {/* Custom reward */}
                   {challenge.custom_reward_text && (
-                    <View style={[s.rewardBanner, { backgroundColor: colors.secondary }]}>
+                    <View style={[s.rewardBanner, { backgroundColor: BRAND.warmGray }]}>
                       <Ionicons name="gift" size={16} color="#A855F7" />
-                      <Text style={[s.rewardText, { color: colors.text }]}>
+                      <Text style={[s.rewardText, { color: BRAND.textPrimary }]}>
                         {challenge.custom_reward_text}
                       </Text>
                     </View>
@@ -186,16 +185,16 @@ export default function ChallengeDetailModal({ visible, challengeId, onClose, on
                   {/* Team progress bar */}
                   {isTeam && (
                     <View style={s.teamProgressSection}>
-                      <Text style={[s.teamProgressLabel, { color: colors.textSecondary }]}>
+                      <Text style={[s.teamProgressLabel, { color: BRAND.textSecondary }]}>
                         Team Progress: {challenge.totalProgress || 0} / {challenge.target_value}
                       </Text>
-                      <View style={[s.progressBg, { backgroundColor: colors.secondary }]}>
+                      <View style={[s.progressBg, { backgroundColor: BRAND.warmGray }]}>
                         <View
                           style={[
                             s.progressFill,
                             {
                               width: `${totalPct}%` as any,
-                              backgroundColor: totalPct >= 100 ? '#10B981' : colors.primary,
+                              backgroundColor: totalPct >= 100 ? '#10B981' : BRAND.teal,
                             },
                           ]}
                         />
@@ -206,7 +205,7 @@ export default function ChallengeDetailModal({ visible, challengeId, onClose, on
                   {/* Opt-in button */}
                   {!isOptedIn && challenge.status === 'active' && (
                     <TouchableOpacity
-                      style={[s.optInBtn, { backgroundColor: colors.primary }]}
+                      style={[s.optInBtn, { backgroundColor: BRAND.teal }]}
                       onPress={handleOptIn}
                       disabled={optingIn}
                       activeOpacity={0.7}
@@ -224,9 +223,9 @@ export default function ChallengeDetailModal({ visible, challengeId, onClose, on
 
                   {/* Leaderboard header */}
                   <View style={s.leaderboardHeader}>
-                    <Ionicons name="podium" size={16} color={colors.primary} />
-                    <Text style={[s.leaderboardTitle, { color: colors.text }]}>Leaderboard</Text>
-                    <Text style={[s.participantCount, { color: colors.textMuted }]}>
+                    <Ionicons name="podium" size={16} color={BRAND.teal} />
+                    <Text style={[s.leaderboardTitle, { color: BRAND.textPrimary }]}>Leaderboard</Text>
+                    <Text style={[s.participantCount, { color: BRAND.textMuted }]}>
                       {challenge.participants.length} player{challenge.participants.length !== 1 ? 's' : ''}
                     </Text>
                   </View>
@@ -243,7 +242,7 @@ export default function ChallengeDetailModal({ visible, challengeId, onClose, on
               const isCompleted = item.completed;
 
               return (
-                <View style={[s.playerRow, isMe && { backgroundColor: colors.primary + '08' }]}>
+                <View style={[s.playerRow, isMe && { backgroundColor: BRAND.teal + '08' }]}>
                   {/* Rank */}
                   <View style={[
                     s.rankBadge,
@@ -253,7 +252,7 @@ export default function ChallengeDetailModal({ visible, challengeId, onClose, on
                   ]}>
                     <Text style={[
                       s.rankText,
-                      { color: colors.text },
+                      { color: BRAND.textPrimary },
                       index === 0 && { color: '#FFD700' },
                       index === 1 && { color: '#C0C0C0' },
                       index === 2 && { color: '#CD7F32' },
@@ -263,28 +262,28 @@ export default function ChallengeDetailModal({ visible, challengeId, onClose, on
                   </View>
 
                   {/* Avatar + name */}
-                  <View style={[s.avatar, { backgroundColor: colors.primary + '25' }]}>
-                    <Text style={[s.avatarText, { color: colors.primary }]}>
+                  <View style={[s.avatar, { backgroundColor: BRAND.teal + '25' }]}>
+                    <Text style={[s.avatarText, { color: BRAND.teal }]}>
                       {getInitials(name)}
                     </Text>
                   </View>
                   <View style={s.playerInfo}>
-                    <Text style={[s.playerName, { color: colors.text }]}>
+                    <Text style={[s.playerName, { color: BRAND.textPrimary }]}>
                       {name} {isMe ? '(You)' : ''}
                     </Text>
                     <View style={s.playerProgress}>
-                      <View style={[s.miniProgressBg, { backgroundColor: colors.secondary }]}>
+                      <View style={[s.miniProgressBg, { backgroundColor: BRAND.warmGray }]}>
                         <View
                           style={[
                             s.miniProgressFill,
                             {
                               width: `${pct}%` as any,
-                              backgroundColor: isCompleted ? '#10B981' : colors.primary,
+                              backgroundColor: isCompleted ? '#10B981' : BRAND.teal,
                             },
                           ]}
                         />
                       </View>
-                      <Text style={[s.playerValue, { color: colors.textSecondary }]}>
+                      <Text style={[s.playerValue, { color: BRAND.textSecondary }]}>
                         {item.current_value || 0}/{challenge.target_value}
                       </Text>
                     </View>
@@ -298,7 +297,7 @@ export default function ChallengeDetailModal({ visible, challengeId, onClose, on
             }}
             ListEmptyComponent={
               <View style={s.emptyLeaderboard}>
-                <Text style={[s.emptyText, { color: colors.textMuted }]}>
+                <Text style={[s.emptyText, { color: BRAND.textMuted }]}>
                   No one has joined yet. Be the first!
                 </Text>
               </View>
@@ -316,107 +315,106 @@ export default function ChallengeDetailModal({ visible, challengeId, onClose, on
 // Styles
 // =============================================================================
 
-const createStyles = (colors: any) =>
-  StyleSheet.create({
-    container: { flex: 1 },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: 16,
-      paddingVertical: 14,
-      borderBottomWidth: 1,
-    },
-    headerTitle: { fontSize: 18, fontWeight: '700' },
-    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
-    detailHeader: { paddingHorizontal: 20, paddingTop: 20, gap: 10 },
-    timerBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      alignSelf: 'flex-start',
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-      borderRadius: 10,
-    },
-    timerText: { fontSize: 13, fontWeight: '700' },
-    challengeTitle: { fontSize: 22, fontWeight: '800' },
-    challengeDesc: { fontSize: 15, lineHeight: 22 },
-    metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-    metaPill: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 8,
-    },
-    metaText: { fontSize: 11, fontWeight: '600' },
-    rewardBanner: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      paddingHorizontal: 14,
-      paddingVertical: 10,
-      borderRadius: 12,
-    },
-    rewardText: { fontSize: 14, fontWeight: '600', flex: 1 },
-    teamProgressSection: { marginTop: 4 },
-    teamProgressLabel: { fontSize: 13, fontWeight: '600', marginBottom: 6 },
-    progressBg: { height: 10, borderRadius: 5, overflow: 'hidden' },
-    progressFill: { height: '100%', borderRadius: 5 },
-    optInBtn: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 8,
-      paddingVertical: 14,
-      borderRadius: 14,
-    },
-    optInBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-    leaderboardHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      marginTop: 12,
-      paddingBottom: 8,
-    },
-    leaderboardTitle: { fontSize: 16, fontWeight: '700', flex: 1 },
-    participantCount: { fontSize: 12, fontWeight: '500' },
-    playerRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 20,
-      paddingVertical: 12,
-      gap: 10,
-    },
-    rankBadge: {
-      width: 28,
-      height: 28,
-      borderRadius: 14,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    rankText: { fontSize: 14, fontWeight: '800' },
-    avatar: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    avatarText: { fontSize: 13, fontWeight: '700' },
-    playerInfo: { flex: 1 },
-    playerName: { fontSize: 14, fontWeight: '600' },
-    playerProgress: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      marginTop: 4,
-    },
-    miniProgressBg: { flex: 1, height: 6, borderRadius: 3, overflow: 'hidden' },
-    miniProgressFill: { height: '100%', borderRadius: 3 },
-    playerValue: { fontSize: 11, fontWeight: '600', width: 50, textAlign: 'right' },
-    emptyLeaderboard: { paddingVertical: 32, alignItems: 'center' },
-    emptyText: { fontSize: 15, fontWeight: '500' },
-  });
+const s = StyleSheet.create({
+  container: { flex: 1 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+  },
+  headerTitle: { fontSize: 18, fontFamily: FONTS.bodyBold },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
+  detailHeader: { paddingHorizontal: 20, paddingTop: 20, gap: 10 },
+  timerBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  timerText: { fontSize: 13, fontFamily: FONTS.bodyBold },
+  challengeTitle: { fontSize: 22, fontFamily: FONTS.bodyExtraBold },
+  challengeDesc: { fontSize: 15, lineHeight: 22 },
+  metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  metaPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  metaText: { fontSize: 11, fontFamily: FONTS.bodySemiBold },
+  rewardBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  rewardText: { fontSize: 14, fontFamily: FONTS.bodySemiBold, flex: 1 },
+  teamProgressSection: { marginTop: 4 },
+  teamProgressLabel: { fontSize: 13, fontFamily: FONTS.bodySemiBold, marginBottom: 6 },
+  progressBg: { height: 10, borderRadius: 5, overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: 5 },
+  optInBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
+  },
+  optInBtnText: { color: '#fff', fontSize: 16, fontFamily: FONTS.bodyBold },
+  leaderboardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
+    paddingBottom: 8,
+  },
+  leaderboardTitle: { fontSize: 16, fontFamily: FONTS.bodyBold, flex: 1 },
+  participantCount: { fontSize: 12, fontFamily: FONTS.bodyMedium },
+  playerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    gap: 10,
+  },
+  rankBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  rankText: { fontSize: 14, fontFamily: FONTS.bodyExtraBold },
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: { fontSize: 13, fontFamily: FONTS.bodyBold },
+  playerInfo: { flex: 1 },
+  playerName: { fontSize: 14, fontFamily: FONTS.bodySemiBold },
+  playerProgress: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+  },
+  miniProgressBg: { flex: 1, height: 6, borderRadius: 3, overflow: 'hidden' },
+  miniProgressFill: { height: '100%', borderRadius: 3 },
+  playerValue: { fontSize: 11, fontFamily: FONTS.bodySemiBold, width: 50, textAlign: 'right' },
+  emptyLeaderboard: { paddingVertical: 32, alignItems: 'center' },
+  emptyText: { fontSize: 15, fontFamily: FONTS.bodyMedium },
+});
