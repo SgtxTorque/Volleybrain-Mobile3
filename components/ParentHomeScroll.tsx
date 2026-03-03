@@ -28,6 +28,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import { useAuth } from '@/lib/auth';
 import { useParentScroll } from '@/lib/parent-scroll-context';
 import { useScrollAnimations, SCROLL_THRESHOLDS } from '@/hooks/useScrollAnimations';
@@ -48,6 +50,7 @@ import RecentBadges from './parent-scroll/RecentBadges';
 import SecondaryEvents from './parent-scroll/SecondaryEvents';
 import AmbientCelebration from './parent-scroll/AmbientCelebration';
 import FlatChatPreview from './parent-scroll/FlatChatPreview';
+import ParentOnboardingModal from './ParentOnboardingModal';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
@@ -156,6 +159,15 @@ export default function ParentHomeScroll() {
     onScrollJS: parentScroll.notifyScroll,
   });
   const data = useParentHomeData();
+
+  // ─── Onboarding modal (first-time parent) ──
+  const ONBOARDING_KEY = 'lynx_parent_onboarding_complete';
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  useEffect(() => {
+    AsyncStorage.getItem(ONBOARDING_KEY).then((done) => {
+      if (!done) setShowOnboarding(true);
+    });
+  }, []);
 
   // Signal to tab bar that parent scroll is active
   useEffect(() => {
@@ -518,6 +530,15 @@ export default function ParentHomeScroll() {
           </Text>
         </View>
       </Animated.ScrollView>
+
+      {/* ─── ONBOARDING MODAL (first-time parent) ──────────────── */}
+      <ParentOnboardingModal
+        visible={showOnboarding}
+        onDone={() => {
+          setShowOnboarding(false);
+          AsyncStorage.setItem(ONBOARDING_KEY, 'true');
+        }}
+      />
     </View>
   );
 }
