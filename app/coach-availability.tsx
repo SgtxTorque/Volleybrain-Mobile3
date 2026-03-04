@@ -27,11 +27,11 @@ type AvailabilityRecord = {
 };
 
 const REASONS = [
-  { value: 'vacation', label: 'Vacation', icon: '🏖️' },
-  { value: 'work', label: 'Work', icon: '💼' },
-  { value: 'personal', label: 'Personal', icon: '🏠' },
-  { value: 'injury', label: 'Injury', icon: '🩹' },
-  { value: 'other', label: 'Other', icon: '📝' },
+  { value: 'vacation', label: 'Vacation', icon: 'sunny-outline' as const },
+  { value: 'work', label: 'Work', icon: 'briefcase-outline' as const },
+  { value: 'personal', label: 'Personal', icon: 'home-outline' as const },
+  { value: 'injury', label: 'Injury', icon: 'medkit-outline' as const },
+  { value: 'other', label: 'Other', icon: 'document-text-outline' as const },
 ];
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -352,7 +352,10 @@ export default function CoachAvailabilityScreen() {
                     <Text style={s.upcomingDate}>
                       {d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                     </Text>
-                    <Text style={s.upcomingReason}>{reason?.icon} {reason?.label || rec.reason || 'No reason'}</Text>
+                    <Text style={s.upcomingReason}>
+                      {reason && <Ionicons name={reason.icon} size={13} color={BRAND.textMuted} />}
+                      {' '}{reason?.label || rec.reason || 'No reason'}
+                    </Text>
                     {rec.notes && <Text style={s.upcomingNotes}>{rec.notes}</Text>}
                   </View>
                   <TouchableOpacity onPress={() => removeRecord(rec.id)}>
@@ -410,7 +413,7 @@ export default function CoachAvailabilityScreen() {
                     style={[s.reasonBtn, selectedReason === r.value && s.reasonBtnActive]}
                     onPress={() => setSelectedReason(r.value)}
                   >
-                    <Text style={s.reasonIcon}>{r.icon}</Text>
+                    <Ionicons name={r.icon} size={16} color={selectedReason === r.value ? BRAND.skyBlue : BRAND.textMuted} />
                     <Text style={[s.reasonLabel, selectedReason === r.value && { color: BRAND.skyBlue }]}>
                       {r.label}
                     </Text>
@@ -506,7 +509,7 @@ const styles = StyleSheet.create({
   reasonGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   reasonBtn: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, borderWidth: 1, borderColor: BRAND.border, backgroundColor: BRAND.offWhite, flexDirection: 'row', alignItems: 'center', gap: 6 },
   reasonBtnActive: { borderColor: BRAND.skyBlue, backgroundColor: BRAND.skyBlue + '15' },
-  reasonIcon: { fontSize: 16 },
+  reasonIcon: { width: 16, height: 16 },
   reasonLabel: { fontSize: 13, fontFamily: FONTS.bodyMedium, color: BRAND.textMuted },
   notesInput: { backgroundColor: BRAND.offWhite, borderRadius: 12, padding: 14, fontSize: 14, color: BRAND.textPrimary, borderWidth: 1, borderColor: BRAND.border, minHeight: 80 },
   modalFooter: { padding: 16, borderTopWidth: 1, borderTopColor: BRAND.border },

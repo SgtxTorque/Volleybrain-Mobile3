@@ -201,15 +201,7 @@ const createStyles = (colors: any) =>
       gap: 8,
       width: '100%',
       marginBottom: 12,
-      ...Platform.select({
-        ios: {
-          shadowColor: colors.primary,
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.3,
-          shadowRadius: 8,
-        },
-        android: { elevation: 6 },
-      }),
+      ...shadows.cardHover,
     },
     primaryBtnText: {
       fontSize: 16,

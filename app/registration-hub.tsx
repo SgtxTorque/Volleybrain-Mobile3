@@ -11,6 +11,7 @@ import { queueRegistrationApproval, queueTeamAssignment } from '@/lib/email-queu
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
+import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -151,13 +152,13 @@ type Team = {
 // STATUS CONFIG
 // =====================================================
 const statusConfig: Record<RegistrationStatus, { label: string; color: string; icon: string }> = {
-  new: { label: 'New', color: '#E8913A', icon: 'alert-circle' },
-  approved: { label: 'Approved', color: '#0EA5E9', icon: 'checkmark-circle' },
-  waitlisted: { label: 'Waitlisted', color: '#8E8E93', icon: 'time' },
-  denied: { label: 'Denied', color: '#D94F4F', icon: 'close-circle' },
-  active: { label: 'Active', color: '#22C55E', icon: 'wallet' },
-  rostered: { label: 'Rostered', color: '#2C5F7C', icon: 'people' },
-  withdrawn: { label: 'Withdrawn', color: '#8E8E93', icon: 'exit' },
+  new: { label: 'New', color: BRAND.warning, icon: 'alert-circle' },
+  approved: { label: 'Approved', color: BRAND.skyBlue, icon: 'checkmark-circle' },
+  waitlisted: { label: 'Waitlisted', color: BRAND.textMuted, icon: 'time' },
+  denied: { label: 'Denied', color: BRAND.coral, icon: 'close-circle' },
+  active: { label: 'Active', color: BRAND.success, icon: 'wallet' },
+  rostered: { label: 'Rostered', color: BRAND.teal, icon: 'people' },
+  withdrawn: { label: 'Withdrawn', color: BRAND.textMuted, icon: 'exit' },
 };
 
 // =====================================================

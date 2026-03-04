@@ -2,6 +2,7 @@ import { getSportDisplay } from '@/constants/sport-display';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { BRAND } from '@/theme/colors';
+import { shadows } from '@/lib/design-tokens';
 import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -484,15 +485,7 @@ const styles = StyleSheet.create({
       padding: 24,
       marginBottom: 20,
       alignItems: 'center',
-      ...Platform.select({
-        ios: {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.15,
-          shadowRadius: 12,
-        },
-        android: { elevation: 6 },
-      }),
+      ...shadows.card,
     },
 
     // Result Badge

@@ -52,10 +52,10 @@ type BlastFilter = 'all' | 'urgent' | 'low_read';
 // ============================================================================
 
 const MESSAGE_TYPE_CONFIG: Record<string, { icon: string; label: string; bg: string; fg: string }> = {
-  announcement: { icon: 'megaphone', label: 'Announcement', bg: '#0EA5E920', fg: '#0EA5E9' },
-  schedule_change: { icon: 'calendar', label: 'Schedule', bg: '#8B5CF620', fg: '#8B5CF6' },
-  payment_reminder: { icon: 'card', label: 'Payment', bg: '#F59E0B20', fg: '#F59E0B' },
-  custom: { icon: 'create', label: 'Custom', bg: '#10B98120', fg: '#10B981' },
+  announcement: { icon: 'megaphone', label: 'Announcement', bg: BRAND.skyBlue + '20', fg: '#0EA5E9' },
+  schedule_change: { icon: 'calendar', label: 'Schedule', bg: BRAND.skyBlue + '20', fg: '#8B5CF6' },
+  payment_reminder: { icon: 'card', label: 'Payment', bg: BRAND.warning + '20', fg: '#F59E0B' },
+  custom: { icon: 'create', label: 'Custom', bg: BRAND.success + '20', fg: '#10B981' },
 };
 
 const formatDate = (iso: string): string => {
@@ -79,9 +79,9 @@ const formatTimestamp = (iso: string): string => {
 };
 
 const getReadRateColor = (rate: number): string => {
-  if (rate >= 80) return '#34C759';
-  if (rate >= 50) return '#FF9500';
-  return '#FF3B30';
+  if (rate >= 80) return BRAND.success;
+  if (rate >= 50) return BRAND.warning;
+  return BRAND.error;
 };
 
 // ============================================================================
@@ -358,7 +358,7 @@ export default function BlastHistoryScreen() {
             <Ionicons
               name={r.acknowledged ? 'shield-checkmark' : 'time-outline'}
               size={18}
-              color={r.acknowledged ? '#34C759' : BRAND.textMuted}
+              color={r.acknowledged ? BRAND.success : BRAND.textMuted}
             />
             <View style={s.recipientInfo}>
               <Text style={s.recipientName}>{r.recipient_name || 'Unknown'}</Text>
@@ -368,7 +368,7 @@ export default function BlastHistoryScreen() {
             </View>
             {r.acknowledged ? (
               <View style={s.recipientStatus}>
-                <Text style={[s.recipientStatusText, { color: '#34C759' }]}>Read</Text>
+                <Text style={[s.recipientStatusText, { color: BRAND.success }]}>Read</Text>
                 {r.acknowledged_at && (
                   <Text style={s.recipientTimestamp}>
                     {formatTimestamp(r.acknowledged_at)}
@@ -418,8 +418,8 @@ export default function BlastHistoryScreen() {
           <View style={s.blastBadgesRow}>
             {renderTypeBadge(blast.message_type)}
             {blast.priority === 'urgent' && (
-              <View style={[s.urgentBadge, { backgroundColor: '#FF3B3020' }]}>
-                <Ionicons name="alert-circle" size={12} color="#FF3B30" />
+              <View style={[s.urgentBadge, { backgroundColor: BRAND.error + '20' }]}>
+                <Ionicons name="alert-circle" size={12} color={BRAND.error} />
                 <Text style={s.urgentBadgeText}>URGENT</Text>
               </View>
             )}
@@ -661,7 +661,7 @@ const s = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 8,
   },
-  urgentBadgeText: { fontSize: 11, fontFamily: FONTS.bodyExtraBold, color: '#FF3B30' },
+  urgentBadgeText: { fontSize: 11, fontFamily: FONTS.bodyExtraBold, color: BRAND.error },
   targetBadge: {
     flexDirection: 'row',
     alignItems: 'center',

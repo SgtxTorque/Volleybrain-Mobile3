@@ -2,6 +2,7 @@ import { useAuth } from '@/lib/auth';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { BRAND } from '@/theme/colors';
+import { shadows } from '@/lib/design-tokens';
 import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -417,7 +418,7 @@ export default function AttendanceScreen() {
                 >
                   <View style={s.eventCardTop}>
                     <View style={s.eventDateWrap}>
-                      <Text style={[s.eventDateText, isToday && { color: '#FF3B3B' }]}>
+                      <Text style={[s.eventDateText, isToday && { color: BRAND.coral }]}>
                         {formatDate(event.event_date)}
                       </Text>
                       {(event.event_time || event.start_time) && (
@@ -730,14 +731,10 @@ const styles = StyleSheet.create({
       marginBottom: 12,
       borderWidth: 1,
       borderColor: BRAND.cardBorder,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.15,
-      shadowRadius: 12,
-      elevation: 6,
+      ...shadows.card,
     },
     eventCardToday: {
-      borderColor: '#FF3B3B40',
+      borderColor: BRAND.coral + '40',
       backgroundColor: 'rgba(26, 13, 13, 0.7)',
     },
     eventCardTop: {

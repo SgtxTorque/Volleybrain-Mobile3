@@ -664,15 +664,15 @@ export default function GamePrepWizardScreen() {
         </Text>
         <View style={s.summaryBreakdown}>
           <View style={s.summaryChip}>
-            <View style={[s.summaryDot, { backgroundColor: '#4ECDC4' }]} />
+            <View style={[s.summaryDot, { backgroundColor: BRAND.teal }]} />
             <Text style={s.summaryChipText}>{rsvpSummary.going} Going</Text>
           </View>
           <View style={s.summaryChip}>
-            <View style={[s.summaryDot, { backgroundColor: '#FF6B6B' }]} />
+            <View style={[s.summaryDot, { backgroundColor: BRAND.coral }]} />
             <Text style={s.summaryChipText}>{rsvpSummary.notGoing} Not Going</Text>
           </View>
           <View style={s.summaryChip}>
-            <View style={[s.summaryDot, { backgroundColor: '#FFB347' }]} />
+            <View style={[s.summaryDot, { backgroundColor: BRAND.goldBrand }]} />
             <Text style={s.summaryChipText}>{rsvpSummary.maybe} Maybe</Text>
           </View>
           <View style={s.summaryChip}>
@@ -719,17 +719,17 @@ export default function GamePrepWizardScreen() {
           switch (status) {
             case 'yes':
               statusIcon = 'checkmark-circle';
-              statusColor = '#4ECDC4';
+              statusColor = BRAND.teal;
               statusLabel = 'Going';
               break;
             case 'no':
               statusIcon = 'close-circle';
-              statusColor = '#FF6B6B';
+              statusColor = BRAND.coral;
               statusLabel = 'Not Going';
               break;
             case 'maybe':
               statusIcon = 'help-circle';
-              statusColor = '#FFB347';
+              statusColor = BRAND.goldBrand;
               statusLabel = 'Maybe';
               break;
             default:

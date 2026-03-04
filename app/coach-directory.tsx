@@ -4,6 +4,7 @@ import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
+import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -154,11 +155,11 @@ export default function CoachDirectoryScreen() {
   const getBgCheckBadge = (status: string | null) => {
     switch (status) {
       case 'passed': case 'cleared':
-        return { icon: 'shield-checkmark' as const, color: '#34C759', label: 'Cleared' };
+        return { icon: 'shield-checkmark' as const, color: BRAND.success, label: 'Cleared' };
       case 'pending':
-        return { icon: 'time' as const, color: '#FF9500', label: 'Pending' };
+        return { icon: 'time' as const, color: BRAND.warning, label: 'Pending' };
       case 'failed': case 'expired':
-        return { icon: 'close-circle' as const, color: '#FF3B30', label: status === 'expired' ? 'Expired' : 'Failed' };
+        return { icon: 'close-circle' as const, color: BRAND.error, label: status === 'expired' ? 'Expired' : 'Failed' };
       default:
         return { icon: 'remove-circle-outline' as const, color: colors.textMuted, label: 'Not Started' };
     }

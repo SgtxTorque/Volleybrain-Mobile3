@@ -131,7 +131,7 @@ export default function AdminSearchScreen() {
               title: t.name,
               subtitle: 'Team',
               icon: 'people',
-              color: t.color || '#14B8A6',
+              color: t.color || BRAND.teal,
               route: `/team-management`,
             });
           }
@@ -153,7 +153,7 @@ export default function AdminSearchScreen() {
               title: e.title,
               subtitle: `${e.event_type} · ${e.event_date}`,
               icon: e.event_type === 'game' ? 'trophy' : 'calendar',
-              color: e.event_type === 'game' ? '#EF4444' : '#0EA5E9',
+              color: e.event_type === 'game' ? BRAND.coral : BRAND.skyBlue,
               route: `/(tabs)/schedule`,
             });
           }
@@ -175,7 +175,7 @@ export default function AdminSearchScreen() {
             title: u.full_name || u.email || 'Unknown',
             subtitle: `${u.role || 'User'} · ${u.email || ''}`,
             icon: 'person-circle',
-            color: '#8B5CF6',
+            color: BRAND.skyBlue,
             route: `/users`,
           });
         }
