@@ -1230,7 +1230,7 @@ export default function GamePrepScreen() {
             <ActivityIndicator size="large" color={BRAND.skyBlue} style={{ marginTop: 40 }} />
           ) : games.length === 0 ? (
             <View style={gs.emptyState}>
-              <Ionicons name="calendar-outline" size={64} color="#334155" />
+              <Ionicons name="calendar-outline" size={64} color={BRAND.textFaint} />
               <Text style={gs.emptyTitle}>No Upcoming Games</Text>
               <Text style={gs.emptySubtext}>Scheduled games will appear here</Text>
             </View>
@@ -1318,11 +1318,11 @@ export default function GamePrepScreen() {
                           router.push(`/lineup-builder?eventId=${game.id}&teamId=${game.team_id}` as any);
                         }}
                       >
-                        <Ionicons name="grid" size={16} color="#6366F1" />
+                        <Ionicons name="grid" size={16} color={BRAND.skyBlue} />
                         <Text style={gs.setLineupBtnText}>
                           {hasLineup ? `EDIT LINEUP (${lineupCount})` : 'SET LINEUP'}
                         </Text>
-                        <Ionicons name="chevron-forward" size={14} color="#6366F1" />
+                        <Ionicons name="chevron-forward" size={14} color={BRAND.skyBlue} />
                       </TouchableOpacity>
                     )}
 
@@ -1339,9 +1339,9 @@ export default function GamePrepScreen() {
                       <View style={gs.scoreDisplay}>
                         <Text style={gs.finalScore}>{game.our_score} - {game.opponent_score}</Text>
                         <View style={gs.viewRecapWrap}>
-                          <Ionicons name="bar-chart" size={14} color="#6366F1" />
+                          <Ionicons name="bar-chart" size={14} color={BRAND.skyBlue} />
                           <Text style={gs.viewRecapText}>VIEW RECAP</Text>
-                          <Ionicons name="chevron-forward" size={14} color="#6366F1" />
+                          <Ionicons name="chevron-forward" size={14} color={BRAND.skyBlue} />
                         </View>
                       </View>
                     )}
@@ -1362,9 +1362,9 @@ export default function GamePrepScreen() {
                         onPress={(e) => { e.stopPropagation(); startStatsEntry(game); }}
                         style={gs.enterStatsBtnWrap}
                       >
-                        <Ionicons name="create" size={14} color="#6366F1" />
-                        <Text style={[gs.enterStatsBtnText, { color: '#6366F1' }]}>EDIT STATS</Text>
-                        <Ionicons name="chevron-forward" size={14} color="#6366F1" />
+                        <Ionicons name="create" size={14} color={BRAND.skyBlue} />
+                        <Text style={[gs.enterStatsBtnText, { color: BRAND.skyBlue }]}>EDIT STATS</Text>
+                        <Ionicons name="chevron-forward" size={14} color={BRAND.skyBlue} />
                       </TouchableOpacity>
                     )}
                   </TouchableOpacity>
@@ -1401,7 +1401,7 @@ export default function GamePrepScreen() {
             </Text>
           )}
           <TouchableOpacity onPress={undoLast} style={gs.undoLastBtn} disabled={undoStack.length === 0}>
-            <Ionicons name="arrow-undo" size={18} color={undoStack.length > 0 ? '#F97316' : '#334155'} />
+            <Ionicons name="arrow-undo" size={18} color={undoStack.length > 0 ? '#F97316' : BRAND.textFaint} />
           </TouchableOpacity>
           <TouchableOpacity onPress={endGame} style={gs.endGameBtn}>
             <Text style={gs.endGameBtnText}>END</Text>
@@ -1762,16 +1762,16 @@ const gs = StyleSheet.create({
   // Lineup Badge & Set Lineup Button
   lineupBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#10B98120', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   lineupBadgeText: { fontSize: 9, fontFamily: FONTS.bodyBold, color: '#10B981', letterSpacing: 0.5 },
-  setLineupBtnWrap: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 10, paddingVertical: 10, borderRadius: 10, backgroundColor: '#6366F115', borderWidth: 1, borderColor: '#6366F140' },
-  setLineupBtnText: { fontSize: 12, fontFamily: FONTS.bodyExtraBold, color: '#6366F1', letterSpacing: 0.5 },
+  setLineupBtnWrap: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 10, paddingVertical: 10, borderRadius: 10, backgroundColor: BRAND.skyBlue + '15', borderWidth: 1, borderColor: BRAND.skyBlue + '40' },
+  setLineupBtnText: { fontSize: 12, fontFamily: FONTS.bodyExtraBold, color: BRAND.skyBlue, letterSpacing: 0.5 },
 
   startBtnWrap: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#1E293B' },
   startBtnText: { fontSize: 14, fontFamily: FONTS.bodyExtraBold, color: '#F97316', letterSpacing: 1 },
   scoreDisplay: { marginTop: 10, alignItems: 'center' },
   finalScore: { fontSize: 18, fontFamily: FONTS.bodyExtraBold, color: '#64748B' },
   viewRecapWrap: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#1E293B' },
-  viewRecapText: { fontSize: 12, fontFamily: FONTS.bodyExtraBold, color: '#6366F1', letterSpacing: 0.5 },
-  enterStatsBtnWrap: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 8, paddingVertical: 10, borderRadius: 10, backgroundColor: '#F59E0B15', borderWidth: 1, borderColor: '#F59E0B40' },
+  viewRecapText: { fontSize: 12, fontFamily: FONTS.bodyExtraBold, color: BRAND.skyBlue, letterSpacing: 0.5 },
+  enterStatsBtnWrap: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 8, paddingVertical: 10, borderRadius: 10, backgroundColor: BRAND.goldBrand + '15', borderWidth: 1, borderColor: '#F59E0B40' },
   enterStatsBtnText: { fontSize: 12, fontFamily: FONTS.bodyExtraBold, color: '#F59E0B', letterSpacing: 0.5 },
 
   // ====== LIVE MODE ======
@@ -1826,7 +1826,7 @@ const gs = StyleSheet.create({
 
   // Header right group
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  undoLastBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#1E293B', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#334155' },
+  undoLastBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#1E293B', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: BRAND.textFaint },
   undoHint: { fontSize: 9, fontFamily: FONTS.bodyBold, color: '#F97316', maxWidth: 60 },
 
   // Bench
@@ -1835,7 +1835,7 @@ const gs = StyleSheet.create({
   benchSlot: { alignItems: 'center', width: 52, gap: 2 },
   benchSlotActive: { opacity: 1, backgroundColor: '#F9731615', borderRadius: 8, padding: 2 },
   benchPhoto: { width: 36, height: 36, borderRadius: 18 },
-  benchJersey: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#1E293B', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#334155' },
+  benchJersey: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#1E293B', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: BRAND.textFaint },
   benchJerseyText: { fontSize: 14, fontFamily: FONTS.bodyExtraBold, color: '#94A3B8' },
   benchName: { fontSize: 8, fontFamily: FONTS.bodyBold, color: '#64748B', textAlign: 'center', width: 48 },
 

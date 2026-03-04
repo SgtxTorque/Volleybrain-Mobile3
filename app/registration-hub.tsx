@@ -68,7 +68,7 @@ type Registration = {
   registration_source: string;
   registration_data?: any;
   waivers_accepted?: Record<string, boolean>;
-  custom_answers?: Record<string, string>;
+  custom_answers?: Record<string, any>;
   signature_name?: string;
   signature_date?: string;
   player: {
@@ -126,7 +126,6 @@ type Registration = {
   }[];
   sport?: Sport;
   season?: Season;
-  custom_answers?: Record<string, any>;
 };
 
 type RegistrationStats = {

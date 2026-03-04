@@ -1058,7 +1058,7 @@ export default function LineupBuilderScreen() {
               </TouchableOpacity>
             ))}
             <TouchableOpacity style={styles.copyAllBtn} onPress={copyToAllSets}>
-              <Ionicons name="copy-outline" size={14} color="#6366F1" />
+              <Ionicons name="copy-outline" size={14} color={BRAND.skyBlue} />
               <Text style={styles.copyAllBtnText}>COPY ALL</Text>
             </TouchableOpacity>
           </View>
@@ -1134,7 +1134,7 @@ export default function LineupBuilderScreen() {
             {/* Serving area indicator (volleyball only) */}
             {isVolleyball && (
               <View style={styles.serveArea}>
-                <Ionicons name="arrow-up-circle" size={14} color="#64748B" />
+                <Ionicons name="arrow-up-circle" size={14} color={BRAND.textMuted} />
                 <Text style={styles.serveAreaText}>SERVICE ZONE (P1)</Text>
               </View>
             )}
@@ -1151,12 +1151,12 @@ export default function LineupBuilderScreen() {
         {/* Action Buttons */}
         <View style={styles.actionBar}>
           <TouchableOpacity style={styles.actionBtn} onPress={handleAutoFill}>
-            <Ionicons name="flash" size={18} color="#F59E0B" />
-            <Text style={[styles.actionBtnText, { color: '#F59E0B' }]}>AUTO-FILL</Text>
+            <Ionicons name="flash" size={18} color={BRAND.goldBrand} />
+            <Text style={[styles.actionBtnText, { color: BRAND.goldBrand }]}>AUTO-FILL</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionBtn} onPress={handleClearLineup}>
-            <Ionicons name="trash-outline" size={18} color="#EF4444" />
-            <Text style={[styles.actionBtnText, { color: '#EF4444' }]}>CLEAR</Text>
+            <Ionicons name="trash-outline" size={18} color={BRAND.coral} />
+            <Text style={[styles.actionBtnText, { color: BRAND.coral }]}>CLEAR</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionBtn, styles.actionBtnSave]}
@@ -1182,7 +1182,7 @@ export default function LineupBuilderScreen() {
               onPress={handleAutoFillFromRsvp}
               disabled={loadingRsvps}
             >
-              <Ionicons name="people" size={18} color="#10B981" />
+              <Ionicons name="people" size={18} color={BRAND.teal} />
               <Text style={styles.rsvpAutoFillText}>
                 AUTO-FILL FROM RSVP ({rsvpPlayerIds.size} going)
               </Text>
@@ -1197,14 +1197,14 @@ export default function LineupBuilderScreen() {
               style={styles.rotationToggle}
               onPress={() => setShowRotationPreview(!showRotationPreview)}
             >
-              <Ionicons name="sync" size={18} color="#6366F1" />
+              <Ionicons name="sync" size={18} color={BRAND.skyBlue} />
               <Text style={styles.rotationToggleText}>
                 {showRotationPreview ? 'HIDE ROTATION PREVIEW' : 'ROTATION PREVIEW'}
               </Text>
               <Ionicons
                 name={showRotationPreview ? 'chevron-up' : 'chevron-down'}
                 size={16}
-                color="#6366F1"
+                color={BRAND.skyBlue}
               />
             </TouchableOpacity>
 
@@ -1216,7 +1216,7 @@ export default function LineupBuilderScreen() {
                     style={styles.rotationNavBtn}
                     onPress={() => setPreviewRotation((prev) => (prev - 1 + 6) % 6)}
                   >
-                    <Ionicons name="chevron-back" size={20} color="#94A3B8" />
+                    <Ionicons name="chevron-back" size={20} color={BRAND.textFaint} />
                   </TouchableOpacity>
                   <View style={styles.rotationNavCenter}>
                     <Text style={styles.rotationNavLabel}>
@@ -1232,7 +1232,7 @@ export default function LineupBuilderScreen() {
                     style={styles.rotationNavBtn}
                     onPress={() => setPreviewRotation((prev) => (prev + 1) % 6)}
                   >
-                    <Ionicons name="chevron-forward" size={20} color="#94A3B8" />
+                    <Ionicons name="chevron-forward" size={20} color={BRAND.textFaint} />
                   </TouchableOpacity>
                 </View>
 
@@ -1309,7 +1309,7 @@ export default function LineupBuilderScreen() {
         {lineup.some((s) => s.player) && (
           <View style={styles.subsSection}>
             <View style={styles.subsHeader}>
-              <Ionicons name="swap-horizontal" size={18} color="#F59E0B" />
+              <Ionicons name="swap-horizontal" size={18} color={BRAND.goldBrand} />
               <Text style={styles.subsTitle}>SUBSTITUTIONS</Text>
             </View>
             <Text style={styles.subsDescription}>
@@ -1331,7 +1331,7 @@ export default function LineupBuilderScreen() {
                       </Text>
                       <Text style={styles.subStarterLabel}>{slot.label}</Text>
                     </View>
-                    <Ionicons name="arrow-forward" size={16} color="#475569" />
+                    <Ionicons name="arrow-forward" size={16} color={BRAND.textFaint} />
                     {subPlayer ? (
                       <TouchableOpacity
                         style={styles.subAssignedWrap}
@@ -1340,7 +1340,7 @@ export default function LineupBuilderScreen() {
                         <Text style={styles.subAssignedName} numberOfLines={1}>
                           #{subPlayer.jersey_number || '?'} {subPlayer.first_name}
                         </Text>
-                        <Ionicons name="close-circle" size={16} color="#EF4444" />
+                        <Ionicons name="close-circle" size={16} color={BRAND.coral} />
                       </TouchableOpacity>
                     ) : (
                       <TouchableOpacity
@@ -1359,7 +1359,7 @@ export default function LineupBuilderScreen() {
         {/* Bench Section */}
         <View style={styles.benchSection}>
           <View style={styles.benchHeader}>
-            <Ionicons name="people" size={18} color="#64748B" />
+            <Ionicons name="people" size={18} color={BRAND.textMuted} />
             <Text style={styles.benchTitle}>BENCH</Text>
             <Text style={styles.benchCount}>{benchPlayers.length} players</Text>
           </View>
@@ -1429,7 +1429,7 @@ export default function LineupBuilderScreen() {
                 }}
                 style={styles.modalCloseBtn}
               >
-                <Ionicons name="close" size={24} color="#94A3B8" />
+                <Ionicons name="close" size={24} color={BRAND.textFaint} />
               </TouchableOpacity>
             </View>
 
@@ -1437,7 +1437,7 @@ export default function LineupBuilderScreen() {
             {assigningPosition &&
               lineup.find((s) => s.position === assigningPosition)?.player && (
                 <TouchableOpacity style={styles.removeSlotBtn} onPress={handleRemoveFromSlot}>
-                  <Ionicons name="remove-circle" size={20} color="#EF4444" />
+                  <Ionicons name="remove-circle" size={20} color={BRAND.coral} />
                   <Text style={styles.removeSlotBtnText}>REMOVE FROM POSITION</Text>
                 </TouchableOpacity>
               )}
@@ -1518,7 +1518,7 @@ export default function LineupBuilderScreen() {
                 }}
                 style={styles.modalCloseBtn}
               >
-                <Ionicons name="close" size={24} color="#94A3B8" />
+                <Ionicons name="close" size={24} color={BRAND.textFaint} />
               </TouchableOpacity>
             </View>
 
@@ -1553,7 +1553,7 @@ export default function LineupBuilderScreen() {
                       <Text style={styles.assignPlayerPos}>{player.position}</Text>
                     )}
                   </View>
-                  <Ionicons name="swap-horizontal" size={24} color="#F59E0B" />
+                  <Ionicons name="swap-horizontal" size={24} color={BRAND.goldBrand} />
                 </TouchableOpacity>
               )}
             />
@@ -1602,7 +1602,7 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     fontSize: 11,
     fontFamily: FONTS.bodySemiBold,
-    color: '#94A3B8',
+    color: BRAND.textFaint,
     marginTop: 2,
     letterSpacing: 0.5,
   },
@@ -1749,7 +1749,7 @@ const styles = StyleSheet.create({
   formationLabel: {
     fontSize: 12,
     fontFamily: FONTS.bodyBold,
-    color: '#64748B',
+    color: BRAND.textMuted,
     letterSpacing: 1.5,
     textTransform: 'uppercase',
   },
@@ -1774,7 +1774,7 @@ const styles = StyleSheet.create({
   formationBtnText: {
     fontSize: 14,
     fontFamily: FONTS.bodyBold,
-    color: '#64748B',
+    color: BRAND.textMuted,
   },
   formationBtnTextActive: {
     color: BRAND.teal,
@@ -1803,7 +1803,7 @@ const styles = StyleSheet.create({
   setTabText: {
     fontSize: 13,
     fontFamily: FONTS.bodyExtraBold,
-    color: '#64748B',
+    color: BRAND.textMuted,
     letterSpacing: 1,
   },
   setTabTextActive: {
@@ -1817,14 +1817,14 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 10,
-    backgroundColor: '#6366F115',
+    backgroundColor: BRAND.skyBlue + '15',
     borderWidth: 1,
-    borderColor: '#6366F140',
+    borderColor: BRAND.skyBlue + '40',
   },
   copyAllBtnText: {
     fontSize: 10,
     fontFamily: FONTS.bodyExtraBold,
-    color: '#6366F1',
+    color: BRAND.skyBlue,
     letterSpacing: 0.5,
   },
 
@@ -1935,7 +1935,7 @@ const styles = StyleSheet.create({
   tapToAssign: {
     fontSize: 8,
     fontFamily: FONTS.bodyBold,
-    color: '#64748B',
+    color: BRAND.textMuted,
     textAlign: 'center',
     letterSpacing: 0.5,
     lineHeight: 12,
@@ -1967,13 +1967,13 @@ const styles = StyleSheet.create({
   serveAreaText: {
     fontSize: 9,
     fontFamily: FONTS.bodySemiBold,
-    color: '#64748B',
+    color: BRAND.textMuted,
     letterSpacing: 0.5,
   },
   longPressHint: {
     fontSize: 11,
     fontFamily: FONTS.bodyMedium,
-    color: '#475569',
+    color: BRAND.textFaint,
     textAlign: 'center',
     marginTop: 8,
     fontStyle: 'italic',
@@ -2027,7 +2027,7 @@ const styles = StyleSheet.create({
   benchTitle: {
     fontSize: 13,
     fontFamily: FONTS.bodyBold,
-    color: '#94A3B8',
+    color: BRAND.textFaint,
     letterSpacing: 1.5,
     textTransform: 'uppercase',
     flex: 1,
@@ -2035,7 +2035,7 @@ const styles = StyleSheet.create({
   benchCount: {
     fontSize: 12,
     fontFamily: FONTS.bodySemiBold,
-    color: '#64748B',
+    color: BRAND.textMuted,
   },
   benchEmpty: {
     paddingVertical: 20,
@@ -2043,7 +2043,7 @@ const styles = StyleSheet.create({
   },
   benchEmptyText: {
     fontSize: 13,
-    color: '#475569',
+    color: BRAND.textFaint,
     fontStyle: 'italic',
   },
   benchGrid: {
@@ -2078,7 +2078,7 @@ const styles = StyleSheet.create({
   benchJerseyText: {
     fontSize: 15,
     fontFamily: FONTS.bodyExtraBold,
-    color: '#94A3B8',
+    color: BRAND.textFaint,
   },
   benchPlayerName: {
     fontSize: 10,
@@ -2089,7 +2089,7 @@ const styles = StyleSheet.create({
   benchPlayerPos: {
     fontSize: 9,
     fontFamily: FONTS.bodyMedium,
-    color: '#64748B',
+    color: BRAND.textMuted,
     marginTop: 2,
   },
 
@@ -2104,7 +2104,7 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 14,
     fontFamily: FONTS.bodySemiBold,
-    color: '#94A3B8',
+    color: BRAND.textFaint,
   },
 
   // ── Assignment Modal ──
@@ -2141,7 +2141,7 @@ const styles = StyleSheet.create({
   assignModalSubtitle: {
     fontSize: 12,
     fontFamily: FONTS.bodySemiBold,
-    color: '#64748B',
+    color: BRAND.textMuted,
     marginTop: 2,
   },
   modalCloseBtn: {
@@ -2159,14 +2159,14 @@ const styles = StyleSheet.create({
     marginHorizontal: 24,
     marginTop: 12,
     borderRadius: 12,
-    backgroundColor: '#EF444415',
+    backgroundColor: BRAND.coral + '15',
     borderWidth: 1,
-    borderColor: '#EF444440',
+    borderColor: BRAND.coral + '40',
   },
   removeSlotBtnText: {
     fontSize: 13,
     fontFamily: FONTS.bodyExtraBold,
-    color: '#EF4444',
+    color: BRAND.coral,
     letterSpacing: 0.5,
   },
   assignList: {
@@ -2179,7 +2179,7 @@ const styles = StyleSheet.create({
   },
   assignEmptyText: {
     fontSize: 14,
-    color: '#64748B',
+    color: BRAND.textMuted,
   },
   assignPlayerRow: {
     flexDirection: 'row',
@@ -2214,7 +2214,7 @@ const styles = StyleSheet.create({
   assignJerseyText: {
     fontSize: 18,
     fontFamily: FONTS.bodyExtraBold,
-    color: '#94A3B8',
+    color: BRAND.textFaint,
   },
   assignPlayerInfo: {
     flex: 1,
@@ -2226,7 +2226,7 @@ const styles = StyleSheet.create({
   },
   assignPlayerPos: {
     fontSize: 12,
-    color: '#64748B',
+    color: BRAND.textMuted,
     marginTop: 2,
   },
   currentBadge: {
@@ -2254,14 +2254,14 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 12,
     borderRadius: 12,
-    backgroundColor: '#10B98115',
+    backgroundColor: BRAND.teal + '15',
     borderWidth: 1,
-    borderColor: '#10B98140',
+    borderColor: BRAND.teal + '40',
   },
   rsvpAutoFillText: {
     fontSize: 12,
     fontFamily: FONTS.bodyExtraBold,
-    color: '#10B981',
+    color: BRAND.teal,
     letterSpacing: 0.5,
   },
 
@@ -2285,7 +2285,7 @@ const styles = StyleSheet.create({
   rotationToggleText: {
     fontSize: 12,
     fontFamily: FONTS.bodyExtraBold,
-    color: '#6366F1',
+    color: BRAND.skyBlue,
     letterSpacing: 0.5,
   },
   rotationPreviewContainer: {
@@ -2317,13 +2317,13 @@ const styles = StyleSheet.create({
   rotationNavLabel: {
     fontSize: 14,
     fontFamily: FONTS.bodyExtraBold,
-    color: '#6366F1',
+    color: BRAND.skyBlue,
     letterSpacing: 1,
   },
   rotationResetText: {
     fontSize: 11,
     fontFamily: FONTS.bodySemiBold,
-    color: '#94A3B8',
+    color: BRAND.textFaint,
     marginTop: 2,
     textDecorationLine: 'underline',
   },
@@ -2341,18 +2341,18 @@ const styles = StyleSheet.create({
     borderColor: '#1E293B',
   },
   rotationMiniCardActive: {
-    borderColor: '#6366F1',
-    backgroundColor: '#6366F115',
+    borderColor: BRAND.skyBlue,
+    backgroundColor: BRAND.skyBlue + '15',
   },
   rotationMiniTitle: {
     fontSize: 11,
     fontFamily: FONTS.bodyExtraBold,
-    color: '#64748B',
+    color: BRAND.textMuted,
     letterSpacing: 1,
     marginBottom: 6,
   },
   rotationMiniTitleActive: {
-    color: '#6366F1',
+    color: BRAND.skyBlue,
   },
   rotationMiniRow: {
     flexDirection: 'row',
@@ -2376,7 +2376,7 @@ const styles = StyleSheet.create({
   rotationServeLabel: {
     fontSize: 7,
     fontFamily: FONTS.bodyBold,
-    color: '#10B981',
+    color: BRAND.teal,
     letterSpacing: 0.5,
     marginTop: 2,
   },
@@ -2400,12 +2400,12 @@ const styles = StyleSheet.create({
   subsTitle: {
     fontSize: 13,
     fontFamily: FONTS.bodyBold,
-    color: '#F59E0B',
+    color: BRAND.goldBrand,
     letterSpacing: 1.5,
   },
   subsDescription: {
     fontSize: 11,
-    color: '#64748B',
+    color: BRAND.textMuted,
     marginBottom: 12,
     fontStyle: 'italic',
   },
@@ -2440,23 +2440,23 @@ const styles = StyleSheet.create({
   },
   subStarterLabel: {
     fontSize: 10,
-    color: '#64748B',
+    color: BRAND.textMuted,
   },
   subAssignedWrap: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#F59E0B15',
+    backgroundColor: BRAND.goldBrand + '15',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#F59E0B40',
+    borderColor: BRAND.goldBrand + '40',
   },
   subAssignedName: {
     fontSize: 12,
     fontFamily: FONTS.bodyBold,
-    color: '#F59E0B',
+    color: BRAND.goldBrand,
     maxWidth: 80,
   },
   subAssignBtn: {
@@ -2470,6 +2470,6 @@ const styles = StyleSheet.create({
   subAssignBtnText: {
     fontSize: 11,
     fontFamily: FONTS.bodyBold,
-    color: '#94A3B8',
+    color: BRAND.textFaint,
   },
 });
