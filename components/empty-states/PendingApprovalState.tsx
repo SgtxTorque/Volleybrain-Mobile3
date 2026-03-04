@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { Animated, Image, StyleSheet, Text, View } from 'react-native';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 
@@ -24,8 +24,12 @@ export default function PendingApprovalState({ orgName }: Props) {
 
   return (
     <View style={s.container}>
-      <Animated.View style={[s.iconCircle, { opacity: pulseAnim }]}>
-        <Ionicons name="hourglass" size={56} color={BRAND.skyBlue} />
+      <Animated.View style={[s.mascotWrap, { opacity: pulseAnim }]}>
+        <Image
+          source={require('@/assets/images/mascot/SleepLynx.png')}
+          style={s.mascot}
+          resizeMode="contain"
+        />
       </Animated.View>
 
       <Text style={s.title}>Almost There!</Text>
@@ -48,10 +52,11 @@ const s = StyleSheet.create({
     flex: 1, justifyContent: 'center', alignItems: 'center',
     padding: 32, backgroundColor: BRAND.offWhite,
   },
-  iconCircle: {
-    width: 110, height: 110, borderRadius: 55,
-    backgroundColor: BRAND.skyBlue + '15', justifyContent: 'center', alignItems: 'center',
-    marginBottom: 24,
+  mascotWrap: {
+    marginBottom: 24, alignItems: 'center',
+  },
+  mascot: {
+    width: 120, height: 120,
   },
   title: {
     fontFamily: FONTS.bodyBold, fontSize: 24, color: BRAND.navy,

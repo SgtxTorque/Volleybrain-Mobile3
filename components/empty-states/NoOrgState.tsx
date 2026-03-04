@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -73,9 +74,11 @@ export default function NoOrgState() {
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
       <ScrollView contentContainerStyle={s.content}>
-        <View style={s.iconCircle}>
-          <Ionicons name="compass-outline" size={56} color={BRAND.teal} />
-        </View>
+        <Image
+          source={require('@/assets/images/mascot/HiLynx.png')}
+          style={s.mascot}
+          resizeMode="contain"
+        />
 
         <Text style={s.title}>You're not connected to an organization yet</Text>
         <Text style={s.subtitle}>
@@ -147,9 +150,8 @@ const s = StyleSheet.create({
     flexGrow: 1, justifyContent: 'center', alignItems: 'center',
     padding: 32, gap: 16,
   },
-  iconCircle: {
-    width: 110, height: 110, borderRadius: 55,
-    backgroundColor: BRAND.teal + '12', justifyContent: 'center', alignItems: 'center',
+  mascot: {
+    width: 120, height: 120, alignSelf: 'center',
     marginBottom: 8,
   },
   title: {

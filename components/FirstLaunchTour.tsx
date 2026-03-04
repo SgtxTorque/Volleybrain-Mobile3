@@ -6,6 +6,7 @@ import {
   Animated,
   Dimensions,
   FlatList,
+  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -84,11 +85,19 @@ export default function FirstLaunchTour({ onDismiss }: Props) {
 
   const isLast = activeIndex === SLIDES.length - 1;
 
-  const renderSlide = ({ item }: { item: TourSlide }) => (
+  const renderSlide = ({ item, index }: { item: TourSlide; index: number }) => (
     <View style={s.slide}>
-      <View style={[s.iconCircle, { backgroundColor: item.color + '15' }]}>
-        <Ionicons name={item.icon as any} size={56} color={item.color} />
-      </View>
+      {index === 0 ? (
+        <Image
+          source={require('@/assets/images/mascot/Meet-Lynx.png')}
+          style={s.mascot}
+          resizeMode="contain"
+        />
+      ) : (
+        <View style={[s.iconCircle, { backgroundColor: item.color + '15' }]}>
+          <Ionicons name={item.icon as any} size={56} color={item.color} />
+        </View>
+      )}
       <Text style={s.slideTitle}>{item.title}</Text>
       <Text style={s.slideBody}>{item.body}</Text>
     </View>
@@ -180,6 +189,12 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 40,
+  },
+  mascot: {
+    width: 120,
+    height: 120,
+    alignSelf: 'center',
+    marginBottom: 32,
   },
   iconCircle: {
     width: 120,

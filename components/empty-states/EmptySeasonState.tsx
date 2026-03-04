@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 
@@ -15,9 +15,11 @@ export default function EmptySeasonState({ role }: Props) {
 
   return (
     <View style={s.container}>
-      <View style={s.iconCircle}>
-        <Ionicons name="sunny-outline" size={56} color={BRAND.skyBlue} />
-      </View>
+      <Image
+        source={require('@/assets/images/mascot/SleepLynx.png')}
+        style={s.mascot}
+        resizeMode="contain"
+      />
 
       <Text style={s.title}>Nothing Happening Yet</Text>
       <Text style={s.subtitle}>
@@ -44,9 +46,8 @@ const s = StyleSheet.create({
     flex: 1, justifyContent: 'center', alignItems: 'center',
     padding: 32, backgroundColor: BRAND.offWhite,
   },
-  iconCircle: {
-    width: 110, height: 110, borderRadius: 55,
-    backgroundColor: BRAND.skyBlue + '12', justifyContent: 'center', alignItems: 'center',
+  mascot: {
+    width: 120, height: 120, alignSelf: 'center',
     marginBottom: 24,
   },
   title: {

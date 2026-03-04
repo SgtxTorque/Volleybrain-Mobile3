@@ -114,7 +114,7 @@ export default function LoginScreen() {
           {/* Logo */}
           <View style={s.logoWrap}>
             <Image
-              source={require('@/assets/images/lynx-logo.png')}
+              source={require('@/assets/images/brand/lynx-icon-logo.png')}
               style={s.logo}
               resizeMode="contain"
             />

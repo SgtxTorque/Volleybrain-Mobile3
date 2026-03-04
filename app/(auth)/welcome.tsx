@@ -95,7 +95,7 @@ export default function WelcomeScreen() {
           ]}
         >
           <Image
-            source={require('@/assets/images/lynx-mascot.png')}
+            source={require('@/assets/images/mascot/HiLynx.png')}
             style={s.mascot}
             resizeMode="contain"
           />

@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
@@ -60,17 +60,23 @@ export default function PendingApprovalScreen() {
         {approved ? (
           /* Approved state */
           <>
-            <View style={[s.iconCircle, { backgroundColor: BRAND.teal + '15' }]}>
-              <Ionicons name="checkmark-circle" size={64} color={BRAND.teal} />
-            </View>
+            <Image
+              source={require('@/assets/images/mascot/celebrate.png')}
+              style={s.mascot}
+              resizeMode="contain"
+            />
             <Text style={s.title}>You're in!</Text>
             <Text style={s.subtitle}>Redirecting to your dashboard...</Text>
           </>
         ) : (
           /* Waiting state */
           <>
-            <Animated.View style={[s.iconCircle, { opacity: pulseAnim }]}>
-              <Ionicons name="hourglass" size={64} color={BRAND.skyBlue} />
+            <Animated.View style={[s.mascotWrap, { opacity: pulseAnim }]}>
+              <Image
+                source={require('@/assets/images/mascot/SleepLynx.png')}
+                style={s.mascot}
+                resizeMode="contain"
+              />
             </Animated.View>
 
             <Text style={s.title}>Almost There!</Text>
@@ -110,10 +116,11 @@ export default function PendingApprovalScreen() {
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: BRAND.offWhite },
   content: { flex: 1, padding: 24, justifyContent: 'center', alignItems: 'center' },
-  iconCircle: {
-    width: 120, height: 120, borderRadius: 60,
-    backgroundColor: BRAND.warmGray, justifyContent: 'center', alignItems: 'center',
-    marginBottom: 28,
+  mascotWrap: {
+    marginBottom: 28, alignItems: 'center',
+  },
+  mascot: {
+    width: 120, height: 120,
   },
   title: {
     fontFamily: FONTS.bodyBold, fontSize: 26, color: BRAND.navy,
