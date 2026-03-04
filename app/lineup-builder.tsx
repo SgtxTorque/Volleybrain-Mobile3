@@ -975,13 +975,6 @@ export default function LineupBuilderScreen() {
             </Text>
           )}
         </View>
-        <TouchableOpacity onPress={handleSaveLineup} style={styles.saveBtn} disabled={saving}>
-          {saving ? (
-            <ActivityIndicator color="#000" size="small" />
-          ) : (
-            <Text style={styles.saveBtnText}>SAVE</Text>
-          )}
-        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.mainScroll} contentContainerStyle={{ paddingBottom: 40 }}>
@@ -1006,7 +999,7 @@ export default function LineupBuilderScreen() {
                   style={[
                     styles.teamTabText,
                     { color: BRAND.textMuted },
-                    selectedTeam?.id === team.id && { color: '#F97316' },
+                    selectedTeam?.id === team.id && { color: BRAND.teal },
                   ]}
                 >
                   {team.name}
@@ -1372,7 +1365,7 @@ export default function LineupBuilderScreen() {
           </View>
 
           {loadingRoster ? (
-            <ActivityIndicator color="#F97316" style={{ marginTop: 20 }} />
+            <ActivityIndicator color={BRAND.teal} style={{ marginTop: 20 }} />
           ) : benchPlayers.length === 0 ? (
             <View style={styles.benchEmpty}>
               <Text style={styles.benchEmptyText}>
@@ -1408,7 +1401,7 @@ export default function LineupBuilderScreen() {
       {/* Loading overlay */}
       {loadingLineup && (
         <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#F97316" />
+          <ActivityIndicator size="large" color={BRAND.teal} />
           <Text style={styles.loadingText}>Loading lineup...</Text>
         </View>
       )}
@@ -1495,7 +1488,7 @@ export default function LineupBuilderScreen() {
                         <Text style={styles.currentBadgeText}>CURRENT</Text>
                       </View>
                     ) : (
-                      <Ionicons name="add-circle" size={24} color="#F97316" />
+                      <Ionicons name="add-circle" size={24} color={BRAND.teal} />
                     )}
                   </TouchableOpacity>
                 );
@@ -1586,7 +1579,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 12,
-    paddingTop: 56,
+    paddingTop: 12,
     paddingBottom: 12,
     backgroundColor: '#0D1117',
   },
@@ -1614,7 +1607,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   saveBtn: {
-    backgroundColor: '#F97316',
+    backgroundColor: BRAND.teal,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 12,
@@ -1648,9 +1641,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
   },
   teamTabActiveInline: {
-    backgroundColor: '#F9731625',
+    backgroundColor: BRAND.teal + '25',
     borderBottomWidth: 2,
-    borderBottomColor: '#F97316',
+    borderBottomColor: BRAND.teal,
   },
   teamTabText: {
     fontSize: 14,
@@ -1775,8 +1768,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   formationBtnActive: {
-    backgroundColor: '#F9731625',
-    borderColor: '#F97316',
+    backgroundColor: BRAND.teal + '25',
+    borderColor: BRAND.teal,
   },
   formationBtnText: {
     fontSize: 14,
@@ -1784,7 +1777,7 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
   formationBtnTextActive: {
-    color: '#F97316',
+    color: BRAND.teal,
   },
 
   // ── Set Tab Bar ──
@@ -1804,8 +1797,8 @@ const styles = StyleSheet.create({
     borderColor: '#1E293B',
   },
   setTabActive: {
-    backgroundColor: '#F9731625',
-    borderColor: '#F97316',
+    backgroundColor: BRAND.teal + '25',
+    borderColor: BRAND.teal,
   },
   setTabText: {
     fontSize: 13,
@@ -1814,7 +1807,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   setTabTextActive: {
-    color: '#F97316',
+    color: BRAND.teal,
   },
   copyAllBtn: {
     flexDirection: 'row',
@@ -1871,14 +1864,14 @@ const styles = StyleSheet.create({
   netDash: {
     flex: 1,
     height: 2,
-    backgroundColor: '#F97316',
+    backgroundColor: BRAND.teal,
     borderRadius: 1,
     opacity: 0.6,
   },
   netLabel: {
     fontSize: 10,
     fontFamily: FONTS.bodyExtraBold,
-    color: '#F97316',
+    color: BRAND.teal,
     letterSpacing: 2,
     opacity: 0.8,
   },
@@ -2006,8 +1999,8 @@ const styles = StyleSheet.create({
     borderColor: '#1E293B',
   },
   actionBtnSave: {
-    backgroundColor: '#F97316',
-    borderColor: '#F97316',
+    backgroundColor: BRAND.teal,
+    borderColor: BRAND.teal,
   },
   actionBtnText: {
     fontSize: 12,
@@ -2199,9 +2192,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   assignPlayerRowCurrent: {
-    backgroundColor: '#F9731615',
+    backgroundColor: BRAND.teal + '15',
     borderWidth: 1,
-    borderColor: '#F9731640',
+    borderColor: BRAND.teal + '40',
   },
   assignPhoto: {
     width: 48,
@@ -2237,7 +2230,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   currentBadge: {
-    backgroundColor: '#F9731625',
+    backgroundColor: BRAND.teal + '25',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 6,
@@ -2245,7 +2238,7 @@ const styles = StyleSheet.create({
   currentBadgeText: {
     fontSize: 10,
     fontFamily: FONTS.bodyBold,
-    color: '#F97316',
+    color: BRAND.teal,
     letterSpacing: 0.5,
   },
 

@@ -6,6 +6,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
+  Image,
   RefreshControl,
   StyleSheet,
   Text,
@@ -330,7 +331,7 @@ export default function ParentHomeScroll() {
       >
         <View style={styles.compactHeaderInner}>
           <View style={styles.compactLeft}>
-            <Text style={styles.compactMascot}>{'\u{1F431}'}</Text>
+            <Image source={require('@/assets/images/mascot/HiLynx.png')} style={styles.compactMascotImg} resizeMode="contain" />
             <Text style={styles.compactBrand}>LYNX</Text>
           </View>
           <View style={styles.compactRight}>
@@ -410,9 +411,7 @@ export default function ParentHomeScroll() {
           </View>
 
           <View style={styles.welcomeContent}>
-            <Animated.Text style={[styles.mascotEmoji, mascotAnimStyle]}>
-              {'\u{1F431}'}
-            </Animated.Text>
+            <Animated.View style={[styles.mascotImageWrap, mascotAnimStyle]}><Image source={require('@/assets/images/mascot/HiLynx.png')} style={styles.mascotImage} resizeMode="contain" /></Animated.View>
             <Text style={styles.welcomeGreeting}>Welcome back, {firstName}</Text>
           </View>
 
@@ -539,7 +538,7 @@ export default function ParentHomeScroll() {
 
         {/* ─── END OF SCROLL (contextual closing) ────────────── */}
         <View style={styles.endSection}>
-          <Text style={styles.endEmoji}>{'\u{1F431}'}</Text>
+          <Image source={require('@/assets/images/mascot/SleepLynx.png')} style={styles.endMascot} resizeMode="contain" />
           <Text style={styles.endText}>
             {(() => {
               const he = data.heroEvent;
@@ -613,6 +612,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   compactMascot: { fontSize: 24 },
+  compactMascotImg: { width: 24, height: 24 },
   compactBrand: {
     fontFamily: FONTS.display,
     fontSize: 22,
@@ -686,6 +686,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   mascotEmoji: { fontSize: 48, marginBottom: 6 },
+  mascotImageWrap: { marginBottom: 6 },
+  mascotImage: { width: 64, height: 64 },
   welcomeGreeting: {
     fontFamily: FONTS.bodyBold,
     fontSize: 22,
@@ -748,6 +750,12 @@ const styles = StyleSheet.create({
   },
   endEmoji: {
     fontSize: 40,
+    opacity: 0.3,
+    marginBottom: 8,
+  },
+  endMascot: {
+    width: 48,
+    height: 48,
     opacity: 0.3,
     marginBottom: 8,
   },

@@ -242,7 +242,7 @@ const SkeletonPostCard = ({ colors }: { colors: any }) => (
   <View
     style={{
       borderBottomWidth: 1,
-      borderBottomColor: '#E5E5E5',
+      borderBottomColor: colors.border,
       paddingBottom: 12,
       marginBottom: 0,
     }}
@@ -264,7 +264,7 @@ const SkeletonPostCard = ({ colors }: { colors: any }) => (
     {/* Full-width image placeholder */}
     <View style={{ width: '100%', height: 200, backgroundColor: colors.bgSecondary, marginBottom: 12 }} />
     {/* Engagement row skeleton */}
-    <View style={{ flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 16, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#E5E5E5' }}>
+    <View style={{ flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 16, paddingTop: 8, borderTopWidth: 1, borderTopColor: colors.border }}>
       {[1, 2, 3].map((i) => (
         <View key={i} style={{ width: 60, height: 18, borderRadius: 4, backgroundColor: colors.bgSecondary }} />
       ))}
@@ -1897,7 +1897,7 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
         onPress={() => setShowShoutoutModal(true)}
         activeOpacity={0.7}
       >
-        <Text style={s.shoutoutQuickEmoji}>💪</Text>
+        <Ionicons name="megaphone-outline" size={20} color={colors.primary} />
         <Text style={[s.shoutoutQuickText, { color: colors.textSecondary }]}>Give a Shoutout</Text>
         <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
       </TouchableOpacity>
@@ -1908,7 +1908,7 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
           onPress={() => setShowChallengeModal(true)}
           activeOpacity={0.7}
         >
-          <Text style={s.shoutoutQuickEmoji}>🏆</Text>
+          <Ionicons name="trophy-outline" size={20} color={colors.primary} />
           <Text style={[s.shoutoutQuickText, { color: colors.textSecondary }]}>Create Challenge</Text>
           <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
         </TouchableOpacity>
@@ -2706,7 +2706,7 @@ const createStyles = (colors: any) =>
       paddingVertical: 12,
       gap: 12,
       borderBottomWidth: 1,
-      borderBottomColor: '#E5E5E5',
+      borderBottomColor: colors.border,
     },
     composeAvatarImg: {
       width: 38,
@@ -2761,7 +2761,7 @@ const createStyles = (colors: any) =>
     // Post Cards — flat, Facebook-style
     postCardFlat: {
       borderBottomWidth: 1,
-      borderBottomColor: '#E5E5E5',
+      borderBottomColor: colors.border,
       paddingTop: 12,
       paddingBottom: 16,
     },
@@ -2985,7 +2985,7 @@ const createStyles = (colors: any) =>
     // Engagement row (Like / Comment / Share)
     engagementDivider: {
       height: 1,
-      backgroundColor: '#E5E5E5',
+      backgroundColor: colors.border,
       marginHorizontal: 16,
       marginTop: 4,
     },
@@ -3011,7 +3011,7 @@ const createStyles = (colors: any) =>
     // Inline Comments
     commentsSection: {
       borderTopWidth: 1,
-      borderTopColor: '#E5E5E5',
+      borderTopColor: colors.border,
       marginTop: 4,
       paddingTop: 8,
       paddingHorizontal: 16,

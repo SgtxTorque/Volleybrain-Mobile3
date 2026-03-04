@@ -749,10 +749,10 @@ export default function GameDayScreen() {
               contentContainerStyle={{ paddingHorizontal: 16, gap: 10 }}
             >
               {[
-                { icon: 'add', color: '#2C5F7C', label: 'Add Event', route: '/(tabs)/schedule' },
-                { icon: 'checkmark-circle-outline', color: '#22C55E', label: 'Attendance', route: '/attendance' },
-                { icon: 'grid-outline', color: '#8B5CF6', label: 'Lineup', route: '/lineup-builder' },
-                { icon: 'analytics-outline', color: '#D94F4F', label: 'Game Prep', route: '/game-prep-wizard' },
+                { icon: 'add', color: BRAND.teal, label: 'Add Event', route: '/(tabs)/schedule' },
+                { icon: 'checkmark-circle-outline', color: BRAND.teal, label: 'Attendance', route: '/attendance' },
+                { icon: 'grid-outline', color: BRAND.skyBlue, label: 'Lineup', route: '/lineup-builder' },
+                { icon: 'analytics-outline', color: BRAND.coral, label: 'Game Prep', route: '/game-prep-wizard' },
               ].map((tool) => (
                 <Card
                   key={tool.label}
@@ -832,7 +832,7 @@ const styles = StyleSheet.create({
       padding: 16,
     },
     heroCountdown: {
-      color: '#14B8A6',
+      color: BRAND.teal,
       fontSize: 12,
       fontFamily: FONTS.bodyExtraBold,
       textTransform: 'uppercase',
@@ -871,7 +871,7 @@ const styles = StyleSheet.create({
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: '#2C5F7C',
+      backgroundColor: BRAND.teal,
       paddingVertical: 10,
       borderRadius: 24,
       gap: 6,
@@ -979,7 +979,7 @@ const styles = StyleSheet.create({
     progressBarFill: {
       height: '100%',
       borderRadius: 4,
-      backgroundColor: '#14B8A6',
+      backgroundColor: BRAND.teal,
     },
     progressLabel: {
       fontSize: 12,
