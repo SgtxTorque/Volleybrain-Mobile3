@@ -175,8 +175,6 @@ export default function EventDetailModal({
 
   const fetchMyPlayers = async () => {
     if (!user || !event) return;
-    if (__DEV__) console.log('[EventDetailModal] fetchMyPlayers start', { userId: user.id, eventTeamId: event.team_id });
-
     const { data: guardianLinks } = await supabase
       .from('player_guardians')
       .select(`
@@ -188,7 +186,6 @@ export default function EventDetailModal({
         )
       `)
       .eq('guardian_id', user.id);
-    if (__DEV__) console.log('[EventDetailModal] guardianLinks', guardianLinks);
 
     const fromGuardians: Player[] = (guardianLinks || [])
       .map((d: any) => d.player)
@@ -198,7 +195,6 @@ export default function EventDetailModal({
       .from('players')
       .select('id, first_name, last_name, jersey_number')
       .eq('parent_account_id', user.id);
-    if (__DEV__) console.log('[EventDetailModal] directPlayers by parent_account_id', directPlayers);
 
     const allPlayers: Player[] = [
       ...fromGuardians,
@@ -211,17 +207,13 @@ export default function EventDetailModal({
     });
     const uniquePlayers = Array.from(playerMap.values());
 
-    if (__DEV__) console.log('[EventDetailModal] PARENT_PLAYER_IDS', uniquePlayers.map(p => p.id));
-
     const { data: teamPlayers } = await supabase
       .from('team_players')
       .select('player_id')
       .eq('team_id', event.team_id);
-    if (__DEV__) console.log('[EventDetailModal] teamPlayers for team', event.team_id, teamPlayers);
 
     const teamPlayerIds = (teamPlayers?.map(tp => String(tp.player_id)) || []);
     let filteredPlayers = uniquePlayers.filter(p => teamPlayerIds.includes(String(p.id)));
-    if (__DEV__) console.log('[EventDetailModal] filteredPlayers', filteredPlayers);
 
     if (filteredPlayers.length === 0) {
       const { data: guardianLinks } = await supabase

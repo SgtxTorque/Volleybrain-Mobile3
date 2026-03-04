@@ -90,7 +90,7 @@ export default function LoginScreen() {
     setEmail(devEmail);
     setPassword(devPassword);
     setLoading(true);
-    console.log(`[DEV] Quick login as ${role} → ${devEmail}`);
+    if (__DEV__) console.log(`[DEV] Quick login as ${role} → ${devEmail}`);
     const { error } = await signIn(devEmail, devPassword);
     setLoading(false);
     if (error) {
