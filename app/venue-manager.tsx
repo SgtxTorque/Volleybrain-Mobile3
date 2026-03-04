@@ -24,7 +24,7 @@ export default function VenueManagerScreen() {
 
       <View style={s.content}>
         <Image
-          source={require('@/assets/images/mascots/laptoplynx.png')}
+          source={require('@/assets/images/mascot/laptoplynx.png')}
           style={s.mascot}
           resizeMode="contain"
         />
