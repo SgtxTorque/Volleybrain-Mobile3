@@ -117,7 +117,7 @@ function buildDynamicMessages(
       text: payMessages[Math.floor(Date.now() / 86400000) % payMessages.length],
       animation: 'bounce',
       type: 'payment',
-      textColor: '#F59E0B', // amberWarm
+      textColor: BRAND.warning,
       hint: 'Tap to pay \u{2192}',
       route: '/family-payments',
     });
