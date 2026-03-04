@@ -23,14 +23,14 @@ const ACTIONS = [
   { icon: '\u{1F4C5}', label: 'Quick\nSchedule', key: 'quickSchedule' },
   { icon: '\u{1F4B0}', label: 'Send\nReminder', key: 'sendReminder' },
   { icon: '\u{1F4E3}', label: 'Blast\nAll', key: 'blastAll' },
-  { icon: '\u{1F464}', label: 'Add\nPlayer', key: 'addPlayer' },
+  { icon: '\u{1F464}', label: 'Register\nPlayer', key: 'addPlayer' },
   { icon: '\u{1F4CA}', label: 'Season\nReport', key: 'seasonReport' },
 ];
 
 const ACTION_ROUTES: Record<string, string> = {
   createEvent: '/(tabs)/admin-schedule',
   quickSchedule: '/bulk-event-create',
-  sendReminder: '/blast-composer',
+  sendReminder: '/payment-reminders',
   blastAll: '/blast-composer',
   addPlayer: '/registration-hub',
   seasonReport: '/season-reports',

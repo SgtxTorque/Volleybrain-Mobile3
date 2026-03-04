@@ -19,9 +19,9 @@ type ActionItem = {
 
 const ALL_ACTIONS: ActionItem[] = [
   { icon: '\u{1F4E3}', label: 'Send a Blast', route: '/(tabs)/coach-chat' },
-  { icon: '\u{1F4DD}', label: 'Build a Lineup', route: '/(tabs)/coach-roster', offDayOnly: true },
+  { icon: '\u{1F4DD}', label: 'Build a Lineup', route: '/lineup-builder', offDayOnly: true },
   { icon: '\u{1F31F}', label: 'Give a Shoutout', route: null },
-  { icon: '\u{1F4CA}', label: 'Review Stats', route: '/(tabs)/coach-schedule', badgeKey: 'stats' },
+  { icon: '\u{1F4CA}', label: 'Review Stats', route: '/game-results', badgeKey: 'stats' },
   { icon: '\u{1F465}', label: 'Manage Roster', route: '/(tabs)/coach-roster', offDayOnly: true, badgeKey: 'roster' },
   { icon: '\u{1F3AF}', label: 'Create a Challenge', route: null },
 ];

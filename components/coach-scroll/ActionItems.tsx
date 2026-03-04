@@ -77,7 +77,7 @@ export default function ActionItems({ teamId, pendingStatsCount }: Props) {
         <TouchableOpacity
           style={styles.item}
           activeOpacity={0.7}
-          onPress={() => router.push('/(tabs)/coach-schedule' as any)}
+          onPress={() => router.push('/game-results' as any)}
         >
           <Text style={styles.itemText}>
             {'\u{1F4CA}'} {pendingStatsCount} game{pendingStatsCount > 1 ? 's' : ''} need stats entered {'\u2192'}

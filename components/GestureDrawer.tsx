@@ -174,7 +174,6 @@ const MENU_SECTIONS: MenuSection[] = [
       { icon: 'person-circle', label: 'My Profile', route: '/profile' },
       { icon: 'settings', label: 'Settings', route: '/(tabs)/settings' },
       { icon: 'notifications-outline', label: 'Notifications', route: '/notification-preferences' },
-      { icon: 'calendar', label: 'Season Settings', route: '/season-settings' },
       { icon: 'archive', label: 'Season History', route: '/season-archives' },
       { icon: 'shield-checkmark', label: 'Privacy Policy', route: '/privacy-policy' },
       { icon: 'document', label: 'Terms of Service', route: '/terms-of-service' },

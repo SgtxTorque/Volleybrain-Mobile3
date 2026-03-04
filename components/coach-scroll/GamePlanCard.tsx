@@ -45,13 +45,13 @@ export default function GamePlanCard({ event, rsvpSummary }: Props) {
   const quickActions = isGame
     ? [
         { label: 'Roster', icon: '\u{1F4CB}', route: '/(tabs)/coach-roster' },
-        { label: 'Lineup', icon: '\u{1F4DD}', route: '/(tabs)/coach-roster' },
-        { label: 'Stats', icon: '\u{1F4CA}', route: '/(tabs)/coach-schedule' },
-        { label: 'Attend.', icon: '\u{2705}', route: '/(tabs)/coach-schedule' },
+        { label: 'Lineup', icon: '\u{1F4DD}', route: `/lineup-builder?eventId=${event.id}` },
+        { label: 'Stats', icon: '\u{1F4CA}', route: `/game-results?eventId=${event.id}` },
+        { label: 'Attend.', icon: '\u{2705}', route: `/attendance?eventId=${event.id}` },
       ]
     : [
         { label: 'Roster', icon: '\u{1F4CB}', route: '/(tabs)/coach-roster' },
-        { label: 'Attend.', icon: '\u{2705}', route: '/(tabs)/coach-schedule' },
+        { label: 'Attend.', icon: '\u{2705}', route: `/attendance?eventId=${event.id}` },
       ];
 
   // RSVP summary text

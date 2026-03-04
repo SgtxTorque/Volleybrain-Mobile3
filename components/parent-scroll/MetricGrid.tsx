@@ -24,7 +24,7 @@ export default function MetricGrid({ record, payment, xp, chat }: Props) {
   const showBalance = payment.balance > 0;
 
   // Balance amount color by urgency (simplified — we don't have due dates in current data)
-  const balanceColor = showBalance ? BRAND.error : '#22C55E'; // success green
+  const balanceColor = showBalance ? BRAND.error : BRAND.success;
 
   return (
     <View style={styles.container}>
@@ -34,7 +34,7 @@ export default function MetricGrid({ record, payment, xp, chat }: Props) {
         <TouchableOpacity
           style={styles.card}
           activeOpacity={0.7}
-          onPress={() => router.push('/(tabs)/parent-schedule' as any)}
+          onPress={() => router.push('/standings' as any)}
         >
           <Text style={styles.emoji}>{'\u{1F3C6}'}</Text>
           <Text style={styles.bigNumber}>
