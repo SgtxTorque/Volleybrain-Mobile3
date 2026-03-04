@@ -1,5 +1,6 @@
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
+import { shadows } from '@/lib/design-tokens';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
@@ -471,7 +472,7 @@ const styles = StyleSheet.create({
   legendDot: { width: 10, height: 10, borderRadius: 5 },
   legendText: { fontSize: 12, color: BRAND.textMuted },
 
-  calendarCard: { backgroundColor: BRAND.surfaceCard, marginHorizontal: 16, borderRadius: 16, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: BRAND.cardBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
+  calendarCard: { backgroundColor: BRAND.surfaceCard, marginHorizontal: 16, borderRadius: 16, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: BRAND.cardBorder, ...shadows.card },
   dayHeaderRow: { flexDirection: 'row' },
   dayHeaderCell: { flex: 1, alignItems: 'center', paddingVertical: 8 },
   dayHeaderText: { fontSize: 12, fontFamily: FONTS.bodySemiBold, color: BRAND.textMuted },
@@ -486,7 +487,7 @@ const styles = StyleSheet.create({
 
   upcomingSection: { paddingHorizontal: 16, marginBottom: 16 },
   upcomingSectionTitle: { fontSize: 13, fontFamily: FONTS.bodyBold, color: BRAND.textMuted, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 1.2 },
-  upcomingCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: BRAND.surfaceCard, borderRadius: 16, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: BRAND.cardBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
+  upcomingCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: BRAND.surfaceCard, borderRadius: 16, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: BRAND.cardBorder, ...shadows.card },
   upcomingDot: { width: 10, height: 10, borderRadius: 5, marginRight: 12 },
   upcomingInfo: { flex: 1 },
   upcomingDate: { fontSize: 14, fontFamily: FONTS.bodySemiBold, color: BRAND.textPrimary },

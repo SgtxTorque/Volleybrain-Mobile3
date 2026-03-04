@@ -8,6 +8,7 @@ import { useSeason } from '@/lib/season';
 import { useSport } from '@/lib/sport';
 import { supabase } from '@/lib/supabase';
 import { BRAND } from '@/theme/colors';
+import { shadows } from '@/lib/design-tokens';
 import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -1739,7 +1740,7 @@ const gs = StyleSheet.create({
   emptySubtext: { fontSize: 14, color: '#64748B', marginTop: 4 },
 
   // Game Card
-  gameCard: { backgroundColor: 'rgba(30, 41, 59, 0.7)', borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.08)', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
+  gameCard: { backgroundColor: 'rgba(30, 41, 59, 0.7)', borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.08)', ...shadows.card },
   gameCardToday: { borderColor: '#FF3B3B40', backgroundColor: '#1A0D0D' },
   gameCardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   gameCardDate: { flexDirection: 'row', alignItems: 'center', gap: 12 },
