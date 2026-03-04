@@ -74,7 +74,7 @@ export default function PaymentSnapshot({
               <TouchableOpacity
                 activeOpacity={0.7}
                 style={styles.reminderBtn}
-                onPress={() => router.push('/blast-composer' as any)}
+                onPress={() => router.push('/payment-reminders' as any)}
               >
                 <Text style={styles.reminderBtnText}>Send All Reminders</Text>
               </TouchableOpacity>

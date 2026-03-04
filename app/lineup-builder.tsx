@@ -998,7 +998,7 @@ export default function LineupBuilderScreen() {
                 <Text
                   style={[
                     styles.teamTabText,
-                    { color: BRAND.textMuted },
+                    { color: 'rgba(255,255,255,0.5)' },
                     selectedTeam?.id === team.id && { color: BRAND.teal },
                   ]}
                 >

@@ -96,17 +96,17 @@ const formatDateHeader = (dateStr: string): string => {
 
 // ─── Event Type Config ─────────────────────────────────────
 const eventTypeConfig: Record<string, { icon: string; color: string; label: string }> = {
-  game: { icon: 'trophy', color: '#D94F4F', label: 'Game' },
-  practice: { icon: 'fitness', color: '#14B8A6', label: 'Practice' },
-  event: { icon: 'calendar', color: '#2C5F7C', label: 'Event' },
-  tournament: { icon: 'medal', color: '#E8913A', label: 'Tournament' },
-  other: { icon: 'calendar', color: '#2C5F7C', label: 'Other' },
+  game: { icon: 'trophy', color: BRAND.coral, label: 'Game' },
+  practice: { icon: 'fitness', color: BRAND.teal, label: 'Practice' },
+  event: { icon: 'calendar', color: BRAND.skyBlue, label: 'Event' },
+  tournament: { icon: 'medal', color: BRAND.goldBrand, label: 'Tournament' },
+  other: { icon: 'calendar', color: BRAND.skyBlue, label: 'Other' },
 };
 
 const locationTypeConfig: Record<string, { label: string; color: string; icon: string }> = {
-  home: { label: 'HOME', color: '#14B8A6', icon: 'home' },
-  away: { label: 'AWAY', color: '#E8913A', icon: 'airplane' },
-  neutral: { label: 'NEUTRAL', color: '#0EA5E9', icon: 'location' },
+  home: { label: 'HOME', color: BRAND.teal, icon: 'home' },
+  away: { label: 'AWAY', color: BRAND.goldBrand, icon: 'airplane' },
+  neutral: { label: 'NEUTRAL', color: BRAND.skyBlue, icon: 'location' },
 };
 
 // ═══════════════════════════════════════════════════════════

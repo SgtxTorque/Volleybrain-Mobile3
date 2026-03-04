@@ -47,7 +47,7 @@ export default function QuickActions({ isEventDay, pendingStatsCount = 0, hasRos
       return { show: true, color: BRAND.error };
     }
     if (action.badgeKey === 'roster' && hasRosterIssues) {
-      return { show: true, color: '#F59E0B' };
+      return { show: true, color: BRAND.goldBrand };
     }
     return { show: false, color: '' };
   };
