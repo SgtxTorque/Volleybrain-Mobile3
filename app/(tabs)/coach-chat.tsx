@@ -736,8 +736,8 @@ export default function CoachChatScreen() {
             onPress={() => { setFabExpanded(false); router.push('/blast-composer' as any); }}
           >
             <Text style={s.fabMenuLabel}>Blast</Text>
-            <View style={[s.fabMenuIcon, { backgroundColor: '#FFB347' }]}>
-              <Ionicons name="megaphone" size={20} color="#FFF" />
+            <View style={[s.fabMenuIcon, { backgroundColor: BRAND.goldBrand }]}>
+              <Ionicons name="megaphone" size={20} color={BRAND.white} />
             </View>
           </TouchableOpacity>
 
@@ -747,7 +747,7 @@ export default function CoachChatScreen() {
           >
             <Text style={s.fabMenuLabel}>New Channel</Text>
             <View style={[s.fabMenuIcon, { backgroundColor: BRAND.skyBlue }]}>
-              <Ionicons name="people" size={20} color="#FFF" />
+              <Ionicons name="people" size={20} color={BRAND.white} />
             </View>
           </TouchableOpacity>
 
@@ -757,7 +757,7 @@ export default function CoachChatScreen() {
           >
             <Text style={s.fabMenuLabel}>New Message</Text>
             <View style={[s.fabMenuIcon, { backgroundColor: BRAND.teal }]}>
-              <Ionicons name="chatbubble" size={20} color="#FFF" />
+              <Ionicons name="chatbubble" size={20} color={BRAND.white} />
             </View>
           </TouchableOpacity>
         </View>
@@ -769,7 +769,7 @@ export default function CoachChatScreen() {
         onPress={() => setFabExpanded(!fabExpanded)}
         activeOpacity={0.8}
       >
-        <Ionicons name={fabExpanded ? 'close' : 'add'} size={26} color="#FFFFFF" />
+        <Ionicons name={fabExpanded ? 'close' : 'add'} size={26} color={BRAND.white} />
       </TouchableOpacity>
 
       {/* DM Modal */}
@@ -802,7 +802,7 @@ export default function CoachChatScreen() {
               )}
               {/* Show search results when searching, otherwise show all org members */}
               {(userSearchQuery.length >= 2 ? searchResults : orgMembers).map(u => {
-                const roleColors: Record<string, string> = { admin: '#AF52DE', coach: '#0EA5E9', parent: '#22C55E' };
+                const roleColors: Record<string, string> = { admin: BRAND.skyBlue, coach: BRAND.teal, parent: BRAND.success };
                 const roleColor = roleColors[u.account_type] || BRAND.textMuted;
                 return (
                   <TouchableOpacity key={u.id} style={s.userRow} onPress={() => startDM(u)}>
@@ -996,7 +996,7 @@ const s = StyleSheet.create({
   noMessages: { fontSize: 14, fontStyle: 'italic', fontFamily: FONTS.bodyLight, color: BRAND.textMuted },
   typingText: { fontSize: 14, fontStyle: 'italic', fontFamily: FONTS.bodyLight, color: BRAND.teal },
   unreadBadge: { minWidth: 22, height: 22, borderRadius: 11, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 6, marginLeft: 8, backgroundColor: BRAND.teal },
-  unreadText: { color: '#FFFFFF', fontSize: 12, fontFamily: FONTS.bodyBold },
+  unreadText: { color: BRAND.white, fontSize: 12, fontFamily: FONTS.bodyBold },
 
   // Empty state
   emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40 },

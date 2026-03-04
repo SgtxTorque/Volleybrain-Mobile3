@@ -4,6 +4,7 @@ import NotificationBell from '@/components/NotificationBell';
 import AppHeaderBar from '@/components/ui/AppHeaderBar';
 import { useAuth } from '@/lib/auth';
 import { displayTextStyle, radii } from '@/lib/design-tokens';
+import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 import { runScheduledChecks } from '@/lib/notifications';
 import { usePermissions } from '@/lib/permissions-context';
@@ -749,7 +750,7 @@ export default function ScheduleScreen() {
             {newEvent.event_type === 'game' && (<>
               <Text style={s.label}>LOCATION TYPE</Text>
               <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16 }}>
-                {[{ key: 'home', label: 'Home', icon: 'home', color: '#4ECDC4' }, { key: 'away', label: 'Away', icon: 'airplane', color: '#FF6B6B' }, { key: 'neutral', label: 'Neutral', icon: 'location', color: '#96CEB4' }].map(loc => (
+                {[{ key: 'home', label: 'Home', icon: 'home', color: BRAND.teal }, { key: 'away', label: 'Away', icon: 'airplane', color: BRAND.coral }, { key: 'neutral', label: 'Neutral', icon: 'location', color: BRAND.goldBrand }].map(loc => (
                   <TouchableOpacity key={loc.key} onPress={() => setNewEvent(prev => ({ ...prev, location_type: loc.key as any }))} style={[s.locBtn, newEvent.location_type === loc.key && { backgroundColor: loc.color + '20', borderColor: loc.color }]}>
                     <Ionicons name={loc.icon as any} size={18} color={loc.color} /><Text style={{ color: loc.color, fontFamily: FONTS.bodySemiBold, fontSize: 13 }}>{loc.label}</Text>
                   </TouchableOpacity>
@@ -761,7 +762,7 @@ export default function ScheduleScreen() {
 
               <Text style={s.label}>ARRIVAL TIME (for players)</Text>
               <TouchableOpacity onPress={() => setShowArrivalTimePicker(true)} style={s.pickerBtn}>
-                <Ionicons name="alarm" size={20} color="#FFB347" />
+                <Ionicons name="alarm" size={20} color={BRAND.goldBrand} />
                 <Text style={s.pickerBtnText}>{formatTime(newEvent.arrival_time)}</Text>
               </TouchableOpacity>
             </>)}
@@ -876,8 +877,8 @@ export default function ScheduleScreen() {
                 {bulkType === 'recurring_practice' && <Ionicons name="checkmark-circle" size={24} color={colors.primary} />}
               </TouchableOpacity>
               <TouchableOpacity onPress={() => setBulkType('game_series')} style={[s.bulkTypeBtn, bulkType === 'game_series' && s.bulkTypeBtnActive]}>
-                <Ionicons name="trophy" size={24} color={bulkType === 'game_series' ? '#FF6B6B' : colors.textMuted} />
-                <View style={{ flex: 1, marginLeft: 12 }}><Text style={[s.bulkTypeTitle, bulkType === 'game_series' && { color: '#FF6B6B' }]}>Multiple Games</Text><Text style={s.bulkTypeDesc}>Add several games at once</Text></View>
+                <Ionicons name="trophy" size={24} color={bulkType === 'game_series' ? BRAND.coral : colors.textMuted} />
+                <View style={{ flex: 1, marginLeft: 12 }}><Text style={[s.bulkTypeTitle, bulkType === 'game_series' && { color: BRAND.coral }]}>Multiple Games</Text><Text style={s.bulkTypeDesc}>Add several games at once</Text></View>
                 {bulkType === 'game_series' && <Ionicons name="checkmark-circle" size={24} color="#FF6B6B" />}
               </TouchableOpacity>
             </View>

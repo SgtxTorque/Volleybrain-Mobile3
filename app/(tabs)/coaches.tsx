@@ -2,6 +2,7 @@ import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { FONTS } from '@/theme/fonts';
+import { shadows } from '@/lib/design-tokens';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import { Alert, Modal, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -237,12 +238,12 @@ const createStyles = (colors: any) => StyleSheet.create({
   subtitle: { fontSize: 14, color: colors.primary, marginTop: 2 },
   addBtn: { backgroundColor: colors.primary, width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
   statsRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  statBox: { flex: 1, backgroundColor: colors.glassCard, borderRadius: 16, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
+  statBox: { flex: 1, backgroundColor: colors.glassCard, borderRadius: 16, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.glassBorder, ...shadows.card },
   statNum: { fontSize: 24, fontFamily: FONTS.bodyBold, color: colors.text },
   statLabel: { fontSize: 11, color: colors.textMuted, marginTop: 4, fontFamily: FONTS.bodyBold, textTransform: 'uppercase' as const, letterSpacing: 0.5 },
   empty: { alignItems: 'center', padding: 60 },
   emptyText: { color: colors.textMuted, fontSize: 16 },
-  coachCard: { backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', marginBottom: 12, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
+  coachCard: { backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', marginBottom: 12, borderWidth: 1, borderColor: colors.glassBorder, ...shadows.card },
   avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.border, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   initials: { color: colors.primary, fontSize: 18, fontFamily: FONTS.bodyBold },
   coachInfo: { flex: 1 },

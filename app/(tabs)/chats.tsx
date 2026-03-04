@@ -498,7 +498,7 @@ export default function ChatsScreen() {
               <View style={s.channelInfo}>
                 <View style={s.channelHeader}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
-                    {pinnedIds.has(channel.id) && <Text style={{ fontSize: 14, marginRight: 4 }}>📌</Text>}
+                    {pinnedIds.has(channel.id) && <Ionicons name="pin" size={14} color={BRAND.textMuted} style={{ marginRight: 4 }} />}
                     <Text style={s.channelName} numberOfLines={1}>{channel.name}</Text>
                   </View>
                   {channel.last_message && (
@@ -712,7 +712,7 @@ const s = StyleSheet.create({
   empty: { alignItems: 'center', padding: 60 },
   emptyText: { color: BRAND.textPrimary, fontSize: 18, fontFamily: FONTS.bodySemiBold, marginTop: 16 },
   emptySubtext: { color: BRAND.textMuted, fontSize: 14, marginTop: 4 },
-  channelCard: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, marginHorizontal: 16, marginBottom: 8, backgroundColor: '#FFF', borderRadius: 16, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
+  channelCard: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, marginHorizontal: 16, marginBottom: 8, backgroundColor: BRAND.white, borderRadius: radii.card, borderWidth: 1, borderColor: BRAND.border, ...shadows.card },
   channelAvatar: { width: 52, height: 52, borderRadius: 26, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   avatarImage: { width: 52, height: 52, borderRadius: 26 },
   channelInfo: { flex: 1 },

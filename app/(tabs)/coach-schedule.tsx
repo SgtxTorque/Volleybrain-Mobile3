@@ -4,6 +4,7 @@ import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
+import { shadows } from '@/lib/design-tokens';
 import EventCard, { ScheduleEvent } from '@/components/EventCard';
 import EventDetailModal from '@/components/EventDetailModal';
 import AppHeaderBar from '@/components/ui/AppHeaderBar';
@@ -1100,29 +1101,7 @@ export default function CoachScheduleScreen() {
 // ===========================================================================
 // Styles
 // ===========================================================================
-const SHADOW_CARD = Platform.select({
-  ios: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2.2 },
-    shadowOpacity: 0.088,
-    shadowRadius: 13.2,
-  },
-  android: {
-    elevation: 3.3,
-  },
-})!;
-
-const SHADOW_CARD_HOVER = Platform.select({
-  ios: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4.4 },
-    shadowOpacity: 0.132,
-    shadowRadius: 17.6,
-  },
-  android: {
-    elevation: 5.5,
-  },
-})!;
+/* shadows imported from design-tokens */
 
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: BRAND.offWhite },
@@ -1182,7 +1161,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: BRAND.border,
     overflow: 'hidden',
-    ...SHADOW_CARD,
+    ...shadows.card,
   },
 
   // RSVP summary bar
@@ -1217,7 +1196,7 @@ const s = StyleSheet.create({
     position: 'absolute', bottom: 24, right: 24, width: 56, height: 56,
     borderRadius: 28, justifyContent: 'center', alignItems: 'center',
     backgroundColor: BRAND.teal,
-    ...SHADOW_CARD_HOVER,
+    ...shadows.cardHover,
   },
 
   // Modal

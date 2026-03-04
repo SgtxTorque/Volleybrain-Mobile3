@@ -4,6 +4,7 @@ import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { FONTS } from '@/theme/fonts';
+import { shadows } from '@/lib/design-tokens';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import { Alert, Modal, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -304,7 +305,7 @@ const assignPlayer = async (player: Player) => {
                   <Text style={s.teamName}>{team.name}</Text>
                   <Text style={s.teamMeta}>{getAgeGroupName(team.age_group_id)} • {team.team_type} • {roster.length}/{team.max_players} players</Text>
                   {teamCoachesList.length > 0 && (
-                    <Text style={s.coachList}>{teamCoachesList.map(c => `${c.role === 'head' ? '👑 ' : ''}${c.first_name}`).join(', ')}</Text>
+                    <Text style={s.coachList}>{teamCoachesList.map(c => `${c.role === 'head' ? '★ ' : ''}${c.first_name}`).join(', ')}</Text>
                   )}
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
@@ -391,7 +392,7 @@ const assignPlayer = async (player: Player) => {
                       <View style={s.memberAvatar}><Text style={s.memberInitials}>{coach.first_name?.[0]}{coach.last_name?.[0]}</Text></View>
                       <View style={s.memberInfo}>
                         <Text style={s.memberName}>{coach.first_name} {coach.last_name}</Text>
-                        <Text style={s.memberRole}>{coach.role === 'head' ? '👑 Head Coach' : 'Assistant'}</Text>
+                        <Text style={s.memberRole}>{coach.role === 'head' ? 'Head Coach' : 'Assistant'}</Text>
                       </View>
                       <TouchableOpacity onPress={() => removeCoach(coach.id)}>
                         <Ionicons name="close-circle" size={24} color={colors.danger} />
@@ -463,12 +464,12 @@ const createStyles = (colors: any) => StyleSheet.create({
   subtitle: { fontSize: 14, color: colors.primary, marginTop: 2 },
   addBtn: { backgroundColor: colors.primary, width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
   statsRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  statBox: { flex: 1, backgroundColor: colors.glassCard, borderRadius: 16, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
+  statBox: { flex: 1, backgroundColor: colors.glassCard, borderRadius: 16, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.glassBorder, ...shadows.card },
   statNum: { fontSize: 24, fontFamily: FONTS.bodyBold, color: colors.text },
   statLabel: { fontSize: 11, color: colors.textMuted, marginTop: 4, fontFamily: FONTS.bodyBold, textTransform: 'uppercase' as const, letterSpacing: 0.5 },
   empty: { alignItems: 'center', padding: 60 },
   emptyText: { color: colors.textMuted, fontSize: 16 },
-  teamCard: { backgroundColor: colors.glassCard, borderRadius: 16, flexDirection: 'row', alignItems: 'center', marginBottom: 12, overflow: 'hidden', borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
+  teamCard: { backgroundColor: colors.glassCard, borderRadius: 16, flexDirection: 'row', alignItems: 'center', marginBottom: 12, overflow: 'hidden', borderWidth: 1, borderColor: colors.glassBorder, ...shadows.card },
   teamColor: { width: 6, height: '100%', position: 'absolute', left: 0 },
   teamInfo: { flex: 1, padding: 16, paddingLeft: 20 },
   teamName: { fontSize: 18, fontFamily: FONTS.bodySemiBold, color: colors.text },

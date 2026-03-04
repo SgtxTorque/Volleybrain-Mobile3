@@ -4,6 +4,7 @@ import { usePermissions } from '@/lib/permissions-context';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { FONTS } from '@/theme/fonts';
+import { shadows } from '@/lib/design-tokens';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -456,11 +457,11 @@ const createStyles = (colors: any) => StyleSheet.create({
   scroll: { flex: 1, padding: 16 },
   title: { fontSize: 28, fontFamily: FONTS.bodyExtraBold, color: colors.text, marginBottom: 20 },
 
-  devBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f59e0b', padding: 12, borderRadius: 12, marginBottom: 16, gap: 8 },
-  devBannerText: { flex: 1, color: '#fff', fontFamily: FONTS.bodySemiBold },
-  devBannerReset: { color: '#fff', fontFamily: FONTS.bodyBold, textDecorationLine: 'underline' },
+  devBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.warning, padding: 12, borderRadius: 12, marginBottom: 16, gap: 8 },
+  devBannerText: { flex: 1, color: colors.background, fontFamily: FONTS.bodySemiBold },
+  devBannerReset: { color: colors.background, fontFamily: FONTS.bodyBold, textDecorationLine: 'underline' },
 
-  card: { backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
+  card: { backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.glassBorder, ...shadows.card },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   cardHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   cardTitle: { fontSize: 18, fontFamily: FONTS.bodySemiBold, color: colors.text, marginBottom: 12 },

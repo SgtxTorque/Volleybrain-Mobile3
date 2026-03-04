@@ -780,7 +780,7 @@ const s = StyleSheet.create({
     backgroundColor: BRAND.teal,
   },
   unreadText: {
-    color: '#FFFFFF',
+    color: BRAND.white,
     fontSize: 12,
     fontFamily: FONTS.bodyBold,
   },

@@ -103,9 +103,9 @@ function getFirstDayOfMonth(year: number, month: number): number {
 }
 
 const RSVP_CONFIG = {
-  yes: { label: 'Going', color: '#22C55E', icon: 'checkmark-circle' as const },
-  no: { label: 'Not Going', color: '#D94F4F', icon: 'close-circle' as const },
-  maybe: { label: 'Maybe', color: '#E8913A', icon: 'help-circle' as const },
+  yes: { label: 'Going', color: BRAND.success, icon: 'checkmark-circle' as const },
+  no: { label: 'Not Going', color: BRAND.coral, icon: 'close-circle' as const },
+  maybe: { label: 'Maybe', color: BRAND.goldWarm, icon: 'help-circle' as const },
 };
 
 // ===========================================================================

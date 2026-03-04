@@ -7,6 +7,7 @@ import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
+import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -823,7 +824,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
       case 'cashapp': return '#00D632';
       case 'venmo': return '#008CFF';
       case 'zelle': return '#6D1ED4';
-      case 'cash': return '#22C55E';
+      case 'cash': return colors.success;
       case 'check': return '#5856D6';
       default: return colors.textSecondary;
     }
@@ -844,7 +845,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
   const getStatusInfo = (status: string) => {
     switch (status) {
       case 'verified': return { label: 'Paid', color: colors.success, icon: 'checkmark-circle' };
-      case 'pending': return { label: 'Pending', color: '#E8913A', icon: 'time' };
+      case 'pending': return { label: 'Pending', color: colors.warning, icon: 'time' };
       default: return { label: 'Due', color: colors.danger, icon: 'alert-circle' };
     }
   };
@@ -875,7 +876,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
   const selectedPendingCount = getSelectedPayments().filter(s => s.payment.status === 'pending').length;
 
   const renderFamilyCard = (family: FamilyGroup) => {
-    const rateColor = family.collectionRate >= 80 ? '#22C55E' : family.collectionRate >= 50 ? '#E8913A' : '#D94F4F';
+    const rateColor = family.collectionRate >= 80 ? colors.success : family.collectionRate >= 50 ? colors.warning : colors.danger;
     return (
       <View
         key={family.family_id || family.family_name}
@@ -885,7 +886,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
           marginBottom: 12,
           overflow: 'hidden',
           borderWidth: 1,
-          borderColor: family.outstanding > 0 ? '#D94F4F40' : colors.border,
+          borderColor: family.outstanding > 0 ? colors.danger + '40' : colors.border,
           ...shadows.card,
         }}
       >
@@ -937,7 +938,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
                     Outstanding: ${family.outstanding}
                   </Text>
                   {overdueCount > 0 && (
-                    <View style={{ backgroundColor: '#D94F4F20', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
+                    <View style={{ backgroundColor: colors.danger + '20', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
                       <Text style={{ color: colors.danger, fontSize: 9, fontFamily: FONTS.bodyBold }}>{overdueCount} OVERDUE</Text>
                     </View>
                   )}
@@ -1013,9 +1014,9 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
 
       {/* Stats Row */}
       <View style={{ flexDirection: 'row', paddingHorizontal: spacing.screenPadding, paddingVertical: 12, gap: 10 }}>
-        <StatBox value={'$' + stats.totalUnpaid} label="Unpaid" accentColor="#D94F4F" />
-        <StatBox value={'$' + stats.totalPending} label="Pending" accentColor="#E8913A" />
-        <StatBox value={'$' + stats.totalPaid} label="Paid" accentColor="#22C55E" />
+        <StatBox value={'$' + stats.totalUnpaid} label="Unpaid" accentColor={colors.danger} />
+        <StatBox value={'$' + stats.totalPending} label="Pending" accentColor={colors.warning} />
+        <StatBox value={'$' + stats.totalPaid} label="Paid" accentColor={colors.success} />
       </View>
 
       {/* Tab Switcher */}
@@ -1047,7 +1048,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
           </Text>
           {stats.pendingCount > 0 && (
             <View style={{
-              backgroundColor: activeTab === 'verification' ? '#00000030' : '#E8913A',
+              backgroundColor: activeTab === 'verification' ? '#00000030' : colors.warning,
               borderRadius: 10,
               paddingHorizontal: 6,
               paddingVertical: 2,
@@ -1119,9 +1120,9 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
             paddingHorizontal: 14,
             paddingVertical: 8,
             borderRadius: 20,
-            backgroundColor: showOutstandingOnly ? '#D94F4F20' : colors.card,
+            backgroundColor: showOutstandingOnly ? colors.danger + '20' : colors.card,
             borderWidth: 1,
-            borderColor: showOutstandingOnly ? '#D94F4F' : colors.border,
+            borderColor: showOutstandingOnly ? colors.danger : colors.border,
           }}
         >
           <Text style={{ fontSize: 13, fontFamily: FONTS.bodySemiBold, color: showOutstandingOnly ? colors.danger : colors.textSecondary }}>
@@ -1180,7 +1181,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
               <Ionicons
                 name={activeTab === 'verification' ? 'checkmark-circle' : 'receipt-outline'}
                 size={48}
-                color={activeTab === 'verification' ? '#22C55E' : colors.textSecondary}
+                color={activeTab === 'verification' ? colors.success : colors.textSecondary}
               />
               <Text style={{ color: colors.text, marginTop: 12, fontSize: 16, fontFamily: FONTS.bodySemiBold }}>
                 {activeTab === 'verification' ? 'All Caught Up!' : 'No Payments Found'}
@@ -1332,7 +1333,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
                                 width: 22,
                                 height: 22,
                                 borderRadius: 4,
-                                backgroundColor: '#22C55E20',
+                                backgroundColor: colors.success + '20',
                                 justifyContent: 'center',
                                 alignItems: 'center',
                                 marginRight: 12,
@@ -1348,7 +1349,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
                                   {payment.fee_name}
                                 </Text>
                                 {payment.status === 'unpaid' && payment.due_date && new Date(payment.due_date) < new Date() && (
-                                  <View style={{ backgroundColor: '#D94F4F20', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
+                                  <View style={{ backgroundColor: colors.danger + '20', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
                                     <Text style={{ color: colors.danger, fontSize: 9, fontFamily: FONTS.bodyBold }}>OVERDUE</Text>
                                   </View>
                                 )}
@@ -1428,7 +1429,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
                                 style={{
                                   marginLeft: 10,
                                   padding: 6,
-                                  backgroundColor: '#22C55E20',
+                                  backgroundColor: colors.success + '20',
                                   borderRadius: 6,
                                 }}
                               >
@@ -1518,7 +1519,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
                     paddingHorizontal: 16,
                     paddingVertical: 10,
                     borderRadius: 8,
-                    backgroundColor: '#D94F4F20',
+                    backgroundColor: colors.danger + '20',
                   }}
                 >
                   <Text style={{ fontSize: 14, fontFamily: FONTS.bodySemiBold, color: colors.danger }}>
@@ -1532,7 +1533,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
                     paddingHorizontal: 16,
                     paddingVertical: 10,
                     borderRadius: 8,
-                    backgroundColor: '#22C55E',
+                    backgroundColor: colors.success,
                   }}
                 >
                   {submitting ? (
@@ -1644,7 +1645,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
               onPress={handleRecordPayment}
               disabled={submitting}
               style={{
-                backgroundColor: '#22C55E',
+                backgroundColor: colors.success,
                 borderRadius: 12,
                 padding: 16,
                 alignItems: 'center',
