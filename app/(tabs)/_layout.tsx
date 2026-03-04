@@ -5,6 +5,7 @@ import { useParentScroll } from '@/lib/parent-scroll-context';
 import { usePermissions } from '@/lib/permissions-context';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
+import { FONTS } from '@/theme/fonts';
 import { useDrawerBadges } from '@/hooks/useDrawerBadges';
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
@@ -179,7 +180,7 @@ export default function TabLayout() {
         tabBarInactiveTintColor: isPlayerMode ? 'rgba(255, 255, 255, 0.20)' : colors.textMuted,
         tabBarLabelStyle: {
           fontSize: 11,
-          fontWeight: '600',
+          fontFamily: FONTS.bodySemiBold,
           letterSpacing: 0.3,
         },
       }}

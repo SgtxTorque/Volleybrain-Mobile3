@@ -1,6 +1,7 @@
 import { useAuth } from '@/lib/auth';
 import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { usePermissions } from '@/lib/permissions-context';
+import { FONTS } from '@/theme/fonts';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
@@ -488,7 +489,7 @@ const createStyles = (colors: any) =>
     },
     seasonLabel: {
       fontSize: 13,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
       color: colors.textMuted,
     },
 
@@ -513,12 +514,12 @@ const createStyles = (colors: any) =>
     },
     attentionCount: {
       fontSize: 30,
-      fontWeight: '800',
+      fontFamily: FONTS.bodyExtraBold,
       marginBottom: 4,
     },
     attentionLabel: {
       fontSize: 12,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
       color: colors.textSecondary,
       lineHeight: 16,
     },
@@ -534,7 +535,7 @@ const createStyles = (colors: any) =>
     },
     sectionTitle: {
       fontSize: 12,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
       color: colors.textMuted,
       textTransform: 'uppercase',
       letterSpacing: 1,
@@ -571,7 +572,7 @@ const createStyles = (colors: any) =>
     },
     tileLabel: {
       fontSize: 11,
-      fontWeight: '700',
+      fontFamily: FONTS.bodyBold,
       color: colors.text,
       textAlign: 'center',
     },
@@ -596,12 +597,12 @@ const createStyles = (colors: any) =>
     },
     snapshotNumber: {
       fontSize: 26,
-      fontWeight: '800',
+      fontFamily: FONTS.bodyExtraBold,
       color: colors.text,
     },
     snapshotLabel: {
       fontSize: 11,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
       color: colors.textMuted,
       marginTop: 2,
     },
@@ -624,7 +625,7 @@ const createStyles = (colors: any) =>
     },
     snapshotFooterText: {
       fontSize: 13,
-      fontWeight: '500',
+      fontFamily: FONTS.bodySemiBold,
       color: colors.textSecondary,
     },
 
@@ -656,7 +657,7 @@ const createStyles = (colors: any) =>
     activityText: {
       flex: 1,
       fontSize: 13,
-      fontWeight: '500',
+      fontFamily: FONTS.bodySemiBold,
       color: colors.text,
     },
     activityTime: {
@@ -682,6 +683,6 @@ const createStyles = (colors: any) =>
     },
     activityViewAllText: {
       fontSize: 13,
-      fontWeight: '600',
+      fontFamily: FONTS.bodySemiBold,
     },
   });

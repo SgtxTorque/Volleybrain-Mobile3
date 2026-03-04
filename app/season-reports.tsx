@@ -284,7 +284,7 @@ export default function SeasonReportsScreen() {
               return (
                 <View key={i} style={{ marginBottom: i < rosterFill.length - 1 ? 8 : 0 }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 3 }}>
-                    <Text style={{ fontSize: 12, color: colors.text, fontWeight: '500' }}>{team.name}</Text>
+                    <Text style={{ fontSize: 12, color: colors.text, fontFamily: FONTS.bodySemiBold }}>{team.name}</Text>
                     <Text style={{ fontSize: 12, color: colors.textMuted }}>{team.count}/{team.max}</Text>
                   </View>
                   <View style={[s.progressBar, { marginTop: 0, marginBottom: 0 }]}>

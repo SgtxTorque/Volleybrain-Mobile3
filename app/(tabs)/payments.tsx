@@ -843,9 +843,9 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
 
   const getStatusInfo = (status: string) => {
     switch (status) {
-      case 'verified': return { label: 'Paid', color: '#22C55E', icon: 'checkmark-circle' };
+      case 'verified': return { label: 'Paid', color: colors.success, icon: 'checkmark-circle' };
       case 'pending': return { label: 'Pending', color: '#E8913A', icon: 'time' };
-      default: return { label: 'Due', color: '#D94F4F', icon: 'alert-circle' };
+      default: return { label: 'Due', color: colors.danger, icon: 'alert-circle' };
     }
   };
 
@@ -933,12 +933,12 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
                 sum + p.payments.filter(f => f.status === 'unpaid' && f.due_date && new Date(f.due_date) < now).length, 0);
               return (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={{ fontSize: 12, color: '#D94F4F', fontWeight: '600' }}>
+                  <Text style={{ fontSize: 12, color: colors.danger, fontFamily: FONTS.bodySemiBold }}>
                     Outstanding: ${family.outstanding}
                   </Text>
                   {overdueCount > 0 && (
                     <View style={{ backgroundColor: '#D94F4F20', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
-                      <Text style={{ color: '#D94F4F', fontSize: 9, fontWeight: '700' }}>{overdueCount} OVERDUE</Text>
+                      <Text style={{ color: colors.danger, fontSize: 9, fontFamily: FONTS.bodyBold }}>{overdueCount} OVERDUE</Text>
                     </View>
                   )}
                 </View>
@@ -958,12 +958,12 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
             }}>
               <Text style={{ fontSize: 16, marginRight: 6 }}>{player.sport_icon}</Text>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 14, color: colors.text, fontWeight: '500' }}>{player.player_name}</Text>
+                <Text style={{ fontSize: 14, color: colors.text, fontFamily: FONTS.bodySemiBold }}>{player.player_name}</Text>
                 <Text style={{ fontSize: 11, color: colors.textSecondary }}>
                   {player.paidCount} paid · {player.unpaidCount + player.pendingCount} outstanding
                 </Text>
               </View>
-              <Text style={{ fontSize: 14, fontWeight: '600', color: player.totalDue > 0 ? '#D94F4F' : '#22C55E' }}>
+              <Text style={{ fontSize: 14, fontFamily: FONTS.bodySemiBold, color: player.totalDue > 0 ? colors.danger : colors.success }}>
                 ${player.totalDue > 0 ? player.totalDue : 'Paid'}
               </Text>
             </View>
@@ -995,7 +995,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
                 ) : (
                   <Ionicons name="add-circle-outline" size={14} color="#FFF" />
                 )}
-                <Text style={{ fontSize: 11, fontWeight: '700', color: '#FFF' }}>GENERATE FEES</Text>
+                <Text style={{ fontSize: 11, fontFamily: FONTS.bodyBold, color: colors.background }}>GENERATE FEES</Text>
               </TouchableOpacity>
             }
           />
@@ -1040,7 +1040,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
           }}
         >
           <Text style={{
-            fontWeight: '600',
+            fontFamily: FONTS.bodySemiBold,
             color: activeTab === 'verification' ? '#000' : colors.text,
           }}>
             Needs Verification
@@ -1053,7 +1053,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
               paddingVertical: 2,
               marginLeft: 6,
             }}>
-              <Text style={{ fontSize: 11, fontWeight: '700', color: '#fff' }}>{stats.pendingCount}</Text>
+              <Text style={{ fontSize: 11, fontFamily: FONTS.bodyBold, color: colors.background }}>{stats.pendingCount}</Text>
             </View>
           )}
         </TouchableOpacity>
@@ -1068,7 +1068,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
         >
           <Text style={{
             textAlign: 'center',
-            fontWeight: '600',
+            fontFamily: FONTS.bodySemiBold,
             color: activeTab === 'all' ? '#000' : colors.text,
           }}>
             All Payments
@@ -1094,7 +1094,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
             borderColor: viewMode === 'player' ? colors.primary : colors.border,
           }}
         >
-          <Text style={{ fontSize: 13, fontWeight: '600', color: viewMode === 'player' ? colors.primary : colors.textSecondary }}>
+          <Text style={{ fontSize: 13, fontFamily: FONTS.bodySemiBold, color: viewMode === 'player' ? colors.primary : colors.textSecondary }}>
             By Player
           </Text>
         </TouchableOpacity>
@@ -1109,7 +1109,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
             borderColor: viewMode === 'family' ? colors.primary : colors.border,
           }}
         >
-          <Text style={{ fontSize: 13, fontWeight: '600', color: viewMode === 'family' ? colors.primary : colors.textSecondary }}>
+          <Text style={{ fontSize: 13, fontFamily: FONTS.bodySemiBold, color: viewMode === 'family' ? colors.primary : colors.textSecondary }}>
             By Family
           </Text>
         </TouchableOpacity>
@@ -1124,7 +1124,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
             borderColor: showOutstandingOnly ? '#D94F4F' : colors.border,
           }}
         >
-          <Text style={{ fontSize: 13, fontWeight: '600', color: showOutstandingOnly ? '#D94F4F' : colors.textSecondary }}>
+          <Text style={{ fontSize: 13, fontFamily: FONTS.bodySemiBold, color: showOutstandingOnly ? colors.danger : colors.textSecondary }}>
             Outstanding
           </Text>
         </TouchableOpacity>
@@ -1182,7 +1182,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
                 size={48}
                 color={activeTab === 'verification' ? '#22C55E' : colors.textSecondary}
               />
-              <Text style={{ color: colors.text, marginTop: 12, fontSize: 16, fontWeight: '600' }}>
+              <Text style={{ color: colors.text, marginTop: 12, fontSize: 16, fontFamily: FONTS.bodySemiBold }}>
                 {activeTab === 'verification' ? 'All Caught Up!' : 'No Payments Found'}
               </Text>
               <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 13, textAlign: 'center' }}>
@@ -1344,12 +1344,12 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
                             {/* Fee Info */}
                             <View style={{ flex: 1 }}>
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                <Text style={{ fontSize: 15, fontWeight: '500', color: colors.text }}>
+                                <Text style={{ fontSize: 15, fontFamily: FONTS.bodySemiBold, color: colors.text }}>
                                   {payment.fee_name}
                                 </Text>
                                 {payment.status === 'unpaid' && payment.due_date && new Date(payment.due_date) < new Date() && (
                                   <View style={{ backgroundColor: '#D94F4F20', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 }}>
-                                    <Text style={{ color: '#D94F4F', fontSize: 9, fontWeight: '700' }}>OVERDUE</Text>
+                                    <Text style={{ color: colors.danger, fontSize: 9, fontFamily: FONTS.bodyBold }}>OVERDUE</Text>
                                   </View>
                                 )}
                               </View>
@@ -1378,11 +1378,11 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
                                       alignItems: 'center',
                                       marginRight: 4,
                                     }}>
-                                      <Text style={{ fontSize: 8, fontWeight: '700', color: '#fff' }}>
+                                      <Text style={{ fontSize: 8, fontFamily: FONTS.bodyBold, color: colors.background }}>
                                         {payment.payment_method === 'venmo' ? 'V' : payment.payment_method === 'cashapp' ? '$' : 'Z'}
                                       </Text>
                                     </View>
-                                    <Text style={{ fontSize: 11, fontWeight: '600', color: getMethodColor(payment.payment_method) }}>
+                                    <Text style={{ fontSize: 11, fontFamily: FONTS.bodySemiBold, color: getMethodColor(payment.payment_method) }}>
                                       {payment.payer_name || getMethodLabel(payment.payment_method)}
                                     </Text>
                                   </View>
@@ -1402,7 +1402,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
 
                             {/* Amount & Status */}
                             <View style={{ alignItems: 'flex-end' }}>
-                              <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>
+                              <Text style={{ fontSize: 16, fontFamily: FONTS.bodySemiBold, color: colors.text }}>
                                 ${payment.amount}
                               </Text>
                               <View style={{
@@ -1415,7 +1415,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
                                 marginTop: 4,
                               }}>
                                 <Ionicons name={status.icon as any} size={10} color={status.color} />
-                                <Text style={{ fontSize: 10, fontWeight: '600', color: status.color, marginLeft: 3 }}>
+                                <Text style={{ fontSize: 10, fontFamily: FONTS.bodySemiBold, color: status.color, marginLeft: 3 }}>
                                   {status.label}
                                 </Text>
                               </View>
@@ -1474,7 +1474,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
                 borderColor: 'rgba(0,0,0,0.06)',
               }}>
                 <Ionicons name="people-outline" size={48} color={colors.textSecondary} />
-                <Text style={{ color: colors.text, marginTop: 12, fontSize: 16, fontWeight: '600' }}>No Families Found</Text>
+                <Text style={{ color: colors.text, marginTop: 12, fontSize: 16, fontFamily: FONTS.bodySemiBold }}>No Families Found</Text>
                 <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 13, textAlign: 'center' }}>
                   {showOutstandingOnly ? 'No families with outstanding payments.' : 'No family payment data.'}
                 </Text>
@@ -1500,7 +1500,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
           justifyContent: 'space-between',
         }}>
           <View>
-            <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text }}>
+            <Text style={{ fontSize: 15, fontFamily: FONTS.bodySemiBold, color: colors.text }}>
               {selectedCount} selected
             </Text>
             <Text style={{ fontSize: 13, color: colors.textSecondary }}>
@@ -1521,7 +1521,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
                     backgroundColor: '#D94F4F20',
                   }}
                 >
-                  <Text style={{ fontSize: 14, fontWeight: '600', color: '#D94F4F' }}>
+                  <Text style={{ fontSize: 14, fontFamily: FONTS.bodySemiBold, color: colors.danger }}>
                     Reject
                   </Text>
                 </TouchableOpacity>
@@ -1538,7 +1538,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
                   {submitting ? (
                     <ActivityIndicator size="small" color="#fff" />
                   ) : (
-                    <Text style={{ fontSize: 14, fontWeight: '600', color: '#fff' }}>
+                    <Text style={{ fontSize: 14, fontFamily: FONTS.bodySemiBold, color: colors.background }}>
                       Verify
                     </Text>
                   )}
@@ -1576,7 +1576,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
                 borderRadius: 2,
                 marginBottom: 16,
               }} />
-              <Text style={{ fontSize: 20, fontWeight: '600', color: colors.text }}>
+              <Text style={{ fontSize: 20, fontFamily: FONTS.bodySemiBold, color: colors.text }}>
                 Record Payment
               </Text>
               {recordingPlayer && recordingFee && (
@@ -1586,7 +1586,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
               )}
             </View>
 
-            <Text style={{ fontSize: 12, fontWeight: '700', color: colors.textSecondary, marginBottom: 10, letterSpacing: 1 }}>
+            <Text style={{ fontSize: 12, fontFamily: FONTS.bodyBold, color: colors.textSecondary, marginBottom: 10, letterSpacing: 1 }}>
               PAYMENT METHOD
             </Text>
             <View style={{
@@ -1610,8 +1610,8 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
                 >
                   <Text style={{
                     fontSize: 14,
-                    fontWeight: '600',
-                    color: recordMethod === method ? '#fff' : colors.text,
+                    fontFamily: FONTS.bodySemiBold,
+                    color: recordMethod === method ? colors.background : colors.text,
                   }}>
                     {getMethodLabel(method)}
                   </Text>
@@ -1619,7 +1619,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
               ))}
             </View>
 
-            <Text style={{ fontSize: 12, fontWeight: '700', color: colors.textSecondary, marginBottom: 10, letterSpacing: 1 }}>
+            <Text style={{ fontSize: 12, fontFamily: FONTS.bodyBold, color: colors.textSecondary, marginBottom: 10, letterSpacing: 1 }}>
               NOTE (OPTIONAL)
             </Text>
             <TextInput
@@ -1654,7 +1654,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
               {submitting ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={{ fontSize: 16, fontWeight: '600', color: '#fff' }}>
+                <Text style={{ fontSize: 16, fontFamily: FONTS.bodySemiBold, color: colors.background }}>
                   Record as Paid
                 </Text>
               )}
@@ -1669,7 +1669,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
                 alignItems: 'center',
               }}
             >
-              <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>Cancel</Text>
+              <Text style={{ fontSize: 16, fontFamily: FONTS.bodySemiBold, color: colors.text }}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>

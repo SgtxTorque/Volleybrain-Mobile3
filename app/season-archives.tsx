@@ -346,10 +346,10 @@ export default function SeasonArchivesScreen() {
                                 {medal ? (
                                   <Text style={{ fontSize: 16 }}>{medal}</Text>
                                 ) : (
-                                  <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textMuted, width: 24, textAlign: 'center' }}>{idx + 1}</Text>
+                                  <Text style={{ fontSize: 14, fontFamily: FONTS.bodySemiBold, color: colors.textMuted, width: 24, textAlign: 'center' }}>{idx + 1}</Text>
                                 )}
-                                <Text style={[s.detailRowText, { fontWeight: idx < 3 ? '600' : '400' }]}>{team.teamName}</Text>
-                                <Text style={[s.detailRowMeta, { fontWeight: '600' }]}>{team.wins}-{team.losses}</Text>
+                                <Text style={[s.detailRowText, { fontFamily: idx < 3 ? FONTS.bodySemiBold : undefined }]}>{team.teamName}</Text>
+                                <Text style={[s.detailRowMeta, { fontFamily: FONTS.bodySemiBold }]}>{team.wins}-{team.losses}</Text>
                               </View>
                             );
                           })}

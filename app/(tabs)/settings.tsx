@@ -3,6 +3,7 @@ import { UserRole } from '@/lib/permissions';
 import { usePermissions } from '@/lib/permissions-context';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -453,45 +454,45 @@ export default function SettingsScreen() {
 const createStyles = (colors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
   scroll: { flex: 1, padding: 16 },
-  title: { fontSize: 28, fontWeight: '800', color: colors.text, marginBottom: 20 },
+  title: { fontSize: 28, fontFamily: FONTS.bodyExtraBold, color: colors.text, marginBottom: 20 },
 
   devBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f59e0b', padding: 12, borderRadius: 12, marginBottom: 16, gap: 8 },
-  devBannerText: { flex: 1, color: '#fff', fontWeight: '600' },
-  devBannerReset: { color: '#fff', fontWeight: 'bold', textDecorationLine: 'underline' },
+  devBannerText: { flex: 1, color: '#fff', fontFamily: FONTS.bodySemiBold },
+  devBannerReset: { color: '#fff', fontFamily: FONTS.bodyBold, textDecorationLine: 'underline' },
 
   card: { backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.glassBorder, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6 },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   cardHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  cardTitle: { fontSize: 18, fontWeight: '600', color: colors.text, marginBottom: 12 },
+  cardTitle: { fontSize: 18, fontFamily: FONTS.bodySemiBold, color: colors.text, marginBottom: 12 },
 
   profileInfo: { flex: 1 },
-  profileName: { fontSize: 20, fontWeight: 'bold', color: colors.text },
+  profileName: { fontSize: 20, fontFamily: FONTS.bodyBold, color: colors.text },
   profileEmail: { fontSize: 14, color: colors.textMuted, marginTop: 2 },
 
   themeOptions: { flexDirection: 'row', gap: 12 },
   themeOption: { flex: 1, alignItems: 'center', padding: 16, borderRadius: 12, backgroundColor: colors.background },
   themeOptionActive: { backgroundColor: colors.primary + '20', borderWidth: 2, borderColor: colors.primary },
   themeOptionText: { marginTop: 8, fontSize: 14, color: colors.textMuted },
-  themeOptionTextActive: { color: colors.primary, fontWeight: '600' },
+  themeOptionTextActive: { color: colors.primary, fontFamily: FONTS.bodySemiBold },
 
   devCard: { borderWidth: 2, borderColor: colors.warning, borderStyle: 'dashed', backgroundColor: colors.glassCard },
   devHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-  devTitle: { fontSize: 16, fontWeight: 'bold', color: colors.warning },
+  devTitle: { fontSize: 16, fontFamily: FONTS.bodyBold, color: colors.warning },
   devSubtitle: { fontSize: 12, color: colors.textMuted, marginBottom: 12 },
   devRoleGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   devRoleBtn: { width: '48%', flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 10, backgroundColor: colors.background },
   devRoleBtnActive: { backgroundColor: colors.warning + '20', borderWidth: 1, borderColor: colors.warning },
   devRoleBtnText: { fontSize: 12, color: colors.textMuted },
-  devRoleBtnTextActive: { color: colors.warning, fontWeight: '600' },
+  devRoleBtnTextActive: { color: colors.warning, fontFamily: FONTS.bodySemiBold },
 
   orgRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
   orgColor: { width: 40, height: 40, borderRadius: 8 },
-  orgName: { fontSize: 16, fontWeight: '600', color: colors.text },
+  orgName: { fontSize: 16, fontFamily: FONTS.bodySemiBold, color: colors.text },
   orgSlug: { fontSize: 13, color: colors.textMuted },
   orgSettings: { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12, marginTop: 4 },
   settingRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 },
   settingLabel: { fontSize: 14, color: colors.textMuted },
-  settingValue: { fontSize: 14, fontWeight: '500' },
+  settingValue: { fontSize: 14, fontFamily: FONTS.bodySemiBold },
 
   userCount: { fontSize: 14, color: colors.textMuted },
   searchBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.background, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12, gap: 8 },
@@ -499,40 +500,40 @@ const createStyles = (colors: any) => StyleSheet.create({
 
   userRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
   userAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primary + '20', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  userInitials: { fontSize: 14, fontWeight: 'bold', color: colors.primary },
+  userInitials: { fontSize: 14, fontFamily: FONTS.bodyBold, color: colors.primary },
   userInfo: { flex: 1 },
-  userName: { fontSize: 15, fontWeight: '500', color: colors.text },
+  userName: { fontSize: 15, fontFamily: FONTS.bodySemiBold, color: colors.text },
   userEmail: { fontSize: 12, color: colors.textMuted },
   userRoles: { flexDirection: 'row', gap: 4, marginRight: 8 },
   roleBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
-  roleBadgeText: { fontSize: 10, fontWeight: '600', textTransform: 'capitalize' },
+  roleBadgeText: { fontSize: 10, fontFamily: FONTS.bodySemiBold, textTransform: 'capitalize' },
   moreRoles: { fontSize: 11, color: colors.textMuted, alignSelf: 'center' },
   moreUsers: { textAlign: 'center', color: colors.textMuted, fontSize: 13, marginTop: 12 },
 
   noRoles: { fontSize: 14, color: colors.textMuted, fontStyle: 'italic' },
   rolesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   roleChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 },
-  roleChipText: { fontSize: 13, fontWeight: '600' },
+  roleChipText: { fontSize: 13, fontFamily: FONTS.bodySemiBold },
 
   legalRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border },
   legalIconWrap: { width: 36, height: 36, borderRadius: 10, backgroundColor: colors.glassCard, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   legalRowText: { flex: 1, fontSize: 15, color: colors.text },
 
   signOutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.glassCard, borderRadius: 16, padding: 16, marginTop: 8, borderWidth: 1, borderColor: colors.glassBorder },
-  signOutText: { fontSize: 16, color: colors.danger, fontWeight: '600' },
+  signOutText: { fontSize: 16, color: colors.danger, fontFamily: FONTS.bodySemiBold },
 
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   modal: { backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '80%' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  modalTitle: { fontSize: 20, fontWeight: 'bold', color: colors.text },
+  modalTitle: { fontSize: 20, fontFamily: FONTS.bodyBold, color: colors.text },
 
   modalUserInfo: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 24, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.border },
   modalAvatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: colors.primary + '20', justifyContent: 'center', alignItems: 'center' },
-  modalInitials: { fontSize: 20, fontWeight: 'bold', color: colors.primary },
-  modalUserName: { fontSize: 18, fontWeight: '600', color: colors.text },
+  modalInitials: { fontSize: 20, fontFamily: FONTS.bodyBold, color: colors.primary },
+  modalUserName: { fontSize: 18, fontFamily: FONTS.bodySemiBold, color: colors.text },
   modalUserEmail: { fontSize: 14, color: colors.textMuted },
 
-  rolesLabel: { fontSize: 14, fontWeight: '600', color: colors.textMuted, marginBottom: 12 },
+  rolesLabel: { fontSize: 14, fontFamily: FONTS.bodySemiBold, color: colors.textMuted, marginBottom: 12 },
   roleOption: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 12, borderRadius: 12, marginBottom: 8, backgroundColor: colors.background },
   roleOptionActive: { backgroundColor: colors.success + '10' },
   roleIndicator: { width: 12, height: 12, borderRadius: 6, marginRight: 12 },

@@ -1,6 +1,7 @@
 import { useAuth } from '@/lib/auth';
 import { AppNotification, fetchNotifications, markAllNotificationsRead, markNotificationRead } from '@/lib/notifications';
 import { useTheme } from '@/lib/theme';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -176,11 +177,11 @@ const createStyles = (colors: any) => StyleSheet.create({
     borderBottomColor: colors.border,
   },
   backBtn: { padding: 4 },
-  title: { fontSize: 18, fontWeight: '600', color: colors.text },
+  title: { fontSize: 18, fontFamily: FONTS.bodySemiBold, color: colors.text },
   markAllBtn: { padding: 4 },
-  markAllText: { fontSize: 14, color: colors.primary, fontWeight: '500' },
+  markAllText: { fontSize: 14, color: colors.primary, fontFamily: FONTS.bodySemiBold },
   empty: { alignItems: 'center', paddingTop: 80 },
-  emptyTitle: { fontSize: 18, fontWeight: '600', color: colors.text, marginTop: 16 },
+  emptyTitle: { fontSize: 18, fontFamily: FONTS.bodySemiBold, color: colors.text, marginTop: 16 },
   emptyText: { fontSize: 14, color: colors.textMuted, marginTop: 4 },
   card: {
     flexDirection: 'row',
@@ -204,8 +205,8 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   content: { flex: 1 },
   row: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
-  notifTitle: { fontSize: 15, fontWeight: '500', color: colors.text, flex: 1 },
-  notifTitleUnread: { fontWeight: '700' },
+  notifTitle: { fontSize: 15, fontFamily: FONTS.bodySemiBold, color: colors.text, flex: 1 },
+  notifTitleUnread: { fontFamily: FONTS.bodyBold },
   dot: {
     width: 8,
     height: 8,

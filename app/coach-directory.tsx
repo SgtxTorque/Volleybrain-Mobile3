@@ -448,7 +448,7 @@ export default function CoachDirectoryScreen() {
                             <Text style={s.teamAssignName}>{team.name}</Text>
                             <TouchableOpacity style={s.roleToggle}
                               onPress={() => assignToTeam(selectedCoach.id, team.id, team.role === 'head' ? 'assistant' : 'head')}>
-                              <Text style={[s.roleToggleText, team.role === 'head' && { color: colors.primary, fontWeight: '700' }]}>
+                              <Text style={[s.roleToggleText, team.role === 'head' && { color: colors.primary, fontFamily: FONTS.bodyBold }]}>
                                 {team.role === 'head' ? '\uD83D\uDC51 Head' : 'Assistant'}
                               </Text>
                             </TouchableOpacity>

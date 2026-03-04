@@ -579,13 +579,13 @@ export default function UsersScreen() {
                   )}
                   {user.is_suspended && (
                     <View style={{
-                      backgroundColor: '#FF3B3020',
+                      backgroundColor: colors.danger + '20',
                       paddingHorizontal: 8,
                       paddingVertical: 3,
                       borderRadius: 8,
                       marginRight: 8,
                     }}>
-                      <Text style={{ fontSize: 10, fontWeight: '700', color: '#FF3B30' }}>SUSPENDED</Text>
+                      <Text style={{ fontSize: 10, fontFamily: FONTS.bodyBold, color: colors.danger }}>SUSPENDED</Text>
                     </View>
                   )}
                   <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
@@ -686,14 +686,14 @@ export default function UsersScreen() {
                       <View style={{
                         flexDirection: 'row',
                         alignItems: 'center',
-                        backgroundColor: '#FF3B3015',
+                        backgroundColor: colors.danger + '15',
                         padding: 12,
                         borderRadius: 12,
                         gap: 8,
                         marginBottom: 12,
                       }}>
-                        <Ionicons name="warning" size={20} color="#FF3B30" />
-                        <Text style={{ flex: 1, fontSize: 14, color: '#FF3B30', fontWeight: '500' }}>
+                        <Ionicons name="warning" size={20} color={colors.danger} />
+                        <Text style={{ flex: 1, fontSize: 14, color: colors.danger, fontFamily: FONTS.bodySemiBold }}>
                           This account is currently suspended
                         </Text>
                       </View>
@@ -707,18 +707,18 @@ export default function UsersScreen() {
                         gap: 8,
                         paddingVertical: 14,
                         borderRadius: 12,
-                        backgroundColor: selectedUser.is_suspended ? colors.success + '20' : '#FF3B3020',
+                        backgroundColor: selectedUser.is_suspended ? colors.success + '20' : colors.danger + '20',
                       }}
                     >
                       <Ionicons
                         name={selectedUser.is_suspended ? 'checkmark-circle' : 'ban'}
                         size={20}
-                        color={selectedUser.is_suspended ? colors.success : '#FF3B30'}
+                        color={selectedUser.is_suspended ? colors.success : colors.danger}
                       />
                       <Text style={{
                         fontSize: 15,
-                        fontWeight: '600',
-                        color: selectedUser.is_suspended ? colors.success : '#FF3B30',
+                        fontFamily: FONTS.bodySemiBold,
+                        color: selectedUser.is_suspended ? colors.success : colors.danger,
                       }}>
                         {selectedUser.is_suspended ? 'Reactivate Account' : 'Suspend Account'}
                       </Text>

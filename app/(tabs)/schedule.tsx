@@ -4,6 +4,7 @@ import NotificationBell from '@/components/NotificationBell';
 import AppHeaderBar from '@/components/ui/AppHeaderBar';
 import { useAuth } from '@/lib/auth';
 import { displayTextStyle, radii } from '@/lib/design-tokens';
+import { FONTS } from '@/theme/fonts';
 import { runScheduledChecks } from '@/lib/notifications';
 import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
@@ -523,7 +524,7 @@ export default function ScheduleScreen() {
       days.push(
         <TouchableOpacity key={day} onPress={() => setSelectedDate(date)} style={{ width: DAY_WIDTH, height: 70, alignItems: 'center', paddingTop: 4 }}>
           <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: isSelected ? colors.primary : isToday ? colors.primary + '30' : 'transparent', justifyContent: 'center', alignItems: 'center' }}>
-            <Text style={{ color: isSelected ? '#fff' : isToday ? colors.primary : colors.text, fontSize: 14, fontWeight: isToday || isSelected ? '600' : '400' }}>{day}</Text>
+            <Text style={{ color: isSelected ? '#fff' : isToday ? colors.primary : colors.text, fontSize: 14, fontFamily: isToday || isSelected ? FONTS.bodySemiBold : FONTS.bodyLight }}>{day}</Text>
           </View>
           <View style={{ flexDirection: 'row', marginTop: 4, gap: 3 }}>
             {dayEvents.slice(0, 3).map((evt, idx) => (
@@ -543,7 +544,7 @@ export default function ScheduleScreen() {
           <TouchableOpacity onPress={goToNextMonth} style={{ padding: 8 }}><Ionicons name="chevron-forward" size={24} color={colors.text} /></TouchableOpacity>
         </View>
         <View style={{ flexDirection: 'row', paddingHorizontal: 16 }}>
-          {WEEKDAYS.map(day => (<View key={day} style={{ width: DAY_WIDTH, alignItems: 'center' }}><Text style={{ color: colors.textMuted, fontSize: 12, fontWeight: '600' }}>{day}</Text></View>))}
+          {WEEKDAYS.map(day => (<View key={day} style={{ width: DAY_WIDTH, alignItems: 'center' }}><Text style={{ color: colors.textMuted, fontSize: 12, fontFamily: FONTS.bodySemiBold }}>{day}</Text></View>))}
         </View>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, marginTop: 8 }}>{days}</View>
         {selectedDate && (
@@ -571,7 +572,7 @@ export default function ScheduleScreen() {
       <View style={{ flex: 1 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12 }}>
           <TouchableOpacity onPress={goToPreviousWeek} style={{ padding: 8 }}><Ionicons name="chevron-back" size={24} color={colors.text} /></TouchableOpacity>
-          <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>{weekDates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {weekDates[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</Text>
+          <Text style={{ color: colors.text, fontSize: 16, fontFamily: FONTS.bodySemiBold }}>{weekDates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {weekDates[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</Text>
           <TouchableOpacity onPress={goToNextWeek} style={{ padding: 8 }}><Ionicons name="chevron-forward" size={24} color={colors.text} /></TouchableOpacity>
         </View>
         <ScrollView style={{ flex: 1 }}>
@@ -581,8 +582,8 @@ export default function ScheduleScreen() {
             return (
               <View key={idx} style={{ flexDirection: 'row', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: isToday ? colors.primary + '10' : 'transparent' }}>
                 <View style={{ width: 60, alignItems: 'center' }}>
-                  <Text style={{ color: isToday ? colors.primary : colors.textMuted, fontSize: 11, fontWeight: '600' }}>{WEEKDAYS[date.getDay()]}</Text>
-                  <Text style={{ color: isToday ? colors.primary : colors.text, fontSize: 22, fontWeight: isToday ? 'bold' : '500' }}>{date.getDate()}</Text>
+                  <Text style={{ color: isToday ? colors.primary : colors.textMuted, fontSize: 11, fontFamily: FONTS.bodySemiBold }}>{WEEKDAYS[date.getDay()]}</Text>
+                  <Text style={{ color: isToday ? colors.primary : colors.text, fontSize: 22, fontFamily: isToday ? FONTS.bodyBold : FONTS.bodySemiBold }}>{date.getDate()}</Text>
                 </View>
                 <View style={{ flex: 1, marginLeft: 12 }}>
                   {dayEvents.length === 0 ? (<Text style={{ color: colors.textMuted, fontStyle: 'italic', paddingVertical: 8 }}>No events</Text>) : (
@@ -625,7 +626,7 @@ export default function ScheduleScreen() {
             <View style={{ marginBottom: 16 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
                 <View style={{ backgroundColor: isToday ? colors.primary : colors.card, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}>
-                  <Text style={{ color: isToday ? '#fff' : colors.text, fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 }}>{isToday ? 'TODAY' : date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</Text>
+                  <Text style={{ color: isToday ? '#fff' : colors.text, fontSize: 13, fontFamily: FONTS.bodyBold, textTransform: 'uppercase', letterSpacing: 1 }}>{isToday ? 'TODAY' : date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</Text>
                 </View>
               </View>
               {dayEvents.map(event => (<TouchableOpacity key={event.id} onLongPress={() => deleteEvent(event)}><EventCard event={event} onPress={() => handleEventPress(event)} /></TouchableOpacity>))}
@@ -671,13 +672,13 @@ export default function ScheduleScreen() {
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filterRow} contentContainerStyle={{ paddingHorizontal: 16 }}>
         {[{ key: 'all', label: 'All', color: colors.primary }, { key: 'game', label: 'Games', color: '#D94F4F' }, { key: 'practice', label: 'Practices', color: '#14B8A6' }, { key: 'event', label: 'Events', color: '#2C5F7C' }].map((filter, idx) => (
           <TouchableOpacity key={filter.key} onPress={() => setEventFilter(filter.key as EventFilter)} style={[s.filterChip, eventFilter === filter.key && { backgroundColor: filter.color + '20', borderColor: filter.color }, idx > 0 && { marginLeft: 8 }]}>
-            <Text style={[s.filterText, eventFilter === filter.key && { color: filter.color, fontWeight: '600' }]}>{filter.label}</Text>
+            <Text style={[s.filterText, eventFilter === filter.key && { color: filter.color, fontFamily: FONTS.bodySemiBold }]}>{filter.label}</Text>
           </TouchableOpacity>
         ))}
         {teams.length > 1 && (<>
           <View style={{ width: 1, height: 24, backgroundColor: colors.border, marginHorizontal: 12, alignSelf: 'center' }} />
           <TouchableOpacity onPress={() => setTeamFilter(null)} style={[s.filterChip, teamFilter === null && s.filterActive]}><Text style={[s.filterText, teamFilter === null && s.filterActiveText]}>All Teams</Text></TouchableOpacity>
-          {teams.map(team => (<TouchableOpacity key={team.id} onPress={() => setTeamFilter(team.id)} style={[s.filterChip, teamFilter === team.id && { backgroundColor: (team.color || colors.primary) + '20', borderColor: team.color || colors.primary }, { marginLeft: 8 }]}><Text style={[s.filterText, teamFilter === team.id && { color: team.color || colors.primary, fontWeight: '600' }]}>{team.name}</Text></TouchableOpacity>))}
+          {teams.map(team => (<TouchableOpacity key={team.id} onPress={() => setTeamFilter(team.id)} style={[s.filterChip, teamFilter === team.id && { backgroundColor: (team.color || colors.primary) + '20', borderColor: team.color || colors.primary }, { marginLeft: 8 }]}><Text style={[s.filterText, teamFilter === team.id && { color: team.color || colors.primary, fontFamily: FONTS.bodySemiBold }]}>{team.name}</Text></TouchableOpacity>))}
         </>)}
       </ScrollView>
 
@@ -697,21 +698,21 @@ export default function ScheduleScreen() {
           <View style={s.modalHeader}>
             <TouchableOpacity onPress={() => { setShowAddModal(false); resetForm(); }}><Text style={{ color: colors.textMuted, fontSize: 16 }}>Cancel</Text></TouchableOpacity>
             <Text style={s.modalTitle}>Add Event</Text>
-            <TouchableOpacity onPress={handleAddEvent} disabled={creating}><Text style={{ color: creating ? colors.textMuted : colors.primary, fontSize: 16, fontWeight: '600' }}>{creating ? 'Saving...' : 'Save'}</Text></TouchableOpacity>
+            <TouchableOpacity onPress={handleAddEvent} disabled={creating}><Text style={{ color: creating ? colors.textMuted : colors.primary, fontSize: 16, fontFamily: FONTS.bodySemiBold }}>{creating ? 'Saving...' : 'Save'}</Text></TouchableOpacity>
           </View>
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
             <Text style={s.label}>EVENT TYPE</Text>
             <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
               {[{ key: 'game', label: 'Game', icon: 'trophy', color: '#D94F4F' }, { key: 'practice', label: 'Practice', icon: 'fitness', color: '#14B8A6' }, { key: 'event', label: 'Event', icon: 'calendar', color: '#2C5F7C' }].map(type => (
                 <TouchableOpacity key={type.key} onPress={() => setNewEvent(prev => ({ ...prev, event_type: type.key as any }))} style={[s.typeBtn, newEvent.event_type === type.key && { backgroundColor: type.color + '20', borderColor: type.color }]}>
-                  <Ionicons name={type.icon as any} size={24} color={type.color} /><Text style={{ color: type.color, marginTop: 6, fontWeight: '600' }}>{type.label}</Text>
+                  <Ionicons name={type.icon as any} size={24} color={type.color} /><Text style={{ color: type.color, marginTop: 6, fontFamily: FONTS.bodySemiBold }}>{type.label}</Text>
                 </TouchableOpacity>
               ))}
             </View>
 
             <Text style={s.label}>TEAM</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 20 }}>
-              {teams.map(team => (<TouchableOpacity key={team.id} onPress={() => setNewEvent(prev => ({ ...prev, team_id: team.id }))} style={[s.teamChip, newEvent.team_id === team.id && { backgroundColor: (team.color || colors.primary) + '20', borderColor: team.color || colors.primary }]}><Text style={{ color: newEvent.team_id === team.id ? (team.color || colors.primary) : colors.text, fontWeight: newEvent.team_id === team.id ? '600' : '400' }}>{team.name}</Text></TouchableOpacity>))}
+              {teams.map(team => (<TouchableOpacity key={team.id} onPress={() => setNewEvent(prev => ({ ...prev, team_id: team.id }))} style={[s.teamChip, newEvent.team_id === team.id && { backgroundColor: (team.color || colors.primary) + '20', borderColor: team.color || colors.primary }]}><Text style={{ color: newEvent.team_id === team.id ? (team.color || colors.primary) : colors.text, fontFamily: newEvent.team_id === team.id ? FONTS.bodySemiBold : FONTS.bodyLight }}>{team.name}</Text></TouchableOpacity>))}
             </ScrollView>
 
             <Text style={s.label}>TITLE</Text>
@@ -749,7 +750,7 @@ export default function ScheduleScreen() {
               <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16 }}>
                 {[{ key: 'home', label: 'Home', icon: 'home', color: '#4ECDC4' }, { key: 'away', label: 'Away', icon: 'airplane', color: '#FF6B6B' }, { key: 'neutral', label: 'Neutral', icon: 'location', color: '#96CEB4' }].map(loc => (
                   <TouchableOpacity key={loc.key} onPress={() => setNewEvent(prev => ({ ...prev, location_type: loc.key as any }))} style={[s.locBtn, newEvent.location_type === loc.key && { backgroundColor: loc.color + '20', borderColor: loc.color }]}>
-                    <Ionicons name={loc.icon as any} size={18} color={loc.color} /><Text style={{ color: loc.color, fontWeight: '600', fontSize: 13 }}>{loc.label}</Text>
+                    <Ionicons name={loc.icon as any} size={18} color={loc.color} /><Text style={{ color: loc.color, fontFamily: FONTS.bodySemiBold, fontSize: 13 }}>{loc.label}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -840,7 +841,7 @@ export default function ScheduleScreen() {
         <Modal visible={showLocationPicker} transparent animationType="fade">
           <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }} activeOpacity={1} onPress={() => setShowLocationPicker(false)}>
             <View style={{ backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, maxHeight: '60%' }}>
-              <Text style={{ color: colors.text, fontSize: 18, fontWeight: 'bold', marginBottom: 16, textAlign: 'center' }}>Select Venue</Text>
+              <Text style={{ color: colors.text, fontSize: 18, fontFamily: FONTS.bodyBold, marginBottom: 16, textAlign: 'center' }}>Select Venue</Text>
               <ScrollView>
                 {venues.map(venue => (
                   <TouchableOpacity key={venue.id} onPress={() => { setNewEvent(prev => ({ ...prev, venue_name: venue.name, venue_address: venue.address || '', location: venue.name })); setShowLocationPicker(false); }} style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
@@ -849,7 +850,7 @@ export default function ScheduleScreen() {
                   </TouchableOpacity>
                 ))}
                 <TouchableOpacity onPress={() => { setShowLocationPicker(false); }} style={{ padding: 16, alignItems: 'center' }}>
-                  <Text style={{ color: colors.primary, fontSize: 16, fontWeight: '600' }}>Enter Custom Location</Text>
+                  <Text style={{ color: colors.primary, fontSize: 16, fontFamily: FONTS.bodySemiBold }}>Enter Custom Location</Text>
                 </TouchableOpacity>
               </ScrollView>
             </View>
@@ -863,7 +864,7 @@ export default function ScheduleScreen() {
           <View style={s.modalHeader}>
             <TouchableOpacity onPress={() => { setShowBulkModal(false); resetBulkForm(); }}><Text style={{ color: colors.textMuted, fontSize: 16 }}>Cancel</Text></TouchableOpacity>
             <Text style={s.modalTitle}>Bulk Add Events</Text>
-            <TouchableOpacity onPress={handleBulkCreate} disabled={creating}><Text style={{ color: creating ? colors.textMuted : colors.primary, fontSize: 16, fontWeight: '600' }}>{creating ? 'Creating...' : 'Create'}</Text></TouchableOpacity>
+            <TouchableOpacity onPress={handleBulkCreate} disabled={creating}><Text style={{ color: creating ? colors.textMuted : colors.primary, fontSize: 16, fontFamily: FONTS.bodySemiBold }}>{creating ? 'Creating...' : 'Create'}</Text></TouchableOpacity>
           </View>
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
             <Text style={s.label}>WHAT DO YOU WANT TO CREATE?</Text>
@@ -882,7 +883,7 @@ export default function ScheduleScreen() {
 
             <Text style={s.label}>SELECT TEAM</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 20 }}>
-              {teams.map(team => (<TouchableOpacity key={team.id} onPress={() => setBulkTeamId(team.id)} style={[s.teamChip, bulkTeamId === team.id && { backgroundColor: (team.color || colors.primary) + '20', borderColor: team.color || colors.primary }]}><Text style={{ color: bulkTeamId === team.id ? (team.color || colors.primary) : colors.text, fontWeight: bulkTeamId === team.id ? '600' : '400' }}>{team.name}</Text></TouchableOpacity>))}
+              {teams.map(team => (<TouchableOpacity key={team.id} onPress={() => setBulkTeamId(team.id)} style={[s.teamChip, bulkTeamId === team.id && { backgroundColor: (team.color || colors.primary) + '20', borderColor: team.color || colors.primary }]}><Text style={{ color: bulkTeamId === team.id ? (team.color || colors.primary) : colors.text, fontFamily: bulkTeamId === team.id ? FONTS.bodySemiBold : FONTS.bodyLight }}>{team.name}</Text></TouchableOpacity>))}
             </ScrollView>
 
             {bulkType === 'recurring_practice' && (<>
@@ -951,7 +952,7 @@ export default function ScheduleScreen() {
                 </View>
               ))}
 
-              <TouchableOpacity onPress={addGameToSeries} style={s.addGameBtn}><Ionicons name="add-circle" size={20} color={colors.primary} /><Text style={{ color: colors.primary, fontWeight: '600', marginLeft: 8 }}>Add Another Game</Text></TouchableOpacity>
+              <TouchableOpacity onPress={addGameToSeries} style={s.addGameBtn}><Ionicons name="add-circle" size={20} color={colors.primary} /><Text style={{ color: colors.primary, fontFamily: FONTS.bodySemiBold, marginLeft: 8 }}>Add Another Game</Text></TouchableOpacity>
               
               {gameSeriesData.filter(g => g.opponent).length > 0 && (<View style={s.previewBox}><Text style={s.previewTitle}>Preview</Text><Text style={s.previewText}>{gameSeriesData.filter(g => g.opponent).length} games will be created</Text></View>)}
             </>)}
@@ -1023,15 +1024,15 @@ const createStyles = (colors: any) => StyleSheet.create({
   viewBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 8, borderRadius: 8, gap: 6 },
   viewBtnActive: { backgroundColor: colors.background },
   viewBtnText: { color: colors.textMuted, fontSize: 13 },
-  viewBtnTextActive: { color: colors.primary, fontWeight: '600' },
+  viewBtnTextActive: { color: colors.primary, fontFamily: FONTS.bodySemiBold },
   filterRow: { marginBottom: 12, flexGrow: 0, flexShrink: 0 },
   filterChip: { paddingHorizontal: 14, paddingVertical: 6, backgroundColor: colors.card, borderRadius: 20, borderWidth: 1, borderColor: colors.border },
   filterActive: { backgroundColor: colors.primary + '20', borderColor: colors.primary },
   filterText: { color: colors.textMuted, fontSize: 13 },
-  filterActiveText: { color: colors.primary, fontWeight: '600' },
+  filterActiveText: { color: colors.primary, fontFamily: FONTS.bodySemiBold },
   modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.card },
-  modalTitle: { fontSize: 18, fontWeight: 'bold', color: colors.text },
-  label: { fontSize: 12, color: colors.textMuted, fontWeight: '700', marginBottom: 8, marginTop: 12, textTransform: 'uppercase' as const, letterSpacing: 1 },
+  modalTitle: { fontSize: 18, fontFamily: FONTS.bodyBold, color: colors.text },
+  label: { fontSize: 12, color: colors.textMuted, fontFamily: FONTS.bodyBold, marginBottom: 8, marginTop: 12, textTransform: 'uppercase' as const, letterSpacing: 1 },
   input: { backgroundColor: colors.card, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, color: colors.text, fontSize: 16, borderWidth: 1, borderColor: colors.border, marginBottom: 16 },
   pickerBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, borderRadius: 12, padding: 14, borderWidth: 1, borderColor: colors.border, marginBottom: 16, gap: 10 },
   pickerBtnText: { flex: 1, color: colors.text, fontSize: 16 },
@@ -1040,22 +1041,22 @@ const createStyles = (colors: any) => StyleSheet.create({
   locBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 12, backgroundColor: colors.card, borderRadius: 8, borderWidth: 2, borderColor: colors.border, gap: 6 },
   bulkTypeBtn: { flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: colors.card, borderRadius: 12, borderWidth: 2, borderColor: colors.border },
   bulkTypeBtnActive: { borderColor: colors.primary, backgroundColor: colors.primary + '10' },
-  bulkTypeTitle: { fontSize: 16, fontWeight: '600', color: colors.text },
+  bulkTypeTitle: { fontSize: 16, fontFamily: FONTS.bodySemiBold, color: colors.text },
   bulkTypeDesc: { fontSize: 13, color: colors.textMuted, marginTop: 2 },
   dayBtn: { paddingHorizontal: 14, paddingVertical: 10, backgroundColor: colors.card, borderRadius: 8, borderWidth: 1, borderColor: colors.border },
   dayBtnActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  dayBtnText: { color: colors.text, fontSize: 13, fontWeight: '500' },
+  dayBtnText: { color: colors.text, fontSize: 13, fontFamily: FONTS.bodySemiBold },
   dayBtnTextActive: { color: '#fff' },
   previewBox: { backgroundColor: colors.primary + '15', borderRadius: 10, padding: 14, marginTop: 8, borderWidth: 1, borderColor: colors.primary + '30' },
-  previewTitle: { color: colors.primary, fontWeight: '600', marginBottom: 6 },
+  previewTitle: { color: colors.primary, fontFamily: FONTS.bodySemiBold, marginBottom: 6 },
   previewText: { color: colors.text, fontSize: 14 },
   gameRow: { backgroundColor: colors.card, borderRadius: 12, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: colors.border },
   gameRowHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  gameRowNum: { color: colors.primary, fontWeight: '600', fontSize: 14 },
+  gameRowNum: { color: colors.primary, fontFamily: FONTS.bodySemiBold, fontSize: 14 },
   gameInput: { backgroundColor: colors.background, borderRadius: 8, padding: 12, color: colors.text, fontSize: 15, borderWidth: 1, borderColor: colors.border },
   miniLocBtn: { flex: 1, paddingVertical: 8, borderRadius: 6, backgroundColor: colors.background, alignItems: 'center', borderWidth: 1, borderColor: colors.border },
   miniLocBtnActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  miniLocText: { color: colors.textMuted, fontSize: 12, fontWeight: '500' },
+  miniLocText: { color: colors.textMuted, fontSize: 12, fontFamily: FONTS.bodySemiBold },
   miniLocTextActive: { color: '#fff' },
   addGameBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 14, borderRadius: 10, borderWidth: 2, borderColor: colors.primary, borderStyle: 'dashed' },
 });

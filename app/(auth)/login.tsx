@@ -410,6 +410,6 @@ const s = StyleSheet.create({
   devBtnText: {
     fontSize: 11,
     color: BRAND.textMuted,
-    fontWeight: '600',
+    fontFamily: FONTS.bodySemiBold,
   },
 });
