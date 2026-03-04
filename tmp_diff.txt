@@ -1,0 +1,1313 @@
+diff --git a/app/achievements.tsx b/app/achievements.tsx
+index 43124c8..797f913 100644
+--- a/app/achievements.tsx
++++ b/app/achievements.tsx
+@@ -17,7 +17,7 @@ import { getLevelFromXP, getLevelTier } from '@/lib/engagement-constants';
+ import { usePermissions } from '@/lib/permissions-context';
+ import { useSeason } from '@/lib/season';
+ import { supabase } from '@/lib/supabase';
+-import { useTheme } from '@/lib/theme';
++import { FONTS } from '@/theme/fonts';
+ import { Ionicons } from '@expo/vector-icons';
+ import { useRouter } from 'expo-router';
+ import React, { useCallback, useEffect, useMemo, useState } from 'react';
+@@ -172,7 +172,6 @@ function getRarityPercentageLabel(rarity: string): string | null {
+ // =============================================================================
+ 
+ export default function AchievementsScreen() {
+-  useTheme(); // keep hook call for consistency
+   const { user } = useAuth();
+   const { workingSeason } = useSeason();
+   const { isAdmin, isCoach, isParent, isPlayer } = usePermissions();
+@@ -549,8 +548,6 @@ export default function AchievementsScreen() {
+     setSelectedAchievement(ach);
+   }, []);
+ 
+-  const s = createStyles();
+-
+   // =========================================================================
+   // LOADING STATE
+   // =========================================================================
+@@ -1149,643 +1146,642 @@ export default function AchievementsScreen() {
+ // STYLES
+ // =============================================================================
+ 
+-const createStyles = () =>
+-  StyleSheet.create({
+-    container: {
+-      flex: 1,
+-      backgroundColor: DARK.bg,
+-    },
+-    centered: {
+-      flex: 1,
+-      justifyContent: 'center',
+-      alignItems: 'center',
+-      paddingHorizontal: 32,
+-    },
+-    loadingText: {
+-      color: DARK.textMuted,
+-      marginTop: 12,
+-      fontSize: 14,
+-    },
+-
+-    // Header
+-    header: {
+-      flexDirection: 'row',
+-      alignItems: 'center',
+-      justifyContent: 'space-between',
+-      paddingHorizontal: 16,
+-      paddingVertical: 12,
+-      borderBottomWidth: 1,
+-      borderBottomColor: DARK.border,
+-    },
+-    backBtn: {
+-      width: 40,
+-      height: 40,
+-      justifyContent: 'center',
+-      alignItems: 'center',
+-    },
+-    headerCenter: {
+-      flexDirection: 'row',
+-      alignItems: 'center',
+-      gap: 10,
+-    },
+-    headerTitle: {
+-      fontSize: 20,
+-      fontWeight: '800',
+-      color: DARK.gold,
+-      textTransform: 'uppercase',
+-      letterSpacing: 3,
+-    },
+-    headerCountBadge: {
+-      backgroundColor: DARK.gold + '25',
+-      borderRadius: 12,
+-      paddingHorizontal: 10,
+-      paddingVertical: 3,
+-      borderWidth: 1,
+-      borderColor: DARK.gold + '50',
+-    },
+-    headerCountText: {
+-      fontSize: 13,
+-      fontWeight: '800',
+-      color: DARK.gold,
+-    },
+-
+-    // Level & XP Bar
+-    xpCard: {
+-      backgroundColor: DARK.card,
+-      borderRadius: 16,
+-      padding: 16,
+-      marginHorizontal: 16,
+-      marginTop: 16,
+-      borderWidth: 1,
+-      borderColor: DARK.border,
+-    },
+-    xpHeaderRow: {
+-      flexDirection: 'row',
+-      alignItems: 'center',
+-      gap: 14,
+-      marginBottom: 12,
+-    },
+-    levelBadge: {
+-      width: 52,
+-      height: 52,
+-      borderRadius: 26,
+-      justifyContent: 'center',
+-      alignItems: 'center',
+-      borderWidth: 2,
+-    },
+-    levelNumber: {
+-      fontSize: 22,
+-      fontWeight: '900',
+-    },
+-    xpInfo: {
+-      flex: 1,
+-    },
+-    xpTierName: {
+-      fontSize: 16,
+-      fontWeight: '800',
+-      color: DARK.text,
+-      textTransform: 'uppercase',
+-      letterSpacing: 1,
+-    },
+-    xpLabel: {
+-      fontSize: 13,
+-      fontWeight: '500',
+-      color: DARK.textMuted,
+-      marginTop: 2,
+-    },
+-    xpBarBg: {
+-      height: 8,
+-      borderRadius: 4,
+-      backgroundColor: 'rgba(255,255,255,0.08)',
+-      overflow: 'hidden',
+-    },
+-    xpBarFill: {
+-      height: '100%',
+-      borderRadius: 4,
+-    },
+-
+-    // Almost There nudges
+-    nudgeSection: {
+-      marginHorizontal: 16,
+-      marginTop: 12,
+-      backgroundColor: DARK.card,
+-      borderRadius: 14,
+-      padding: 14,
+-      borderWidth: 1,
+-      borderColor: DARK.border,
+-    },
+-    nudgeHeader: {
+-      flexDirection: 'row',
+-      alignItems: 'center',
+-      gap: 6,
+-      marginBottom: 10,
+-    },
+-    nudgeTitle: {
+-      fontSize: 13,
+-      fontWeight: '800',
+-      color: '#F59E0B',
+-      textTransform: 'uppercase',
+-      letterSpacing: 1,
+-    },
+-    nudgeRow: {
+-      flexDirection: 'row',
+-      alignItems: 'center',
+-      gap: 10,
+-      paddingVertical: 6,
+-    },
+-    nudgeEmoji: {
+-      fontSize: 22,
+-    },
+-    nudgeInfo: {
+-      flex: 1,
+-    },
+-    nudgeName: {
+-      fontSize: 13,
+-      fontWeight: '600',
+-      color: DARK.text,
+-      marginBottom: 3,
+-    },
+-    nudgeProgressBg: {
+-      height: 5,
+-      borderRadius: 2.5,
+-      backgroundColor: 'rgba(255,255,255,0.08)',
+-      overflow: 'hidden',
+-    },
+-    nudgeProgressFill: {
+-      height: '100%',
+-      borderRadius: 2.5,
+-      backgroundColor: '#F59E0B',
+-    },
+-    nudgePct: {
+-      fontSize: 12,
+-      fontWeight: '700',
+-      color: DARK.textSecondary,
+-    },
+-
+-    // Summary Card
+-    summaryCard: {
+-      backgroundColor: DARK.card,
+-      borderRadius: 16,
+-      padding: 20,
+-      marginHorizontal: 16,
+-      marginTop: 16,
+-      marginBottom: 16,
+-      borderWidth: 1,
+-      borderColor: DARK.border,
+-      ...Platform.select({
+-        ios: {
+-          shadowColor: '#000',
+-          shadowOffset: { width: 0, height: 4 },
+-          shadowOpacity: 0.25,
+-          shadowRadius: 12,
+-        },
+-        android: { elevation: 6 },
+-      }),
+-    },
+-    summaryRow: {
+-      flexDirection: 'row',
+-      justifyContent: 'space-around',
+-      alignItems: 'center',
+-    },
+-    summaryItem: {
+-      alignItems: 'center',
+-    },
+-    summaryNumber: {
+-      fontSize: 28,
+-      fontWeight: '900',
+-      color: DARK.text,
+-    },
+-    summaryLabel: {
+-      fontSize: 11,
+-      fontWeight: '700',
+-      color: DARK.textMuted,
+-      marginTop: 4,
+-      textTransform: 'uppercase',
+-      letterSpacing: 1,
+-    },
+-    summaryDivider: {
+-      width: 1,
+-      height: 40,
+-      backgroundColor: DARK.border,
+-    },
+-    summaryProgressBarBg: {
+-      height: 6,
+-      borderRadius: 3,
+-      backgroundColor: 'rgba(255,255,255,0.08)',
+-      overflow: 'hidden',
+-      marginTop: 16,
+-    },
+-    summaryProgressBarFill: {
+-      height: '100%',
+-      borderRadius: 3,
+-      backgroundColor: DARK.gold,
+-    },
+-    nextToEarnRow: {
+-      flexDirection: 'row',
+-      alignItems: 'center',
+-      marginTop: 14,
+-      gap: 8,
+-      flexWrap: 'wrap',
+-    },
+-    nextToEarnLabel: {
+-      fontSize: 12,
+-      fontWeight: '600',
+-      color: DARK.textMuted,
+-    },
+-    nextToEarnBadge: {
+-      fontSize: 13,
+-      fontWeight: '700',
+-      color: DARK.gold,
+-    },
+-    nextToEarnProgress: {
+-      fontSize: 12,
+-      fontWeight: '600',
+-      color: DARK.textSecondary,
+-    },
+-    nextToEarnText: {
+-      fontSize: 12,
+-      fontWeight: '700',
+-      color: DARK.gold,
+-      flex: 1,
+-    },
+-
+-    // Category Filter
+-    categoryScroll: {
+-      marginBottom: 12,
+-    },
+-    categoryScrollContent: {
+-      paddingHorizontal: 16,
+-      gap: 8,
+-    },
+-    categoryChip: {
+-      flexDirection: 'row',
+-      alignItems: 'center',
+-      gap: 6,
+-      paddingHorizontal: 12,
+-      paddingVertical: 8,
+-      borderRadius: 20,
+-      borderWidth: 1,
+-      borderColor: DARK.border,
+-      backgroundColor: DARK.card,
+-    },
+-    categoryChipText: {
+-      fontSize: 13,
+-      fontWeight: '600',
+-      color: DARK.textMuted,
+-    },
+-    categoryCount: {
+-      fontSize: 11,
+-      fontWeight: '500',
+-      color: DARK.textMuted,
+-    },
+-
+-    // Badge Grid
+-    gridContent: {
+-      paddingBottom: 16,
+-    },
+-    gridRow: {
+-      paddingHorizontal: GRID_PADDING,
+-      gap: GRID_GAP,
+-      marginBottom: GRID_GAP,
+-    },
+-    badgeCell: {
+-      width: CELL_WIDTH,
+-      borderRadius: 14,
+-      padding: 10,
+-      alignItems: 'center',
+-      borderWidth: 1,
+-      borderColor: DARK.border,
+-    },
+-    badgeCellEmpty: {
+-      width: CELL_WIDTH,
+-    },
+-    badgeIconWrap: {
+-      width: 52,
+-      height: 52,
+-      borderRadius: 26,
+-      justifyContent: 'center',
+-      alignItems: 'center',
+-      marginBottom: 6,
+-      position: 'relative',
+-    },
+-    badgeEmoji: {
+-      fontSize: 32,
+-    },
+-    badgeCheckOverlay: {
+-      position: 'absolute',
+-      bottom: -2,
+-      right: -2,
+-      backgroundColor: DARK.card,
+-      borderRadius: 8,
+-      padding: 1,
+-    },
+-    badgeLockOverlay: {
+-      position: 'absolute',
+-      bottom: -1,
+-      right: -1,
+-      backgroundColor: DARK.cardAlt,
+-      borderRadius: 8,
+-      padding: 2,
+-    },
+-    badgeName: {
+-      fontSize: 11,
+-      fontWeight: '600',
+-      color: DARK.text,
+-      textAlign: 'center',
+-      lineHeight: 14,
+-      height: 28,
+-    },
+-    rarityDot: {
+-      width: 6,
+-      height: 6,
+-      borderRadius: 3,
+-      marginTop: 4,
+-    },
+-    miniProgressBg: {
+-      width: '100%',
+-      height: 3,
+-      borderRadius: 1.5,
+-      backgroundColor: 'rgba(255,255,255,0.08)',
+-      marginTop: 4,
+-      overflow: 'hidden',
+-    },
+-    miniProgressFill: {
+-      height: '100%',
+-      borderRadius: 1.5,
+-    },
+-
+-    // Empty states
+-    emptyBox: {
+-      alignItems: 'center',
+-      paddingVertical: 40,
+-      paddingHorizontal: 32,
+-    },
+-    emptyTitle: {
+-      fontSize: 18,
+-      fontWeight: '700',
+-      color: DARK.textSecondary,
+-      marginTop: 16,
+-      textAlign: 'center',
+-    },
+-    emptySubtitle: {
+-      fontSize: 14,
+-      color: DARK.textMuted,
+-      marginTop: 6,
+-      textAlign: 'center',
+-    },
+-    emptyFilterText: {
+-      fontSize: 15,
+-      fontWeight: '600',
+-      color: DARK.textMuted,
+-      marginTop: 12,
+-    },
+-
+-    // =========================================================================
+-    // MODAL STYLES
+-    // =========================================================================
+-    modalContainer: {
+-      flex: 1,
+-      backgroundColor: DARK.bg,
+-    },
+-    modalCloseBtn: {
+-      position: 'absolute',
+-      top: Platform.OS === 'ios' ? 56 : 16,
+-      right: 16,
+-      width: 40,
+-      height: 40,
+-      borderRadius: 20,
+-      backgroundColor: DARK.cardAlt,
+-      justifyContent: 'center',
+-      alignItems: 'center',
+-      zIndex: 10,
+-      borderWidth: 1,
+-      borderColor: DARK.border,
+-    },
+-    modalScrollContent: {
+-      paddingHorizontal: 24,
+-      paddingTop: 40,
+-      paddingBottom: 40,
+-      alignItems: 'center',
+-    },
+-    modalBadgeCircle: {
+-      width: 100,
+-      height: 100,
+-      borderRadius: 50,
+-      justifyContent: 'center',
+-      alignItems: 'center',
+-      borderWidth: 2,
+-      borderColor: DARK.border,
+-      position: 'relative',
+-    },
+-    modalBadgeEmoji: {
+-      fontSize: 48,
+-    },
+-    modalLockOverlay: {
+-      position: 'absolute',
+-      bottom: 0,
+-      right: 0,
+-      backgroundColor: DARK.cardAlt,
+-      borderRadius: 14,
+-      padding: 4,
+-      borderWidth: 1,
+-      borderColor: DARK.border,
+-    },
+-    modalBadgeName: {
+-      fontSize: 24,
+-      fontWeight: '800',
+-      color: DARK.text,
+-      marginTop: 16,
+-      textAlign: 'center',
+-    },
+-    modalRarityPill: {
+-      flexDirection: 'row',
+-      alignItems: 'center',
+-      gap: 6,
+-      paddingHorizontal: 14,
+-      paddingVertical: 6,
+-      borderRadius: 20,
+-      marginTop: 10,
+-    },
+-    modalRarityDot: {
+-      width: 8,
+-      height: 8,
+-      borderRadius: 4,
+-    },
+-    modalRarityText: {
+-      fontSize: 13,
+-      fontWeight: '700',
+-      textTransform: 'uppercase',
+-      letterSpacing: 1,
+-    },
+-    modalDescription: {
+-      fontSize: 15,
+-      color: DARK.textSecondary,
+-      lineHeight: 22,
+-      textAlign: 'center',
+-      marginTop: 20,
+-      paddingHorizontal: 8,
+-    },
+-
+-    // Modal sections
+-    modalSection: {
+-      width: '100%',
+-      marginTop: 28,
+-      backgroundColor: DARK.card,
+-      borderRadius: 14,
+-      padding: 18,
+-      borderWidth: 1,
+-      borderColor: DARK.border,
+-    },
+-    modalSectionTitle: {
+-      fontSize: 12,
+-      fontWeight: '800',
+-      color: DARK.textMuted,
+-      textTransform: 'uppercase',
+-      letterSpacing: 2,
+-      marginBottom: 14,
+-    },
+-
+-    // How to earn
+-    modalHowToEarnRow: {
+-      flexDirection: 'row',
+-      alignItems: 'center',
+-      gap: 12,
+-    },
+-    modalCategoryIconWrap: {
+-      width: 36,
+-      height: 36,
+-      borderRadius: 18,
+-      justifyContent: 'center',
+-      alignItems: 'center',
+-    },
+-    modalHowToEarnText: {
+-      flex: 1,
+-      fontSize: 14,
+-      color: DARK.textSecondary,
+-      lineHeight: 20,
+-    },
+-
+-    // Modal progress
+-    modalProgressWrap: {
+-      marginTop: 14,
+-    },
+-    modalProgressBarBg: {
+-      height: 10,
+-      borderRadius: 5,
+-      backgroundColor: 'rgba(255,255,255,0.08)',
+-      overflow: 'hidden',
+-    },
+-    modalProgressBarFill: {
+-      height: '100%',
+-      borderRadius: 5,
+-    },
+-    modalProgressLabel: {
+-      fontSize: 13,
+-      fontWeight: '600',
+-      color: DARK.textSecondary,
+-      marginTop: 8,
+-      textAlign: 'center',
+-    },
+-
+-    // Status section
+-    modalStatusEarned: {
+-      alignItems: 'center',
+-      gap: 8,
+-    },
+-    modalStatusLocked: {
+-      alignItems: 'center',
+-      gap: 8,
+-    },
+-    modalStatusBanner: {
+-      flexDirection: 'row',
+-      alignItems: 'center',
+-      gap: 8,
+-    },
+-    modalStatusEarnedText: {
+-      fontSize: 18,
+-      fontWeight: '900',
+-      color: '#10B981',
+-      letterSpacing: 2,
+-    },
+-    modalStatusLockedText: {
+-      fontSize: 18,
+-      fontWeight: '900',
+-      color: DARK.textMuted,
+-      letterSpacing: 2,
+-    },
+-    modalStatusDate: {
+-      fontSize: 13,
+-      color: DARK.textSecondary,
+-    },
+-    modalMotivation: {
+-      fontSize: 13,
+-      color: DARK.textSecondary,
+-      fontStyle: 'italic',
+-      textAlign: 'center',
+-    },
+-
+-    // Stats section
+-    modalStatRow: {
+-      flexDirection: 'row',
+-      alignItems: 'center',
+-      gap: 10,
+-      marginBottom: 10,
+-    },
+-    modalStatText: {
+-      fontSize: 14,
+-      color: DARK.textSecondary,
+-      flex: 1,
+-    },
+-
+-    // Track button
+-    modalTrackBtn: {
+-      flexDirection: 'row',
+-      alignItems: 'center',
+-      justifyContent: 'center',
+-      gap: 8,
+-      marginTop: 20,
+-      backgroundColor: DARK.cardAlt,
+-      borderRadius: 14,
+-      paddingVertical: 14,
+-      paddingHorizontal: 32,
+-      borderWidth: 1,
+-      borderColor: DARK.border,
+-      width: '100%',
+-    },
+-    modalTrackBtnText: {
+-      fontSize: 15,
+-      fontWeight: '700',
+-      color: DARK.textSecondary,
+-    },
+-    modalTrackHint: {
+-      fontSize: 12,
+-      color: DARK.textMuted,
+-    },
+-
+-    // Tracking indicator on badge cell
+-    trackingIndicator: {
+-      position: 'absolute',
+-      top: 4,
+-      right: 4,
+-      backgroundColor: DARK.gold + '30',
+-      borderRadius: 8,
+-      padding: 3,
+-    },
+-
+-    // Bottom close
+-    modalBottomCloseBtn: {
+-      marginTop: 32,
+-      backgroundColor: DARK.cardAlt,
+-      borderRadius: 14,
+-      paddingVertical: 14,
+-      paddingHorizontal: 48,
+-      borderWidth: 1,
+-      borderColor: DARK.border,
+-    },
+-    modalBottomCloseBtnText: {
+-      fontSize: 16,
+-      fontWeight: '700',
+-      color: DARK.text,
+-      textAlign: 'center',
+-    },
+-  });
++const s = StyleSheet.create({
++  container: {
++    flex: 1,
++    backgroundColor: DARK.bg,
++  },
++  centered: {
++    flex: 1,
++    justifyContent: 'center',
++    alignItems: 'center',
++    paddingHorizontal: 32,
++  },
++  loadingText: {
++    color: DARK.textMuted,
++    marginTop: 12,
++    fontSize: 14,
++  },
++
++  // Header
++  header: {
++    flexDirection: 'row',
++    alignItems: 'center',
++    justifyContent: 'space-between',
++    paddingHorizontal: 16,
++    paddingVertical: 12,
++    borderBottomWidth: 1,
++    borderBottomColor: DARK.border,
++  },
++  backBtn: {
++    width: 40,
++    height: 40,
++    justifyContent: 'center',
++    alignItems: 'center',
++  },
++  headerCenter: {
++    flexDirection: 'row',
++    alignItems: 'center',
++    gap: 10,
++  },
++  headerTitle: {
++    fontSize: 20,
++    fontFamily: FONTS.bodyExtraBold,
++    color: DARK.gold,
++    textTransform: 'uppercase',
++    letterSpacing: 3,
++  },
++  headerCountBadge: {
++    backgroundColor: DARK.gold + '25',
++    borderRadius: 12,
++    paddingHorizontal: 10,
++    paddingVertical: 3,
++    borderWidth: 1,
++    borderColor: DARK.gold + '50',
++  },
++  headerCountText: {
++    fontSize: 13,
++    fontFamily: FONTS.bodyExtraBold,
++    color: DARK.gold,
++  },
++
++  // Level & XP Bar
++  xpCard: {
++    backgroundColor: DARK.card,
++    borderRadius: 16,
++    padding: 16,
++    marginHorizontal: 16,
++    marginTop: 16,
++    borderWidth: 1,
++    borderColor: DARK.border,
++  },
++  xpHeaderRow: {
++    flexDirection: 'row',
++    alignItems: 'center',
++    gap: 14,
++    marginBottom: 12,
++  },
++  levelBadge: {
++    width: 52,
++    height: 52,
++    borderRadius: 26,
++    justifyContent: 'center',
++    alignItems: 'center',
++    borderWidth: 2,
++  },
++  levelNumber: {
++    fontSize: 22,
++    fontFamily: FONTS.bodyExtraBold,
++  },
++  xpInfo: {
++    flex: 1,
++  },
++  xpTierName: {
++    fontSize: 16,
++    fontFamily: FONTS.bodyExtraBold,
++    color: DARK.text,
++    textTransform: 'uppercase',
++    letterSpacing: 1,
++  },
++  xpLabel: {
++    fontSize: 13,
++    fontFamily: FONTS.bodyMedium,
++    color: DARK.textMuted,
++    marginTop: 2,
++  },
++  xpBarBg: {
++    height: 8,
++    borderRadius: 4,
++    backgroundColor: 'rgba(255,255,255,0.08)',
++    overflow: 'hidden',
++  },
++  xpBarFill: {
++    height: '100%',
++    borderRadius: 4,
++  },
++
++  // Almost There nudges
++  nudgeSection: {
++    marginHorizontal: 16,
++    marginTop: 12,
++    backgroundColor: DARK.card,
++    borderRadius: 14,
++    padding: 14,
++    borderWidth: 1,
++    borderColor: DARK.border,
++  },
++  nudgeHeader: {
++    flexDirection: 'row',
++    alignItems: 'center',
++    gap: 6,
++    marginBottom: 10,
++  },
++  nudgeTitle: {
++    fontSize: 13,
++    fontFamily: FONTS.bodyExtraBold,
++    color: '#F59E0B',
++    textTransform: 'uppercase',
++    letterSpacing: 1,
++  },
++  nudgeRow: {
++    flexDirection: 'row',
++    alignItems: 'center',
++    gap: 10,
++    paddingVertical: 6,
++  },
++  nudgeEmoji: {
++    fontSize: 22,
++  },
++  nudgeInfo: {
++    flex: 1,
++  },
++  nudgeName: {
++    fontSize: 13,
++    fontFamily: FONTS.bodySemiBold,
++    color: DARK.text,
++    marginBottom: 3,
++  },
++  nudgeProgressBg: {
++    height: 5,
++    borderRadius: 2.5,
++    backgroundColor: 'rgba(255,255,255,0.08)',
++    overflow: 'hidden',
++  },
++  nudgeProgressFill: {
++    height: '100%',
++    borderRadius: 2.5,
++    backgroundColor: '#F59E0B',
++  },
++  nudgePct: {
++    fontSize: 12,
++    fontFamily: FONTS.bodyBold,
++    color: DARK.textSecondary,
++  },
++
++  // Summary Card
++  summaryCard: {
++    backgroundColor: DARK.card,
++    borderRadius: 16,
++    padding: 20,
++    marginHorizontal: 16,
++    marginTop: 16,
++    marginBottom: 16,
++    borderWidth: 1,
++    borderColor: DARK.border,
++    ...Platform.select({
++      ios: {
++        shadowColor: '#000',
++        shadowOffset: { width: 0, height: 4 },
++        shadowOpacity: 0.25,
++        shadowRadius: 12,
++      },
++      android: { elevation: 6 },
++    }),
++  },
++  summaryRow: {
++    flexDirection: 'row',
++    justifyContent: 'space-around',
++    alignItems: 'center',
++  },
++  summaryItem: {
++    alignItems: 'center',
++  },
++  summaryNumber: {
++    fontSize: 28,
++    fontFamily: FONTS.bodyExtraBold,
++    color: DARK.text,
++  },
++  summaryLabel: {
++    fontSize: 11,
++    fontFamily: FONTS.bodyBold,
++    color: DARK.textMuted,
++    marginTop: 4,
++    textTransform: 'uppercase',
++    letterSpacing: 1,
++  },
++  summaryDivider: {
++    width: 1,
++    height: 40,
++    backgroundColor: DARK.border,
++  },
++  summaryProgressBarBg: {
++    height: 6,
++    borderRadius: 3,
++    backgroundColor: 'rgba(255,255,255,0.08)',
++    overflow: 'hidden',
++    marginTop: 16,
++  },
++  summaryProgressBarFill: {
++    height: '100%',
++    borderRadius: 3,
++    backgroundColor: DARK.gold,
++  },
++  nextToEarnRow: {
++    flexDirection: 'row',
++    alignItems: 'center',
++    marginTop: 14,
++    gap: 8,
++    flexWrap: 'wrap',
++  },
++  nextToEarnLabel: {
++    fontSize: 12,
++    fontFamily: FONTS.bodySemiBold,
++    color: DARK.textMuted,
++  },
++  nextToEarnBadge: {
++    fontSize: 13,
++    fontFamily: FONTS.bodyBold,
++    color: DARK.gold,
++  },
++  nextToEarnProgress: {
++    fontSize: 12,
++    fontFamily: FONTS.bodySemiBold,
++    color: DARK.textSecondary,
++  },
++  nextToEarnText: {
++    fontSize: 12,
++    fontFamily: FONTS.bodyBold,
++    color: DARK.gold,
++    flex: 1,
++  },
++
++  // Category Filter
++  categoryScroll: {
++    marginBottom: 12,
++  },
++  categoryScrollContent: {
++    paddingHorizontal: 16,
++    gap: 8,
++  },
++  categoryChip: {
++    flexDirection: 'row',
++    alignItems: 'center',
++    gap: 6,
++    paddingHorizontal: 12,
++    paddingVertical: 8,
++    borderRadius: 20,
++    borderWidth: 1,
++    borderColor: DARK.border,
++    backgroundColor: DARK.card,
++  },
++  categoryChipText: {
++    fontSize: 13,
++    fontFamily: FONTS.bodySemiBold,
++    color: DARK.textMuted,
++  },
++  categoryCount: {
++    fontSize: 11,
++    fontFamily: FONTS.bodyMedium,
++    color: DARK.textMuted,
++  },
++
++  // Badge Grid
++  gridContent: {
++    paddingBottom: 16,
++  },
++  gridRow: {
++    paddingHorizontal: GRID_PADDING,
++    gap: GRID_GAP,
++    marginBottom: GRID_GAP,
++  },
++  badgeCell: {
++    width: CELL_WIDTH,
++    borderRadius: 14,
++    padding: 10,
++    alignItems: 'center',
++    borderWidth: 1,
++    borderColor: DARK.border,
++  },
++  badgeCellEmpty: {
++    width: CELL_WIDTH,
++  },
++  badgeIconWrap: {
++    width: 52,
++    height: 52,
++    borderRadius: 26,
++    justifyContent: 'center',
++    alignItems: 'center',
++    marginBottom: 6,
++    position: 'relative',
++  },
++  badgeEmoji: {
++    fontSize: 32,
++  },
++  badgeCheckOverlay: {
++    position: 'absolute',
++    bottom: -2,
++    right: -2,
++    backgroundColor: DARK.card,
++    borderRadius: 8,
++    padding: 1,
++  },
++  badgeLockOverlay: {
++    position: 'absolute',
++    bottom: -1,
++    right: -1,
++    backgroundColor: DARK.cardAlt,
++    borderRadius: 8,
++    padding: 2,
++  },
++  badgeName: {
++    fontSize: 11,
++    fontFamily: FONTS.bodySemiBold,
++    color: DARK.text,
++    textAlign: 'center',
++    lineHeight: 14,
++    height: 28,
++  },
++  rarityDot: {
++    width: 6,
++    height: 6,
++    borderRadius: 3,
++    marginTop: 4,
++  },
++  miniProgressBg: {
++    width: '100%',
++    height: 3,
++    borderRadius: 1.5,
++    backgroundColor: 'rgba(255,255,255,0.08)',
++    marginTop: 4,
++    overflow: 'hidden',
++  },
++  miniProgressFill: {
++    height: '100%',
++    borderRadius: 1.5,
++  },
++
++  // Empty states
++  emptyBox: {
++    alignItems: 'center',
++    paddingVertical: 40,
++    paddingHorizontal: 32,
++  },
++  emptyTitle: {
++    fontSize: 18,
++    fontFamily: FONTS.bodyBold,
++    color: DARK.textSecondary,
++    marginTop: 16,
++    textAlign: 'center',
++  },
++  emptySubtitle: {
++    fontSize: 14,
++    color: DARK.textMuted,
++    marginTop: 6,
++    textAlign: 'center',
++  },
++  emptyFilterText: {
++    fontSize: 15,
++    fontFamily: FONTS.bodySemiBold,
++    color: DARK.textMuted,
++    marginTop: 12,
++  },
++
++  // =========================================================================
++  // MODAL STYLES
++  // =========================================================================
++  modalContainer: {
++    flex: 1,
++    backgroundColor: DARK.bg,
++  },
++  modalCloseBtn: {
++    position: 'absolute',
++    top: Platform.OS === 'ios' ? 56 : 16,
++    right: 16,
++    width: 40,
++    height: 40,
++    borderRadius: 20,
++    backgroundColor: DARK.cardAlt,
++    justifyContent: 'center',
++    alignItems: 'center',
++    zIndex: 10,
++    borderWidth: 1,
++    borderColor: DARK.border,
++  },
++  modalScrollContent: {
++    paddingHorizontal: 24,
++    paddingTop: 40,
++    paddingBottom: 40,
++    alignItems: 'center',
++  },
++  modalBadgeCircle: {
++    width: 100,
++    height: 100,
++    borderRadius: 50,
++    justifyContent: 'center',
++    alignItems: 'center',
++    borderWidth: 2,
++    borderColor: DARK.border,
++    position: 'relative',
++  },
++  modalBadgeEmoji: {
++    fontSize: 48,
++  },
++  modalLockOverlay: {
++    position: 'absolute',
++    bottom: 0,
++    right: 0,
++    backgroundColor: DARK.cardAlt,
++    borderRadius: 14,
++    padding: 4,
++    borderWidth: 1,
++    borderColor: DARK.border,
++  },
++  modalBadgeName: {
++    fontSize: 24,
++    fontFamily: FONTS.bodyExtraBold,
++    color: DARK.text,
++    marginTop: 16,
++    textAlign: 'center',
++  },
++  modalRarityPill: {
++    flexDirection: 'row',
++    alignItems: 'center',
++    gap: 6,
++    paddingHorizontal: 14,
++    paddingVertical: 6,
++    borderRadius: 20,
++    marginTop: 10,
++  },
++  modalRarityDot: {
++    width: 8,
++    height: 8,
++    borderRadius: 4,
++  },
++  modalRarityText: {
++    fontSize: 13,
++    fontFamily: FONTS.bodyBold,
++    textTransform: 'uppercase',
++    letterSpacing: 1,
++  },
++  modalDescription: {
++    fontSize: 15,
++    color: DARK.textSecondary,
++    lineHeight: 22,
++    textAlign: 'center',
++    marginTop: 20,
++    paddingHorizontal: 8,
++  },
++
++  // Modal sections
++  modalSection: {
++    width: '100%',
++    marginTop: 28,
++    backgroundColor: DARK.card,
++    borderRadius: 14,
++    padding: 18,
++    borderWidth: 1,
++    borderColor: DARK.border,
++  },
++  modalSectionTitle: {
++    fontSize: 12,
++    fontFamily: FONTS.bodyExtraBold,
++    color: DARK.textMuted,
++    textTransform: 'uppercase',
++    letterSpacing: 2,
++    marginBottom: 14,
++  },
++
++  // How to earn
++  modalHowToEarnRow: {
++    flexDirection: 'row',
++    alignItems: 'center',
++    gap: 12,
++  },
++  modalCategoryIconWrap: {
++    width: 36,
++    height: 36,
++    borderRadius: 18,
++    justifyContent: 'center',
++    alignItems: 'center',
++  },
++  modalHowToEarnText: {
++    flex: 1,
++    fontSize: 14,
++    color: DARK.textSecondary,
++    lineHeight: 20,
++  },
++
++  // Modal progress
++  modalProgressWrap: {
++    marginTop: 14,
++  },
++  modalProgressBarBg: {
++    height: 10,
++    borderRadius: 5,
++    backgroundColor: 'rgba(255,255,255,0.08)',
++    overflow: 'hidden',
++  },
++  modalProgressBarFill: {
++    height: '100%',
++    borderRadius: 5,
++  },
++  modalProgressLabel: {
++    fontSize: 13,
++    fontFamily: FONTS.bodySemiBold,
++    color: DARK.textSecondary,
++    marginTop: 8,
++    textAlign: 'center',
++  },
++
++  // Status section
++  modalStatusEarned: {
++    alignItems: 'center',
++    gap: 8,
++  },
++  modalStatusLocked: {
++    alignItems: 'center',
++    gap: 8,
++  },
++  modalStatusBanner: {
++    flexDirection: 'row',
++    alignItems: 'center',
++    gap: 8,
++  },
++  modalStatusEarnedText: {
++    fontSize: 18,
++    fontFamily: FONTS.bodyExtraBold,
++    color: '#10B981',
++    letterSpacing: 2,
++  },
++  modalStatusLockedText: {
++    fontSize: 18,
++    fontFamily: FONTS.bodyExtraBold,
++    color: DARK.textMuted,
++    letterSpacing: 2,
++  },
++  modalStatusDate: {
++    fontSize: 13,
++    color: DARK.textSecondary,
++  },
++  modalMotivation: {
++    fontSize: 13,
++    color: DARK.textSecondary,
++    fontStyle: 'italic',
++    textAlign: 'center',
++  },
++
++  // Stats section
++  modalStatRow: {
++    flexDirection: 'row',
++    alignItems: 'center',
++    gap: 10,
++    marginBottom: 10,
++  },
++  modalStatText: {
++    fontSize: 14,
++    color: DARK.textSecondary,
++    flex: 1,
++  },
++
++  // Track button
++  modalTrackBtn: {
++    flexDirection: 'row',
++    alignItems: 'center',
++    justifyContent: 'center',
++    gap: 8,
++    marginTop: 20,
++    backgroundColor: DARK.cardAlt,
++    borderRadius: 14,
++    paddingVertical: 14,
++    paddingHorizontal: 32,
++    borderWidth: 1,
++    borderColor: DARK.border,
++    width: '100%',
++  },
++  modalTrackBtnText: {
++    fontSize: 15,
++    fontFamily: FONTS.bodyBold,
++    color: DARK.textSecondary,
++  },
++  modalTrackHint: {
++    fontSize: 12,
++    color: DARK.textMuted,
++  },
++
++  // Tracking indicator on badge cell
++  trackingIndicator: {
++    position: 'absolute',
++    top: 4,
++    right: 4,
++    backgroundColor: DARK.gold + '30',
++    borderRadius: 8,
++    padding: 3,
++  },
++
++  // Bottom close
++  modalBottomCloseBtn: {
++    marginTop: 32,
++    backgroundColor: DARK.cardAlt,
++    borderRadius: 14,
++    paddingVertical: 14,
++    paddingHorizontal: 48,
++    borderWidth: 1,
++    borderColor: DARK.border,
++  },
++  modalBottomCloseBtnText: {
++    fontSize: 16,
++    fontFamily: FONTS.bodyBold,
++    color: DARK.text,
++    textAlign: 'center',
++  },
++});
