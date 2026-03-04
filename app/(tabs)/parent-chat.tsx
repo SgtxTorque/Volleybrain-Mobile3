@@ -537,7 +537,7 @@ export default function ParentChatListScreen() {
   // =========================================================================
   const EmptyState = () => (
     <View style={s.emptyState}>
-      <Ionicons name="chatbubbles-outline" size={64} color={BRAND.textMuted} />
+      <Image source={require('@/assets/images/mascot/SleepLynx.png')} style={{ width: 120, height: 120, marginBottom: 16 }} resizeMode="contain" />
       <Text style={s.emptyTitle}>No conversations yet</Text>
       <Text style={s.emptySubtitle}>
         Your team chats will appear here once your child is assigned to a team.

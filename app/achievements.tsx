@@ -26,6 +26,7 @@ import {
   Alert,
   Dimensions,
   FlatList,
+  Image,
   Modal,
   Platform,
   ScrollView,
@@ -578,7 +579,7 @@ export default function AchievementsScreen() {
           <View style={s.backBtn} />
         </View>
         <View style={s.centered}>
-          <Ionicons name="trophy-outline" size={64} color={DARK.textMuted} />
+          <Image source={require('@/assets/images/mascot/Meet-Lynx.png')} style={{ width: 120, height: 120, marginBottom: 16 }} resizeMode="contain" />
           <Text style={s.emptyTitle}>Achievements Unlocking Soon</Text>
           <Text style={s.emptySubtitle}>Your league is setting up trophies. Check back — your first badge is within reach!</Text>
         </View>

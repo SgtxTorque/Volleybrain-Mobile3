@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
-import { Alert, Modal, RefreshControl, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, Modal, RefreshControl, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type Message = { id: string; message_type: string; subject: string; body: string; target_audience: string; priority: string; requires_acknowledgment: boolean; sent_at: string; };
@@ -113,7 +113,7 @@ export default function MessagesScreen() {
 
         {messages.length === 0 ? (
           <View style={s.empty}>
-            <Ionicons name="mail-outline" size={48} color={colors.textMuted} style={s.emptyIcon} />
+            <Image source={require('@/assets/images/mascot/SleepLynx.png')} style={{ width: 120, height: 120, marginBottom: 16 }} resizeMode="contain" />
             <Text style={s.emptyText}>No messages sent yet</Text>
           </View>
         ) : (

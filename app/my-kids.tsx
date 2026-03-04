@@ -8,6 +8,7 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -260,9 +261,7 @@ export default function MyKidsScreen() {
         {/* Empty State */}
         {children.length === 0 ? (
           <View style={s.emptyState}>
-            <View style={s.emptyIconWrap}>
-              <Ionicons name="people-outline" size={56} color={colors.textMuted} />
-            </View>
+            <Image source={require('@/assets/images/mascot/Meet-Lynx.png')} style={{ width: 120, height: 120, marginBottom: 16 }} resizeMode="contain" />
             <Text style={s.emptyTitle}>No Children Registered</Text>
             <Text style={s.emptySubtitle}>
               Your children will appear here once they are registered and linked to your account.

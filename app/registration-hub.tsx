@@ -18,6 +18,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Modal,
   Platform,
   RefreshControl,
@@ -1694,7 +1695,7 @@ export default function RegistrationHubScreen() {
         {/* Empty State */}
         {filteredRegistrations.length === 0 && (
           <View style={{ alignItems: 'center', paddingVertical: 48 }}>
-            <Ionicons name="document-text-outline" size={48} color={colors.textSecondary} />
+            <Image source={require('@/assets/images/mascot/SleepLynx.png')} style={{ width: 120, height: 120, marginBottom: 16 }} resizeMode="contain" />
             <Text style={{ color: colors.textSecondary, marginTop: 16, fontSize: 16, fontFamily: FONTS.bodySemiBold }}>No registrations found</Text>
             {seasons.length === 0 && (
               <Text style={{ color: colors.textSecondary, marginTop: 8, fontSize: 14, textAlign: 'center' }}>No seasons have registration open.{'\n'}Go to Season Settings to open registration.</Text>

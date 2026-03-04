@@ -467,7 +467,7 @@ export default function ChatsScreen() {
       >
         {filteredChannels.length === 0 ? (
           <View style={s.empty}>
-            <Ionicons name="chatbubbles-outline" size={64} color={BRAND.textMuted} />
+            <Image source={require('@/assets/images/mascot/SleepLynx.png')} style={{ width: 120, height: 120, marginBottom: 16 }} resizeMode="contain" />
             <Text style={s.emptyText}>No chats yet</Text>
             <Text style={s.emptySubtext}>Start a conversation or create a channel</Text>
           </View>

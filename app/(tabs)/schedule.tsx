@@ -19,6 +19,7 @@ import {
   Alert,
   Dimensions,
   FlatList,
+  Image,
   Modal,
   Platform,
   RefreshControl,
@@ -614,7 +615,7 @@ export default function ScheduleScreen() {
         keyExtractor={(item, index) => item + index}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
         contentContainerStyle={{ padding: 16 }}
-        ListEmptyComponent={<View style={{ alignItems: 'center', paddingVertical: 60 }}><Ionicons name="calendar-outline" size={64} color={colors.textMuted} /><Text style={{ color: colors.textMuted, fontSize: 16, marginTop: 16 }}>No events scheduled</Text></View>}
+        ListEmptyComponent={<View style={{ alignItems: 'center', paddingVertical: 60 }}><Image source={require('@/assets/images/mascot/SleepLynx.png')} style={{ width: 120, height: 120, marginBottom: 16 }} resizeMode="contain" /><Text style={{ color: colors.textMuted, fontSize: 16 }}>No events scheduled</Text></View>}
         renderItem={({ item: dateKey }) => {
           if (dateKey === 'past_divider') {
             return (<View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 20, gap: 12 }}><View style={{ flex: 1, height: 1, backgroundColor: colors.border }} /><Text style={{ color: colors.textMuted, fontSize: 12 }}>PAST EVENTS</Text><View style={{ flex: 1, height: 1, backgroundColor: colors.border }} /></View>);
@@ -640,7 +641,7 @@ export default function ScheduleScreen() {
   const s = createStyles(colors);
 
   if (!workingSeason) {
-    return (<SafeAreaView style={s.container} edges={['top']}><AppHeaderBar title="SCHEDULE" showLogo={false} showNotificationBell={false} showAvatar={false} /><View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Ionicons name="calendar-outline" size={64} color={colors.textMuted} /><Text style={{ color: colors.textMuted, marginTop: 16 }}>No season selected</Text></View></SafeAreaView>);
+    return (<SafeAreaView style={s.container} edges={['top']}><AppHeaderBar title="SCHEDULE" showLogo={false} showNotificationBell={false} showAvatar={false} /><View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}><Image source={require('@/assets/images/mascot/SleepLynx.png')} style={{ width: 120, height: 120, marginBottom: 16 }} resizeMode="contain" /><Text style={{ color: colors.textMuted }}>No season selected</Text></View></SafeAreaView>);
   }
 
   return (

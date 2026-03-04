@@ -5,7 +5,7 @@ import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 // Simple Achievements tab content
 function AchievementsTab({ teamId }: { teamId: string }) {
@@ -28,8 +28,8 @@ function AchievementsTab({ teamId }: { teamId: string }) {
   if (loading) return <View style={{ padding: 40, alignItems: 'center' }}><ActivityIndicator color={BRAND.teal} /></View>;
   if (badges.length === 0) return (
     <View style={{ padding: 40, alignItems: 'center' }}>
-      <Ionicons name="trophy-outline" size={48} color={BRAND.textMuted} />
-      <Text style={{ fontSize: 14, color: BRAND.textMuted, marginTop: 8 }}>No achievements yet</Text>
+      <Image source={require('@/assets/images/mascot/SleepLynx.png')} style={{ width: 120, height: 120, marginBottom: 8 }} resizeMode="contain" />
+      <Text style={{ fontSize: 14, color: BRAND.textMuted }}>No achievements yet</Text>
     </View>
   );
 
@@ -83,8 +83,8 @@ function StatsTab({ teamId }: { teamId: string }) {
   if (loading) return <View style={{ padding: 40, alignItems: 'center' }}><ActivityIndicator color={BRAND.teal} /></View>;
   if (stats.length === 0) return (
     <View style={{ padding: 40, alignItems: 'center' }}>
-      <Ionicons name="stats-chart-outline" size={48} color={BRAND.textMuted} />
-      <Text style={{ fontSize: 14, color: BRAND.textMuted, marginTop: 8 }}>No stats recorded yet</Text>
+      <Image source={require('@/assets/images/mascot/SleepLynx.png')} style={{ width: 120, height: 120, marginBottom: 8 }} resizeMode="contain" />
+      <Text style={{ fontSize: 14, color: BRAND.textMuted }}>No stats recorded yet</Text>
     </View>
   );
 

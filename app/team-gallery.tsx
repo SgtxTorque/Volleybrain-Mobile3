@@ -224,7 +224,7 @@ export default function TeamGalleryScreen() {
     if (loading) return null;
     return (
       <View style={s.emptyContainer}>
-        <Ionicons name="images-outline" size={64} color={BRAND.textMuted} />
+        <Image source={require('@/assets/images/mascot/SleepLynx.png')} style={{ width: 120, height: 120, marginBottom: 16 }} resizeMode="contain" />
         <Text style={s.emptyTitle}>No photos yet</Text>
         <Text style={s.emptySubtitle}>
           Post to the team wall to start building your gallery!
