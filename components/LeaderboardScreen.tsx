@@ -144,7 +144,7 @@ export default function LeaderboardScreen({
   if (isEmpty) {
     return (
       <View style={s.emptyWrap}>
-        <Text style={s.emptyIcon}>🏆</Text>
+        <Image source={require('@/assets/images/mascot/SleepLynx.png')} style={{ width: 64, height: 64, marginBottom: 8 }} resizeMode="contain" />
         <Text style={[s.emptyTitle, { color: colors.text }]}>No Rankings Yet</Text>
         <Text style={[s.emptySubtitle, { color: colors.textMuted }]}>
           Leaderboards will appear once game stats are recorded.{'\n'}Play some games and check back!
