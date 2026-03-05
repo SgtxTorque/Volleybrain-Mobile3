@@ -23,6 +23,7 @@ import { useSeason } from '@/lib/season';
 import { getSportDisplay } from '@/constants/sport-display';
 import PlayerTradingCard, { PlayerTradingCardPlayer } from '@/components/PlayerTradingCard';
 import { PLAYER_THEME } from '@/components/PlayerHomeScroll';
+import { useResponsive } from '@/lib/responsive';
 import { FONTS } from '@/theme/fonts';
 
 // XP / OVR formulas — same as usePlayerHomeData
@@ -57,6 +58,7 @@ export default function PlayerCardScreen() {
   const insets = useSafeAreaInsets();
   const { workingSeason } = useSeason();
 
+  const { isTabletAny, contentMaxWidth } = useResponsive();
   const resolvedId = playerId || childId || null;
 
   const [loading, setLoading] = useState(true);
@@ -170,7 +172,7 @@ export default function PlayerCardScreen() {
       ) : (
         <Animated.ScrollView
           entering={FadeIn.duration(400)}
-          contentContainerStyle={styles.scroll}
+          contentContainerStyle={[styles.scroll, isTabletAny && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%' }]}
           showsVerticalScrollIndicator={false}
         >
           <PlayerTradingCard

@@ -13,6 +13,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -163,6 +164,12 @@ function CompactCard({ player }: { player: PlayerTradingCardPlayer }) {
 // ─── Full Variant ───────────────────────────────────────────────
 
 function FullCard({ player, onShare, onViewStats }: PlayerTradingCardProps) {
+  const { width: screenW } = useWindowDimensions();
+  const isTablet = screenW >= 744;
+  const cardWidth = isTablet
+    ? Math.min(screenW * 0.5, 500)
+    : Math.min(screenW - 40, 320);
+
   const posInfo = getPositionInfo(player.position, player.sportName);
   const posColor = posInfo?.color || PLAYER_THEME.accent;
   const posLabel = posInfo?.full || player.position || '';
@@ -187,9 +194,9 @@ function FullCard({ player, onShare, onViewStats }: PlayerTradingCardProps) {
   return (
     <View style={s.fullWrap}>
       {/* Glow behind card */}
-      <View style={[s.glowBg, { backgroundColor: PLAYER_THEME.accent + '08' }]} />
+      <View style={[s.glowBg, { backgroundColor: PLAYER_THEME.accent + '08', width: cardWidth - 40 }]} />
 
-      <View style={s.card}>
+      <View style={[s.card, { width: cardWidth }]}>
         {/* ── PHOTO AREA ─────────────────────────────────────── */}
         <LinearGradient
           colors={[teamColor, darken(teamColor, 0.4), darken(teamColor, 0.7)]}
@@ -288,7 +295,7 @@ function FullCard({ player, onShare, onViewStats }: PlayerTradingCardProps) {
       </View>
 
       {/* ── ACTION BUTTONS ─────────────────────────────────── */}
-      <View style={s.actions}>
+      <View style={[s.actions, { width: cardWidth }]}>
         <TouchableOpacity style={s.shareBtn} onPress={onShare} activeOpacity={0.8}>
           <Ionicons name="share-outline" size={16} color="#0D1B3E" />
           <Text style={s.shareBtnText}>Share Card</Text>

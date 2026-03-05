@@ -14,6 +14,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
   ViewToken,
 } from 'react-native';
@@ -169,6 +170,10 @@ export default function RosterCarousel({
   showHeader = true,
 }: RosterCarouselProps) {
   const router = useRouter();
+  const { width: screenW } = useWindowDimensions();
+  const isTablet = screenW >= 744;
+  const cardWidth = isTablet ? Math.min(screenW * 0.4, 350) : screenW * 0.78;
+  const cardSpacing = isTablet ? 16 : CARD_SPACING;
   const [activeIndex, setActiveIndex] = useState(0);
   const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 60 }).current;
 
@@ -209,13 +214,13 @@ export default function RosterCarousel({
         keyExtractor={p => p.id}
         horizontal
         showsHorizontalScrollIndicator={false}
-        snapToInterval={CARD_WIDTH + CARD_SPACING}
+        snapToInterval={cardWidth + cardSpacing}
         decelerationRate="fast"
         contentContainerStyle={s.listContent}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
         renderItem={({ item }) => (
-          <View style={{ width: CARD_WIDTH, marginRight: CARD_SPACING }}>
+          <View style={{ width: cardWidth, marginRight: cardSpacing }}>
             <CarouselCard
               player={item}
               onTap={() => handleTap(item.id)}
