@@ -6,7 +6,7 @@
  */
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import type { Formation, MatchState, Phase, PlayerSlot } from './match-state';
+import type { Formation, MatchState, Phase, PlayerSlot, RallyActionType, RallyEvent } from './match-state';
 import * as store from './match-store';
 import { autoFillLineup, getCourtPositions, processPoint, validateSubstitution } from './rotation-engine';
 
@@ -47,6 +47,13 @@ export interface MatchContextValue {
   endSet: () => void;
   startNextSet: () => void;
   endMatch: () => void;
+
+  // Rally stat tracking (Tier 2)
+  toggleRallyStats: () => void;
+  recordRallyAction: (playerId: string, action: RallyActionType) => void;
+  undoLastRallyAction: () => void;
+  /** Current rally being assembled (actions since last point) */
+  currentRally: RallyEvent | null;
 }
 
 const MatchContext = createContext<MatchContextValue | null>(null);
@@ -416,6 +423,87 @@ export function MatchProvider({
     setCurrentPage(3); // go to summary
   }, [match, persist]);
 
+  // ── Rally stat tracking (Tier 2) ─────────────────────────
+
+  const [currentRally, setCurrentRally] = useState<RallyEvent | null>(null);
+
+  const toggleRallyStats = useCallback(() => {
+    if (!match) return;
+    persist({ ...match, trackRallyStats: !match.trackRallyStats });
+  }, [match, persist]);
+
+  const recordRallyAction = useCallback((playerId: string, action: RallyActionType) => {
+    if (!match) return;
+    const setIdx = match.currentSet - 1;
+    const cs = match.sets[setIdx];
+    const rallyNumber = (cs?.rallyLog.length ?? 0) + 1;
+
+    setCurrentRally(prev => {
+      const rally: RallyEvent = prev ?? {
+        id: store.generateActionId(),
+        timestamp: new Date().toISOString(),
+        setNumber: match.currentSet,
+        rallyNumber,
+        actions: [],
+        pointFor: 'home', // updated when point scored
+      };
+      return {
+        ...rally,
+        actions: [...rally.actions, { playerId, action }],
+      };
+    });
+  }, [match]);
+
+  const undoLastRallyAction = useCallback(() => {
+    setCurrentRally(prev => {
+      if (!prev || prev.actions.length === 0) return null;
+      const actions = prev.actions.slice(0, -1);
+      if (actions.length === 0) return null;
+      return { ...prev, actions };
+    });
+  }, []);
+
+  // Flush current rally into the set's rallyLog when a point is scored
+  useEffect(() => {
+    if (!match || !currentRally) return;
+    const setIdx = match.currentSet - 1;
+    const cs = match.sets[setIdx];
+    if (!cs) return;
+
+    // Detect if score just changed (rally is over)
+    const totalScore = cs.homeScore + cs.awayScore;
+    const lastRally = cs.rallyLog[cs.rallyLog.length - 1];
+    const lastRallyNumber = lastRally?.rallyNumber ?? 0;
+
+    // If a point was scored after rally actions were recorded, flush
+    if (currentRally.actions.length > 0 && totalScore > 0) {
+      // pointFor determined by which score increased — we'll attribute on next score
+    }
+  }, [match?.sets, currentRally]);
+
+  // Hook into scorePoint to flush rally
+  const originalScorePoint = scorePoint;
+  const scorePointWithRally = useCallback((pointFor: 'home' | 'away') => {
+    if (match?.trackRallyStats && currentRally && currentRally.actions.length > 0) {
+      // Flush the current rally into the set log
+      const sets = [...match.sets];
+      const setIdx = match.currentSet - 1;
+      const cs = { ...sets[setIdx] };
+      const finalRally: RallyEvent = {
+        ...currentRally,
+        pointFor,
+      };
+      cs.rallyLog = [...cs.rallyLog, finalRally];
+      sets[setIdx] = cs;
+      persist({ ...match, sets }).then(() => {
+        setCurrentRally(null);
+      });
+    } else {
+      setCurrentRally(null);
+    }
+    originalScorePoint(pointFor);
+  }, [match, currentRally, originalScorePoint, persist]);
+
   // ── Context value ───────────────────────────────────────────
 
   const value: MatchContextValue = {
@@ -425,7 +513,8 @@ export function MatchProvider({
     setFormation, assignStarter, removeStarter, swapStarterPositions,
     assignLibero, addSubPair, removeSubPair,
     doAutoFill, clearLineup, setFirstServe, startMatch, lineupReady,
-    scorePoint, undoLastPoint, confirmSub, endSet, startNextSet, endMatch,
+    scorePoint: scorePointWithRally, undoLastPoint, confirmSub, endSet, startNextSet, endMatch,
+    toggleRallyStats, recordRallyAction, undoLastRallyAction, currentRally,
   };
 
   return React.createElement(MatchContext.Provider, { value }, children);

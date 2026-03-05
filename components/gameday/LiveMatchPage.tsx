@@ -27,6 +27,7 @@ import { getCourtPositions, isSetComplete, getSetWinner, isMatchComplete } from 
 import type { PlayerSlot } from '@/lib/gameday/match-state';
 import CourtView from './CourtView';
 import ServeTracker from './ServeTracker';
+import RallyStatPanel from './RallyStatPanel';
 import { FONTS } from '@/theme/fonts';
 
 const ACCENT = '#4BB9EC';
@@ -38,6 +39,7 @@ export default function LiveMatchPage() {
   const {
     match, setCurrentPage,
     scorePoint, undoLastPoint, confirmSub, endSet,
+    toggleRallyStats,
   } = useMatch();
 
   const { width: screenWidth } = useWindowDimensions();
@@ -365,6 +367,19 @@ export default function LiveMatchPage() {
             </Text>
           </TouchableOpacity>
         )}
+        <TouchableOpacity
+          style={[s.actionBtn, match?.trackRallyStats ? s.statsOnBtn : undefined]}
+          onPress={toggleRallyStats}
+        >
+          <Ionicons
+            name="stats-chart"
+            size={16}
+            color={match?.trackRallyStats ? TEAL : 'rgba(255,255,255,0.4)'}
+          />
+          <Text style={[s.actionBtnText, { color: match?.trackRallyStats ? TEAL : 'rgba(255,255,255,0.4)' }]}>
+            Stats {match?.trackRallyStats ? 'ON' : 'OFF'}
+          </Text>
+        </TouchableOpacity>
         <TouchableOpacity style={[s.actionBtn, s.endSetBtn]} onPress={() => {
           if (homeScore > 0 || awayScore > 0) {
             Alert.alert(
@@ -381,6 +396,9 @@ export default function LiveMatchPage() {
           <Text style={[s.actionBtnText, { color: CORAL }]}>End Set</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Rally stat panel (Tier 2) */}
+      {match?.trackRallyStats && <RallyStatPanel />}
 
       {/* ═══ SUB MODAL ═══ */}
       <Modal visible={showSubModal} animationType="slide" transparent>
@@ -714,6 +732,10 @@ const s = StyleSheet.create({
   serveTrackBtn: {
     borderColor: GOLD + '30',
     backgroundColor: GOLD + '08',
+  },
+  statsOnBtn: {
+    borderColor: TEAL + '30',
+    backgroundColor: TEAL + '08',
   },
   endSetBtn: {
     borderColor: CORAL + '30',
