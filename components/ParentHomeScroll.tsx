@@ -37,6 +37,8 @@ import { useParentScroll } from '@/lib/parent-scroll-context';
 import { useScrollAnimations, SCROLL_THRESHOLDS } from '@/hooks/useScrollAnimations';
 import { useParentHomeData } from '@/hooks/useParentHomeData';
 
+import { useResponsive } from '@/lib/responsive';
+
 import NoOrgState from './empty-states/NoOrgState';
 import NoTeamState from './empty-states/NoTeamState';
 import EmptySeasonState from './empty-states/EmptySeasonState';
@@ -167,6 +169,7 @@ export default function ParentHomeScroll() {
     onScrollJS: parentScroll.notifyScroll,
   });
   const data = useParentHomeData();
+  const { isTabletAny, contentMaxWidth, contentPadding } = useResponsive();
 
   // ─── Level-up celebration for child ──
   const [showLevelUp, setShowLevelUp] = useState(false);
@@ -376,7 +379,10 @@ export default function ParentHomeScroll() {
         onScroll={scrollHandler}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={[
+          { paddingBottom: 120 },
+          isTabletAny && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%', paddingHorizontal: contentPadding },
+        ]}
         refreshControl={
           <RefreshControl
             refreshing={data.refreshing}
@@ -411,7 +417,7 @@ export default function ParentHomeScroll() {
           </View>
 
           <View style={styles.welcomeContent}>
-            <Animated.View style={[styles.mascotImageWrap, mascotAnimStyle]}><Image source={require('@/assets/images/mascot/HiLynx.png')} style={styles.mascotImage} resizeMode="contain" /></Animated.View>
+            <Animated.View style={[styles.mascotImageWrap, mascotAnimStyle]}><Image source={require('@/assets/images/mascot/HiLynx.png')} style={[styles.mascotImage, isTabletAny && { width: 80, height: 80 }]} resizeMode="contain" /></Animated.View>
             <Text style={styles.welcomeGreeting}>Welcome back, {firstName}</Text>
           </View>
 

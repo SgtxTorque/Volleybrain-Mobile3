@@ -37,6 +37,8 @@ import { BRAND } from '@/theme/colors';
 import { SPACING } from '@/theme/spacing';
 import { FONTS } from '@/theme/fonts';
 
+import { useResponsive } from '@/lib/responsive';
+
 import NoOrgState from './empty-states/NoOrgState';
 import NoTeamState from './empty-states/NoTeamState';
 import EmptySeasonState from './empty-states/EmptySeasonState';
@@ -157,6 +159,7 @@ export default function CoachHomeScroll() {
   const { profile, organization } = useAuth();
   const { scrollY, scrollHandler } = useScrollAnimations();
   const data = useCoachHomeData();
+  const { isTabletAny, contentMaxWidth, contentPadding } = useResponsive();
 
   const firstName = profile?.full_name?.split(' ')[0] || 'Coach';
   const userInitials = useMemo(() => {
@@ -384,7 +387,10 @@ export default function CoachHomeScroll() {
         onScroll={scrollHandler}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 140 }}
+        contentContainerStyle={[
+          { paddingBottom: 140 },
+          isTabletAny && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%', paddingHorizontal: contentPadding },
+        ]}
         refreshControl={
           <RefreshControl
             refreshing={data.refreshing}

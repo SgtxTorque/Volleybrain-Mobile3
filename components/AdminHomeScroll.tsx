@@ -31,6 +31,8 @@ import { useAdminHomeData } from '@/hooks/useAdminHomeData';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 
+import { useResponsive } from '@/lib/responsive';
+
 import NoOrgState from './empty-states/NoOrgState';
 import NoTeamState from './empty-states/NoTeamState';
 import EmptySeasonState from './empty-states/EmptySeasonState';
@@ -51,6 +53,7 @@ export default function AdminHomeScroll() {
   const { organization } = useAuth();
   const { scrollY, scrollHandler } = useScrollAnimations();
   const data = useAdminHomeData();
+  const { isTabletAny, contentMaxWidth, contentPadding } = useResponsive();
 
   // Header interactivity
   const [headerVisible, setHeaderVisible] = React.useState(false);
@@ -128,7 +131,10 @@ export default function AdminHomeScroll() {
         onScroll={scrollHandler}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 140 }}
+        contentContainerStyle={[
+          { flexGrow: 1, paddingBottom: 140 },
+          isTabletAny && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%', paddingHorizontal: contentPadding },
+        ]}
         refreshControl={
           <RefreshControl
             refreshing={data.refreshing}

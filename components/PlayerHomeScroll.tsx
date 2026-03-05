@@ -41,6 +41,8 @@ import { useAuth } from '@/lib/auth';
 import { useScrollAnimations } from '@/hooks/useScrollAnimations';
 import { usePlayerHomeData } from '@/hooks/usePlayerHomeData';
 
+import { useResponsive } from '@/lib/responsive';
+
 import NoOrgState from './empty-states/NoOrgState';
 import NoTeamState from './empty-states/NoTeamState';
 import EmptySeasonState from './empty-states/EmptySeasonState';
@@ -93,6 +95,7 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
   const { organization } = useAuth();
   const { scrollY, scrollHandler } = useScrollAnimations();
   const data = usePlayerHomeData(playerId);
+  const { isTabletAny, contentMaxWidth, contentPadding } = useResponsive();
 
   // ─── Shoutout modal ──
   const [showShoutoutModal, setShowShoutoutModal] = useState(false);
@@ -205,7 +208,10 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
         onScroll={scrollHandler}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 140 }}
+        contentContainerStyle={[
+          { flexGrow: 1, paddingBottom: 140 },
+          isTabletAny && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%', paddingHorizontal: contentPadding },
+        ]}
         refreshControl={
           <RefreshControl
             refreshing={data.refreshing}
