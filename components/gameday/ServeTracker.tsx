@@ -15,7 +15,6 @@ import {
   Text,
   TouchableOpacity,
   View,
-  useWindowDimensions,
 } from 'react-native';
 import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,6 +22,7 @@ import * as Haptics from 'expo-haptics';
 import { useMatch } from '@/lib/gameday/use-match';
 import { generateActionId } from '@/lib/gameday/match-store';
 import type { ServeEvent, ServeResult } from '@/lib/gameday/match-state';
+import { useResponsive } from '@/lib/responsive';
 import { FONTS } from '@/theme/fonts';
 
 const ACCENT = '#4BB9EC';
@@ -57,8 +57,7 @@ export default function ServeTracker({
   visible,
 }: ServeTrackerProps) {
   const { match, scorePoint } = useMatch();
-  const { width: screenWidth } = useWindowDimensions();
-  const isTablet = screenWidth >= 768;
+  const { isTabletAny, isLandscape, width: screenWidth } = useResponsive();
 
   const [markers, setMarkers] = useState<TapMarker[]>([]);
   const [stats, setStats] = useState({ total: 0, good: 0, aces: 0, errors: 0 });
@@ -66,8 +65,14 @@ export default function ServeTracker({
   const courtRef = useRef<View>(null);
   const courtLayout = useRef({ x: 0, y: 0, width: 0, height: 0 });
 
-  const courtWidth = isTablet ? 340 : screenWidth - 64;
-  const courtHeight = courtWidth * 0.55; // opponent's half-court aspect
+  const tabletLandscape = isTabletAny && isLandscape;
+
+  const courtWidth = isTabletAny
+    ? (isLandscape ? Math.min(screenWidth * 0.6, 600) : screenWidth - 96)
+    : screenWidth - 64;
+  const courtHeight = tabletLandscape
+    ? Math.max(courtWidth * 0.55, 400)
+    : courtWidth * 0.55; // opponent's half-court aspect
 
   // ── Serve recording ─────────────────────────────────────────
 
@@ -147,128 +152,154 @@ export default function ServeTracker({
 
   if (!visible) return null;
 
+  /* ── Shared sub-components ────────────────────────────── */
+
+  const headerBlock = (
+    <View style={[s.header, tabletLandscape && s.headerLandscape]}>
+      <View style={s.serverInfo}>
+        <View style={[s.serverBadge, isTabletAny && s.serverBadgeTablet]}>
+          <Text style={[s.serverJersey, isTabletAny && s.serverJerseyTablet]}>{serverJersey}</Text>
+        </View>
+        <View>
+          <Text style={[s.serverName, isTabletAny && s.serverNameTablet]}>{serverName}</Text>
+          <Text style={s.serverLabel}>SERVING</Text>
+        </View>
+      </View>
+      <TouchableOpacity style={s.dismissBtn} onPress={onDismiss}>
+        <Ionicons name="chevron-down" size={20} color="rgba(255,255,255,0.4)" />
+        <Text style={s.dismissText}>Hide</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const courtBlock = (
+    <View style={[s.courtWrap, tabletLandscape && s.courtWrapLandscape]}>
+      <Text style={s.courtLabel}>TAP WHERE SERVE LANDS</Text>
+      <View
+        ref={courtRef}
+        style={[s.court, { width: courtWidth, height: courtHeight }]}
+        onLayout={handleCourtLayout}
+        onStartShouldSetResponder={() => true}
+        onResponderGrant={handleTouchStart}
+        onResponderRelease={handleTouchEnd}
+      >
+        {/* Court lines */}
+        <View style={s.courtLines}>
+          <View style={s.centerLine} />
+          <View style={s.attackLine} />
+          <Text style={[s.zoneLabel, { top: '15%', left: '15%' }]}>1</Text>
+          <Text style={[s.zoneLabel, { top: '15%', left: '48%' }]}>6</Text>
+          <Text style={[s.zoneLabel, { top: '15%', right: '15%' }]}>5</Text>
+          <Text style={[s.zoneLabel, { bottom: '15%', left: '15%' }]}>4</Text>
+          <Text style={[s.zoneLabel, { bottom: '15%', left: '48%' }]}>3</Text>
+          <Text style={[s.zoneLabel, { bottom: '15%', right: '15%' }]}>2</Text>
+        </View>
+
+        {/* Tap markers */}
+        {markers.map(m => (
+          <Animated.View
+            key={m.id}
+            entering={ZoomIn.duration(200)}
+            style={[
+              s.marker,
+              {
+                left: `${m.x}%`,
+                top: `${m.y}%`,
+                marginLeft: -8,
+                marginTop: -8,
+              },
+            ]}
+          >
+            {m.result === 'ace' ? (
+              <Ionicons name="star" size={16} color={GOLD} />
+            ) : m.result === 'error' ? (
+              <Ionicons name="close" size={16} color={CORAL} />
+            ) : (
+              <View style={s.goodMark} />
+            )}
+          </Animated.View>
+        ))}
+      </View>
+
+      {/* Net label below court */}
+      <View style={[s.netIndicator, { width: courtWidth }]}>
+        <View style={s.netLine} />
+        <Text style={s.netText}>NET</Text>
+        <View style={s.netLine} />
+      </View>
+
+      {/* Instructions */}
+      <View style={s.instructions}>
+        <View style={s.instrItem}>
+          <View style={[s.instrDot, { backgroundColor: TEAL }]} />
+          <Text style={s.instrText}>Tap = Good Serve</Text>
+        </View>
+        <View style={s.instrItem}>
+          <Ionicons name="star" size={10} color={GOLD} />
+          <Text style={s.instrText}>Long Press = ACE</Text>
+        </View>
+        <View style={s.instrItem}>
+          <Ionicons name="close" size={10} color={CORAL} />
+          <Text style={s.instrText}>Outside = Error</Text>
+        </View>
+      </View>
+    </View>
+  );
+
+  const statsBarBlock = (
+    <View style={s.statsBar}>
+      <View style={s.statItem}>
+        <Text style={s.statValue}>{stats.total}</Text>
+        <Text style={s.statLabel}>TOTAL</Text>
+      </View>
+      <View style={s.statItem}>
+        <Text style={[s.statValue, { color: TEAL }]}>{stats.good}</Text>
+        <Text style={s.statLabel}>GOOD</Text>
+      </View>
+      <View style={s.statItem}>
+        <Text style={[s.statValue, { color: GOLD }]}>{stats.aces}</Text>
+        <Text style={s.statLabel}>ACES</Text>
+      </View>
+      <View style={s.statItem}>
+        <Text style={[s.statValue, { color: CORAL }]}>{stats.errors}</Text>
+        <Text style={s.statLabel}>ERRORS</Text>
+      </View>
+      {stats.total > 0 && (
+        <View style={s.statItem}>
+          <Text style={s.statValue}>
+            {Math.round(((stats.good + stats.aces) / stats.total) * 100)}%
+          </Text>
+          <Text style={s.statLabel}>IN %</Text>
+        </View>
+      )}
+    </View>
+  );
+
+  /* ── Render ───────────────────────────────────────────── */
+
   return (
     <Animated.View entering={FadeIn.duration(200)} style={s.root}>
-      {/* Header */}
-      <View style={s.header}>
-        <View style={s.serverInfo}>
-          <View style={s.serverBadge}>
-            <Text style={s.serverJersey}>{serverJersey}</Text>
+      {tabletLandscape ? (
+        /* LANDSCAPE: header+server on the left (~30%), court on the right (~70%) */
+        <>
+          <View style={s.landscapeRow}>
+            <View style={s.landscapeLeft}>
+              {headerBlock}
+            </View>
+            <View style={s.landscapeRight}>
+              {courtBlock}
+            </View>
           </View>
-          <View>
-            <Text style={s.serverName}>{serverName}</Text>
-            <Text style={s.serverLabel}>SERVING</Text>
-          </View>
-        </View>
-        <TouchableOpacity style={s.dismissBtn} onPress={onDismiss}>
-          <Ionicons name="chevron-down" size={20} color="rgba(255,255,255,0.4)" />
-          <Text style={s.dismissText}>Hide</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Court tap-map */}
-      <View style={s.courtWrap}>
-        <Text style={s.courtLabel}>TAP WHERE SERVE LANDS</Text>
-        <View
-          ref={courtRef}
-          style={[s.court, { width: courtWidth, height: courtHeight }]}
-          onLayout={handleCourtLayout}
-          onStartShouldSetResponder={() => true}
-          onResponderGrant={handleTouchStart}
-          onResponderRelease={handleTouchEnd}
-        >
-          {/* Court lines */}
-          <View style={s.courtLines}>
-            {/* Center line */}
-            <View style={s.centerLine} />
-            {/* Attack line */}
-            <View style={s.attackLine} />
-            {/* Zones labels */}
-            <Text style={[s.zoneLabel, { top: '15%', left: '15%' }]}>1</Text>
-            <Text style={[s.zoneLabel, { top: '15%', left: '48%' }]}>6</Text>
-            <Text style={[s.zoneLabel, { top: '15%', right: '15%' }]}>5</Text>
-            <Text style={[s.zoneLabel, { bottom: '15%', left: '15%' }]}>4</Text>
-            <Text style={[s.zoneLabel, { bottom: '15%', left: '48%' }]}>3</Text>
-            <Text style={[s.zoneLabel, { bottom: '15%', right: '15%' }]}>2</Text>
-          </View>
-
-          {/* Tap markers */}
-          {markers.map(m => (
-            <Animated.View
-              key={m.id}
-              entering={ZoomIn.duration(200)}
-              style={[
-                s.marker,
-                {
-                  left: `${m.x}%`,
-                  top: `${m.y}%`,
-                  marginLeft: -8,
-                  marginTop: -8,
-                },
-              ]}
-            >
-              {m.result === 'ace' ? (
-                <Ionicons name="star" size={16} color={GOLD} />
-              ) : m.result === 'error' ? (
-                <Ionicons name="close" size={16} color={CORAL} />
-              ) : (
-                <View style={s.goodMark} />
-              )}
-            </Animated.View>
-          ))}
-        </View>
-
-        {/* Net label below court */}
-        <View style={s.netIndicator}>
-          <View style={s.netLine} />
-          <Text style={s.netText}>NET</Text>
-          <View style={s.netLine} />
-        </View>
-
-        {/* Instructions */}
-        <View style={s.instructions}>
-          <View style={s.instrItem}>
-            <View style={[s.instrDot, { backgroundColor: TEAL }]} />
-            <Text style={s.instrText}>Tap = Good Serve</Text>
-          </View>
-          <View style={s.instrItem}>
-            <Ionicons name="star" size={10} color={GOLD} />
-            <Text style={s.instrText}>Long Press = ACE</Text>
-          </View>
-          <View style={s.instrItem}>
-            <Ionicons name="close" size={10} color={CORAL} />
-            <Text style={s.instrText}>Outside = Error</Text>
-          </View>
-        </View>
-      </View>
-
-      {/* Stats bar */}
-      <View style={s.statsBar}>
-        <View style={s.statItem}>
-          <Text style={s.statValue}>{stats.total}</Text>
-          <Text style={s.statLabel}>TOTAL</Text>
-        </View>
-        <View style={s.statItem}>
-          <Text style={[s.statValue, { color: TEAL }]}>{stats.good}</Text>
-          <Text style={s.statLabel}>GOOD</Text>
-        </View>
-        <View style={s.statItem}>
-          <Text style={[s.statValue, { color: GOLD }]}>{stats.aces}</Text>
-          <Text style={s.statLabel}>ACES</Text>
-        </View>
-        <View style={s.statItem}>
-          <Text style={[s.statValue, { color: CORAL }]}>{stats.errors}</Text>
-          <Text style={s.statLabel}>ERRORS</Text>
-        </View>
-        {stats.total > 0 && (
-          <View style={s.statItem}>
-            <Text style={s.statValue}>
-              {Math.round(((stats.good + stats.aces) / stats.total) * 100)}%
-            </Text>
-            <Text style={s.statLabel}>IN %</Text>
-          </View>
-        )}
-      </View>
+          {statsBarBlock}
+        </>
+      ) : (
+        /* PORTRAIT (phone & tablet-portrait): stacked layout */
+        <>
+          {headerBlock}
+          {courtBlock}
+          {statsBarBlock}
+        </>
+      )}
     </Animated.View>
   );
 }
@@ -284,12 +315,31 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
   },
 
+  // Landscape layout (tablet only)
+  landscapeRow: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  landscapeLeft: {
+    width: '30%',
+    justifyContent: 'center',
+  },
+  landscapeRight: {
+    flex: 1,
+  },
+
   // Header
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
+  },
+  headerLandscape: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginBottom: 0,
   },
   serverInfo: {
     flexDirection: 'row',
@@ -306,15 +356,26 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  serverBadgeTablet: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+  },
   serverJersey: {
     fontFamily: FONTS.bodyExtraBold,
     fontSize: 16,
     color: TEAL,
   },
+  serverJerseyTablet: {
+    fontSize: 20,
+  },
   serverName: {
     fontFamily: FONTS.bodySemiBold,
     fontSize: 14,
     color: '#fff',
+  },
+  serverNameTablet: {
+    fontSize: 17,
   },
   serverLabel: {
     fontFamily: FONTS.bodyBold,
@@ -336,6 +397,9 @@ const s = StyleSheet.create({
   // Court
   courtWrap: {
     alignItems: 'center',
+  },
+  courtWrapLandscape: {
+    alignItems: 'flex-start',
   },
   courtLabel: {
     fontFamily: FONTS.bodyBold,

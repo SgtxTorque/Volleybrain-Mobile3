@@ -10,7 +10,7 @@
  *   2 — End Set / End Match
  *   3 — Post-Game Summary
  */
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   StatusBar,
   StyleSheet,
@@ -27,6 +27,8 @@ import LiveMatchPage from '@/components/gameday/LiveMatchPage';
 import EndSetPage from '@/components/gameday/EndSetPage';
 import SummaryPage from '@/components/gameday/SummaryPage';
 import { FONTS } from '@/theme/fonts';
+import { useResponsive } from '@/lib/responsive';
+import { unlockOrientation } from '@/lib/orientation';
 
 const PAGE_LABELS = ['GAME PREP', 'LIVE MATCH', 'END SET', 'SUMMARY'];
 const ACCENT = '#4BB9EC';
@@ -37,6 +39,11 @@ function CommandCenterContent() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { match, currentPage, setCurrentPage, loading } = useMatch();
+  const { isTabletAny } = useResponsive();
+
+  useEffect(() => {
+    if (isTabletAny) unlockOrientation();
+  }, [isTabletAny]);
 
   // Placeholder pages for Phase 3-7
   const renderCurrentPage = () => {

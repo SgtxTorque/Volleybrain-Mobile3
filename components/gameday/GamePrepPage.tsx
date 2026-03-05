@@ -12,8 +12,8 @@ import {
   Text,
   TouchableOpacity,
   View,
-  useWindowDimensions,
 } from 'react-native';
+import { useResponsive } from '@/lib/responsive';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useMatch } from '@/lib/gameday/use-match';
@@ -42,8 +42,7 @@ export default function GamePrepPage() {
     startMatch, lineupReady,
   } = useMatch();
 
-  const { width: screenWidth } = useWindowDimensions();
-  const isTablet = screenWidth >= 768;
+  const { isTabletAny, isLandscape, isPhone, width: screenWidth } = useResponsive();
 
   const [selectedCourtIdx, setSelectedCourtIdx] = useState<number | null>(null);
   const [showRotationPreview, setShowRotationPreview] = useState(false);
@@ -219,7 +218,8 @@ export default function GamePrepPage() {
 
   // ── Layout ──────────────────────────────────────────────────
 
-  if (isTablet) {
+  // ── Tablet Landscape: 3-column layout ────────────────────
+  if (isTabletAny && isLandscape) {
     return (
       <View style={s.root}>
         {/* Top bar */}
@@ -332,6 +332,103 @@ export default function GamePrepPage() {
     );
   }
 
+  // ── Tablet Portrait: scrollable vertical layout with bigger court ──
+  if (isTabletAny && !isLandscape) {
+    return (
+      <ScrollView style={s.root} contentContainerStyle={s.tabletPortraitContent} showsVerticalScrollIndicator={false}>
+        {/* Top bar */}
+        <View style={s.topBarPhone}>
+          <Text style={s.topBarTitle}>vs {match?.opponentName || 'Opponent'}</Text>
+          <TouchableOpacity
+            style={[s.servePill, isServing && s.servePillActive]}
+            onPress={() => setFirstServe(!isServing)}
+          >
+            <Text style={[s.servePillText, isServing && s.servePillTextActive]}>
+              {isServing ? 'WE SERVE' : 'THEY SERVE'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Formation + Rotation + Phase in compact horizontal pills */}
+        <View style={s.tabletPortraitControls}>
+          {renderFormationPills()}
+          {renderRotationPills()}
+          {renderPhasePills()}
+        </View>
+
+        {/* Court — larger nodes, not compact */}
+        <CourtView
+          positions={courtPositions}
+          selectedIndex={selectedCourtIdx}
+          onTapPosition={handleCourtTap}
+          isServing={isServing}
+          compact={false}
+        />
+
+        {/* Bench — wrapping grid on tablet portrait */}
+        <View style={{ marginTop: 20, paddingHorizontal: 24 }}>
+          <View style={s.benchHeader}>
+            <Text style={s.sectionLabel}>BENCH ({benchPlayers.length})</Text>
+            {libero && (
+              <View style={s.liberoRowCompact}>
+                <Ionicons name="shield" size={14} color="#FFD700" />
+                <Text style={s.liberoNameSmall}>L: #{libero.jerseyNumber}</Text>
+              </View>
+            )}
+          </View>
+          <View style={s.benchGridTablet}>
+            {benchPlayers.map(p => (
+              <TouchableOpacity
+                key={p.playerId}
+                style={[s.benchCardTabletPortrait, selectedCourtIdx != null && s.benchCardHighlight]}
+                onPress={() => handleBenchTap(p)}
+                onLongPress={() => handleSetLibero(p)}
+                activeOpacity={0.7}
+              >
+                <View style={[s.benchJersey, { width: 34, height: 34, borderRadius: 17 }]}>
+                  <Text style={[s.benchJerseyText, { fontSize: 14 }]}>{p.jerseyNumber || '?'}</Text>
+                </View>
+                <View style={s.benchInfo}>
+                  <Text style={[s.benchName, { fontSize: 13 }]} numberOfLines={1}>
+                    {p.firstName} {p.lastName.charAt(0)}.
+                  </Text>
+                  <Text style={[s.benchPos, { fontSize: 11 }]}>{p.position || '---'}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+            {benchPlayers.length === 0 && (
+              <Text style={s.emptyBench}>All players assigned</Text>
+            )}
+          </View>
+        </View>
+
+        {/* Action buttons */}
+        <View style={s.phoneActions}>
+          <TouchableOpacity style={s.actionBtn} onPress={doAutoFill}>
+            <Ionicons name="flash" size={16} color={ACCENT} />
+            <Text style={s.actionBtnText}>Auto-Fill</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.actionBtn} onPress={clearLineup}>
+            <Ionicons name="trash" size={16} color="#EF4444" />
+            <Text style={[s.actionBtnText, { color: '#EF4444' }]}>Clear</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Start Match button */}
+        <TouchableOpacity
+          style={[s.startBtnPhone, !lineupReady && s.startBtnDisabled]}
+          onPress={startMatch}
+          disabled={!lineupReady}
+        >
+          <Ionicons name="play" size={18} color="#000" />
+          <Text style={s.startBtnText}>Start Match</Text>
+        </TouchableOpacity>
+
+        <View style={{ height: 40 }} />
+      </ScrollView>
+    );
+  }
+
   // ── Phone layout ────────────────────────────────────────────
 
   return (
@@ -364,7 +461,7 @@ export default function GamePrepPage() {
         selectedIndex={selectedCourtIdx}
         onTapPosition={handleCourtTap}
         isServing={isServing}
-        compact
+        compact={isPhone}
       />
 
       {/* Bench (horizontal scroll on phone) */}
@@ -548,6 +645,36 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     gap: 16,
     marginTop: 12,
+  },
+
+  // Tablet portrait
+  tabletPortraitContent: {
+    paddingBottom: 20,
+    alignItems: 'center',
+  },
+  tabletPortraitControls: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 24,
+    marginBottom: 12,
+  },
+  benchGridTablet: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  benchCardTabletPortrait: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 12,
+    padding: 10,
+    width: '48%',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
   },
 
   // Pills

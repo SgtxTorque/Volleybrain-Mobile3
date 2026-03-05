@@ -24,6 +24,7 @@ import { useRouter } from 'expo-router';
 import { useMatch } from '@/lib/gameday/use-match';
 import type { ServeEvent } from '@/lib/gameday/match-state';
 import { FONTS } from '@/theme/fonts';
+import { useResponsive } from '@/lib/responsive';
 
 const ACCENT = '#4BB9EC';
 const TEAL = '#10B981';
@@ -34,6 +35,7 @@ export default function SummaryPage() {
   const { match } = useMatch();
   const router = useRouter();
   const [syncing, setSyncing] = useState(false);
+  const { isTabletAny, contentMaxWidth } = useResponsive();
 
   const sets = match?.sets || [];
   const starters = match?.starters || [];
@@ -150,7 +152,10 @@ export default function SummaryPage() {
   }, [router]);
 
   return (
-    <ScrollView style={s.root} contentContainerStyle={s.content}>
+    <ScrollView style={s.root} contentContainerStyle={[
+      s.content,
+      isTabletAny && { maxWidth: contentMaxWidth, alignSelf: 'center' as const, width: '100%' as const },
+    ]}>
       {/* Match hero */}
       <Animated.View entering={FadeIn.duration(400)} style={s.heroBanner}>
         <View style={[s.resultBadge, { backgroundColor: isWin ? TEAL + '20' : CORAL + '20' }]}>
@@ -200,7 +205,7 @@ export default function SummaryPage() {
           <Text style={[s.sectionTitle, { marginTop: 16 }]}>AWARDS</Text>
           <View style={s.awardsRow}>
             {mvp && mvp.kills > 0 && (
-              <View style={s.awardCard}>
+              <View style={[s.awardCard, isTabletAny && { minWidth: 120 }]}>
                 <Ionicons name="flash" size={18} color={GOLD} />
                 <Text style={s.awardLabel}>MVP</Text>
                 <Text style={s.awardPlayer}>#{mvp.jersey} {mvp.name}</Text>
@@ -208,7 +213,7 @@ export default function SummaryPage() {
               </View>
             )}
             {topServer && topServer.aces > 0 && (
-              <View style={s.awardCard}>
+              <View style={[s.awardCard, isTabletAny && { minWidth: 120 }]}>
                 <Ionicons name="tennisball" size={18} color={TEAL} />
                 <Text style={s.awardLabel}>TOP SERVER</Text>
                 <Text style={s.awardPlayer}>#{topServer.jersey} {topServer.name}</Text>
@@ -216,7 +221,7 @@ export default function SummaryPage() {
               </View>
             )}
             {topDefender && topDefender.digs > 0 && (
-              <View style={s.awardCard}>
+              <View style={[s.awardCard, isTabletAny && { minWidth: 120 }]}>
                 <Ionicons name="shield" size={18} color={ACCENT} />
                 <Text style={s.awardLabel}>TOP DEFENDER</Text>
                 <Text style={s.awardPlayer}>#{topDefender.jersey} {topDefender.name}</Text>

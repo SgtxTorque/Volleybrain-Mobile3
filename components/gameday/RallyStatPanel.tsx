@@ -14,13 +14,13 @@ import {
   Text,
   TouchableOpacity,
   View,
-  useWindowDimensions,
 } from 'react-native';
 import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useMatch } from '@/lib/gameday/use-match';
 import type { RallyActionType, RallyEvent } from '@/lib/gameday/match-state';
+import { useResponsive } from '@/lib/responsive';
 import { FONTS } from '@/theme/fonts';
 
 const ACCENT = '#4BB9EC';
@@ -81,8 +81,8 @@ export default function RallyStatPanel() {
   const {
     match, recordRallyAction, undoLastRallyAction, currentRally,
   } = useMatch();
-  const { width: screenWidth } = useWindowDimensions();
-  const isTablet = screenWidth >= 768;
+  const { isTabletAny, isLandscape, width: screenWidth } = useResponsive();
+  const tabletLandscape = isTabletAny && isLandscape;
 
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
 
@@ -186,18 +186,33 @@ export default function RallyStatPanel() {
           return (
             <TouchableOpacity
               key={p.playerId}
-              style={[s.playerChip, isSelected && s.playerChipSelected]}
+              style={[
+                s.playerChip,
+                isTabletAny && s.playerChipTablet,
+                isSelected && s.playerChipSelected,
+              ]}
               onPress={() => handleTapPlayer(p.playerId)}
               activeOpacity={0.7}
             >
-              <Text style={[s.playerJersey, isSelected && s.playerJerseySelected]}>
+              <Text style={[
+                s.playerJersey,
+                isTabletAny && s.playerJerseyTablet,
+                isSelected && s.playerJerseySelected,
+              ]}>
                 {p.jerseyNumber}
               </Text>
-              <Text style={[s.playerName, isSelected && s.playerNameSelected]} numberOfLines={1}>
+              <Text
+                style={[
+                  s.playerName,
+                  isTabletAny && s.playerNameTablet,
+                  isSelected && s.playerNameSelected,
+                ]}
+                numberOfLines={1}
+              >
                 {p.firstName.charAt(0)}.{p.lastName.charAt(0)}.
               </Text>
               {stats.length > 0 && (
-                <Text style={s.playerStats}>{stats}</Text>
+                <Text style={[s.playerStats, isTabletAny && s.playerStatsTablet]}>{stats}</Text>
               )}
             </TouchableOpacity>
           );
@@ -207,32 +222,71 @@ export default function RallyStatPanel() {
       {/* Action bar (only shows when a player is selected) */}
       {selectedPlayer && (
         <Animated.View entering={FadeIn.duration(150)} style={s.actionBar}>
-          <Text style={s.actionHeader}>
+          <Text style={[s.actionHeader, isTabletAny && s.actionHeaderTablet]}>
             #{selectedPlayer.jerseyNumber} {selectedPlayer.firstName}
           </Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={s.actionGroups}
-          >
-            {ACTION_GROUPS.map(group => (
-              <View key={group.label} style={s.actionGroup}>
-                <Text style={s.groupLabel}>{group.label}</Text>
-                <View style={s.groupBtns}>
-                  {group.actions.map(act => (
-                    <TouchableOpacity
-                      key={act.type}
-                      style={[s.actionBtn, { borderColor: act.color + '40' }]}
-                      onPress={() => handleTapAction(act.type)}
-                    >
-                      <Ionicons name={act.icon as any} size={14} color={act.color} />
-                      <Text style={[s.actionLabel, { color: act.color }]}>{act.shortLabel}</Text>
-                    </TouchableOpacity>
-                  ))}
+          {tabletLandscape ? (
+            /* Landscape tablet: show action groups in a non-scrolling row */
+            <View style={s.actionGroupsRow}>
+              {ACTION_GROUPS.map(group => (
+                <View key={group.label} style={s.actionGroup}>
+                  <Text style={s.groupLabel}>{group.label}</Text>
+                  <View style={s.groupBtns}>
+                    {group.actions.map(act => (
+                      <TouchableOpacity
+                        key={act.type}
+                        style={[
+                          s.actionBtn,
+                          s.actionBtnTablet,
+                          { borderColor: act.color + '40' },
+                        ]}
+                        onPress={() => handleTapAction(act.type)}
+                      >
+                        <Ionicons name={act.icon as any} size={16} color={act.color} />
+                        <Text style={[s.actionLabel, s.actionLabelTablet, { color: act.color }]}>
+                          {act.shortLabel}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
                 </View>
-              </View>
-            ))}
-          </ScrollView>
+              ))}
+            </View>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={s.actionGroups}
+            >
+              {ACTION_GROUPS.map(group => (
+                <View key={group.label} style={s.actionGroup}>
+                  <Text style={s.groupLabel}>{group.label}</Text>
+                  <View style={s.groupBtns}>
+                    {group.actions.map(act => (
+                      <TouchableOpacity
+                        key={act.type}
+                        style={[
+                          s.actionBtn,
+                          isTabletAny && s.actionBtnTablet,
+                          { borderColor: act.color + '40' },
+                        ]}
+                        onPress={() => handleTapAction(act.type)}
+                      >
+                        <Ionicons name={act.icon as any} size={isTabletAny ? 16 : 14} color={act.color} />
+                        <Text style={[
+                          s.actionLabel,
+                          isTabletAny && s.actionLabelTablet,
+                          { color: act.color },
+                        ]}>
+                          {act.shortLabel}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+          )}
         </Animated.View>
       )}
 
@@ -285,6 +339,12 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
   },
+  playerChipTablet: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    minWidth: 60,
+    borderRadius: 12,
+  },
   playerChipSelected: {
     backgroundColor: ACCENT + '20',
     borderColor: ACCENT,
@@ -293,6 +353,9 @@ const s = StyleSheet.create({
     fontFamily: FONTS.bodyExtraBold,
     fontSize: 16,
     color: '#fff',
+  },
+  playerJerseyTablet: {
+    fontSize: 19,
   },
   playerJerseySelected: {
     color: ACCENT,
@@ -303,6 +366,9 @@ const s = StyleSheet.create({
     color: 'rgba(255,255,255,0.4)',
     marginTop: 1,
   },
+  playerNameTablet: {
+    fontSize: 10,
+  },
   playerNameSelected: {
     color: ACCENT,
   },
@@ -311,6 +377,9 @@ const s = StyleSheet.create({
     fontSize: 7,
     color: 'rgba(255,255,255,0.3)',
     marginTop: 2,
+  },
+  playerStatsTablet: {
+    fontSize: 8,
   },
 
   // Action bar
@@ -324,8 +393,16 @@ const s = StyleSheet.create({
     color: ACCENT,
     marginBottom: 6,
   },
+  actionHeaderTablet: {
+    fontSize: 13,
+  },
   actionGroups: {
     gap: 12,
+  },
+  actionGroupsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 14,
   },
   actionGroup: {
     gap: 4,
@@ -351,9 +428,18 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.04)',
     borderWidth: 1,
   },
+  actionBtnTablet: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    gap: 4,
+  },
   actionLabel: {
     fontFamily: FONTS.bodySemiBold,
     fontSize: 10,
+  },
+  actionLabelTablet: {
+    fontSize: 12,
   },
 
   // Rally trail

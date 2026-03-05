@@ -22,6 +22,7 @@ import { useMatch } from '@/lib/gameday/use-match';
 import { isMatchComplete } from '@/lib/gameday/rotation-engine';
 import type { SetState, RallyEvent } from '@/lib/gameday/match-state';
 import { FONTS } from '@/theme/fonts';
+import { useResponsive } from '@/lib/responsive';
 
 const ACCENT = '#4BB9EC';
 const TEAL = '#10B981';
@@ -30,6 +31,7 @@ const GOLD = '#FFD700';
 
 export default function EndSetPage() {
   const { match, startNextSet, endMatch, setCurrentPage } = useMatch();
+  const { isTabletAny, contentMaxWidth } = useResponsive();
 
   const sets = match?.sets || [];
   const currentSetNum = match?.currentSet ?? 1;
@@ -114,7 +116,10 @@ export default function EndSetPage() {
   };
 
   return (
-    <ScrollView style={s.root} contentContainerStyle={s.content}>
+    <ScrollView style={s.root} contentContainerStyle={[
+      s.content,
+      isTabletAny && { maxWidth: contentMaxWidth, alignSelf: 'center' as const, width: '100%' as const },
+    ]}>
       {/* Match result banner (if match is over) */}
       {matchOver && (
         <Animated.View entering={FadeIn.duration(400)} style={s.resultBanner}>
@@ -138,10 +143,10 @@ export default function EndSetPage() {
         <Animated.View
           key={set.setNumber}
           entering={FadeInDown.delay(i * 80).duration(300)}
-          style={[s.setRow, set.setComplete && (set.winner === 'home' ? s.setWon : s.setLost)]}
+          style={[s.setRow, set.setComplete && (set.winner === 'home' ? s.setWon : s.setLost), isTabletAny && { padding: 16 }]}
         >
           <View style={s.setLabel}>
-            <Text style={s.setNumber}>Set {set.setNumber}</Text>
+            <Text style={[s.setNumber, isTabletAny && { fontSize: 15 }]}>Set {set.setNumber}</Text>
             {set.setComplete && (
               <Ionicons
                 name={set.winner === 'home' ? 'checkmark-circle' : 'close-circle'}
@@ -150,7 +155,7 @@ export default function EndSetPage() {
               />
             )}
           </View>
-          <Text style={s.setScore}>
+          <Text style={[s.setScore, isTabletAny && { fontSize: 26 }]}>
             {set.homeScore} — {set.awayScore}
           </Text>
           <View style={s.setMeta}>
@@ -167,17 +172,17 @@ export default function EndSetPage() {
         <>
           <Text style={[s.sectionTitle, { marginTop: 16 }]}>TOP PERFORMERS</Text>
           {topPerformers.map((p, i) => (
-            <View key={p.playerId} style={s.performerRow}>
+            <View key={p.playerId} style={[s.performerRow, isTabletAny && { paddingVertical: 12 }]}>
               <Text style={s.performerRank}>{i + 1}</Text>
               <View style={s.performerJerseyBadge}>
                 <Text style={s.performerJersey}>{p.jersey}</Text>
               </View>
-              <Text style={s.performerName}>{p.name}</Text>
+              <Text style={[s.performerName, isTabletAny && { fontSize: 15 }]}>{p.name}</Text>
               <View style={s.performerStats}>
-                {p.kills > 0 && <Text style={[s.statBadge, { color: TEAL }]}>{p.kills}K</Text>}
-                {p.digs > 0 && <Text style={[s.statBadge, { color: ACCENT }]}>{p.digs}D</Text>}
-                {p.blocks > 0 && <Text style={[s.statBadge, { color: GOLD }]}>{p.blocks}B</Text>}
-                {p.errors > 0 && <Text style={[s.statBadge, { color: CORAL }]}>{p.errors}E</Text>}
+                {p.kills > 0 && <Text style={[s.statBadge, { color: TEAL }, isTabletAny && { fontSize: 13 }]}>{p.kills}K</Text>}
+                {p.digs > 0 && <Text style={[s.statBadge, { color: ACCENT }, isTabletAny && { fontSize: 13 }]}>{p.digs}D</Text>}
+                {p.blocks > 0 && <Text style={[s.statBadge, { color: GOLD }, isTabletAny && { fontSize: 13 }]}>{p.blocks}B</Text>}
+                {p.errors > 0 && <Text style={[s.statBadge, { color: CORAL }, isTabletAny && { fontSize: 13 }]}>{p.errors}E</Text>}
               </View>
             </View>
           ))}
