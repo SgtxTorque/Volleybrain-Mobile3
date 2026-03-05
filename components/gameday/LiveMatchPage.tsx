@@ -26,6 +26,7 @@ import { useMatch } from '@/lib/gameday/use-match';
 import { getCourtPositions, isSetComplete, getSetWinner, isMatchComplete } from '@/lib/gameday/rotation-engine';
 import type { PlayerSlot } from '@/lib/gameday/match-state';
 import CourtView from './CourtView';
+import ServeTracker from './ServeTracker';
 import { FONTS } from '@/theme/fonts';
 
 const ACCENT = '#4BB9EC';
@@ -45,6 +46,7 @@ export default function LiveMatchPage() {
   const [liberoAlert, setLiberoAlert] = useState<string | null>(null);
   const [showSubModal, setShowSubModal] = useState(false);
   const [selectedCourtPlayer, setSelectedCourtPlayer] = useState<number | null>(null);
+  const [showServeTracker, setShowServeTracker] = useState(false);
   const alertTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const currentSet = match?.sets[(match?.currentSet ?? 1) - 1];
@@ -71,8 +73,15 @@ export default function LiveMatchPage() {
   // ── Server info ─────────────────────────────────────────────
 
   const server = useMemo(() => {
-    return courtPositions.find(p => p.isServer);
-  }, [courtPositions]);
+    const pos = courtPositions.find(p => p.isServer);
+    if (!pos) return null;
+    const starter = starters.find(s => s.playerId === pos.playerId);
+    return {
+      ...pos,
+      firstName: starter?.firstName ?? '',
+      lastName: starter?.lastName ?? '',
+    };
+  }, [courtPositions, starters]);
 
   // ── Set scores summary ──────────────────────────────────────
 
@@ -156,6 +165,12 @@ export default function LiveMatchPage() {
     setShowSubModal(false);
     setSelectedCourtPlayer(null);
   }, [selectedCourtPlayer, starters, confirmSub]);
+
+  // ── Auto-hide serve tracker on side-out ─────────────────────
+
+  useEffect(() => {
+    if (!isServing) setShowServeTracker(false);
+  }, [isServing]);
 
   // ── Layout ──────────────────────────────────────────────────
 
@@ -323,12 +338,33 @@ export default function LiveMatchPage() {
         </View>
       </View>
 
+      {/* Serve Tracker overlay */}
+      {showServeTracker && server && (
+        <ServeTracker
+          serverJersey={server.jerseyNumber ?? 0}
+          serverName={`${server.firstName} ${server.lastName}`.trim()}
+          onDismiss={() => setShowServeTracker(false)}
+          visible={showServeTracker}
+        />
+      )}
+
       {/* Action bar */}
       <View style={s.actionBar}>
         <TouchableOpacity style={s.actionBtn} onPress={() => setCurrentPage(0)}>
           <Ionicons name="grid" size={16} color={ACCENT} />
           <Text style={s.actionBtnText}>Rotations</Text>
         </TouchableOpacity>
+        {isServing && server && (
+          <TouchableOpacity
+            style={[s.actionBtn, s.serveTrackBtn]}
+            onPress={() => setShowServeTracker(prev => !prev)}
+          >
+            <Ionicons name="tennisball" size={16} color={GOLD} />
+            <Text style={[s.actionBtnText, { color: GOLD }]}>
+              {showServeTracker ? 'Hide Serves' : 'Track Serve'}
+            </Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity style={[s.actionBtn, s.endSetBtn]} onPress={() => {
           if (homeScore > 0 || awayScore > 0) {
             Alert.alert(
@@ -674,6 +710,10 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.04)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.06)',
+  },
+  serveTrackBtn: {
+    borderColor: GOLD + '30',
+    backgroundColor: GOLD + '08',
   },
   endSetBtn: {
     borderColor: CORAL + '30',
