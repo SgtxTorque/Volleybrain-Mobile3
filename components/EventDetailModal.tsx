@@ -11,7 +11,6 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
-  Dimensions,
   Linking,
   PanResponder,
   Platform,
@@ -21,6 +20,7 @@ import {
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { ScheduleEvent } from './EventCard';
@@ -63,8 +63,7 @@ type Props = {
 
 /* ────────────────────────── Constants ────────────────────── */
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
-const SHEET_MAX_HEIGHT = SCREEN_HEIGHT * 0.9;
+const sheetMaxHeight_RATIO = 0.9;
 const DISMISS_THRESHOLD = 120;
 
 const EVENT_TYPE_CONFIG = {
@@ -85,6 +84,9 @@ export default function EventDetailModal({
 }: Props) {
   const { user } = useAuth();
   const router = useRouter();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const isTablet = screenWidth >= 744;
+  const sheetMaxHeight = screenHeight * sheetMaxHeight_RATIO;
 
   const [loading, setLoading] = useState(false);
 
@@ -99,7 +101,7 @@ export default function EventDetailModal({
   const [sendingBlast, setSendingBlast] = useState(false);
 
   // Animation
-  const slideAnim = useRef(new Animated.Value(SHEET_MAX_HEIGHT)).current;
+  const slideAnim = useRef(new Animated.Value(sheetMaxHeight)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
 
   const panResponder = useRef(
@@ -132,7 +134,7 @@ export default function EventDetailModal({
   useEffect(() => {
     if (visible && event) {
       // Animate in
-      slideAnim.setValue(SHEET_MAX_HEIGHT);
+      slideAnim.setValue(sheetMaxHeight);
       backdropAnim.setValue(0);
       Animated.parallel([
         Animated.spring(slideAnim, {
@@ -157,7 +159,7 @@ export default function EventDetailModal({
   const dismissSheet = () => {
     Animated.parallel([
       Animated.timing(slideAnim, {
-        toValue: SHEET_MAX_HEIGHT,
+        toValue: sheetMaxHeight,
         duration: 250,
         useNativeDriver: true,
       }),
@@ -635,7 +637,8 @@ export default function EventDetailModal({
       <Animated.View
         style={[
           s.sheet,
-          { transform: [{ translateY: slideAnim }] },
+          { maxHeight: sheetMaxHeight, transform: [{ translateY: slideAnim }] },
+          isTablet && { maxWidth: 600, alignSelf: 'center' as const, width: '100%' },
         ]}
         {...panResponder.panHandlers}
       >
@@ -1012,7 +1015,6 @@ const s = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    maxHeight: SHEET_MAX_HEIGHT,
     backgroundColor: BRAND.white,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,

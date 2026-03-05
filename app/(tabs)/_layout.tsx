@@ -4,6 +4,7 @@ import { useFirstTimeWelcome } from '@/lib/first-time-welcome';
 import { useParentScroll } from '@/lib/parent-scroll-context';
 import { usePermissions } from '@/lib/permissions-context';
 import { supabase } from '@/lib/supabase';
+import { useResponsive } from '@/lib/responsive';
 import { useTheme } from '@/lib/theme';
 import { FONTS } from '@/theme/fonts';
 import { useDrawerBadges } from '@/hooks/useDrawerBadges';
@@ -19,6 +20,7 @@ export default function TabLayout() {
   const { loading, isAdmin, isCoach, isParent, isPlayer, viewAs } = usePermissions();
   const { profile } = useAuth();
   const { openDrawer } = useDrawer();
+  const { isTabletAny } = useResponsive();
   const primaryRole = isCoach ? 'coach' : isParent ? 'parent' : null;
   useFirstTimeWelcome(primaryRole);
   const { isScrolling, isParentScrollActive } = useParentScroll();
@@ -164,6 +166,7 @@ export default function TabLayout() {
           paddingBottom: insets.bottom,
           paddingTop: 8,
           transform: [{ translateY: tabBarTranslateY as any }],
+          ...(isTabletAny ? { maxWidth: 600, alignSelf: 'center' as const, width: '100%' } : {}),
           ...Platform.select({
             ios: {
               shadowColor: '#000',

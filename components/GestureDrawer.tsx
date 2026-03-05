@@ -7,7 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useState } from 'react';
-import { Alert, Dimensions, LayoutAnimation, Platform, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, UIManager, View } from 'react-native';
+import { Alert, LayoutAnimation, Platform, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, UIManager, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   interpolate,
@@ -31,11 +31,8 @@ const ROLE_COLORS: Record<UserRole, string> = {
   player: BRAND.goldBrand,
 };
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const DRAWER_WIDTH = Math.min(SCREEN_WIDTH * 0.82, 340);
 const EDGE_SWIPE_ZONE = 25;
 const VELOCITY_THRESHOLD = 500;
-const SNAP_THRESHOLD = DRAWER_WIDTH * 0.35;
 const SPRING_CONFIG = { damping: 22, stiffness: 200, mass: 0.8 };
 
 const ROLE_DISPLAY: Record<UserRole, string> = {
@@ -198,6 +195,10 @@ export default function GestureDrawer() {
   const { user, profile, organization, signOut } = useAuth();
   const { actualRoles, isAdmin, isCoach, isParent, isPlayer } = usePermissions();
   const router = useRouter();
+  const { width: screenWidth } = useWindowDimensions();
+  const isTablet = screenWidth >= 744;
+  const drawerWidth = Math.min(screenWidth * 0.82, isTablet ? 400 : 340);
+  const snapThreshold = drawerWidth * 0.35;
 
   // Profile header data
   const avatarUrl = profile?.avatar_url || null;
@@ -343,19 +344,19 @@ export default function GestureDrawer() {
       // Only activate from left edge
       if (e.x > EDGE_SWIPE_ZONE) return;
       isDragging.value = true;
-      dragStartX.value = progress.value * DRAWER_WIDTH;
+      dragStartX.value = progress.value * drawerWidth;
     })
     .onUpdate((e) => {
       if (!isDragging.value) return;
-      const newX = Math.max(0, Math.min(DRAWER_WIDTH, dragStartX.value + e.translationX));
-      progress.value = newX / DRAWER_WIDTH;
+      const newX = Math.max(0, Math.min(drawerWidth, dragStartX.value + e.translationX));
+      progress.value = newX / drawerWidth;
     })
     .onEnd((e) => {
       if (!isDragging.value) return;
       isDragging.value = false;
 
-      const currentX = progress.value * DRAWER_WIDTH;
-      const shouldOpen = e.velocityX > VELOCITY_THRESHOLD || currentX > SNAP_THRESHOLD;
+      const currentX = progress.value * drawerWidth;
+      const shouldOpen = e.velocityX > VELOCITY_THRESHOLD || currentX > snapThreshold;
 
       if (shouldOpen) {
         progress.value = withSpring(1, SPRING_CONFIG);
@@ -372,19 +373,19 @@ export default function GestureDrawer() {
     .failOffsetY([-20, 20])
     .onBegin(() => {
       isDragging.value = true;
-      dragStartX.value = progress.value * DRAWER_WIDTH;
+      dragStartX.value = progress.value * drawerWidth;
     })
     .onUpdate((e) => {
       if (!isDragging.value) return;
-      const newX = Math.max(0, Math.min(DRAWER_WIDTH, dragStartX.value + e.translationX));
-      progress.value = newX / DRAWER_WIDTH;
+      const newX = Math.max(0, Math.min(drawerWidth, dragStartX.value + e.translationX));
+      progress.value = newX / drawerWidth;
     })
     .onEnd((e) => {
       if (!isDragging.value) return;
       isDragging.value = false;
 
-      const currentX = progress.value * DRAWER_WIDTH;
-      const shouldClose = e.velocityX < -VELOCITY_THRESHOLD || currentX < DRAWER_WIDTH - SNAP_THRESHOLD;
+      const currentX = progress.value * drawerWidth;
+      const shouldClose = e.velocityX < -VELOCITY_THRESHOLD || currentX < drawerWidth - snapThreshold;
 
       if (shouldClose) {
         progress.value = withSpring(0, SPRING_CONFIG);
@@ -397,7 +398,7 @@ export default function GestureDrawer() {
 
   // Animated styles
   const drawerStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: interpolate(progress.value, [0, 1], [-DRAWER_WIDTH, 0]) }],
+    transform: [{ translateX: interpolate(progress.value, [0, 1], [-drawerWidth, 0]) }],
   }));
 
   const scrimStyle = useAnimatedStyle(() => ({
@@ -424,7 +425,7 @@ export default function GestureDrawer() {
             styles.drawer,
             drawerStyle,
             {
-              width: DRAWER_WIDTH,
+              width: drawerWidth,
               paddingTop: insets.top,
               paddingBottom: insets.bottom,
               ...Platform.select({
