@@ -522,6 +522,7 @@ export default function ParentHomeScroll() {
           payment={data.paymentStatus}
           xp={data.childXp}
           chat={data.lastChat}
+          childPlayerId={data.children[0]?.id}
         />
 
         {/* ─── TEAM HUB PREVIEW (flat) ──────────────────────── */}
@@ -534,7 +535,7 @@ export default function ParentHomeScroll() {
         <SeasonSnapshot record={data.seasonRecord} />
 
         {/* ─── RECENT BADGES ─────────────────────────────────── */}
-        <RecentBadges playerIds={data.children.map((c) => c.id)} />
+        <RecentBadges playerIds={data.children.map((c) => c.id)} childPlayerId={data.children[0]?.id} />
 
         {/* ─── END OF SCROLL (contextual closing) ────────────── */}
         <View style={styles.endSection}>

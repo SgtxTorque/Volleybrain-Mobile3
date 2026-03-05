@@ -18,8 +18,9 @@ import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { FONTS } from '@/theme/fonts';
+import { fetchActiveChallenges, type ChallengeWithParticipants } from '@/lib/challenge-service';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -177,6 +178,7 @@ export default function AchievementsScreen() {
   const { workingSeason } = useSeason();
   const { isAdmin, isCoach, isParent, isPlayer } = usePermissions();
   const router = useRouter();
+  const { playerId: paramPlayerId } = useLocalSearchParams<{ playerId?: string }>();
 
   // Detect effective role for this screen
   const effectiveRole: 'player' | 'coach' | 'parent' | 'admin' = isAdmin
@@ -197,6 +199,9 @@ export default function AchievementsScreen() {
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [seasonStats, setSeasonStats] = useState<PlayerSeasonStats>({});
   const [earnedCounts, setEarnedCounts] = useState<Record<string, number>>({});
+  const [activeTab, setActiveTab] = useState<'badges' | 'challenges' | 'progress'>('badges');
+  const [challenges, setChallenges] = useState<ChallengeWithParticipants[]>([]);
+  const [teamId, setTeamId] = useState<string | null>(null);
   const [selectedAchievement, setSelectedAchievement] = useState<Achievement | null>(null);
   const [trackedIds, setTrackedIds] = useState<Set<string>>(new Set());
   const [totalXp, setTotalXp] = useState(0);
@@ -218,6 +223,8 @@ export default function AchievementsScreen() {
   }, [loading, playerId, allAchievements.length, seasonStatsCount]);
 
   const resolvePlayerId = async (): Promise<string | null> => {
+    // Use route param if provided (parent viewing child's achievements)
+    if (paramPlayerId) return paramPlayerId;
     if (!user?.id || !workingSeason?.id) return null;
 
     // 1. Check parent_account_id
@@ -334,6 +341,22 @@ export default function AchievementsScreen() {
       if (resolvedPlayerId) {
         const xpData = await fetchPlayerXP(resolvedPlayerId);
         setTotalXp(xpData.totalXp);
+      }
+
+      // Fetch team ID for challenges
+      if (resolvedPlayerId) {
+        const { data: teamLink } = await supabase
+          .from('team_players')
+          .select('team_id')
+          .eq('player_id', resolvedPlayerId)
+          .eq('is_active', true)
+          .limit(1)
+          .maybeSingle();
+        if (teamLink?.team_id) {
+          setTeamId(teamLink.team_id);
+          const teamChallenges = await fetchActiveChallenges(teamLink.team_id);
+          setChallenges(teamChallenges);
+        }
       }
     } catch (error) {
       if (__DEV__) console.error('Error loading achievements:', error);
@@ -1096,34 +1119,313 @@ export default function AchievementsScreen() {
   // MAIN RENDER
   // =========================================================================
 
+  // =========================================================================
+  // CHALLENGES TAB HELPERS
+  // =========================================================================
+
+  const activeChallenges = useMemo(() =>
+    challenges.filter(c => c.status === 'active'), [challenges]);
+
+  const completedChallenges = useMemo(() =>
+    challenges.filter(c => c.status === 'completed'), [challenges]);
+
+  const getDaysRemaining = (endsAt: string) => {
+    const now = Date.now();
+    const end = new Date(endsAt).getTime();
+    const days = Math.ceil((end - now) / 86400000);
+    return days > 0 ? days : 0;
+  };
+
+  const getPlayerProgress = (challenge: ChallengeWithParticipants) => {
+    if (!playerId) return { current: 0, target: challenge.target_value || 1, pct: 0 };
+    const part = challenge.participants.find(p => p.player_id === playerId);
+    const current = part?.current_value || 0;
+    const target = challenge.target_value || 1;
+    return { current, target, pct: Math.min((current / target) * 100, 100) };
+  };
+
+  // =========================================================================
+  // RENDER CHALLENGES TAB
+  // =========================================================================
+
+  const renderChallengesTab = () => (
+    <ScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 40 }}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* Active Challenges */}
+      {activeChallenges.length > 0 && (
+        <>
+          <Text style={s.tabSectionLabel}>ACTIVE CHALLENGES</Text>
+          {activeChallenges.map(ch => {
+            const prog = getPlayerProgress(ch);
+            const daysLeft = getDaysRemaining(ch.ends_at);
+            const isGold = prog.pct >= 50;
+            return (
+              <View key={ch.id} style={[s.challengeCard, isGold && { borderColor: DARK.gold + '25' }]}>
+                <View style={s.challengeHeader}>
+                  <View style={[s.challengeIconWrap, { backgroundColor: isGold ? DARK.gold + '15' : '#4BB9EC15' }]}>
+                    <Ionicons name="flash" size={16} color={isGold ? DARK.gold : '#4BB9EC'} />
+                  </View>
+                  <Text style={[s.challengeTitle, { color: isGold ? DARK.gold : '#4BB9EC' }]} numberOfLines={2}>
+                    {ch.title}
+                  </Text>
+                </View>
+                {ch.description ? (
+                  <Text style={s.challengeDesc} numberOfLines={2}>{ch.description}</Text>
+                ) : null}
+                <View style={s.challengeProgressRow}>
+                  <View style={s.challengeProgressBg}>
+                    <View
+                      style={[
+                        s.challengeProgressFill,
+                        { width: `${prog.pct}%` as any, backgroundColor: isGold ? DARK.gold : '#4BB9EC' },
+                      ]}
+                    />
+                  </View>
+                  <Text style={s.challengeProgressText}>{prog.current}/{prog.target}</Text>
+                </View>
+                <View style={s.challengeFooter}>
+                  <Text style={s.challengeXp}>+{ch.xp_reward} XP reward</Text>
+                  <View style={s.challengeTimeRow}>
+                    <Ionicons name="time-outline" size={12} color={DARK.textMuted} />
+                    <Text style={s.challengeTimeText}>{daysLeft}d left</Text>
+                  </View>
+                </View>
+                {ch.participants.length > 0 && (
+                  <Text style={s.challengeParticipants}>
+                    {ch.participants.length} participant{ch.participants.length !== 1 ? 's' : ''}
+                    {' \u00B7 '}
+                    {ch.participants.filter(p => p.completed).length} completed
+                  </Text>
+                )}
+              </View>
+            );
+          })}
+        </>
+      )}
+
+      {/* Completed Challenges */}
+      {completedChallenges.length > 0 && (
+        <>
+          <Text style={[s.tabSectionLabel, { marginTop: 20 }]}>COMPLETED</Text>
+          {completedChallenges.map(ch => (
+            <View key={ch.id} style={[s.challengeCard, { opacity: 0.6 }]}>
+              <View style={s.challengeHeader}>
+                <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+                <Text style={[s.challengeTitle, { color: DARK.textSecondary }]} numberOfLines={1}>
+                  {ch.title}
+                </Text>
+              </View>
+              <Text style={s.challengeXp}>+{ch.xp_reward} XP earned</Text>
+            </View>
+          ))}
+        </>
+      )}
+
+      {/* Empty state */}
+      {activeChallenges.length === 0 && completedChallenges.length === 0 && (
+        <View style={s.emptyBox}>
+          <Image
+            source={require('@/assets/images/mascot/Meet-Lynx.png')}
+            style={{ width: 80, height: 80, marginBottom: 12 }}
+            resizeMode="contain"
+          />
+          <Text style={s.emptyTitle}>No Challenges Yet</Text>
+          <Text style={s.emptySubtitle}>Your coach will post challenges here. Stay ready!</Text>
+        </View>
+      )}
+    </ScrollView>
+  );
+
+  // =========================================================================
+  // RENDER PROGRESS TAB
+  // =========================================================================
+
+  const levelInfo = getLevelFromXP(totalXp);
+  const tier = getLevelTier(levelInfo.level);
+
+  // Build stat power bars from season stats
+  const statBars = useMemo(() => {
+    const keys = [
+      { key: 'total_kills', label: 'KILLS', color: '#EF4444' },
+      { key: 'total_aces', label: 'ACES', color: '#F59E0B' },
+      { key: 'total_digs', label: 'DIGS', color: '#4BB9EC' },
+      { key: 'total_blocks', label: 'BLOCKS', color: '#A855F7' },
+      { key: 'total_assists', label: 'ASSISTS', color: '#10B981' },
+      { key: 'total_serves', label: 'SERVES', color: '#EC4899' },
+    ];
+    const gamesPlayed = seasonStats.games_played || seasonStats.total_games_played || 1;
+    return keys
+      .filter(k => seasonStats[k.key] != null && seasonStats[k.key] > 0)
+      .map(k => {
+        const total = seasonStats[k.key] || 0;
+        const perGame = total / gamesPlayed;
+        // Normalize to 0-100 scale (rough heuristic)
+        const maxPerGame: Record<string, number> = {
+          total_kills: 15, total_aces: 8, total_digs: 20,
+          total_blocks: 6, total_assists: 30, total_serves: 20,
+        };
+        const norm = Math.min(Math.round((perGame / (maxPerGame[k.key] || 10)) * 100), 100);
+        return { ...k, total, perGame: perGame.toFixed(1), value: norm };
+      });
+  }, [seasonStats]);
+
+  const renderProgressTab = () => (
+    <ScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 16, paddingBottom: 40 }}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* XP Progress */}
+      <View style={s.xpCard}>
+        <View style={s.xpHeaderRow}>
+          <View style={[s.levelBadge, { backgroundColor: tier.color + '25', borderColor: tier.color }]}>
+            <Text style={[s.levelNumber, { color: tier.color }]}>{levelInfo.level}</Text>
+          </View>
+          <View style={s.xpInfo}>
+            <Text style={s.xpTierName}>{tier.name}</Text>
+            <Text style={s.xpLabel}>
+              {totalXp} / {levelInfo.nextLevelXp} XP to Level {levelInfo.level + 1}
+            </Text>
+          </View>
+        </View>
+        <View style={s.xpBarBg}>
+          <View style={[s.xpBarFill, { width: `${levelInfo.progress}%` as any, backgroundColor: tier.color }]} />
+        </View>
+      </View>
+
+      {/* Season Stats Power Bars */}
+      {statBars.length > 0 && (
+        <View style={[s.progressStatsCard, { marginTop: 16 }]}>
+          <Text style={s.tabSectionLabel}>SEASON STATS</Text>
+          {statBars.map(bar => (
+            <View key={bar.key} style={s.progressStatRow}>
+              <Text style={s.progressStatLabel}>{bar.label}</Text>
+              <View style={s.progressBarBg}>
+                <View style={[s.progressBarFill, { width: `${bar.value}%` as any, backgroundColor: bar.color }]} />
+              </View>
+              <Text style={[s.progressStatValue, { color: bar.color }]}>{bar.total}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {/* Summary */}
+      <View style={[s.summaryCard, { marginTop: 16 }]}>
+        <View style={s.summaryRow}>
+          <View style={s.summaryItem}>
+            <Text style={s.summaryNumber}>{totalEarned}</Text>
+            <Text style={s.summaryLabel}>Badges</Text>
+          </View>
+          <View style={s.summaryDivider} />
+          <View style={s.summaryItem}>
+            <Text style={[s.summaryNumber, { color: DARK.gold }]}>{completePct}%</Text>
+            <Text style={s.summaryLabel}>Complete</Text>
+          </View>
+          <View style={s.summaryDivider} />
+          <View style={s.summaryItem}>
+            <Text style={s.summaryNumber}>{activeChallenges.length}</Text>
+            <Text style={s.summaryLabel}>Active</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Personal Bests */}
+      {statBars.length > 0 && (
+        <View style={[s.progressStatsCard, { marginTop: 16 }]}>
+          <Text style={s.tabSectionLabel}>PER-GAME AVERAGES</Text>
+          <View style={s.personalBestsGrid}>
+            {statBars.map(bar => (
+              <View key={bar.key} style={s.personalBestCard}>
+                <Text style={[s.personalBestNum, { color: bar.color }]}>{bar.perGame}</Text>
+                <Text style={s.personalBestLabel}>{bar.label}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {/* Empty */}
+      {statBars.length === 0 && (
+        <View style={[s.emptyBox, { marginTop: 16 }]}>
+          <Image
+            source={require('@/assets/images/mascot/Meet-Lynx.png')}
+            style={{ width: 80, height: 80, marginBottom: 12 }}
+            resizeMode="contain"
+          />
+          <Text style={s.emptyTitle}>Stats Coming Soon</Text>
+          <Text style={s.emptySubtitle}>Play games to build your stats profile!</Text>
+        </View>
+      )}
+    </ScrollView>
+  );
+
+  // =========================================================================
+  // MAIN RENDER
+  // =========================================================================
+
+  const TAB_ITEMS: { key: typeof activeTab; label: string }[] = [
+    { key: 'badges', label: 'BADGES' },
+    { key: 'challenges', label: 'CHALLENGES' },
+    { key: 'progress', label: 'PROGRESS' },
+  ];
+
   return (
     <SafeAreaView style={s.container}>
-      {/* Header */}
+      {/* Trophy Case Header */}
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
           <Ionicons name="arrow-back" size={24} color={DARK.text} />
         </TouchableOpacity>
-        <View style={s.headerCenter}>
-          <Text style={s.headerTitle}>ACHIEVEMENTS</Text>
-          <View style={s.headerCountBadge}>
-            <Text style={s.headerCountText}>{totalEarned}</Text>
-          </View>
+        <View style={{ flex: 1 }} />
+        <View style={s.headerCountBadge}>
+          <Text style={s.headerCountText}>{totalEarned}</Text>
         </View>
-        <View style={s.backBtn} />
       </View>
 
-      {/* Badge Grid */}
-      <FlatList
-        data={filteredAchievements.length > 0 ? gridData : []}
-        renderItem={renderBadgeCell}
-        keyExtractor={(item, index) => (item ? item.id : `pad-${index}`)}
-        numColumns={NUM_COLUMNS}
-        columnWrapperStyle={s.gridRow}
-        contentContainerStyle={s.gridContent}
-        ListHeaderComponent={renderListHeader}
-        ListFooterComponent={<View style={{ height: 40 }} />}
-        showsVerticalScrollIndicator={false}
-      />
+      {/* Trophy Case Title */}
+      <View style={s.trophyCaseTitle}>
+        <Text style={s.trophyWord}>TROPHY</Text>
+        <Text style={[s.trophyWord, { color: DARK.gold }]}>CASE</Text>
+        <View style={s.trophyDivider}>
+          <Text style={s.trophyEarnedCount}>{totalEarned} Earned</Text>
+          <View style={s.trophyDividerLine} />
+        </View>
+      </View>
+
+      {/* Tab Bar */}
+      <View style={s.tabBar}>
+        {TAB_ITEMS.map(tab => (
+          <TouchableOpacity
+            key={tab.key}
+            style={[s.tabItem, activeTab === tab.key && s.tabItemActive]}
+            onPress={() => setActiveTab(tab.key)}
+          >
+            <Text style={[s.tabItemText, activeTab === tab.key && s.tabItemTextActive]}>
+              {tab.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* Tab Content */}
+      {activeTab === 'badges' && (
+        <FlatList
+          data={filteredAchievements.length > 0 ? gridData : []}
+          renderItem={renderBadgeCell}
+          keyExtractor={(item, index) => (item ? item.id : `pad-${index}`)}
+          numColumns={NUM_COLUMNS}
+          columnWrapperStyle={s.gridRow}
+          contentContainerStyle={s.gridContent}
+          ListHeaderComponent={renderListHeader}
+          ListFooterComponent={<View style={{ height: 40 }} />}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
+      {activeTab === 'challenges' && renderChallengesTab()}
+      {activeTab === 'progress' && renderProgressTab()}
 
       {/* Detail Modal */}
       {renderDetailModal()}
@@ -1784,5 +2086,225 @@ const s = StyleSheet.create({
     fontFamily: FONTS.bodyBold,
     color: DARK.text,
     textAlign: 'center',
+  },
+
+  // =========================================================================
+  // TROPHY CASE HEADER
+  // =========================================================================
+  trophyCaseTitle: {
+    paddingHorizontal: 20,
+    marginBottom: 8,
+  },
+  trophyWord: {
+    fontSize: 48,
+    fontFamily: FONTS.display,
+    color: DARK.text,
+    lineHeight: 52,
+    letterSpacing: 2,
+  },
+  trophyDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 6,
+  },
+  trophyEarnedCount: {
+    fontSize: 12,
+    fontFamily: FONTS.bodyBold,
+    color: 'rgba(255,255,255,0.40)',
+  },
+  trophyDividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+
+  // =========================================================================
+  // TAB BAR
+  // =========================================================================
+  tabBar: {
+    flexDirection: 'row',
+    marginHorizontal: 16,
+    marginBottom: 8,
+    backgroundColor: DARK.card,
+    borderRadius: 14,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: DARK.border,
+  },
+  tabItem: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 11,
+    alignItems: 'center',
+  },
+  tabItemActive: {
+    backgroundColor: DARK.gold + '20',
+  },
+  tabItemText: {
+    fontSize: 12,
+    fontFamily: FONTS.bodyBold,
+    color: DARK.textMuted,
+    letterSpacing: 1,
+  },
+  tabItemTextActive: {
+    color: DARK.gold,
+  },
+  tabSectionLabel: {
+    fontSize: 10,
+    fontFamily: FONTS.bodyBold,
+    color: 'rgba(255,255,255,0.20)',
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    marginBottom: 10,
+  },
+
+  // =========================================================================
+  // CHALLENGES TAB
+  // =========================================================================
+  challengeCard: {
+    backgroundColor: DARK.card,
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: DARK.border,
+  },
+  challengeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 6,
+  },
+  challengeIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  challengeTitle: {
+    fontSize: 13,
+    fontFamily: FONTS.bodyBold,
+    flex: 1,
+  },
+  challengeDesc: {
+    fontSize: 12,
+    fontFamily: FONTS.bodyMedium,
+    color: DARK.textMuted,
+    marginBottom: 8,
+    lineHeight: 17,
+  },
+  challengeProgressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  challengeProgressBg: {
+    flex: 1,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    overflow: 'hidden',
+  },
+  challengeProgressFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  challengeProgressText: {
+    fontSize: 11,
+    fontFamily: FONTS.bodyBold,
+    color: 'rgba(255,255,255,0.30)',
+  },
+  challengeFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  challengeXp: {
+    fontSize: 11,
+    fontFamily: FONTS.bodyMedium,
+    color: DARK.gold + '80',
+  },
+  challengeTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  challengeTimeText: {
+    fontSize: 10,
+    fontFamily: FONTS.bodySemiBold,
+    color: DARK.textMuted,
+  },
+  challengeParticipants: {
+    fontSize: 10,
+    fontFamily: FONTS.bodyMedium,
+    color: DARK.textMuted,
+    marginTop: 8,
+  },
+
+  // =========================================================================
+  // PROGRESS TAB
+  // =========================================================================
+  progressStatsCard: {
+    backgroundColor: DARK.card,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: DARK.border,
+  },
+  progressStatRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12,
+  },
+  progressStatLabel: {
+    width: 56,
+    fontSize: 10,
+    fontFamily: FONTS.bodyBold,
+    color: DARK.textMuted,
+    letterSpacing: 0.5,
+  },
+  progressBarBg: {
+    flex: 1,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  progressStatValue: {
+    width: 36,
+    fontSize: 14,
+    fontFamily: FONTS.bodyExtraBold,
+    textAlign: 'right',
+  },
+  personalBestsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  personalBestCard: {
+    width: (SCREEN_WIDTH - 32 - 32 - 20) / 3,
+    backgroundColor: DARK.cardAlt,
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+  },
+  personalBestNum: {
+    fontSize: 20,
+    fontFamily: FONTS.bodyExtraBold,
+  },
+  personalBestLabel: {
+    fontSize: 9,
+    fontFamily: FONTS.bodyBold,
+    color: DARK.textMuted,
+    letterSpacing: 0.5,
+    marginTop: 4,
   },
 });

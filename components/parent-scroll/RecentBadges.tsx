@@ -18,9 +18,10 @@ type BadgeItem = {
 
 type Props = {
   playerIds: string[];
+  childPlayerId?: string;
 };
 
-export default function RecentBadges({ playerIds }: Props) {
+export default function RecentBadges({ playerIds, childPlayerId }: Props) {
   const router = useRouter();
   const [badges, setBadges] = useState<BadgeItem[]>([]);
 
@@ -65,7 +66,7 @@ export default function RecentBadges({ playerIds }: Props) {
     <View style={styles.container}>
       <View style={styles.headerRow}>
         <Text style={styles.sectionHeader}>RECENT BADGES</Text>
-        <TouchableOpacity onPress={() => router.push('/achievements' as any)}>
+        <TouchableOpacity onPress={() => router.push(childPlayerId ? `/achievements?playerId=${childPlayerId}` as any : '/achievements' as any)}>
           <Text style={styles.seeAll}>See All {'\u{2192}'}</Text>
         </TouchableOpacity>
       </View>
@@ -79,7 +80,7 @@ export default function RecentBadges({ playerIds }: Props) {
             key={badge.id}
             style={styles.pill}
             activeOpacity={0.7}
-            onPress={() => router.push('/achievements' as any)}
+            onPress={() => router.push(childPlayerId ? `/achievements?playerId=${childPlayerId}` as any : '/achievements' as any)}
           >
             <Text style={styles.pillIcon}>{badge.icon}</Text>
             <Text style={styles.pillText} numberOfLines={1}>

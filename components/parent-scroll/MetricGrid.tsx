@@ -16,9 +16,10 @@ type Props = {
   payment: PaymentStatus;
   xp: { totalXp: number; level: number; progress: number } | null;
   chat: LastChatPreview | null;
+  childPlayerId?: string;
 };
 
-export default function MetricGrid({ record, payment, xp, chat }: Props) {
+export default function MetricGrid({ record, payment, xp, chat, childPlayerId }: Props) {
   const router = useRouter();
 
   const showBalance = payment.balance > 0;
@@ -74,7 +75,7 @@ export default function MetricGrid({ record, payment, xp, chat }: Props) {
         <TouchableOpacity
           style={styles.card}
           activeOpacity={0.7}
-          onPress={() => router.push('/achievements' as any)}
+          onPress={() => router.push(childPlayerId ? `/achievements?playerId=${childPlayerId}` as any : '/achievements' as any)}
         >
           <Text style={styles.emoji}>{'\u{2B50}'}</Text>
           <Text style={styles.bigNumber}>
