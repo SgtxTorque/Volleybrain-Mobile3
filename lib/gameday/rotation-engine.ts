@@ -126,6 +126,23 @@ export function getCourtPositions(
 
     // If libero is active and this is the replacement target, show libero
     let player = players[i];
+
+    // Guard: if starter slot is empty, render placeholder
+    if (!player) {
+      return {
+        slot: `P${i + 1}`,
+        x: pos.x,
+        y: pos.y,
+        label: rt.label,
+        role: rt.role,
+        playerId: undefined,
+        jerseyNumber: undefined,
+        isServer: false,
+        isLibero: false,
+        isFrontRow: !isBackRow,
+      };
+    }
+
     let showAsLibero = false;
     if (libero && liberoTarget && player.playerId === liberoTarget.playerId && isBackRow) {
       player = libero;
@@ -152,7 +169,7 @@ export function getCourtPositions(
 /**
  * The player at P1 (index 0) in the current rotation is the server.
  */
-export function getNextServer(rotation: number, starters: PlayerSlot[]): PlayerSlot {
+export function getNextServer(rotation: number, starters: PlayerSlot[]): PlayerSlot | undefined {
   return starters[starterIndexAtPosition(0, rotation)];
 }
 
@@ -184,7 +201,7 @@ export function getLiberoTarget(
 
   for (const posIdx of backRowIndices) {
     const starterIdx = starterIndexAtPosition(posIdx, rotation);
-    if (roles[starterIdx].label === 'MB') {
+    if (roles[starterIdx].label === 'MB' && starters[starterIdx]) {
       return starters[starterIdx];
     }
   }

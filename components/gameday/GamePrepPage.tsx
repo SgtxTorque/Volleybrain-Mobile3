@@ -57,16 +57,10 @@ export default function GamePrepPage() {
   const isServing = match?.sets[0]?.isServing ?? true;
 
   const courtPositions = useMemo(() => {
-    if (starters.filter(Boolean).length < 6) {
-      // Not all starters assigned — show empty position slots
-      return getCourtPositions(formation, viewRotation, viewPhase,
-        starters.length === 6 ? starters : Array.from({ length: 6 }, (_, i) =>
-          starters[i] || { playerId: '', firstName: '', lastName: '', jerseyNumber: 0, position: '' }
-        ),
-        libero,
-      );
-    }
-    return getCourtPositions(formation, viewRotation, viewPhase, starters, libero);
+    // Pad starters to 6 so rotation engine always gets a 6-element array.
+    // Missing slots are undefined — the engine renders placeholder positions.
+    const padded = Array.from({ length: 6 }, (_, i) => starters[i] ?? undefined);
+    return getCourtPositions(formation, viewRotation, viewPhase, padded as PlayerSlot[], libero);
   }, [formation, viewRotation, viewPhase, starters, libero]);
 
   // Players not yet in the starting lineup or libero
@@ -186,11 +180,8 @@ export default function GamePrepPage() {
     return (
       <View style={s.previewGrid}>
         {ROTATIONS.map(r => {
-          const positions = getCourtPositions(formation, r, 'base',
-            starters.length === 6 ? starters : Array.from({ length: 6 }, () => ({
-              playerId: '', firstName: '', lastName: '', jerseyNumber: 0, position: '',
-            })),
-          );
+          const padded = Array.from({ length: 6 }, (_, i) => starters[i] ?? undefined);
+          const positions = getCourtPositions(formation, r, 'base', padded as PlayerSlot[]);
           return (
             <TouchableOpacity
               key={r}

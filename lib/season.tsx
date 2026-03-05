@@ -10,6 +10,8 @@ type Season = {
   id: string;
   name: string;
   status: string;
+  start_date: string | null;
+  end_date: string | null;
   registration_open: boolean;
   registration_closes_at: string | null;
   fee_registration: number;
@@ -53,6 +55,7 @@ export function SeasonProvider({ children }: { children: React.ReactNode }) {
     let query = supabase
       .from('seasons')
       .select('*')
+      .order('end_date', { ascending: false, nullsFirst: false })
       .order('created_at', { ascending: false });
 
     // Filter by organization (critical data scoping — matches web)
