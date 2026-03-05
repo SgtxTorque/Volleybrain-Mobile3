@@ -24,7 +24,8 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useRef } from 'react';
-import { KeyboardAvoidingView, Platform } from 'react-native';
+import { Dimensions, KeyboardAvoidingView, Platform } from 'react-native';
+import { lockPortrait, unlockOrientation } from '@/lib/orientation';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 SplashScreen.preventAutoHideAsync();
@@ -160,6 +161,16 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded]);
+
+  // Orientation: unlock on tablets, lock portrait on phones
+  useEffect(() => {
+    const w = Dimensions.get('window').width;
+    if (w >= 744) {
+      unlockOrientation();
+    } else {
+      lockPortrait();
+    }
+  }, []);
 
   if (!fontsLoaded) return null;
 
