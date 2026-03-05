@@ -103,7 +103,7 @@ const parseSetScores = (raw: any): { us: number; them: number }[] => {
 export default function GameRecapScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const params = useLocalSearchParams<{ eventId?: string }>();
+  const params = useLocalSearchParams<{ eventId?: string; playerId?: string }>();
 
   const [loading, setLoading] = useState(true);
   const [game, setGame] = useState<GameEvent | null>(null);
@@ -111,6 +111,7 @@ export default function GameRecapScreen() {
   const [playerStats, setPlayerStats] = useState<PlayerStat[]>([]);
   const [players, setPlayers] = useState<PlayerInfo[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
+  const [viewingPlayerId, setViewingPlayerId] = useState<string | null>(null);
 
   // ── Data Loading ──────────────────────────────────────────
 
@@ -165,6 +166,20 @@ export default function GameRecapScreen() {
 
     setPlayerStats((statsResult.data || []) as PlayerStat[]);
     setAttendance((attendanceResult.data || []) as AttendanceRecord[]);
+
+    // Resolve viewing player (for personal performance section)
+    if (params.playerId) {
+      setViewingPlayerId(params.playerId);
+    } else if (user?.id) {
+      // Try to find the user's player_id from their profile
+      const { data: playerLink } = await supabase
+        .from('players')
+        .select('id')
+        .eq('parent_account_id', user.id)
+        .limit(1);
+      if (playerLink?.[0]) setViewingPlayerId(playerLink[0].id);
+    }
+
     setLoading(false);
   };
 
@@ -203,6 +218,45 @@ export default function GameRecapScreen() {
     }
 
     return performers.slice(0, 3);
+  }, [playerStats, playerMap]);
+
+  // Personal performance (for player/parent view)
+  const personalStats = useMemo(() => {
+    if (!viewingPlayerId) return null;
+    const ps = playerStats.find(s => s.player_id === viewingPlayerId);
+    if (!ps) return null;
+    const statItems = [
+      { label: 'KILLS', value: ps.kills ?? 0, color: '#F59E0B', highlight: (ps.kills ?? 0) > 0 },
+      { label: 'ACES', value: ps.aces ?? 0, color: '#EC4899', highlight: (ps.aces ?? 0) > 0 },
+      { label: 'DIGS', value: ps.digs ?? 0, color: '#06B6D4', highlight: (ps.digs ?? 0) > 0 },
+      { label: 'BLOCKS', value: ps.blocks ?? 0, color: '#6366F1', highlight: (ps.blocks ?? 0) > 0 },
+      { label: 'ASSISTS', value: ps.assists ?? 0, color: '#10B981', highlight: (ps.assists ?? 0) > 0 },
+      { label: 'SERVES', value: ps.serves ?? 0, color: '#A855F7', highlight: (ps.serves ?? 0) > 0 },
+    ].filter(st => st.value > 0 || st.label === 'KILLS');
+    return statItems;
+  }, [viewingPlayerId, playerStats]);
+
+  const personalPlayerName = useMemo(() => {
+    if (!viewingPlayerId) return '';
+    const p = playerMap[viewingPlayerId];
+    return p ? `${p.first_name}'s` : '';
+  }, [viewingPlayerId, playerMap]);
+
+  // MVP — the top scorer overall
+  const mvp = useMemo(() => {
+    if (playerStats.length === 0) return null;
+    const scored = playerStats.map(ps => ({
+      ...ps,
+      total: (ps.kills ?? 0) + (ps.aces ?? 0) + (ps.digs ?? 0) + (ps.blocks ?? 0) + (ps.assists ?? 0),
+    }));
+    const best = scored.sort((a, b) => b.total - a.total)[0];
+    if (!best || best.total === 0) return null;
+    const p = playerMap[best.player_id];
+    if (!p) return null;
+    const topStat = (best.kills ?? 0) >= (best.assists ?? 0)
+      ? `${best.kills} Kills`
+      : `${best.assists} Assists`;
+    return { player: p, topStat, total: best.total };
   }, [playerStats, playerMap]);
 
   const attendanceSummary = useMemo(() => {
@@ -371,6 +425,47 @@ export default function GameRecapScreen() {
                   </View>
                 );
               })}
+            </View>
+          </View>
+        )}
+
+        {/* ═══ MVP HIGHLIGHT ═══ */}
+        {mvp && (
+          <View style={s.section}>
+            <View style={s.mvpCard}>
+              <View style={s.mvpIconWrap}>
+                <Ionicons name="star" size={24} color="#FFD700" />
+              </View>
+              <View style={s.mvpInfo}>
+                <Text style={s.mvpLabel}>MATCH MVP</Text>
+                <Text style={s.mvpName}>{mvp.player.first_name} {mvp.player.last_name}</Text>
+                <Text style={s.mvpStat}>{mvp.topStat}</Text>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* ═══ YOUR PERFORMANCE (player/parent view) ═══ */}
+        {personalStats && personalStats.length > 0 && (
+          <View style={s.section}>
+            <Text style={s.sectionLabel}>{personalPlayerName.toUpperCase()} PERFORMANCE</Text>
+            <View style={s.personalGrid}>
+              {personalStats.map((stat, i) => (
+                <View
+                  key={i}
+                  style={[
+                    s.personalStatCard,
+                    stat.highlight
+                      ? { backgroundColor: stat.color + '12', borderColor: stat.color + '20' }
+                      : { backgroundColor: BRAND.surfaceCard, borderColor: BRAND.cardBorder },
+                  ]}
+                >
+                  <Text style={[s.personalStatNum, stat.highlight ? { color: '#fff' } : { color: BRAND.textTertiary }]}>
+                    {stat.value}
+                  </Text>
+                  <Text style={s.personalStatLabel}>{stat.label}</Text>
+                </View>
+              ))}
             </View>
           </View>
         )}
@@ -669,6 +764,74 @@ const s = StyleSheet.create({
   setScore: {
     fontFamily: FONTS.display,
     fontSize: 22,
+  },
+
+  // ── MVP Card ────────────────────────────────────────
+
+  mvpCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: 'rgba(255,215,0,0.08)',
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,215,0,0.20)',
+  },
+  mvpIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,215,0,0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mvpInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  mvpLabel: {
+    fontFamily: FONTS.bodyExtraBold,
+    fontSize: 10,
+    color: 'rgba(255,215,0,0.60)',
+    letterSpacing: 1.2,
+  },
+  mvpName: {
+    fontFamily: FONTS.bodyExtraBold,
+    fontSize: 16,
+    color: BRAND.textLight,
+  },
+  mvpStat: {
+    fontFamily: FONTS.bodyMedium,
+    fontSize: 11,
+    color: BRAND.textTertiary,
+  },
+
+  // ── Personal Performance ────────────────────────────
+
+  personalGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  personalStatCard: {
+    width: '47%' as any,
+    borderRadius: 14,
+    padding: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+  },
+  personalStatNum: {
+    fontFamily: FONTS.display,
+    fontSize: 32,
+    lineHeight: 34,
+  },
+  personalStatLabel: {
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 10,
+    color: BRAND.textTertiary,
+    marginTop: 4,
+    letterSpacing: 0.5,
   },
 
   // ── Top Performers ────────────────────────────────────
