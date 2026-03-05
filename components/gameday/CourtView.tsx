@@ -149,11 +149,11 @@ export default function CourtView({
 
   // Court aspect ratio: slightly taller than wide (volleyball court is 9m x 18m)
   const courtWidth = compact
-    ? screenWidth - 32
+    ? screenWidth - 48
     : isTablet
     ? Math.min(500, screenWidth - 240)
     : screenWidth - 40;
-  const courtHeight = courtWidth * 1.1;
+  const courtHeight = compact ? courtWidth * 0.85 : courtWidth * 1.1;
 
   return (
     <View style={[styles.court, { width: courtWidth, height: courtHeight }]}>

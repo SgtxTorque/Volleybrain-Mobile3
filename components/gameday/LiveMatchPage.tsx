@@ -176,8 +176,13 @@ export default function LiveMatchPage() {
 
   // ── Layout ──────────────────────────────────────────────────
 
+  const ContentWrapper = isTablet ? View : ScrollView;
+  const wrapperProps = isTablet
+    ? { style: s.root }
+    : { style: s.root, contentContainerStyle: s.scrollContent, showsVerticalScrollIndicator: false };
+
   return (
-    <View style={s.root}>
+    <ContentWrapper {...(wrapperProps as any)}>
       {/* Libero alert banner */}
       {liberoAlert && (
         <Animated.View entering={SlideInUp.duration(300)} style={s.alertBanner}>
@@ -440,7 +445,7 @@ export default function LiveMatchPage() {
           </View>
         </View>
       </Modal>
-    </View>
+    </ContentWrapper>
   );
 }
 
@@ -449,6 +454,9 @@ export default function LiveMatchPage() {
 const s = StyleSheet.create({
   root: {
     flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 20,
   },
 
   // Alert banner
