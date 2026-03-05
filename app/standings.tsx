@@ -273,7 +273,7 @@ export default function StandingsScreen() {
 
   // Navigate to player detail on tap
   const handlePlayerTap = useCallback((playerId: string) => {
-    router.push(`/child-detail?playerId=${playerId}` as any);
+    router.push(`/player-card?playerId=${playerId}` as any);
   }, [router]);
 
   // -----------------------------------------------

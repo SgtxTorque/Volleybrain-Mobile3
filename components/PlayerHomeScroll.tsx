@@ -239,6 +239,24 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           scrollY={scrollY}
         />
 
+        {/* ─── 1b. MY TEAM (one-tap to roster) ─────────────────── */}
+        {data.primaryTeam && (
+          <TouchableOpacity
+            style={styles.myTeamCard}
+            activeOpacity={0.85}
+            onPress={() => router.push(`/roster?teamId=${data.primaryTeam!.id}` as any)}
+          >
+            <View style={styles.myTeamLeft}>
+              <Text style={styles.myTeamLabel}>MY TEAM</Text>
+              <Text style={styles.myTeamName}>{data.primaryTeam.name}</Text>
+              <Text style={styles.myTeamCta}>See your teammates {'\u2192'}</Text>
+            </View>
+            <View style={styles.myTeamAvatars}>
+              <Text style={{ fontSize: 22 }}>{'\u{1F465}'}</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
         {/* ─── 2. STREAK BANNER (if streak ≥ 2) ──────────────── */}
         <StreakBanner streak={data.attendanceStreak} />
 
@@ -424,5 +442,48 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: PLAYER_THEME.accent,
     letterSpacing: 0.3,
+  },
+  // My Team card
+  myTeamCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 20,
+    marginBottom: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 18,
+    backgroundColor: PLAYER_THEME.cardBg,
+    borderWidth: 1,
+    borderColor: PLAYER_THEME.borderAccent,
+  },
+  myTeamLeft: {
+    flex: 1,
+    gap: 2,
+  },
+  myTeamLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: PLAYER_THEME.accent,
+    letterSpacing: 1.5,
+    opacity: 0.6,
+  },
+  myTeamName: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: PLAYER_THEME.textPrimary,
+  },
+  myTeamCta: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: PLAYER_THEME.textMuted,
+    marginTop: 2,
+  },
+  myTeamAvatars: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(75,185,236,0.10)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
