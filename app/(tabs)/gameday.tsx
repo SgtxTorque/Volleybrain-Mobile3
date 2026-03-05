@@ -293,7 +293,7 @@ export default function GameDayScreen() {
 
   // Season progress: games only
   const seasonStats = useMemo(() => {
-    const games = events.filter((e) => e.event_type === 'game');
+    const games = events.filter((e) => e.event_type?.toLowerCase() === 'game');
     const completed = games.filter(
       (g) =>
         g.our_score !== null &&
@@ -364,7 +364,7 @@ export default function GameDayScreen() {
   // ═══════════════════════════════════════════════════════
   // RENDER
   // ═══════════════════════════════════════════════════════
-  const heroTypeConf = nextEvent ? (eventTypeConfig[nextEvent.event_type] || eventTypeConfig.other) : null;
+  const heroTypeConf = nextEvent ? (eventTypeConfig[nextEvent.event_type?.toLowerCase()] || eventTypeConfig.other) : null;
   const heroCountdown = nextEvent ? getCountdown(nextEvent.event_date) : null;
 
   return (
@@ -434,7 +434,7 @@ export default function GameDayScreen() {
               <Text style={s.heroCountdown}>{heroCountdown?.text}</Text>
 
               <Text style={s.heroTitle}>
-                {nextEvent.event_type === 'game'
+                {nextEvent.event_type?.toLowerCase() === 'game'
                   ? 'GAME DAY'
                   : (heroTypeConf?.label || 'EVENT').toUpperCase()}
               </Text>
@@ -469,7 +469,7 @@ export default function GameDayScreen() {
 
               {/* Action buttons */}
               <View style={s.heroActions}>
-                {isCoachOrAdmin && nextEvent.event_type === 'game' && (
+                {isCoachOrAdmin && nextEvent.event_type?.toLowerCase() === 'game' && (
                   <TouchableOpacity
                     style={s.heroActionPrimary}
                     onPress={() => router.push(`/game-day-command?eventId=${nextEvent.id}&teamId=${nextEvent.team_id}&opponent=${encodeURIComponent(nextEvent.opponent_name || nextEvent.opponent || 'Opponent')}` as any)}
@@ -478,7 +478,7 @@ export default function GameDayScreen() {
                     <Text style={s.heroActionPrimaryText}>Live Command</Text>
                   </TouchableOpacity>
                 )}
-                {isCoachOrAdmin && nextEvent.event_type !== 'game' && (
+                {isCoachOrAdmin && nextEvent.event_type?.toLowerCase() !== 'game' && (
                   <TouchableOpacity
                     style={s.heroActionPrimary}
                     onPress={() => router.push('/lineup-builder' as any)}
@@ -519,7 +519,7 @@ export default function GameDayScreen() {
           <View style={s.sectionBlock}>
             <SectionHeader title="This Week" />
             {thisWeekEvents.map((event) => {
-              const typeConf = eventTypeConfig[event.event_type] || eventTypeConfig.other;
+              const typeConf = eventTypeConfig[event.event_type?.toLowerCase()] || eventTypeConfig.other;
               const rsvp = event.rsvp_count;
               return (
                 <Card
@@ -542,7 +542,7 @@ export default function GameDayScreen() {
                         </Text>
                       )}
                     </View>
-                    {event.event_type === 'game' &&
+                    {event.event_type?.toLowerCase() === 'game' &&
                       event.location_type &&
                       locationTypeConfig[event.location_type] && (
                         <Badge
@@ -667,7 +667,7 @@ export default function GameDayScreen() {
                     {formatDateHeader(dateKey)}
                   </Text>
                   {groupedUpcoming[dateKey].map((event) => {
-                    const typeConf = eventTypeConfig[event.event_type] || eventTypeConfig.other;
+                    const typeConf = eventTypeConfig[event.event_type?.toLowerCase()] || eventTypeConfig.other;
                     return (
                       <Card
                         key={event.id}
@@ -716,7 +716,7 @@ export default function GameDayScreen() {
           const completedGames = events
             .filter(
               (e) =>
-                e.event_type === 'game' &&
+                e.event_type?.toLowerCase() === 'game' &&
                 e.event_date < todayStr &&
                 e.our_score != null &&
                 e.opponent_score != null

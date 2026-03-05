@@ -68,7 +68,7 @@ export default function RosterScreen() {
 
   // ─── Fetch all teams the user has access to ────────────────────
   const fetchTeams = useCallback(async () => {
-    if (!user?.id) return;
+    if (!user?.id || !workingSeason?.id) return;
     try {
       const teamMap = new Map<string, RosterTeam>();
 
@@ -81,7 +81,7 @@ export default function RosterScreen() {
 
       for (const st of (staffTeams || [])) {
         const t = (st as any).teams;
-        if (t?.id && (!workingSeason?.id || t.season_id === workingSeason.id)) {
+        if (t?.id && t.season_id === workingSeason.id) {
           teamMap.set(t.id, { id: t.id, name: t.name, color: t.color });
         }
       }
@@ -99,7 +99,7 @@ export default function RosterScreen() {
           : [coachRecord.team_coaches];
         for (const ct of tcList) {
           const t = (ct as any).teams;
-          if (t?.id && !teamMap.has(t.id) && (!workingSeason?.id || t.season_id === workingSeason.id)) {
+          if (t?.id && !teamMap.has(t.id) && t.season_id === workingSeason.id) {
             teamMap.set(t.id, { id: t.id, name: t.name, color: t.color });
           }
         }
@@ -129,7 +129,7 @@ export default function RosterScreen() {
 
         for (const tl of (parentTeamLinks || [])) {
           const t = (tl as any).teams;
-          if (t?.id && !teamMap.has(t.id) && (!workingSeason?.id || t.season_id === workingSeason.id)) {
+          if (t?.id && !teamMap.has(t.id) && t.season_id === workingSeason.id) {
             teamMap.set(t.id, { id: t.id, name: t.name, color: t.color });
           }
         }
