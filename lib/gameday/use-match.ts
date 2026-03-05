@@ -397,6 +397,7 @@ export function MatchProvider({
     cs.winner = cs.homeScore > cs.awayScore ? 'home' : 'away';
     sets[setIdx] = cs;
     persist({ ...match, sets });
+    setCurrentPage(2); // navigate to End Set page
   }, [match, persist]);
 
   const startNextSet = useCallback(() => {

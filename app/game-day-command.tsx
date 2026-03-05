@@ -24,6 +24,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { MatchProvider, useMatch } from '@/lib/gameday/use-match';
 import GamePrepPage from '@/components/gameday/GamePrepPage';
 import LiveMatchPage from '@/components/gameday/LiveMatchPage';
+import EndSetPage from '@/components/gameday/EndSetPage';
+import SummaryPage from '@/components/gameday/SummaryPage';
 import { FONTS } from '@/theme/fonts';
 
 const PAGE_LABELS = ['GAME PREP', 'LIVE MATCH', 'END SET', 'SUMMARY'];
@@ -44,19 +46,9 @@ function CommandCenterContent() {
       case 1:
         return <LiveMatchPage />;
       case 2:
-        return (
-          <View style={s.placeholder}>
-            <Ionicons name="flag" size={48} color="rgba(255,255,255,0.15)" />
-            <Text style={s.placeholderText}>End Set / Match — Phase 6</Text>
-          </View>
-        );
+        return <EndSetPage />;
       case 3:
-        return (
-          <View style={s.placeholder}>
-            <Ionicons name="trophy" size={48} color="rgba(255,255,255,0.15)" />
-            <Text style={s.placeholderText}>Post-Game Summary — Phase 7</Text>
-          </View>
-        );
+        return <SummaryPage />;
       default:
         return null;
     }
@@ -83,10 +75,11 @@ function CommandCenterContent() {
               key={i}
               style={s.dotWrap}
               onPress={() => {
-                // Only allow going back to prep, or forward if conditions met
-                if (i === 0 || (i === 1 && match && match.starters.filter(Boolean).length === 6)) {
-                  setCurrentPage(i);
-                }
+                // Navigation gating: prep always, live if lineup ready, end/summary if match started
+                const lineupReady = match && match.starters.filter(Boolean).length === 6;
+                if (i === 0) setCurrentPage(i);
+                else if (i === 1 && lineupReady) setCurrentPage(i);
+                else if ((i === 2 || i === 3) && lineupReady) setCurrentPage(i);
               }}
             >
               <View style={[s.dot, currentPage === i && s.dotActive]} />
