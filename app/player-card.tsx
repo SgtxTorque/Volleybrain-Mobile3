@@ -69,7 +69,7 @@ export default function PlayerCardScreen() {
       // Player basic info
       const { data: pData } = await supabase
         .from('players')
-        .select('id, first_name, last_name, jersey_number, position, photo_url, sport_name')
+        .select('id, first_name, last_name, jersey_number, position, photo_url')
         .eq('id', resolvedId)
         .maybeSingle();
 
@@ -107,7 +107,7 @@ export default function PlayerCardScreen() {
       } catch { /* table may not exist */ }
 
       // Build stat bars from sport config
-      const sportConfig = getSportDisplay(pData.sport_name);
+      const sportConfig = getSportDisplay(null);
       const statBars = sportConfig.primaryStats.map(sc => ({
         label: sc.short,
         value: seasonStats ? Math.min(100, Math.round((seasonStats[sc.seasonColumn] || 0) / Math.max(1, seasonStats.games_played || 1) * 10)) : 0,
@@ -125,7 +125,7 @@ export default function PlayerCardScreen() {
         photoUrl: pData.photo_url,
         jerseyNumber: pData.jersey_number,
         position: pData.position,
-        sportName: pData.sport_name,
+        sportName: undefined,
         teamName: team?.name || '',
         teamColor: team?.color,
         seasonName: workingSeason?.name || undefined,

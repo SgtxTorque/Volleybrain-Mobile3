@@ -2,11 +2,12 @@
  * roster screen — Full-screen roster carousel view.
  *
  * Route: /roster?teamId=xxx
- *        If no teamId, uses the user's current team.
+ *        If no teamId, resolves teams from user's role and shows team selector.
  */
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -26,7 +27,14 @@ import type { PlayerTradingCardPlayer } from '@/components/PlayerTradingCard';
 import { PLAYER_THEME } from '@/components/PlayerHomeScroll';
 import { FONTS } from '@/theme/fonts';
 
-// Shared OVR formula
+// ─── Types ──────────────────────────────────────────────────────
+type RosterTeam = {
+  id: string;
+  name: string;
+  color: string | null;
+};
+
+// ─── OVR formula (shared with PlayerTradingCard / usePlayerHomeData) ──
 function computeOVR(ss: Record<string, number> | null): number {
   if (!ss) return 0;
   const gp = ss.games_played || 0;
@@ -50,44 +58,137 @@ export default function RosterScreen() {
   const { workingSeason } = useSeason();
 
   const [loading, setLoading] = useState(true);
+  const [teams, setTeams] = useState<RosterTeam[]>([]);
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(paramTeamId || null);
   const [teamName, setTeamName] = useState('');
   const [teamColor, setTeamColor] = useState<string | null>(null);
   const [players, setPlayers] = useState<PlayerTradingCardPlayer[]>([]);
 
-  const fetchRoster = useCallback(async () => {
+  const showTeamSelector = teams.length > 1;
+
+  // ─── Fetch all teams the user has access to ────────────────────
+  const fetchTeams = useCallback(async () => {
+    if (!user?.id) return;
     try {
-      // Resolve team ID
-      let resolvedTeamId = paramTeamId;
-      if (!resolvedTeamId && user?.id) {
-        // Try team_staff first (coach/admin)
-        const { data: staff } = await supabase
-          .from('team_staff')
-          .select('team_id')
-          .eq('user_id', user.id)
-          .eq('is_active', true)
-          .limit(1);
-        if (staff?.[0]) {
-          resolvedTeamId = staff[0].team_id;
+      const teamMap = new Map<string, RosterTeam>();
+
+      // 1. team_staff (coaches, admins)
+      const { data: staffTeams } = await supabase
+        .from('team_staff')
+        .select('team_id, teams(id, name, color, season_id)')
+        .eq('user_id', user.id)
+        .eq('is_active', true);
+
+      for (const st of (staffTeams || [])) {
+        const t = (st as any).teams;
+        if (t?.id && (!workingSeason?.id || t.season_id === workingSeason.id)) {
+          teamMap.set(t.id, { id: t.id, name: t.name, color: t.color });
         }
       }
-      if (!resolvedTeamId) { setLoading(false); return; }
 
+      // 2. coaches → team_coaches (profile_id = auth user id)
+      const { data: coachRecord } = await supabase
+        .from('coaches')
+        .select('id, team_coaches(team_id, teams(id, name, color, season_id))')
+        .eq('profile_id', user.id)
+        .maybeSingle();
+
+      if (coachRecord?.team_coaches) {
+        const tcList = Array.isArray(coachRecord.team_coaches)
+          ? coachRecord.team_coaches
+          : [coachRecord.team_coaches];
+        for (const ct of tcList) {
+          const t = (ct as any).teams;
+          if (t?.id && !teamMap.has(t.id) && (!workingSeason?.id || t.season_id === workingSeason.id)) {
+            teamMap.set(t.id, { id: t.id, name: t.name, color: t.color });
+          }
+        }
+      }
+
+      // 3. Parent path: players linked to user → team_players
+      const { data: directPlayers } = await supabase
+        .from('players')
+        .select('id')
+        .eq('parent_account_id', user.id);
+
+      const { data: guardianLinks } = await supabase
+        .from('player_guardians')
+        .select('player_id')
+        .eq('guardian_id', user.id);
+
+      const parentPlayerIds = [
+        ...(directPlayers || []).map(p => p.id),
+        ...(guardianLinks || []).map(g => g.player_id),
+      ];
+
+      if (parentPlayerIds.length > 0) {
+        const { data: parentTeamLinks } = await supabase
+          .from('team_players')
+          .select('team_id, teams(id, name, color, season_id)')
+          .in('player_id', parentPlayerIds);
+
+        for (const tl of (parentTeamLinks || [])) {
+          const t = (tl as any).teams;
+          if (t?.id && !teamMap.has(t.id) && (!workingSeason?.id || t.season_id === workingSeason.id)) {
+            teamMap.set(t.id, { id: t.id, name: t.name, color: t.color });
+          }
+        }
+      }
+
+      // 4. Player path: user is a player themselves
+      const { data: selfPlayer } = await supabase
+        .from('players')
+        .select('id')
+        .eq('player_account_enabled', true)
+        .eq('parent_account_id', user.id);
+      // Also check if there's a direct team_players link via any player the user owns
+      // (already handled above via parent path)
+
+      const allTeams = Array.from(teamMap.values());
+      allTeams.sort((a, b) => a.name.localeCompare(b.name));
+      setTeams(allTeams);
+
+      // Select default team
+      if (!selectedTeamId && allTeams.length > 0) {
+        setSelectedTeamId(allTeams[0].id);
+      } else if (selectedTeamId && !teamMap.has(selectedTeamId)) {
+        // Param teamId not in user's teams — still use it (e.g., viewing another team)
+        // Fetch the team info directly
+        const { data: directTeam } = await supabase
+          .from('teams')
+          .select('id, name, color')
+          .eq('id', selectedTeamId)
+          .maybeSingle();
+        if (directTeam) {
+          teamMap.set(directTeam.id, directTeam);
+          setTeams(prev => [...prev, directTeam]);
+        }
+      }
+    } catch (err) {
+      if (__DEV__) console.error('[roster] fetchTeams error:', err);
+    }
+  }, [user?.id, workingSeason?.id]);
+
+  // ─── Fetch roster for selected team ────────────────────────────
+  const fetchRoster = useCallback(async (tid: string) => {
+    setLoading(true);
+    try {
       // Get team info
       const { data: team } = await supabase
         .from('teams')
-        .select('id, name, color, sport_name')
-        .eq('id', resolvedTeamId)
+        .select('id, name, color')
+        .eq('id', tid)
         .maybeSingle();
 
-      if (!team) { setLoading(false); return; }
+      if (!team) { setPlayers([]); setLoading(false); return; }
       setTeamName(team.name);
       setTeamColor(team.color);
 
       // Get players on this team
       const { data: teamPlayers } = await supabase
         .from('team_players')
-        .select('player_id, players(id, first_name, last_name, jersey_number, position, photo_url, sport_name)')
-        .eq('team_id', resolvedTeamId);
+        .select('player_id, jersey_number, players(id, first_name, last_name, jersey_number, position, photo_url)')
+        .eq('team_id', tid);
 
       if (!teamPlayers || teamPlayers.length === 0) {
         setPlayers([]);
@@ -97,7 +198,7 @@ export default function RosterScreen() {
 
       const playerIds = teamPlayers.map((tp: any) => tp.players?.id).filter(Boolean);
 
-      // Batch fetch season stats for all players
+      // Batch fetch season stats
       let statsMap: Record<string, Record<string, number>> = {};
       if (workingSeason?.id && playerIds.length > 0) {
         const { data: allStats } = await supabase
@@ -111,7 +212,7 @@ export default function RosterScreen() {
         }
       }
 
-      const sportConfig = getSportDisplay(team.sport_name);
+      const sportConfig = getSportDisplay(null); // defaults to volleyball
 
       const rosterPlayers: PlayerTradingCardPlayer[] = teamPlayers
         .map((tp: any) => {
@@ -127,14 +228,16 @@ export default function RosterScreen() {
             color: sc.color,
           }));
 
+          // Prefer jersey_number from team_players (team-specific), fall back to players table
+          const jersey = tp.jersey_number ?? p.jersey_number;
+
           return {
             id: p.id,
             firstName: p.first_name || '',
             lastName: p.last_name || '',
             photoUrl: p.photo_url,
-            jerseyNumber: p.jersey_number,
+            jerseyNumber: jersey,
             position: p.position,
-            sportName: p.sport_name || team.sport_name,
             teamName: team.name,
             teamColor: team.color,
             seasonName: workingSeason?.name,
@@ -144,7 +247,7 @@ export default function RosterScreen() {
         })
         .filter(Boolean) as PlayerTradingCardPlayer[];
 
-      // Sort by jersey number or name
+      // Sort by jersey number then name
       rosterPlayers.sort((a, b) => {
         const numA = a.jerseyNumber ? Number(a.jerseyNumber) : 999;
         const numB = b.jerseyNumber ? Number(b.jerseyNumber) : 999;
@@ -154,40 +257,79 @@ export default function RosterScreen() {
 
       setPlayers(rosterPlayers);
     } catch (err) {
-      if (__DEV__) console.error('[roster] fetch error:', err);
+      if (__DEV__) console.error('[roster] fetchRoster error:', err);
     } finally {
       setLoading(false);
     }
-  }, [paramTeamId, user?.id, workingSeason?.id]);
+  }, [workingSeason?.id]);
 
-  useEffect(() => { fetchRoster(); }, [fetchRoster]);
+  // ─── Lifecycle ─────────────────────────────────────────────────
+  useEffect(() => { fetchTeams(); }, [fetchTeams]);
+  useEffect(() => {
+    if (selectedTeamId) fetchRoster(selectedTeamId);
+  }, [selectedTeamId, fetchRoster]);
+
+  const handleTeamSelect = (tid: string) => {
+    if (tid === selectedTeamId) return;
+    setSelectedTeamId(tid);
+    setPlayers([]); // clear while loading
+  };
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
+    <View style={[s.root, { paddingTop: insets.top }]}>
       <StatusBar barStyle="light-content" backgroundColor="#0D1B3E" />
       <Stack.Screen options={{ headerShown: false }} />
 
       {/* Header */}
-      <View style={styles.header}>
+      <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
           <Ionicons name="chevron-back" size={24} color="rgba(255,255,255,0.6)" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>TEAM ROSTER</Text>
+        <Text style={s.headerTitle}>TEAM ROSTER</Text>
         <View style={{ width: 24 }} />
       </View>
 
+      {/* Team Selector (multi-team users) */}
+      {showTeamSelector && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={s.teamPillsScroll}
+          style={s.teamPillsWrap}
+        >
+          {teams.map(team => {
+            const isActive = team.id === selectedTeamId;
+            return (
+              <TouchableOpacity
+                key={team.id}
+                style={[s.teamPill, isActive && s.teamPillActive]}
+                activeOpacity={0.7}
+                onPress={() => handleTeamSelect(team.id)}
+              >
+                {team.color && (
+                  <View style={[s.teamDot, { backgroundColor: team.color }]} />
+                )}
+                <Text style={[s.teamPillText, isActive && s.teamPillTextActive]}>
+                  {team.name}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
+
       {loading ? (
-        <View style={styles.loadingWrap}>
+        <View style={s.loadingWrap}>
           <ActivityIndicator size="large" color={PLAYER_THEME.accent} />
         </View>
       ) : players.length === 0 ? (
-        <View style={styles.loadingWrap}>
-          <Text style={styles.emptyText}>No players on this roster yet</Text>
+        <View style={s.loadingWrap}>
+          <Text style={s.emptyText}>No players on this roster yet</Text>
         </View>
       ) : (
         <View style={{ flex: 1, justifyContent: 'center' }}>
           <RosterCarousel
-            teamId={paramTeamId || ''}
+            teamId={selectedTeamId || ''}
             teamName={teamName}
             teamColor={teamColor}
             seasonName={workingSeason?.name}
@@ -199,7 +341,7 @@ export default function RosterScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: '#0D1B3E',
@@ -217,6 +359,45 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.25)',
     letterSpacing: 2,
   },
+
+  // Team selector pills
+  teamPillsWrap: {
+    maxHeight: 48,
+    marginBottom: 4,
+  },
+  teamPillsScroll: {
+    paddingHorizontal: 20,
+    gap: 8,
+  },
+  teamPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  teamPillActive: {
+    backgroundColor: PLAYER_THEME.accent + '20',
+    borderColor: PLAYER_THEME.accent,
+  },
+  teamDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  teamPillText: {
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.40)',
+  },
+  teamPillTextActive: {
+    color: PLAYER_THEME.accent,
+  },
+
   loadingWrap: {
     flex: 1,
     justifyContent: 'center',
