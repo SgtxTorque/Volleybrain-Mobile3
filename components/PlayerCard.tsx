@@ -50,9 +50,11 @@ type PlayerCardProps = {
   onPress: () => void;
   size?: 'small' | 'medium' | 'large';
   teamLogoUrl?: string | null;
+  /** Overall rating (0-99) — shows mini OVR badge when provided */
+  overallRating?: number | null;
 };
 
-export default function PlayerCard({ player, onPress, size = 'medium', teamLogoUrl }: PlayerCardProps) {
+export default function PlayerCard({ player, onPress, size = 'medium', teamLogoUrl, overallRating }: PlayerCardProps) {
   const { colors } = useTheme();
   const { isCoach, isAdmin } = usePermissions();
   // Derive dark mode from background color
@@ -64,6 +66,11 @@ export default function PlayerCard({ player, onPress, size = 'medium', teamLogoU
   const posInfo = getPositionInfo(player.position, player.sport_name);
   const positionColor = posInfo?.color || BRAND.skyBlue;
   const teamColor = player.team_color || BRAND.navy;
+  const ovrTierColor = !overallRating ? '#64748B'
+    : overallRating >= 80 ? '#FFD700'
+    : overallRating >= 60 ? BRAND.teal
+    : overallRating >= 40 ? BRAND.skyBlue
+    : '#64748B';
   const jerseyNumber = player.jersey_number;
   const hasPhoto = player.photo_url && player.photo_url.length > 0;
   const hasMedicalAlert = !!(player.medical_conditions || player.allergies);
@@ -115,6 +122,18 @@ export default function PlayerCard({ player, onPress, size = 'medium', teamLogoU
             <Image source={{ uri: player.photo_url! }} style={s.photo} />
             {/* Photo border glow */}
             <View style={[s.photoBorderGlow, { borderColor: positionColor + '60' }]} />
+            {/* Position pip on photo */}
+            {player.position && (
+              <View style={[s.photoPosOverlay, { backgroundColor: positionColor }]}>
+                <Text style={s.photoPosText}>{player.position}</Text>
+              </View>
+            )}
+            {/* OVR badge on photo */}
+            {overallRating != null && (
+              <View style={[s.ovrBadge, { backgroundColor: ovrTierColor + '30', borderColor: ovrTierColor }]}>
+                <Text style={[s.ovrText, { color: ovrTierColor }]}>{overallRating}</Text>
+              </View>
+            )}
           </View>
         ) : (
           <View style={s.silhouette}>
@@ -325,6 +344,39 @@ const createStyles = (colors: any, isDark: boolean, size: 'small' | 'medium' | '
       borderRadius: 10,
       padding: size === 'small' ? 3 : 4,
       zIndex: 10,
+    },
+    ovrBadge: {
+      position: 'absolute',
+      bottom: -2,
+      right: -2,
+      width: size === 'small' ? 22 : 26,
+      height: size === 'small' ? 22 : 26,
+      borderRadius: size === 'small' ? 11 : 13,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1.5,
+      zIndex: 9,
+    },
+    ovrText: {
+      fontSize: size === 'small' ? 10 : 12,
+      fontFamily: FONTS.bodyExtraBold,
+    },
+    photoPosOverlay: {
+      position: 'absolute',
+      bottom: -2,
+      left: -2,
+      width: size === 'small' ? 18 : 22,
+      height: size === 'small' ? 18 : 22,
+      borderRadius: size === 'small' ? 9 : 11,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 2,
+      borderColor: 'rgba(0,0,0,0.6)',
+    },
+    photoPosText: {
+      fontSize: size === 'small' ? 8 : 9,
+      fontFamily: FONTS.bodyExtraBold,
+      color: '#000',
     },
   });
 };
