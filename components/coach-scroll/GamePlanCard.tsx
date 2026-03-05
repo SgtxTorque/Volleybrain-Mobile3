@@ -131,7 +131,7 @@ export default function GamePlanCard({ event, rsvpSummary }: Props) {
           style={styles.gameDayBtn}
           activeOpacity={0.8}
           onPress={() => {
-            router.push(`/game-day-command?eventId=${event.id}` as any);
+            router.push(`/game-day-command?eventId=${event.id}&teamId=${event.team_id}&opponent=${encodeURIComponent(event.opponent_name || 'Opponent')}` as any);
           }}
         >
           <Text style={styles.gameDayBtnText}>START GAME DAY MODE</Text>

@@ -12,6 +12,7 @@ import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { useSport } from '@/lib/sport';
 import { supabase } from '@/lib/supabase';
+import { getInProgressMatch } from '@/lib/gameday/match-store';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
@@ -133,6 +134,7 @@ export default function GameDayScreen() {
 
   const [selectedEvent, setSelectedEvent] = useState<ScheduleEvent | null>(null);
   const [showEventModal, setShowEventModal] = useState(false);
+  const [inProgressMatch, setInProgressMatch] = useState<{ id: string; opponentName: string } | null>(null);
 
   const s = styles;
 
@@ -230,6 +232,16 @@ export default function GameDayScreen() {
   useEffect(() => {
     if (workingSeason?.id) fetchData();
   }, [workingSeason?.id, fetchData]);
+
+  // Check for in-progress match on mount and refresh
+  useEffect(() => {
+    (async () => {
+      try {
+        const m = await getInProgressMatch();
+        setInProgressMatch(m ? { id: m.id, opponentName: m.opponentName } : null);
+      } catch { /* ignore */ }
+    })();
+  }, []);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -366,6 +378,20 @@ export default function GameDayScreen() {
         }
         contentContainerStyle={{ paddingBottom: 120 }}
       >
+        {/* In-progress match banner */}
+        {inProgressMatch && (
+          <TouchableOpacity
+            style={s.inProgressBanner}
+            onPress={() => router.push(`/game-day-command?matchId=${inProgressMatch.id}` as any)}
+          >
+            <View style={s.inProgressDot} />
+            <Text style={s.inProgressText}>
+              Match in progress vs {inProgressMatch.opponentName}
+            </Text>
+            <Ionicons name="chevron-forward" size={14} color={BRAND.teal} />
+          </TouchableOpacity>
+        )}
+
         {/* ================================================================ */}
         {/* HERO CARD — Photo gradient treatment                              */}
         {/* ================================================================ */}
@@ -443,7 +469,16 @@ export default function GameDayScreen() {
 
               {/* Action buttons */}
               <View style={s.heroActions}>
-                {isCoachOrAdmin && (
+                {isCoachOrAdmin && nextEvent.event_type === 'game' && (
+                  <TouchableOpacity
+                    style={s.heroActionPrimary}
+                    onPress={() => router.push(`/game-day-command?eventId=${nextEvent.id}&teamId=${nextEvent.team_id}&opponent=${encodeURIComponent(nextEvent.opponent_name || nextEvent.opponent || 'Opponent')}` as any)}
+                  >
+                    <Ionicons name="game-controller" size={14} color="#FFF" />
+                    <Text style={s.heroActionPrimaryText}>Live Command</Text>
+                  </TouchableOpacity>
+                )}
+                {isCoachOrAdmin && nextEvent.event_type !== 'game' && (
                   <TouchableOpacity
                     style={s.heroActionPrimary}
                     onPress={() => router.push('/lineup-builder' as any)}
@@ -792,6 +827,33 @@ const styles = StyleSheet.create({
     container: {
       flex: 1,
       backgroundColor: BRAND.offWhite,
+    },
+
+    // ─── In-progress match banner ─────────────────
+    inProgressBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginHorizontal: 16,
+      marginBottom: 8,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      backgroundColor: BRAND.teal + '12',
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: BRAND.teal + '30',
+    },
+    inProgressDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: BRAND.teal,
+    },
+    inProgressText: {
+      fontFamily: FONTS.bodySemiBold,
+      fontSize: 12,
+      color: BRAND.teal,
+      flex: 1,
     },
 
     // ─── Sections ────────────────────────────────
