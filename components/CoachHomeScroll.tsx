@@ -54,6 +54,7 @@ import TeamHubPreviewCard from './coach-scroll/TeamHubPreviewCard';
 import ActivityFeed from './coach-scroll/ActivityFeed';
 import SeasonSetupCard from './coach-scroll/SeasonSetupCard';
 import GiveShoutoutModal from './GiveShoutoutModal';
+import TeamPulse from './TeamPulse';
 
 // ─── Welcome briefing logic ─────────────────────────────────────
 
@@ -552,6 +553,11 @@ export default function CoachHomeScroll() {
         {/* ─── 11. RECENT ACTIVITY (Tier 2 — 2 items max) ── ↕ 20px ── */}
         <View style={{ marginBottom: 20 }}>
           <ActivityFeed teamId={data.selectedTeamId} />
+        </View>
+
+        {/* ─── 11b. TEAM PULSE (Tier 2 — light variant) ── ↕ 20px ── */}
+        <View style={{ marginBottom: 20 }}>
+          <TeamPulse teamId={data.selectedTeamId} variant="light" limit={4} />
         </View>
 
         {/* ─── 12. SEASON SETUP (conditional — early season only) ── ↕ 24px ── */}

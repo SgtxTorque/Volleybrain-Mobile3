@@ -56,6 +56,7 @@ import LastGameStats from './player-scroll/LastGameStats';
 import ClosingMascot from './player-scroll/ClosingMascot';
 import LevelUpCelebrationModal from './LevelUpCelebrationModal';
 import GiveShoutoutModal from './GiveShoutoutModal';
+import TeamPulse from './TeamPulse';
 import RoleSelector from './RoleSelector';
 
 // ─── Player Dark Theme ──────────────────────────────────────────
@@ -288,6 +289,11 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
 
         {/* ─── 8. ACTIVE CHALLENGE (if exists) ────────────────── */}
         <ActiveChallengeCard available={data.challengesAvailable} teamId={data.primaryTeam?.id} />
+
+        {/* ─── 8b. TEAM PULSE (social feed) ─────────────────────── */}
+        <View style={{ marginBottom: 12 }}>
+          <TeamPulse teamId={data.primaryTeam?.id} variant="dark" limit={3} />
+        </View>
 
         {/* ─── 9. LAST GAME STATS ─────────────────────────────── */}
         <LastGameStats
