@@ -13,6 +13,7 @@ import { useSeason } from '@/lib/season';
 import { useSport } from '@/lib/sport';
 import { supabase } from '@/lib/supabase';
 import { getInProgressMatch } from '@/lib/gameday/match-store';
+import { useResponsive } from '@/lib/responsive';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
@@ -119,6 +120,7 @@ export default function GameDayScreen() {
   const { user, profile } = useAuth();
   const { isAdmin, isCoach } = usePermissions();
   const router = useRouter();
+  const { isTabletAny, contentMaxWidth, contentPadding } = useResponsive();
 
   const isCoachOrAdmin = isAdmin || isCoach;
 
@@ -376,7 +378,7 @@ export default function GameDayScreen() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BRAND.skyBlue} />
         }
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={[{ paddingBottom: 120 }, isTabletAny && { maxWidth: contentMaxWidth, alignSelf: 'center' as const, width: '100%', paddingHorizontal: contentPadding }]}
       >
         {/* In-progress match banner */}
         {inProgressMatch && (

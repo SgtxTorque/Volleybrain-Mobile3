@@ -3,6 +3,7 @@ import SectionHeader from '@/components/ui/SectionHeader';
 import { useAuth } from '@/lib/auth';
 import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { FONTS } from '@/theme/fonts';
+import { useResponsive } from '@/lib/responsive';
 import { supabase } from '@/lib/supabase';
 import { AccentColor, accentColors, useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -57,6 +58,7 @@ export default function CoachMyStuffScreen() {
   const { user, profile, organization, signOut } = useAuth();
   const router = useRouter();
   const s = createStyles(colors);
+  const { isTabletAny, contentMaxWidth, contentPadding } = useResponsive();
 
   // State
   const [coachTeams, setCoachTeams] = useState<CoachTeamInfo[]>([]);
@@ -224,7 +226,7 @@ export default function CoachMyStuffScreen() {
 
       <ScrollView
         style={s.scroll}
-        contentContainerStyle={s.scrollContent}
+        contentContainerStyle={[s.scrollContent, isTabletAny && { maxWidth: contentMaxWidth, alignSelf: 'center' as const, width: '100%', paddingHorizontal: contentPadding }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} colors={[colors.primary]} />

@@ -4,6 +4,7 @@ import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
+import { useResponsive } from '@/lib/responsive';
 import { shadows } from '@/lib/design-tokens';
 import EventCard, { ScheduleEvent } from '@/components/EventCard';
 import EventDetailModal from '@/components/EventDetailModal';
@@ -104,6 +105,7 @@ export default function CoachScheduleScreen() {
   const { workingSeason } = useSeason();
   const { isCoach, isAdmin } = usePermissions();
   const router = useRouter();
+  const { isTabletAny, contentMaxWidth, contentPadding } = useResponsive();
 
   // --- Teams ---
   const [teams, setTeams] = useState<CoachTeam[]>([]);
@@ -862,7 +864,7 @@ export default function CoachScheduleScreen() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BRAND.teal} />
         }
-        contentContainerStyle={[s.listContent, filteredEvents.length === 0 && { flex: 1 }]}
+        contentContainerStyle={[s.listContent, filteredEvents.length === 0 && { flex: 1 }, isTabletAny && { maxWidth: contentMaxWidth, alignSelf: 'center' as const, width: '100%', paddingHorizontal: contentPadding }]}
         showsVerticalScrollIndicator={false}
       />
 

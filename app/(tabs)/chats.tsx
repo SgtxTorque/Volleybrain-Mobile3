@@ -2,6 +2,7 @@ import { useAuth } from '@/lib/auth';
 import { radii, shadows, spacing } from '@/lib/design-tokens';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
+import { useResponsive } from '@/lib/responsive';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
@@ -59,6 +60,7 @@ export default function ChatsScreen() {
   const { profile } = useAuth();
   const { workingSeason } = useSeason();
   const router = useRouter();
+  const { isTabletAny, contentMaxWidth, contentPadding } = useResponsive();
 
   const [channels, setChannels] = useState<Channel[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -454,6 +456,7 @@ export default function ChatsScreen() {
 
       <ScrollView
         style={s.scroll}
+        contentContainerStyle={isTabletAny ? { maxWidth: contentMaxWidth, alignSelf: 'center' as const, width: '100%', paddingHorizontal: contentPadding } : undefined}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

@@ -4,6 +4,7 @@ import { useAuth } from '@/lib/auth';
 import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { FONTS } from '@/theme/fonts';
 import { useSeason } from '@/lib/season';
+import { useResponsive } from '@/lib/responsive';
 import { supabase } from '@/lib/supabase';
 import { AccentColor, accentColors, useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -57,6 +58,7 @@ export default function AdminMyStuffScreen() {
   const { workingSeason, setWorkingSeason, allSeasons } = useSeason();
   const router = useRouter();
   const s = createStyles(colors);
+  const { isTabletAny, contentMaxWidth, contentPadding } = useResponsive();
 
   // --- State ---
   const [loading, setLoading] = useState(true);
@@ -352,7 +354,7 @@ export default function AdminMyStuffScreen() {
 
       <ScrollView
         style={s.scroll}
-        contentContainerStyle={s.scrollContent}
+        contentContainerStyle={[s.scrollContent, isTabletAny && { maxWidth: contentMaxWidth, alignSelf: 'center' as const, width: '100%', paddingHorizontal: contentPadding }]}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />

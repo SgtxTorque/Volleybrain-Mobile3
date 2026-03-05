@@ -7,6 +7,7 @@ import { FONTS } from '@/theme/fonts';
 import EventCard, { ScheduleEvent } from '@/components/EventCard';
 import EventDetailModal from '@/components/EventDetailModal';
 import AppHeaderBar from '@/components/ui/AppHeaderBar';
+import { useResponsive } from '@/lib/responsive';
 import PillTabs from '@/components/ui/PillTabs';
 import { Ionicons } from '@expo/vector-icons';
 import * as Calendar from 'expo-calendar';
@@ -114,6 +115,7 @@ const RSVP_CONFIG = {
 export default function ParentScheduleScreen() {
   const { user, profile } = useAuth();
   const { workingSeason } = useSeason();
+  const { isTabletAny, contentMaxWidth, contentPadding } = useResponsive();
 
   // --- Children & teams ---
   const [children, setChildren] = useState<ChildInfo[]>([]);
@@ -798,7 +800,7 @@ export default function ParentScheduleScreen() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BRAND.teal} />
         }
-        contentContainerStyle={[s.listContent, filteredEvents.length === 0 && { flex: 1 }]}
+        contentContainerStyle={[s.listContent, filteredEvents.length === 0 && { flex: 1 }, isTabletAny && { maxWidth: contentMaxWidth, alignSelf: 'center' as const, width: '100%', paddingHorizontal: contentPadding }]}
         showsVerticalScrollIndicator={false}
       />
 

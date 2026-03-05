@@ -9,6 +9,7 @@ import { FONTS } from '@/theme/fonts';
 import { runScheduledChecks } from '@/lib/notifications';
 import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
+import { useResponsive } from '@/lib/responsive';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -54,6 +55,7 @@ export default function ScheduleScreen() {
   const { workingSeason } = useSeason();
   const { user, profile } = useAuth();
   const router = useRouter();
+  const { isTabletAny, contentMaxWidth, contentPadding } = useResponsive();
 
   const [events, setEvents] = useState<ScheduleEvent[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
@@ -615,7 +617,7 @@ export default function ScheduleScreen() {
         data={[...upcomingDates, ...(pastDates.length > 0 ? ['past_divider', ...pastDates] : [])]}
         keyExtractor={(item, index) => item + index}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
-        contentContainerStyle={{ padding: 16 }}
+        contentContainerStyle={[{ padding: 16 }, isTabletAny && { maxWidth: contentMaxWidth, alignSelf: 'center' as const, width: '100%' }]}
         ListEmptyComponent={<View style={{ alignItems: 'center', paddingVertical: 60 }}><Image source={require('@/assets/images/mascot/SleepLynx.png')} style={{ width: 120, height: 120, marginBottom: 16 }} resizeMode="contain" /><Text style={{ color: colors.textMuted, fontSize: 16 }}>No events scheduled</Text></View>}
         renderItem={({ item: dateKey }) => {
           if (dateKey === 'past_divider') {

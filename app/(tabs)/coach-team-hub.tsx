@@ -10,15 +10,13 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Dimensions,
   FlatList,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // ---------------------------------------------------------------------------
 // Types
@@ -38,6 +36,7 @@ type CoachTeam = {
 export default function CoachTeamHubScreen() {
   const { user } = useAuth();
   const { workingSeason } = useSeason();
+  const { width: screenWidth } = useWindowDimensions();
 
   // State
   const [coachTeams, setCoachTeams] = useState<CoachTeam[]>([]);
@@ -137,7 +136,7 @@ export default function CoachTeamHubScreen() {
   const handleScroll = useCallback(
     (e: any) => {
       const x = e.nativeEvent.contentOffset.x;
-      const idx = Math.round(x / SCREEN_WIDTH);
+      const idx = Math.round(x / screenWidth);
       if (idx >= 0 && idx < coachTeams.length) {
         setPageIndex(idx);
       }
@@ -206,7 +205,7 @@ export default function CoachTeamHubScreen() {
           <FlatList
             ref={flatListRef}
             horizontal
-            snapToInterval={SCREEN_WIDTH}
+            snapToInterval={screenWidth}
             snapToAlignment="start"
             decelerationRate="fast"
             disableIntervalMomentum
@@ -215,7 +214,7 @@ export default function CoachTeamHubScreen() {
             data={coachTeams}
             keyExtractor={(item) => item.teamId}
             renderItem={({ item }) => (
-              <View style={{ width: SCREEN_WIDTH, height: pagerHeight }}>
+              <View style={{ width: screenWidth, height: pagerHeight }}>
                 <TeamWall
                   teamId={item.teamId}
                   embedded
@@ -223,8 +222,8 @@ export default function CoachTeamHubScreen() {
               </View>
             )}
             getItemLayout={(_, index) => ({
-              length: SCREEN_WIDTH,
-              offset: SCREEN_WIDTH * index,
+              length: screenWidth,
+              offset: screenWidth * index,
               index,
             })}
             onScroll={handleScroll}

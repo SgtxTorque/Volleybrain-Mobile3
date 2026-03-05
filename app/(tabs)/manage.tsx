@@ -4,6 +4,7 @@ import { usePermissions } from '@/lib/permissions-context';
 import { FONTS } from '@/theme/fonts';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
+import { useResponsive } from '@/lib/responsive';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -83,6 +84,7 @@ export default function ManageScreen() {
   const { profile } = useAuth();
   const { workingSeason } = useSeason();
   const router = useRouter();
+  const { isTabletAny, contentMaxWidth, contentPadding } = useResponsive();
   const s = createStyles(colors);
 
   const [refreshing, setRefreshing] = useState(false);
@@ -324,7 +326,7 @@ export default function ManageScreen() {
     <SafeAreaView style={s.container}>
       <ScrollView
         style={s.scroll}
-        contentContainerStyle={s.scrollContent}
+        contentContainerStyle={[s.scrollContent, isTabletAny && { maxWidth: contentMaxWidth, alignSelf: 'center' as const, width: '100%', paddingHorizontal: contentPadding }]}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
