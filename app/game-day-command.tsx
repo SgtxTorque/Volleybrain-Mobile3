@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { MatchProvider, useMatch } from '@/lib/gameday/use-match';
 import GamePrepPage from '@/components/gameday/GamePrepPage';
+import LiveMatchPage from '@/components/gameday/LiveMatchPage';
 import { FONTS } from '@/theme/fonts';
 
 const PAGE_LABELS = ['GAME PREP', 'LIVE MATCH', 'END SET', 'SUMMARY'];
@@ -41,15 +42,7 @@ function CommandCenterContent() {
       case 0:
         return <GamePrepPage />;
       case 1:
-        return (
-          <View style={s.placeholder}>
-            <Ionicons name="tennisball" size={48} color="rgba(255,255,255,0.15)" />
-            <Text style={s.placeholderText}>Live Match — Phase 3</Text>
-            <TouchableOpacity style={s.placeholderBtn} onPress={() => setCurrentPage(0)}>
-              <Text style={s.placeholderBtnText}>Back to Prep</Text>
-            </TouchableOpacity>
-          </View>
-        );
+        return <LiveMatchPage />;
       case 2:
         return (
           <View style={s.placeholder}>
