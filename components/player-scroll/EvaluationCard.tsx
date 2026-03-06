@@ -6,11 +6,9 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import {
   EVAL_SKILLS,
-  SKILL_KEYS,
   calculateOVR,
   getOvrTierColor,
 } from '@/lib/evaluations';

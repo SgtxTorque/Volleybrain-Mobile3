@@ -7,7 +7,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
-  Dimensions,
   Image,
   ScrollView,
   StyleSheet,
@@ -31,7 +30,6 @@ import {
   calculateOVR,
   dbToUi,
   getOvrTierColor,
-  getPlayerRatings,
   getRatingBlockColor,
   savePlayerEvaluation,
   uiToDb,
