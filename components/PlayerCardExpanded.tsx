@@ -1,4 +1,5 @@
 import { getPlayerPlaceholder } from '@/lib/default-images';
+import { calculateOVR } from '@/lib/evaluations';
 import { getSportDisplay, getPositionInfo } from '@/constants/sport-display';
 import { useAuth } from '@/lib/auth';
 import { usePermissions } from '@/lib/permissions-context';
@@ -97,6 +98,7 @@ export default function PlayerCardExpanded({ player, visible, onClose, onUpdate 
   const [skills, setSkills] = useState<PlayerSkills>({
     passing: 50, serving: 50, hitting: 50, blocking: 50, setting: 50, defense: 50,
   });
+  const [evalRatings, setEvalRatings] = useState<Record<string, number> | null>(null);
   const [badges, setBadges] = useState<PlayerBadge[]>([]);
   const [activeTab, setActiveTab] = useState<'stats' | 'skills' | 'info'>('stats');
   const [showBadgeModal, setShowBadgeModal] = useState(false);
@@ -125,15 +127,28 @@ export default function PlayerCardExpanded({ player, visible, onClose, onUpdate 
       setStats(statsData);
     }
 
-    // Fetch skills
+    // Fetch skills (simple 0-100)
     const { data: skillsData } = await supabase
       .from('player_skills')
       .select('*')
       .eq('player_id', player.id)
       .single();
-    
+
     if (skillsData) {
       setSkills(skillsData);
+    }
+
+    // Fetch evaluation-based skill ratings (1-10) for OVR
+    const { data: evalData } = await supabase
+      .from('player_skill_ratings')
+      .select('serving_rating, passing_rating, setting_rating, attacking_rating, blocking_rating, defense_rating, hustle_rating, coachability_rating, teamwork_rating, overall_rating')
+      .eq('player_id', player.id)
+      .order('rated_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (evalData) {
+      setEvalRatings(evalData as Record<string, number>);
     }
 
     // Fetch badges
@@ -229,7 +244,9 @@ export default function PlayerCardExpanded({ player, visible, onClose, onUpdate 
   const teamColor = player.team_color || '#1a1a2e';
   const hasPhoto = player.photo_url && player.photo_url.length > 0;
   const overallRating = isVolleyball
-    ? Math.round((skills.passing + skills.serving + skills.hitting + skills.blocking + skills.setting + skills.defense) / 6)
+    ? evalRatings
+      ? calculateOVR(evalRatings) // Prefer evaluation-based OVR (1-10 scale → 0-99)
+      : Math.round((skills.passing + skills.serving + skills.hitting + skills.blocking + skills.setting + skills.defense) / 6)
     : null;
 
   return (
