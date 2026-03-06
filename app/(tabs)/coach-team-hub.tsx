@@ -1,19 +1,18 @@
 import AppHeaderBar from '@/components/ui/AppHeaderBar';
-import CarouselDots from '@/components/ui/CarouselDots';
-import TeamWall from '@/components/TeamWall';
+import TeamHubScreen from '@/components/team-hub/TeamHubScreen';
 import { useAuth } from '@/lib/auth';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  FlatList,
+  ScrollView,
   StyleSheet,
   Text,
-  useWindowDimensions,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -26,7 +25,6 @@ type CoachTeam = {
   teamId: string;
   teamName: string;
   teamColor: string | null;
-  staffRole: string;
 };
 
 // ---------------------------------------------------------------------------
@@ -36,14 +34,9 @@ type CoachTeam = {
 export default function CoachTeamHubScreen() {
   const { user } = useAuth();
   const { workingSeason } = useSeason();
-  const { width: screenWidth } = useWindowDimensions();
-
-  // State
   const [coachTeams, setCoachTeams] = useState<CoachTeam[]>([]);
-  const [pageIndex, setPageIndex] = useState(0);
-  const [pagerHeight, setPagerHeight] = useState(0);
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const flatListRef = useRef<FlatList>(null);
 
   // ---------------------------------------------------------------------------
   // Data: resolve coach → teams via team_staff + team_coaches + coaches fallback
@@ -108,12 +101,12 @@ export default function CoachTeamHubScreen() {
             teamId: t.id,
             teamName: t.name || 'Team',
             teamColor: t.color || null,
-            staffRole: sl.staff_role || 'coach',
           };
         })
         .filter(Boolean) as CoachTeam[];
 
       setCoachTeams(teams);
+      if (teams.length > 0 && !selectedTeamId) setSelectedTeamId(teams[0].teamId);
     } catch (err) {
       if (__DEV__) console.error('[CoachTeamHub] fetchCoachTeams error:', err);
     } finally {
@@ -121,28 +114,7 @@ export default function CoachTeamHubScreen() {
     }
   }, [user?.id, workingSeason?.id]);
 
-  // ---------------------------------------------------------------------------
-  // Effects
-  // ---------------------------------------------------------------------------
-
-  useEffect(() => {
-    fetchCoachTeams();
-  }, [fetchCoachTeams]);
-
-  // ---------------------------------------------------------------------------
-  // Swipe pager — track current page
-  // ---------------------------------------------------------------------------
-
-  const handleScroll = useCallback(
-    (e: any) => {
-      const x = e.nativeEvent.contentOffset.x;
-      const idx = Math.round(x / screenWidth);
-      if (idx >= 0 && idx < coachTeams.length) {
-        setPageIndex(idx);
-      }
-    },
-    [coachTeams.length],
-  );
+  useEffect(() => { fetchCoachTeams(); }, [fetchCoachTeams]);
 
   // ---------------------------------------------------------------------------
   // Loading
@@ -151,7 +123,6 @@ export default function CoachTeamHubScreen() {
   if (loading) {
     return (
       <SafeAreaView style={[s.container, { backgroundColor: BRAND.offWhite }]}>
-        <AppHeaderBar title="MY TEAM" showAvatar={false} showNotificationBell={false} />
         <View style={s.centered}>
           <ActivityIndicator size="large" color={BRAND.teal} />
         </View>
@@ -169,8 +140,8 @@ export default function CoachTeamHubScreen() {
         <AppHeaderBar title="MY TEAM" showAvatar={false} showNotificationBell={false} />
         <View style={s.centered}>
           <Ionicons name="people-outline" size={64} color={BRAND.textMuted} />
-          <Text style={[s.emptyTitle, { color: BRAND.textPrimary }]}>No Teams Assigned</Text>
-          <Text style={[s.emptySubtitle, { color: BRAND.textSecondary }]}>
+          <Text style={s.emptyTitle}>No Teams Assigned</Text>
+          <Text style={s.emptySubtitle}>
             Once you are assigned to a team, your team hub will appear here.
           </Text>
         </View>
@@ -179,62 +150,41 @@ export default function CoachTeamHubScreen() {
   }
 
   // ---------------------------------------------------------------------------
-  // Main render — swipe pager
+  // Main render
   // ---------------------------------------------------------------------------
+
+  const activeTeam = coachTeams.find((t) => t.teamId === selectedTeamId) || coachTeams[0];
 
   return (
     <SafeAreaView style={[s.container, { backgroundColor: BRAND.offWhite }]} edges={['top']}>
-      <AppHeaderBar title="MY TEAM" showAvatar={false} showNotificationBell={false} />
-
-      {/* Carousel indicator dots — above hero, below header */}
+      {/* Team selector pills — only if multiple teams */}
       {coachTeams.length > 1 && (
-        <CarouselDots
-          total={coachTeams.length}
-          activeIndex={pageIndex}
-          activeColor={BRAND.teal}
-          inactiveColor={BRAND.textMuted}
-        />
+        <View style={s.teamSelectorBar}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.teamSelectorScroll}>
+            {coachTeams.map((team) => {
+              const isActive = team.teamId === activeTeam.teamId;
+              return (
+                <TouchableOpacity
+                  key={team.teamId}
+                  style={[s.teamPill, isActive && { backgroundColor: BRAND.teal, borderColor: BRAND.teal }]}
+                  onPress={() => setSelectedTeamId(team.teamId)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[s.teamPillText, isActive && { color: '#FFF' }]}>{team.teamName}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
       )}
 
-      {/* Swipe pager — each page is an independent TeamWall instance */}
-      <View
-        style={s.feedContainer}
-        onLayout={(e) => setPagerHeight(e.nativeEvent.layout.height)}
-      >
-        {pagerHeight > 0 && (
-          <FlatList
-            ref={flatListRef}
-            horizontal
-            snapToInterval={screenWidth}
-            snapToAlignment="start"
-            decelerationRate="fast"
-            disableIntervalMomentum
-            scrollEnabled={coachTeams.length > 1}
-            showsHorizontalScrollIndicator={false}
-            data={coachTeams}
-            keyExtractor={(item) => item.teamId}
-            renderItem={({ item }) => (
-              <View style={{ width: screenWidth, height: pagerHeight }}>
-                <TeamWall
-                  teamId={item.teamId}
-                  embedded
-                />
-              </View>
-            )}
-            getItemLayout={(_, index) => ({
-              length: screenWidth,
-              offset: screenWidth * index,
-              index,
-            })}
-            onScroll={handleScroll}
-            scrollEventThrottle={16}
-            initialNumToRender={coachTeams.length}
-            maxToRenderPerBatch={coachTeams.length}
-            windowSize={21}
-            removeClippedSubviews={false}
-          />
-        )}
-      </View>
+      {/* Shared Team Hub */}
+      <TeamHubScreen
+        teamId={activeTeam.teamId}
+        teamName={activeTeam.teamName}
+        teamColor={activeTeam.teamColor}
+        role="coach"
+      />
     </SafeAreaView>
   );
 }
@@ -258,13 +208,35 @@ const s = StyleSheet.create({
     fontSize: 20,
     fontFamily: FONTS.bodyBold,
     textAlign: 'center',
+    color: BRAND.textPrimary,
   },
   emptySubtitle: {
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
+    color: BRAND.textSecondary,
   },
-  feedContainer: {
-    flex: 1,
+  teamSelectorBar: {
+    borderBottomWidth: 1,
+    borderBottomColor: BRAND.border,
+    backgroundColor: BRAND.offWhite,
+  },
+  teamSelectorScroll: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    gap: 8,
+  },
+  teamPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: BRAND.border,
+    backgroundColor: BRAND.warmGray,
+  },
+  teamPillText: {
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 13,
+    color: BRAND.textPrimary,
   },
 });

@@ -1,18 +1,17 @@
 import AppHeaderBar from '@/components/ui/AppHeaderBar';
-import CarouselDots from '@/components/ui/CarouselDots';
-import TeamWall from '@/components/TeamWall';
+import TeamHubScreen from '@/components/team-hub/TeamHubScreen';
 import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  FlatList,
+  ScrollView,
   StyleSheet,
   Text,
-  useWindowDimensions,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -25,8 +24,6 @@ type ChildTeam = {
   teamId: string;
   teamName: string;
   teamColor: string | null;
-  childName: string;
-  seasonId: string;
 };
 
 // ---------------------------------------------------------------------------
@@ -35,29 +32,19 @@ type ChildTeam = {
 
 export default function ParentTeamHubScreen() {
   const { user, profile } = useAuth();
-  const { width: screenWidth } = useWindowDimensions();
-
-  // State
   const [childTeams, setChildTeams] = useState<ChildTeam[]>([]);
-  const [pageIndex, setPageIndex] = useState(0);
-  const [pagerHeight, setPagerHeight] = useState(0);
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const flatListRef = useRef<FlatList>(null);
 
   // ---------------------------------------------------------------------------
   // Data: resolve parent → children → teams
   // ---------------------------------------------------------------------------
 
   const fetchChildTeams = useCallback(async () => {
-    if (!user?.id) {
-      setLoading(false);
-      return;
-    }
+    if (!user?.id) { setLoading(false); return; }
 
     try {
       const parentEmail = profile?.email || user?.email;
-
-      // 3-source parent-child resolution (same as ParentDashboard)
       let playerIds: string[] = [];
 
       const { data: guardianLinks } = await supabase
@@ -81,23 +68,13 @@ export default function ParentTeamHubScreen() {
       }
 
       playerIds = [...new Set(playerIds)];
+      if (playerIds.length === 0) { setChildTeams([]); setLoading(false); return; }
 
-      if (playerIds.length === 0) {
-        setChildTeams([]);
-        setLoading(false);
-        return;
-      }
-
-      // Fetch players with team info
       const { data: players } = await supabase
         .from('players')
-        .select(`
-          id, first_name, last_name, season_id,
-          team_players ( team_id, teams (id, name, color) )
-        `)
+        .select('id, first_name, last_name, team_players ( team_id, teams (id, name, color) )')
         .in('id', playerIds);
 
-      // Deduplicate by team_id
       const teamsMap = new Map<string, ChildTeam>();
       (players || []).forEach((player) => {
         const teamEntries = (player.team_players as any) || [];
@@ -108,8 +85,6 @@ export default function ParentTeamHubScreen() {
               teamId: team.id,
               teamName: team.name || 'Team',
               teamColor: team.color || null,
-              childName: `${player.first_name} ${player.last_name}`,
-              seasonId: player.season_id,
             });
           }
         });
@@ -117,6 +92,7 @@ export default function ParentTeamHubScreen() {
 
       const teams = Array.from(teamsMap.values());
       setChildTeams(teams);
+      if (teams.length > 0 && !selectedTeamId) setSelectedTeamId(teams[0].teamId);
     } catch (err) {
       if (__DEV__) console.error('[ParentTeamHub] fetchChildTeams error:', err);
     } finally {
@@ -124,37 +100,15 @@ export default function ParentTeamHubScreen() {
     }
   }, [user?.id, profile?.email]);
 
-  // ---------------------------------------------------------------------------
-  // Effects
-  // ---------------------------------------------------------------------------
-
-  useEffect(() => {
-    fetchChildTeams();
-  }, [fetchChildTeams]);
+  useEffect(() => { fetchChildTeams(); }, [fetchChildTeams]);
 
   // ---------------------------------------------------------------------------
-  // Swipe pager — track current page
-  // ---------------------------------------------------------------------------
-
-  const handleScroll = useCallback(
-    (e: any) => {
-      const x = e.nativeEvent.contentOffset.x;
-      const idx = Math.round(x / screenWidth);
-      if (idx >= 0 && idx < childTeams.length) {
-        setPageIndex(idx);
-      }
-    },
-    [childTeams.length],
-  );
-
-  // ---------------------------------------------------------------------------
-  // Loading state
+  // Loading
   // ---------------------------------------------------------------------------
 
   if (loading) {
     return (
       <SafeAreaView style={[s.container, { backgroundColor: BRAND.offWhite }]}>
-        <AppHeaderBar title="MY TEAM" showAvatar={false} showNotificationBell={false} />
         <View style={s.centered}>
           <ActivityIndicator size="large" color={BRAND.teal} />
         </View>
@@ -172,8 +126,8 @@ export default function ParentTeamHubScreen() {
         <AppHeaderBar title="MY TEAM" showAvatar={false} showNotificationBell={false} />
         <View style={s.centered}>
           <Ionicons name="people-outline" size={64} color={BRAND.textMuted} />
-          <Text style={[s.emptyTitle, { color: BRAND.textPrimary }]}>No Teams Yet</Text>
-          <Text style={[s.emptySubtitle, { color: BRAND.textSecondary }]}>
+          <Text style={s.emptyTitle}>No Teams Yet</Text>
+          <Text style={s.emptySubtitle}>
             Once your child is registered and assigned to a team, their team hub will appear here.
           </Text>
         </View>
@@ -182,59 +136,41 @@ export default function ParentTeamHubScreen() {
   }
 
   // ---------------------------------------------------------------------------
-  // Main render — swipe pager
+  // Main render
   // ---------------------------------------------------------------------------
+
+  const activeTeam = childTeams.find((t) => t.teamId === selectedTeamId) || childTeams[0];
 
   return (
     <SafeAreaView style={[s.container, { backgroundColor: BRAND.offWhite }]} edges={['top']}>
-      <AppHeaderBar title="MY TEAM" showAvatar={false} showNotificationBell={false} />
-
-      {/* Carousel indicator dots — above hero, below header */}
+      {/* Team selector pills — only if multiple teams */}
       {childTeams.length > 1 && (
-        <CarouselDots
-          total={childTeams.length}
-          activeIndex={pageIndex}
-          activeColor={BRAND.teal}
-          inactiveColor={BRAND.textMuted}
-        />
+        <View style={s.teamSelectorBar}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.teamSelectorScroll}>
+            {childTeams.map((team) => {
+              const isActive = team.teamId === activeTeam.teamId;
+              return (
+                <TouchableOpacity
+                  key={team.teamId}
+                  style={[s.teamPill, isActive && { backgroundColor: BRAND.teal, borderColor: BRAND.teal }]}
+                  onPress={() => setSelectedTeamId(team.teamId)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[s.teamPillText, isActive && { color: '#FFF' }]}>{team.teamName}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
       )}
 
-      {/* Swipe pager — each page is an independent TeamWall instance */}
-      <View
-        style={s.feedContainer}
-        onLayout={(e) => setPagerHeight(e.nativeEvent.layout.height)}
-      >
-        {pagerHeight > 0 && (
-          <FlatList
-            ref={flatListRef}
-            horizontal
-            snapToInterval={screenWidth}
-            snapToAlignment="start"
-            decelerationRate="fast"
-            disableIntervalMomentum
-            scrollEnabled={childTeams.length > 1}
-            showsHorizontalScrollIndicator={false}
-            data={childTeams}
-            keyExtractor={(item) => item.teamId}
-            renderItem={({ item }) => (
-              <View style={{ width: screenWidth, height: pagerHeight }}>
-                <TeamWall teamId={item.teamId} embedded />
-              </View>
-            )}
-            getItemLayout={(_, index) => ({
-              length: screenWidth,
-              offset: screenWidth * index,
-              index,
-            })}
-            onScroll={handleScroll}
-            scrollEventThrottle={16}
-            initialNumToRender={childTeams.length}
-            maxToRenderPerBatch={childTeams.length}
-            windowSize={21}
-            removeClippedSubviews={false}
-          />
-        )}
-      </View>
+      {/* Shared Team Hub */}
+      <TeamHubScreen
+        teamId={activeTeam.teamId}
+        teamName={activeTeam.teamName}
+        teamColor={activeTeam.teamColor}
+        role="parent"
+      />
     </SafeAreaView>
   );
 }
@@ -258,13 +194,35 @@ const s = StyleSheet.create({
     fontSize: 20,
     fontFamily: FONTS.bodyBold,
     textAlign: 'center',
+    color: BRAND.textPrimary,
   },
   emptySubtitle: {
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
+    color: BRAND.textSecondary,
   },
-  feedContainer: {
-    flex: 1,
+  teamSelectorBar: {
+    borderBottomWidth: 1,
+    borderBottomColor: BRAND.border,
+    backgroundColor: BRAND.offWhite,
+  },
+  teamSelectorScroll: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    gap: 8,
+  },
+  teamPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: BRAND.border,
+    backgroundColor: BRAND.warmGray,
+  },
+  teamPillText: {
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 13,
+    color: BRAND.textPrimary,
   },
 });
