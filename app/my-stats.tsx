@@ -28,6 +28,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import ShoutoutProfileSection from '@/components/ShoutoutProfileSection';
+import { usePlayerEvaluationHistory } from '@/hooks/useEvaluations';
+import { EVAL_SKILLS, dbToUi, calculateOVR, getOvrTierColor, getRatingBlockColor } from '@/lib/evaluations';
 
 // =============================================================================
 // TYPES
@@ -134,6 +136,8 @@ export default function MyStatsScreen() {
 
   const [drillDownData, setDrillDownData] = useState<DrillDownData | null>(null);
   const [showDrillDown, setShowDrillDown] = useState(false);
+  const [evalTimelineExpanded, setEvalTimelineExpanded] = useState<string | null>(null);
+  const { data: evalHistory } = usePlayerEvaluationHistory(playerId);
 
   const effectiveSeasonId = selectedSeasonId || workingSeason?.id;
 
@@ -868,6 +872,98 @@ export default function MyStatsScreen() {
         {/* Skill Ratings */}
         {renderSkillsSection()}
 
+        {/* Evaluation History Timeline */}
+        {evalHistory.length > 0 && (
+          <View style={s.section}>
+            <Text style={s.sectionTitle}>EVALUATION HISTORY</Text>
+            <View style={{ paddingHorizontal: 20, gap: 8 }}>
+              {evalHistory.map((entry) => {
+                const ovr = calculateOVR(entry.skills);
+                const tierColor = getOvrTierColor(ovr);
+                const expanded = evalTimelineExpanded === entry.id;
+                const typeLabel = entry.evaluationType === 'regular' ? 'Check-In'
+                  : entry.evaluationType === 'mid_season' ? 'Mid-Season'
+                  : entry.evaluationType === 'end_season' ? 'End of Season'
+                  : entry.evaluationType === 'tryout' ? 'Tryout'
+                  : entry.evaluationType === 'skill_rating' ? 'Skill Rating'
+                  : 'Evaluation';
+
+                return (
+                  <TouchableOpacity
+                    key={entry.id}
+                    style={[s.evalTimelineCard, { backgroundColor: BRAND.white, borderColor: BRAND.border }]}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setEvalTimelineExpanded(expanded ? null : entry.id);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <View style={s.evalTimelineHeader}>
+                      <View style={[s.evalOvrBadge, { backgroundColor: tierColor + '15' }]}>
+                        <Text style={[s.evalOvrValue, { color: tierColor }]}>{ovr}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[s.evalTimelineType, { color: BRAND.textPrimary }]}>{typeLabel}</Text>
+                        <Text style={[s.evalTimelineDate, { color: BRAND.textMuted }]}>
+                          {new Date(entry.evaluationDate).toLocaleDateString('en-US', {
+                            month: 'short', day: 'numeric', year: 'numeric',
+                          })}
+                        </Text>
+                      </View>
+                      <Ionicons
+                        name={expanded ? 'chevron-up' : 'chevron-down'}
+                        size={18}
+                        color={BRAND.textFaint}
+                      />
+                    </View>
+
+                    {expanded && (
+                      <View style={s.evalTimelineDetails}>
+                        {EVAL_SKILLS.map((sk) => {
+                          const val = entry.skills[sk.key] || 0;
+                          if (val === 0) return null;
+                          const uiVal = dbToUi(val);
+                          return (
+                            <View key={sk.key} style={s.evalSkillRow}>
+                              <Text style={[s.evalSkillLabel, { color: BRAND.textPrimary }]}>
+                                {sk.label}
+                              </Text>
+                              <View style={s.evalBlocksRow}>
+                                {[1, 2, 3, 4, 5].map((b) => (
+                                  <View
+                                    key={b}
+                                    style={[
+                                      s.evalBlock,
+                                      {
+                                        backgroundColor: uiVal >= b
+                                          ? getRatingBlockColor(b)
+                                          : BRAND.warmGray,
+                                      },
+                                    ]}
+                                  />
+                                ))}
+                              </View>
+                              <Text style={[s.evalSkillVal, { color: getRatingBlockColor(uiVal) }]}>
+                                {uiVal}/5
+                              </Text>
+                            </View>
+                          );
+                        })}
+                        {entry.notes && (
+                          <View style={[s.evalNotesBox, { borderTopColor: BRAND.border }]}>
+                            <Ionicons name="chatbubble-outline" size={12} color={BRAND.textMuted} />
+                            <Text style={[s.evalNotesText, { color: BRAND.textMuted }]}>{entry.notes}</Text>
+                          </View>
+                        )}
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
         {/* Shoutout Stats */}
         {playerId && (
           <View style={{ marginHorizontal: 20 }}>
@@ -1203,6 +1299,87 @@ const s = StyleSheet.create({
     fontSize: 13,
     fontStyle: 'italic',
     lineHeight: 18,
+  },
+
+  // Evaluation Timeline
+  evalTimelineCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 12,
+    overflow: 'hidden',
+  },
+  evalTimelineHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  evalOvrBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  evalOvrValue: {
+    fontFamily: FONTS.display,
+    fontSize: 18,
+  },
+  evalTimelineType: {
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 14,
+  },
+  evalTimelineDate: {
+    fontFamily: FONTS.bodyMedium,
+    fontSize: 12,
+    marginTop: 1,
+  },
+  evalTimelineDetails: {
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    gap: 6,
+  },
+  evalSkillRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  evalSkillLabel: {
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 12,
+    width: 90,
+  },
+  evalBlocksRow: {
+    flexDirection: 'row',
+    flex: 1,
+    gap: 3,
+  },
+  evalBlock: {
+    flex: 1,
+    height: 8,
+    borderRadius: 2,
+  },
+  evalSkillVal: {
+    fontFamily: FONTS.bodyBold,
+    fontSize: 11,
+    width: 28,
+    textAlign: 'right',
+  },
+  evalNotesBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    marginTop: 6,
+    paddingTop: 8,
+    borderTopWidth: 1,
+  },
+  evalNotesText: {
+    flex: 1,
+    fontFamily: FONTS.bodyMedium,
+    fontSize: 12,
+    fontStyle: 'italic',
+    lineHeight: 16,
   },
 
   // Drill-Down Modal

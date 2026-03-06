@@ -59,6 +59,7 @@ import SecondaryEvents from './parent-scroll/SecondaryEvents';
 import AmbientCelebration from './parent-scroll/AmbientCelebration';
 import FlatChatPreview from './parent-scroll/FlatChatPreview';
 import ChallengeVerifyCard from './parent-scroll/ChallengeVerifyCard';
+import ParentEvaluationCard from './parent-scroll/EvaluationCard';
 import LevelUpCelebrationModal from './LevelUpCelebrationModal';
 import RegistrationBanner from './RegistrationBanner';
 import ReenrollmentBanner from './ReenrollmentBanner';
@@ -530,6 +531,16 @@ export default function ParentHomeScroll() {
               id: c.id,
               first_name: c.first_name,
               teamId: c.team_id,
+            }))}
+          />
+        )}
+
+        {/* ─── EVALUATIONS ─────────────────────────────────────── */}
+        {data.children.length > 0 && (
+          <ParentEvaluationCard
+            children={data.children.map((c) => ({
+              id: c.id,
+              first_name: c.first_name,
             }))}
           />
         )}

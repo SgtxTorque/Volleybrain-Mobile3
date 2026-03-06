@@ -54,6 +54,7 @@ import NextUpCard from './player-scroll/NextUpCard';
 import ChatPeek from './player-scroll/ChatPeek';
 import QuickPropsRow from './player-scroll/QuickPropsRow';
 import ActiveChallengeCard from './player-scroll/ActiveChallengeCard';
+import EvaluationCard from './player-scroll/EvaluationCard';
 import LastGameStats from './player-scroll/LastGameStats';
 import ClosingMascot from './player-scroll/ClosingMascot';
 import LevelUpCelebrationModal from './LevelUpCelebrationModal';
@@ -295,6 +296,9 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
 
         {/* ─── 8. ACTIVE CHALLENGE (if exists) ────────────────── */}
         <ActiveChallengeCard available={data.challengesAvailable} teamId={data.primaryTeam?.id} />
+
+        {/* ─── 8c. NEW EVALUATION CARD ──────────────────────────── */}
+        <EvaluationCard playerId={user?.id || null} teamId={data.primaryTeam?.id || null} />
 
         {/* ─── 8b. TEAM PULSE (social feed) ─────────────────────── */}
         <View style={{ marginBottom: 12 }}>
