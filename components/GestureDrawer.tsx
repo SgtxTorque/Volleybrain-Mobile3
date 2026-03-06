@@ -113,6 +113,7 @@ const MENU_SECTIONS: MenuSection[] = [
     items: [
       { icon: 'analytics', label: 'Game Prep', route: '/game-prep' },
       { icon: 'grid', label: 'Lineup Builder', route: '/lineup-builder' },
+      { icon: 'trophy', label: 'Challenges', route: '/coach-challenge-dashboard' },
       { icon: 'checkmark-circle', label: 'Attendance', route: '/attendance' },
       { icon: 'stats-chart', label: 'Game Results', route: '/game-results' },
       { icon: 'calendar-outline', label: 'Coach Availability', route: '/coach-availability' },
@@ -145,6 +146,7 @@ const MENU_SECTIONS: MenuSection[] = [
     items: [
       { icon: 'shirt', label: 'My Teams', route: '/(tabs)/my-teams' },
       { icon: 'stats-chart', label: 'My Stats', route: '/my-stats' },
+      { icon: 'trophy', label: 'Challenges', route: '/challenges' },
       { icon: 'ribbon', label: 'Achievements', route: '/achievements' },
       { icon: 'calendar', label: 'Schedule', route: '/(tabs)/schedule' },
     ],

@@ -101,6 +101,18 @@ function RootLayoutNav() {
         case 'game':
           router.push('/game-prep');
           break;
+        case 'challenge_new':
+        case 'challenge_joined':
+        case 'challenge_progress':
+        case 'challenge_completed':
+        case 'challenge_winner':
+        case 'challenge_verify':
+          router.push(
+            data.challengeId
+              ? (`/challenge-cta?challengeId=${data.challengeId}` as any)
+              : ('/challenges' as any),
+          );
+          break;
         default:
           router.push('/(tabs)');
       }

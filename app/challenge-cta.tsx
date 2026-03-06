@@ -167,8 +167,7 @@ export default function ChallengeCTAScreen() {
   }
 
   function handleViewLeaderboard() {
-    // Could navigate to a leaderboard screen or show inline
-    router.back();
+    router.push(`/challenge-detail?challengeId=${challengeId}` as any);
   }
 
   // ---------------------------------------------------------------------------

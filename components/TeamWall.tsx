@@ -1464,8 +1464,7 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
             onViewDetails={() => {
               const cid = (challengeParticipation as any)[`cid:${post.id}`];
               if (cid) {
-                setChallengeDetailId(cid);
-                setShowChallengeDetail(true);
+                router.push(`/challenge-cta?challengeId=${cid}` as any);
               }
             }}
           />

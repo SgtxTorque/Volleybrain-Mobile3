@@ -30,7 +30,7 @@ type QuickLink = {
 };
 
 const COACH_QUICK_LINKS: QuickLink[] = [
-  { label: 'Create Challenge', icon: 'trophy-outline', color: BRAND.goldBrand, route: '/challenges' },
+  { label: 'Create Challenge', icon: 'trophy-outline', color: BRAND.goldBrand, route: '/challenge-library' },
   { label: 'Send Blast', icon: 'megaphone-outline', color: BRAND.skyBlue, route: '/blast-composer' },
   { label: 'View Attendance', icon: 'people-outline', color: BRAND.teal, route: '/attendance' },
 ];
