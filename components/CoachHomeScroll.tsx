@@ -57,6 +57,7 @@ import ActivityFeed from './coach-scroll/ActivityFeed';
 import SeasonSetupCard from './coach-scroll/SeasonSetupCard';
 import GiveShoutoutModal from './GiveShoutoutModal';
 import TeamPulse from './TeamPulse';
+import ChallengeQuickCard from './coach-scroll/ChallengeQuickCard';
 
 // ─── Welcome briefing logic ─────────────────────────────────────
 
@@ -496,6 +497,9 @@ export default function CoachHomeScroll() {
             suggestedPlayer={suggestedPlayer}
           />
         </View>
+
+        {/* ─── 6b. CHALLENGES QUICK CARD ── ↕ 12px ── */}
+        <ChallengeQuickCard teamId={data.selectedTeamId} />
 
         {/* ─── 7. TEAM HEALTH CARD (Tier 1.5 — dots + bars) ── ↕ 20px ── */}
         <View style={{ marginBottom: 20 }}>

@@ -58,6 +58,7 @@ import RecentBadges from './parent-scroll/RecentBadges';
 import SecondaryEvents from './parent-scroll/SecondaryEvents';
 import AmbientCelebration from './parent-scroll/AmbientCelebration';
 import FlatChatPreview from './parent-scroll/FlatChatPreview';
+import ChallengeVerifyCard from './parent-scroll/ChallengeVerifyCard';
 import LevelUpCelebrationModal from './LevelUpCelebrationModal';
 import RegistrationBanner from './RegistrationBanner';
 import ReenrollmentBanner from './ReenrollmentBanner';
@@ -519,6 +520,17 @@ export default function ParentHomeScroll() {
           <AmbientCelebration
             playerIds={data.children.map((c) => c.id)}
             childNames={Object.fromEntries(data.children.map((c) => [c.id, c.first_name]))}
+          />
+        )}
+
+        {/* ─── CHALLENGES ─────────────────────────────────────── */}
+        {data.children.length > 0 && (
+          <ChallengeVerifyCard
+            children={data.children.map((c) => ({
+              id: c.id,
+              first_name: c.first_name,
+              teamId: c.team_id,
+            }))}
           />
         )}
 

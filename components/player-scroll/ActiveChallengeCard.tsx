@@ -1,6 +1,7 @@
 /**
- * ActiveChallengeCard — Shows the player's most active team challenge.
- * Tapping navigates to /challenges screen.
+ * ActiveChallengeCard — Shows the player's active challenges (up to 3).
+ * "MY CHALLENGES" section header with "View All" link.
+ * Tapping a challenge navigates to /challenge-cta?challengeId=X.
  */
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -17,6 +18,7 @@ const PT = {
   textMuted: 'rgba(255,255,255,0.30)',
   textFaint: 'rgba(255,255,255,0.15)',
   borderGold: 'rgba(255,215,0,0.20)',
+  success: '#10B981',
 };
 
 type Props = {
@@ -27,58 +29,111 @@ type Props = {
 export default function ActiveChallengeCard({ available, teamId }: Props) {
   const router = useRouter();
   const { user } = useAuth();
-  const [challenge, setChallenge] = useState<ChallengeWithParticipants | null>(null);
+  const [challenges, setChallenges] = useState<ChallengeWithParticipants[]>([]);
 
   useEffect(() => {
     if (!available || !teamId) return;
-    loadChallenge();
+    loadChallenges();
   }, [available, teamId]);
 
-  const loadChallenge = async () => {
+  const loadChallenges = async () => {
     if (!teamId) return;
-    const challenges = await fetchActiveChallenges(teamId);
-    // Pick the most recently created active challenge
-    setChallenge(challenges[0] || null);
+    const all = await fetchActiveChallenges(teamId);
+    // Show up to 3 most recent active challenges
+    setChallenges(all.slice(0, 3));
   };
 
-  if (!available || !challenge) return null;
-
-  const isTeam = challenge.challenge_type === 'team';
-  const myProgress = challenge.participants.find(p => p.player_id === user?.id);
-  const progressVal = isTeam ? (challenge.totalProgress || 0) : (myProgress?.current_value || 0);
-  const target = challenge.target_value || 1;
-  const pct = Math.min((progressVal / target) * 100, 100);
-
-  // Time remaining
-  const diff = new Date(challenge.ends_at).getTime() - Date.now();
-  const daysLeft = diff > 0 ? Math.ceil(diff / (1000 * 60 * 60 * 24)) : 0;
+  if (!available || challenges.length === 0) return null;
 
   return (
-    <TouchableOpacity
-      style={styles.card}
-      activeOpacity={0.8}
-      onPress={() => router.push('/challenges' as any)}
-    >
-      <View style={styles.headerRow}>
-        <Text style={styles.icon}>{'\u26A1'}</Text>
-        <Text style={styles.label}>ACTIVE CHALLENGE</Text>
-        {daysLeft > 0 && (
-          <Text style={styles.timeLeft}>{daysLeft}d left</Text>
-        )}
+    <View style={styles.container}>
+      {/* Section header */}
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionLabel}>MY CHALLENGES</Text>
+        <TouchableOpacity onPress={() => router.push('/challenges' as any)}>
+          <Text style={styles.viewAll}>View All {'\u2192'}</Text>
+        </TouchableOpacity>
       </View>
-      <Text style={styles.title} numberOfLines={1}>{challenge.title}</Text>
-      <View style={styles.barTrack}>
-        <View style={[styles.barFill, { width: `${pct}%` }]} />
-      </View>
-      <View style={styles.footerRow}>
-        <Text style={styles.progressText}>{progressVal}/{target}</Text>
-        <Text style={styles.reward}>+{challenge.xp_reward} XP</Text>
-      </View>
-    </TouchableOpacity>
+
+      {challenges.map((challenge) => {
+        const isTeam = challenge.challenge_type === 'team';
+        const myProgress = challenge.participants.find((p) => p.player_id === user?.id);
+        const progressVal = isTeam
+          ? (challenge.totalProgress || 0)
+          : (myProgress?.current_value || 0);
+        const target = challenge.target_value || 1;
+        const pct = Math.min((progressVal / target) * 100, 100);
+        const isComplete = pct >= 100;
+
+        // Time remaining
+        const diff = new Date(challenge.ends_at).getTime() - Date.now();
+        const daysLeft = diff > 0 ? Math.ceil(diff / (1000 * 60 * 60 * 24)) : 0;
+
+        return (
+          <TouchableOpacity
+            key={challenge.id}
+            style={styles.card}
+            activeOpacity={0.8}
+            onPress={() => router.push(`/challenge-cta?challengeId=${challenge.id}` as any)}
+          >
+            <View style={styles.headerRow}>
+              <Text style={styles.icon}>{isComplete ? '\u2705' : '\u26A1'}</Text>
+              <Text style={styles.label}>
+                {isComplete ? 'COMPLETE' : 'ACTIVE CHALLENGE'}
+              </Text>
+              {daysLeft > 0 && !isComplete && (
+                <Text style={styles.timeLeft}>{daysLeft}d left</Text>
+              )}
+            </View>
+            <Text style={styles.title} numberOfLines={1}>
+              {challenge.title}
+            </Text>
+            <View style={styles.barTrack}>
+              <View
+                style={[
+                  styles.barFill,
+                  {
+                    width: `${pct}%`,
+                    backgroundColor: isComplete ? PT.success : PT.gold,
+                  },
+                ]}
+              />
+            </View>
+            <View style={styles.footerRow}>
+              <Text style={styles.progressText}>
+                {progressVal}/{target}
+              </Text>
+              <Text style={styles.reward}>+{challenge.xp_reward} XP</Text>
+            </View>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    marginBottom: 8,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginHorizontal: 20,
+    marginBottom: 8,
+  },
+  sectionLabel: {
+    fontFamily: FONTS.bodyBold,
+    fontSize: 10,
+    color: PT.gold,
+    letterSpacing: 1.2,
+  },
+  viewAll: {
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 11,
+    color: PT.teal,
+  },
   card: {
     marginHorizontal: 20,
     borderRadius: 18,
@@ -86,7 +141,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: PT.borderGold,
     padding: 16,
-    marginBottom: 16,
+    marginBottom: 8,
   },
   headerRow: {
     flexDirection: 'row',
