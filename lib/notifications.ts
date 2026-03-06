@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { checkExpiredChallenges } from './challenge-service';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
@@ -614,17 +615,19 @@ export async function sendRSVPReminders(daysAhead: number = 3): Promise<number> 
 export async function runScheduledChecks(): Promise<{
   autoBlasts: number;
   rsvpReminders: number;
+  expiredChallenges: number;
 }> {
   if (__DEV__) console.log('Running scheduled notification checks...');
-  
-  const [autoBlasts, rsvpReminders] = await Promise.all([
+
+  const [autoBlasts, rsvpReminders, expiredChallenges] = await Promise.all([
     runAutoBlastCheck(2),      // Check games in next 2 days
     sendRSVPReminders(3),      // Remind for events in next 3 days
+    checkExpiredChallenges(),   // Auto-complete overdue challenges
   ]);
-  
-  if (__DEV__) console.log(`Scheduled checks complete: ${autoBlasts} blasts, ${rsvpReminders} reminders`);
-  
-  return { autoBlasts, rsvpReminders };
+
+  if (__DEV__) console.log(`Scheduled checks complete: ${autoBlasts} blasts, ${rsvpReminders} reminders, ${expiredChallenges} challenges expired`);
+
+  return { autoBlasts, rsvpReminders, expiredChallenges };
 }
 
 // =====================================================

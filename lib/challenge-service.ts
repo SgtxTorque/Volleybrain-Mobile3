@@ -554,3 +554,150 @@ export async function completeChallenge(challengeId: string): Promise<{
     return { success: false, completedCount: 0 };
   }
 }
+
+// =============================================================================
+// Stat-Based Auto-Tracking — update challenge progress from game stats
+// =============================================================================
+
+// Volleyball stat columns on game_player_stats that can be tracked by challenges
+const STAT_COLUMNS = [
+  'aces', 'kills', 'blocks', 'digs', 'assists', 'serves',
+  'service_errors', 'attacks', 'attack_errors', 'block_assists',
+  'block_errors', 'dig_errors', 'set_errors', 'receptions',
+  'reception_errors', 'points',
+] as const;
+
+/**
+ * After game stats are saved, check for active stat_based challenges
+ * and auto-update participant progress. Call this fire-and-forget
+ * after inserting game_player_stats.
+ *
+ * game_player_stats uses named columns (aces, kills, blocks, etc.)
+ * rather than a key-value pattern. The challenge's stat_key maps
+ * directly to a column name on game_player_stats.
+ */
+export async function updateStatBasedChallenges(params: {
+  teamId: string;
+  playerIds: string[];
+  seasonId: string;
+}): Promise<void> {
+  try {
+    const { teamId, playerIds, seasonId } = params;
+
+    // Get active stat_based challenges for this team
+    const { data: challenges } = await supabase
+      .from('coach_challenges')
+      .select('id, stat_key, target_value, title, xp_reward')
+      .eq('team_id', teamId)
+      .eq('status', 'active')
+      .eq('metric_type', 'stat_based');
+
+    if (!challenges || challenges.length === 0) return;
+
+    // Filter to challenges with valid stat keys
+    const validChallenges = challenges.filter(
+      (c) => c.stat_key && STAT_COLUMNS.includes(c.stat_key as any),
+    );
+    if (validChallenges.length === 0) return;
+
+    // Get all challenge participants that are active players
+    const challengeIds = validChallenges.map((c) => c.id);
+    const { data: participants } = await supabase
+      .from('challenge_participants')
+      .select('id, challenge_id, player_id, current_value, completed')
+      .in('challenge_id', challengeIds)
+      .in('player_id', playerIds)
+      .eq('completed', false);
+
+    if (!participants || participants.length === 0) return;
+
+    // Determine which stat columns we need
+    const neededStatKeys = [...new Set(validChallenges.map((c) => c.stat_key!))];
+    const selectCols = ['player_id', ...neededStatKeys].join(', ');
+
+    // Batch fetch season stats for all relevant players
+    const uniquePlayerIds = [...new Set(participants.map((p) => p.player_id))];
+    const { data: allStats } = await supabase
+      .from('game_player_stats')
+      .select(selectCols)
+      .in('player_id', uniquePlayerIds)
+      .eq('season_id', seasonId);
+
+    if (!allStats) return;
+
+    // Build stat totals: { playerId: { statKey: total } }
+    const statTotals = new Map<string, Record<string, number>>();
+    for (const row of allStats as Record<string, any>[]) {
+      const pid = row.player_id as string;
+      let playerMap = statTotals.get(pid);
+      if (!playerMap) {
+        playerMap = {};
+        statTotals.set(pid, playerMap);
+      }
+      for (const key of neededStatKeys) {
+        playerMap[key] = (playerMap[key] || 0) + (row[key] || 0);
+      }
+    }
+
+    // Update each participant's progress
+    for (const participant of participants) {
+      const challenge = validChallenges.find((c) => c.id === participant.challenge_id);
+      if (!challenge?.stat_key) continue;
+
+      const playerStats = statTotals.get(participant.player_id);
+      const newValue = playerStats?.[challenge.stat_key] || 0;
+
+      // Only update if value actually changed
+      if (newValue !== participant.current_value) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', participant.player_id)
+          .single();
+
+        await updateChallengeProgress(
+          participant.challenge_id,
+          participant.player_id,
+          newValue,
+          profile?.full_name || undefined,
+        );
+      }
+    }
+  } catch (err) {
+    if (__DEV__) console.error('[ChallengeService] updateStatBasedChallenges error:', err);
+  }
+}
+
+// =============================================================================
+// Deadline Checker — auto-expire and complete overdue challenges
+// =============================================================================
+
+/**
+ * Check for challenges that have passed their ends_at deadline.
+ * Mark them as completed and award XP. Call on app open or periodically.
+ */
+export async function checkExpiredChallenges(): Promise<number> {
+  try {
+    const now = new Date().toISOString();
+
+    // Find active challenges that have passed their deadline
+    const { data: expired } = await supabase
+      .from('coach_challenges')
+      .select('id')
+      .eq('status', 'active')
+      .lt('ends_at', now);
+
+    if (!expired || expired.length === 0) return 0;
+
+    let completedCount = 0;
+    for (const ch of expired) {
+      const result = await completeChallenge(ch.id);
+      if (result.success) completedCount++;
+    }
+
+    return completedCount;
+  } catch (err) {
+    if (__DEV__) console.error('[ChallengeService] checkExpiredChallenges error:', err);
+    return 0;
+  }
+}

@@ -3,6 +3,7 @@ import GameCompletionWizard, { type GameCompletionResult } from '@/components/Ga
 import GiveShoutoutModal from '@/components/GiveShoutoutModal';
 import VolleyballCourt, { type CourtSlot } from '@/components/VolleyballCourt';
 import { checkAndUnlockAchievements } from '@/lib/achievement-engine';
+import { updateStatBasedChallenges } from '@/lib/challenge-service';
 import { useAuth } from '@/lib/auth';
 import { useSeason } from '@/lib/season';
 import { useSport } from '@/lib/sport';
@@ -792,6 +793,13 @@ export default function GamePrepScreen() {
             gameId: activeGame.id,
             seasonId: workingSeason.id,
           }).catch((err) => { if (__DEV__) console.error('Achievement check:', err); });
+
+          // Fire-and-forget stat-based challenge auto-tracking
+          updateStatBasedChallenges({
+            teamId: activeGame.team_id,
+            playerIds: participatingPlayerIds,
+            seasonId: workingSeason.id,
+          }).catch((err) => { if (__DEV__) console.error('Challenge stat tracking:', err); });
         }
       }
 
@@ -1001,6 +1009,13 @@ export default function GamePrepScreen() {
           gameId: activeGame.id,
           seasonId: workingSeason!.id,
         }).catch((err) => { if (__DEV__) console.error('Achievement check:', err); });
+
+        // Fire-and-forget stat-based challenge auto-tracking
+        updateStatBasedChallenges({
+          teamId: activeGame.team_id,
+          playerIds: detailedPlayerIds,
+          seasonId: workingSeason!.id,
+        }).catch((err) => { if (__DEV__) console.error('Challenge stat tracking:', err); });
       }
 
       Alert.alert('Stats Saved!', `Saved stats for ${statsArray.length} players.`, [
