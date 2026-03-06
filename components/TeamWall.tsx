@@ -18,6 +18,7 @@ import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTeamContext } from '@/lib/team-context';
 import { useTheme } from '@/lib/theme';
+import { BRAND } from '@/theme/colors';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
@@ -1334,10 +1335,35 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
     const typeConfig = POST_TYPE_CONFIG[post.post_type as PostType] || POST_TYPE_CONFIG.text;
     const currentUserReaction = userReactions[post.id];
     const isAnnouncement = post.post_type === 'announcement';
+    const isShoutout = post.post_type === 'shoutout';
+    const isSystemPost = post.post_type === 'game_recap' || post.post_type === 'milestone';
     const isCoachPost = isAnnouncement;
 
     return (
-      <View style={s.postCardFlat}>
+      <View style={[
+        s.postCardFlat,
+        isAnnouncement && s.postCardAnnouncement,
+        isShoutout && s.postCardShoutout,
+        isSystemPost && s.postCardSystem,
+      ]}>
+        {/* Announcement badge */}
+        {isAnnouncement && (
+          <View style={s.announcementBadgeRow}>
+            <Ionicons name="megaphone" size={12} color={BRAND.teal} />
+            <Text style={s.announcementBadgeText}>ANNOUNCEMENT</Text>
+          </View>
+        )}
+
+        {/* System post indicator */}
+        {isSystemPost && (
+          <View style={s.systemPostBadgeRow}>
+            <Ionicons name={typeConfig.icon} size={12} color={typeConfig.color} />
+            <Text style={[s.systemPostBadgeText, { color: typeConfig.color }]}>
+              {typeConfig.label.toUpperCase()}
+            </Text>
+          </View>
+        )}
+
         {/* Pinned indicator */}
         {post.is_pinned && (
           <View style={s.pinnedIndicator}>
@@ -2764,6 +2790,50 @@ const createStyles = (colors: any) =>
       borderBottomColor: colors.border,
       paddingTop: 12,
       paddingBottom: 16,
+    },
+    // Announcement variant — teal left border accent
+    postCardAnnouncement: {
+      borderLeftWidth: 4,
+      borderLeftColor: BRAND.teal,
+      backgroundColor: BRAND.teal + '08',
+    },
+    // Shoutout variant — warm gold background
+    postCardShoutout: {
+      backgroundColor: BRAND.goldBrand + '10',
+      borderLeftWidth: 4,
+      borderLeftColor: BRAND.goldBrand,
+    },
+    // System/auto-generated variant — lighter, more subtle
+    postCardSystem: {
+      backgroundColor: colors.bgSecondary || BRAND.warmGray,
+      opacity: 0.95,
+    },
+    announcementBadgeRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: 5,
+      paddingHorizontal: 16,
+      paddingTop: 8,
+      paddingBottom: 2,
+    },
+    announcementBadgeText: {
+      fontSize: 10,
+      fontWeight: '800' as const,
+      color: BRAND.teal,
+      letterSpacing: 1,
+    },
+    systemPostBadgeRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: 5,
+      paddingHorizontal: 16,
+      paddingTop: 8,
+      paddingBottom: 2,
+    },
+    systemPostBadgeText: {
+      fontSize: 10,
+      fontWeight: '700' as const,
+      letterSpacing: 0.8,
     },
     pinnedIndicator: {
       flexDirection: 'row',
