@@ -298,7 +298,7 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
         <ActiveChallengeCard available={data.challengesAvailable} teamId={data.primaryTeam?.id} />
 
         {/* ─── 8c. NEW EVALUATION CARD ──────────────────────────── */}
-        <EvaluationCard playerId={user?.id || null} teamId={data.primaryTeam?.id || null} />
+        <EvaluationCard playerId={playerId} teamId={data.primaryTeam?.id || null} />
 
         {/* ─── 8b. TEAM PULSE (social feed) ─────────────────────── */}
         <View style={{ marginBottom: 12 }}>
