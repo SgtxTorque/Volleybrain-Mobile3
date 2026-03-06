@@ -119,7 +119,7 @@ type PostComment = {
   profiles: { id: string; full_name: string | null; avatar_url: string | null } | null;
 };
 
-type PostType = 'text' | 'announcement' | 'game_recap' | 'shoutout' | 'milestone' | 'photo';
+type PostType = 'text' | 'announcement' | 'game_recap' | 'shoutout' | 'milestone' | 'photo' | 'challenge';
 
 type ReactionType = 'like' | 'heart' | 'fire' | 'clap' | 'muscle' | 'volleyball' | (string & {});
 
@@ -154,9 +154,10 @@ const POST_TYPE_CONFIG: Record<PostType, { label: string; color: string; icon: k
   shoutout: { label: 'Shoutout', color: '#A855F7', icon: 'heart' },
   milestone: { label: 'Milestone', color: '#F59E0B', icon: 'ribbon' },
   photo: { label: 'Photo', color: '#3B82F6', icon: 'camera' },
+  challenge: { label: 'Challenge', color: '#FFD700', icon: 'trophy' },
 };
 
-const POST_TYPES: PostType[] = ['text', 'announcement', 'game_recap', 'shoutout', 'milestone', 'photo'];
+const POST_TYPES: PostType[] = ['text', 'announcement', 'game_recap', 'shoutout', 'milestone', 'photo', 'challenge'];
 
 const REACTION_CONFIG: { type: ReactionType; emoji: string; label: string }[] = [
   { type: 'fire', emoji: '🔥', label: 'Fire' },
@@ -1336,7 +1337,7 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
     const currentUserReaction = userReactions[post.id];
     const isAnnouncement = post.post_type === 'announcement';
     const isShoutout = post.post_type === 'shoutout';
-    const isSystemPost = post.post_type === 'game_recap' || post.post_type === 'milestone';
+    const isSystemPost = post.post_type === 'game_recap' || post.post_type === 'milestone' || post.post_type === 'challenge';
     const isCoachPost = isAnnouncement;
 
     return (

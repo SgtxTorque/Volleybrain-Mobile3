@@ -1,8 +1,10 @@
 // =============================================================================
-// ChallengeCard — Special team wall card for coach challenges
+// ChallengeCard — 3-variant challenge card for team wall and hub screens
+// Variants: active (gold border), needs-verification (parent CTA), completed (subdued)
 // =============================================================================
 
-import { useTheme } from '@/lib/theme';
+import { BRAND } from '@/theme/colors';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -21,16 +23,27 @@ export type ChallengePostData = {
   endsAt: string;
 };
 
+export type ChallengeCardVariant = 'active' | 'needs_verification' | 'completed';
+
 type Props = {
-  metadataJson: string | null;
-  coachName: string;
-  createdAt: string;
+  metadataJson?: string | null;
+  title?: string;
+  description?: string | null;
+  challengeType?: 'individual' | 'team';
+  targetValue?: number;
+  xpReward?: number;
+  endsAt?: string;
+  coachName?: string;
+  createdAt?: string;
   onOptIn?: () => void;
   onViewDetails?: () => void;
+  onVerify?: () => void;
   participantCount?: number;
   isOptedIn?: boolean;
   userProgress?: number;
   teamProgress?: number;
+  variant?: ChallengeCardVariant;
+  childName?: string; // For parent verification variant
 };
 
 // =============================================================================
@@ -66,104 +79,168 @@ function getTimeRemaining(endsAt: string): string {
 }
 
 // =============================================================================
+// Variant configs
+// =============================================================================
+
+const VARIANT_CONFIG: Record<ChallengeCardVariant, {
+  borderColor: string;
+  bannerBg: string;
+  bannerLabel: string;
+  bannerLabelColor: string;
+  bannerIcon: keyof typeof Ionicons.glyphMap;
+  bannerIconColor: string;
+  opacity: number;
+}> = {
+  active: {
+    borderColor: '#FFD700',
+    bannerBg: '#FFD70015',
+    bannerLabel: 'COACH CHALLENGE',
+    bannerLabelColor: '#D4A017',
+    bannerIcon: 'trophy',
+    bannerIconColor: '#FFD700',
+    opacity: 1,
+  },
+  needs_verification: {
+    borderColor: BRAND.warning,
+    bannerBg: `${BRAND.warning}15`,
+    bannerLabel: 'NEEDS YOUR VERIFICATION',
+    bannerLabelColor: BRAND.warning,
+    bannerIcon: 'shield-checkmark',
+    bannerIconColor: BRAND.warning,
+    opacity: 1,
+  },
+  completed: {
+    borderColor: BRAND.border,
+    bannerBg: `${BRAND.success}10`,
+    bannerLabel: 'CHALLENGE COMPLETE',
+    bannerLabelColor: BRAND.success,
+    bannerIcon: 'checkmark-circle',
+    bannerIconColor: BRAND.success,
+    opacity: 0.7,
+  },
+};
+
+// =============================================================================
 // Component
 // =============================================================================
 
 export default function ChallengeCard({
   metadataJson,
+  title: propTitle,
+  description: propDescription,
+  challengeType: propChallengeType,
+  targetValue: propTarget,
+  xpReward: propXp,
+  endsAt: propEndsAt,
   coachName,
   createdAt,
   onOptIn,
   onViewDetails,
+  onVerify,
   participantCount = 0,
   isOptedIn = false,
   userProgress = 0,
   teamProgress = 0,
+  variant = 'active',
+  childName,
 }: Props) {
-  const { colors } = useTheme();
-  const data = useMemo(() => parseChallengeMetadata(metadataJson), [metadataJson]);
-  const s = useMemo(() => createStyles(colors), [colors]);
+  const parsed = useMemo(() => parseChallengeMetadata(metadataJson ?? null), [metadataJson]);
 
-  if (!data) return null;
+  // Support both metadataJson and direct props
+  const cardTitle = propTitle || parsed?.title;
+  const cardDesc = propDescription ?? parsed?.description;
+  const cardType = propChallengeType || parsed?.challengeType || 'individual';
+  const cardTarget = propTarget || parsed?.targetValue || 0;
+  const cardXp = propXp ?? parsed?.xpReward ?? 0;
+  const cardEndsAt = propEndsAt || parsed?.endsAt;
 
-  const timeLeft = getTimeRemaining(data.endsAt);
+  if (!cardTitle) return null;
+
+  const vc = VARIANT_CONFIG[variant];
+  const timeLeft = cardEndsAt ? getTimeRemaining(cardEndsAt) : null;
   const isEnded = timeLeft === 'Ended';
-  const progressPct = data.challengeType === 'team'
-    ? Math.min((teamProgress / data.targetValue) * 100, 100)
-    : Math.min((userProgress / data.targetValue) * 100, 100);
+  const progressPct = cardType === 'team'
+    ? Math.min((teamProgress / (cardTarget || 1)) * 100, 100)
+    : Math.min((userProgress / (cardTarget || 1)) * 100, 100);
 
   return (
     <TouchableOpacity
-      style={[s.card, { borderColor: colors.primary }]}
+      style={[s.card, { borderColor: vc.borderColor, opacity: vc.opacity }]}
       onPress={onViewDetails}
       activeOpacity={0.7}
     >
-      {/* Gradient-like top banner */}
-      <View style={[s.banner, { backgroundColor: colors.primary + '15' }]}>
+      {/* Banner */}
+      <View style={[s.banner, { backgroundColor: vc.bannerBg }]}>
         <View style={s.bannerLeft}>
-          <Ionicons name="trophy" size={14} color={colors.primary} />
-          <Text style={[s.bannerLabel, { color: colors.primary }]}>COACH CHALLENGE</Text>
+          <Ionicons name={vc.bannerIcon} size={14} color={vc.bannerIconColor} />
+          <Text style={[s.bannerLabel, { color: vc.bannerLabelColor }]}>{vc.bannerLabel}</Text>
         </View>
-        <Text style={[s.timeLeft, { color: isEnded ? colors.textMuted : '#F59E0B' }]}>
-          {timeLeft}
-        </Text>
+        {timeLeft && (
+          <Text style={[s.timeLeft, { color: isEnded ? BRAND.textMuted : BRAND.warning }]}>
+            {timeLeft}
+          </Text>
+        )}
       </View>
 
       <View style={s.content}>
         {/* Title */}
-        <Text style={[s.title, { color: colors.text }]}>{data.title}</Text>
+        <Text style={s.title}>{cardTitle}</Text>
 
         {/* Description */}
-        {data.description && (
-          <Text style={[s.desc, { color: colors.textSecondary }]} numberOfLines={2}>
-            {data.description}
-          </Text>
+        {cardDesc && (
+          <Text style={s.desc} numberOfLines={2}>{cardDesc}</Text>
+        )}
+
+        {/* Parent verification message */}
+        {variant === 'needs_verification' && childName && (
+          <View style={s.verifyMessage}>
+            <Ionicons name="person-circle" size={16} color={BRAND.warning} />
+            <Text style={s.verifyMessageText}>
+              {childName} submitted progress — please verify
+            </Text>
+          </View>
         )}
 
         {/* Challenge type + target */}
         <View style={s.metaRow}>
-          <View style={[s.metaPill, { backgroundColor: colors.secondary }]}>
+          <View style={s.metaPill}>
             <Ionicons
-              name={data.challengeType === 'team' ? 'people' : 'person'}
+              name={cardType === 'team' ? 'people' : 'person'}
               size={12}
-              color={colors.textMuted}
+              color={BRAND.textMuted}
             />
-            <Text style={[s.metaText, { color: colors.textMuted }]}>
-              {data.challengeType === 'team' ? 'Team Goal' : 'Individual'}
+            <Text style={s.metaText}>
+              {cardType === 'team' ? 'Team Goal' : 'Individual'}
             </Text>
           </View>
-          <View style={[s.metaPill, { backgroundColor: colors.secondary }]}>
-            <Ionicons name="flag" size={12} color={colors.textMuted} />
-            <Text style={[s.metaText, { color: colors.textMuted }]}>
-              Target: {data.targetValue}
-            </Text>
+          <View style={s.metaPill}>
+            <Ionicons name="flag" size={12} color={BRAND.textMuted} />
+            <Text style={s.metaText}>Target: {cardTarget}</Text>
           </View>
           <View style={[s.metaPill, { backgroundColor: '#FFD70020' }]}>
             <Ionicons name="star" size={12} color="#FFD700" />
-            <Text style={[s.metaText, { color: '#FFD700' }]}>+{data.xpReward} XP</Text>
+            <Text style={[s.metaText, { color: '#FFD700' }]}>+{cardXp} XP</Text>
           </View>
         </View>
 
-        {/* Progress bar (if opted in or team challenge) */}
-        {(isOptedIn || data.challengeType === 'team') && (
+        {/* Progress bar (active variant, opted in or team) */}
+        {variant === 'active' && (isOptedIn || cardType === 'team') && (
           <View style={s.progressSection}>
             <View style={s.progressHeader}>
-              <Text style={[s.progressLabel, { color: colors.textSecondary }]}>
-                {data.challengeType === 'team'
-                  ? `Team: ${teamProgress} / ${data.targetValue}`
-                  : `Your progress: ${userProgress} / ${data.targetValue}`}
+              <Text style={s.progressLabel}>
+                {cardType === 'team'
+                  ? `Team: ${teamProgress} / ${cardTarget}`
+                  : `Your progress: ${userProgress} / ${cardTarget}`}
               </Text>
-              <Text style={[s.progressPct, { color: colors.primary }]}>
-                {Math.round(progressPct)}%
-              </Text>
+              <Text style={s.progressPct}>{Math.round(progressPct)}%</Text>
             </View>
-            <View style={[s.progressBg, { backgroundColor: colors.secondary }]}>
+            <View style={s.progressBg}>
               <View
                 style={[
                   s.progressFill,
                   {
                     width: `${progressPct}%` as any,
-                    backgroundColor: progressPct >= 100 ? '#10B981' : colors.primary,
+                    backgroundColor: progressPct >= 100 ? BRAND.success : BRAND.teal,
                   },
                 ]}
               />
@@ -171,16 +248,25 @@ export default function ChallengeCard({
           </View>
         )}
 
-        {/* Participants count */}
+        {/* Completed progress (full bar) */}
+        {variant === 'completed' && (
+          <View style={s.progressSection}>
+            <View style={s.progressBg}>
+              <View style={[s.progressFill, { width: '100%', backgroundColor: BRAND.success }]} />
+            </View>
+          </View>
+        )}
+
+        {/* Footer */}
         <View style={s.footerRow}>
-          <Text style={[s.participantText, { color: colors.textMuted }]}>
-            {participantCount} player{participantCount !== 1 ? 's' : ''} participating
+          <Text style={s.participantText}>
+            {participantCount} player{participantCount !== 1 ? 's' : ''}
           </Text>
 
-          {/* Opt in button */}
-          {!isOptedIn && !isEnded && onOptIn && (
+          {/* Active variant actions */}
+          {variant === 'active' && !isOptedIn && !isEnded && onOptIn && (
             <TouchableOpacity
-              style={[s.optInBtn, { backgroundColor: colors.primary }]}
+              style={s.optInBtn}
               onPress={onOptIn}
               activeOpacity={0.7}
             >
@@ -188,10 +274,30 @@ export default function ChallengeCard({
             </TouchableOpacity>
           )}
 
-          {isOptedIn && (
-            <View style={[s.joinedBadge, { backgroundColor: '#10B98120' }]}>
-              <Ionicons name="checkmark-circle" size={14} color="#10B981" />
-              <Text style={[s.joinedText, { color: '#10B981' }]}>Joined</Text>
+          {variant === 'active' && isOptedIn && (
+            <View style={s.joinedBadge}>
+              <Ionicons name="checkmark-circle" size={14} color={BRAND.success} />
+              <Text style={s.joinedText}>Joined</Text>
+            </View>
+          )}
+
+          {/* Needs verification actions (parent) */}
+          {variant === 'needs_verification' && onVerify && (
+            <TouchableOpacity
+              style={s.verifyBtn}
+              onPress={onVerify}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="shield-checkmark" size={14} color="#fff" />
+              <Text style={s.verifyBtnText}>Verify</Text>
+            </TouchableOpacity>
+          )}
+
+          {/* Completed badge */}
+          {variant === 'completed' && (
+            <View style={s.completedBadge}>
+              <Ionicons name="trophy" size={14} color={BRAND.success} />
+              <Text style={s.completedText}>Done</Text>
             </View>
           )}
         </View>
@@ -204,119 +310,174 @@ export default function ChallengeCard({
 // Styles
 // =============================================================================
 
-const createStyles = (colors: any) =>
-  StyleSheet.create({
-    card: {
-      borderWidth: 1.5,
-      borderRadius: 16,
-      overflow: 'hidden',
-      marginBottom: 12,
-    },
-    banner: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: 14,
-      paddingVertical: 8,
-    },
-    bannerLeft: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-    },
-    bannerLabel: {
-      fontSize: 11,
-      fontWeight: '800',
-      letterSpacing: 0.5,
-    },
-    timeLeft: {
-      fontSize: 12,
-      fontWeight: '700',
-    },
-    content: {
-      padding: 14,
-      gap: 8,
-    },
-    title: {
-      fontSize: 17,
-      fontWeight: '700',
-    },
-    desc: {
-      fontSize: 14,
-      lineHeight: 20,
-    },
-    metaRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 6,
-    },
-    metaPill: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 8,
-    },
-    metaText: {
-      fontSize: 11,
-      fontWeight: '600',
-    },
-    progressSection: {
-      marginTop: 4,
-    },
-    progressHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      marginBottom: 4,
-    },
-    progressLabel: {
-      fontSize: 12,
-      fontWeight: '600',
-    },
-    progressPct: {
-      fontSize: 12,
-      fontWeight: '700',
-    },
-    progressBg: {
-      height: 8,
-      borderRadius: 4,
-      overflow: 'hidden',
-    },
-    progressFill: {
-      height: '100%',
-      borderRadius: 4,
-    },
-    footerRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginTop: 4,
-    },
-    participantText: {
-      fontSize: 12,
-      fontWeight: '500',
-    },
-    optInBtn: {
-      paddingHorizontal: 16,
-      paddingVertical: 8,
-      borderRadius: 10,
-    },
-    optInText: {
-      color: '#fff',
-      fontSize: 13,
-      fontWeight: '700',
-    },
-    joinedBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: 8,
-    },
-    joinedText: {
-      fontSize: 12,
-      fontWeight: '700',
-    },
-  });
+const s = StyleSheet.create({
+  card: {
+    borderWidth: 1.5,
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 12,
+    backgroundColor: BRAND.cardBg,
+  },
+  banner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  bannerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  bannerLabel: {
+    fontSize: 11,
+    fontFamily: FONTS.bodyExtraBold,
+    letterSpacing: 0.5,
+  },
+  timeLeft: {
+    fontSize: 12,
+    fontFamily: FONTS.bodyBold,
+  },
+  content: {
+    padding: 14,
+    gap: 8,
+  },
+  title: {
+    fontSize: 17,
+    fontFamily: FONTS.bodyBold,
+    color: BRAND.textPrimary,
+  },
+  desc: {
+    fontSize: 14,
+    fontFamily: FONTS.bodyMedium,
+    lineHeight: 20,
+    color: BRAND.textSecondary,
+  },
+  verifyMessage: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: `${BRAND.warning}10`,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  verifyMessageText: {
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 12,
+    color: BRAND.warning,
+    flex: 1,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  metaPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: BRAND.warmGray,
+  },
+  metaText: {
+    fontSize: 11,
+    fontFamily: FONTS.bodySemiBold,
+    color: BRAND.textMuted,
+  },
+  progressSection: {
+    marginTop: 4,
+  },
+  progressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  progressLabel: {
+    fontSize: 12,
+    fontFamily: FONTS.bodySemiBold,
+    color: BRAND.textSecondary,
+  },
+  progressPct: {
+    fontSize: 12,
+    fontFamily: FONTS.bodyBold,
+    color: BRAND.teal,
+  },
+  progressBg: {
+    height: 8,
+    borderRadius: 4,
+    overflow: 'hidden',
+    backgroundColor: BRAND.warmGray,
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  footerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 4,
+  },
+  participantText: {
+    fontSize: 12,
+    fontFamily: FONTS.bodyMedium,
+    color: BRAND.textMuted,
+  },
+  optInBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: BRAND.teal,
+  },
+  optInText: {
+    color: '#fff',
+    fontSize: 13,
+    fontFamily: FONTS.bodyBold,
+  },
+  joinedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    backgroundColor: `${BRAND.success}20`,
+  },
+  joinedText: {
+    fontSize: 12,
+    fontFamily: FONTS.bodyBold,
+    color: BRAND.success,
+  },
+  verifyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: BRAND.warning,
+  },
+  verifyBtnText: {
+    color: '#fff',
+    fontSize: 13,
+    fontFamily: FONTS.bodyBold,
+  },
+  completedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    backgroundColor: `${BRAND.success}15`,
+  },
+  completedText: {
+    fontSize: 12,
+    fontFamily: FONTS.bodyBold,
+    color: BRAND.success,
+  },
+});

@@ -28,6 +28,12 @@ export type NotificationType =
   | 'rsvp_reminder'
   | 'event_update'
   | 'backup_promoted'
+  | 'challenge_new'
+  | 'challenge_joined'
+  | 'challenge_progress'
+  | 'challenge_completed'
+  | 'challenge_winner'
+  | 'challenge_verify'
   | 'general';
 
 export interface AppNotification {
@@ -619,4 +625,150 @@ export async function runScheduledChecks(): Promise<{
   if (__DEV__) console.log(`Scheduled checks complete: ${autoBlasts} blasts, ${rsvpReminders} reminders`);
   
   return { autoBlasts, rsvpReminders };
+}
+
+// =====================================================
+// CHALLENGE NOTIFICATIONS
+// =====================================================
+
+/** Notify all team players about a new challenge */
+export async function notifyChallengeCreated(params: {
+  teamId: string;
+  challengeId: string;
+  challengeTitle: string;
+  coachName: string;
+}): Promise<void> {
+  try {
+    const { teamId, challengeId, challengeTitle, coachName } = params;
+
+    // Get all player profile IDs on this team
+    const { data: teamPlayers } = await supabase
+      .from('team_players')
+      .select('player_id')
+      .eq('team_id', teamId);
+
+    if (!teamPlayers || teamPlayers.length === 0) return;
+
+    // Get parent_account_id for each player to also notify players with app accounts
+    const playerIds = teamPlayers.map((tp) => tp.player_id);
+    const { data: players } = await supabase
+      .from('players')
+      .select('id, parent_account_id')
+      .in('id', playerIds);
+
+    const userIds = new Set<string>();
+    for (const p of players || []) {
+      if (p.parent_account_id) userIds.add(p.parent_account_id);
+    }
+
+    if (userIds.size === 0) return;
+
+    const notifications = [...userIds].map((uid) => ({
+      user_id: uid,
+      title: 'New Coach Challenge!',
+      body: `${coachName} issued "${challengeTitle}" — tap to join!`,
+      type: 'challenge_new' as NotificationType,
+      team_id: teamId,
+      data: { challengeId },
+    }));
+
+    await supabase.from('notifications').insert(notifications);
+  } catch (err) {
+    if (__DEV__) console.error('[Notifications] notifyChallengeCreated error:', err);
+  }
+}
+
+/** Notify coach that a player joined their challenge */
+export async function notifyChallengeJoined(params: {
+  coachUserId: string;
+  challengeId: string;
+  challengeTitle: string;
+  playerName: string;
+  teamId: string;
+}): Promise<void> {
+  try {
+    const { coachUserId, challengeId, challengeTitle, playerName, teamId } = params;
+
+    await supabase.from('notifications').insert({
+      user_id: coachUserId,
+      title: 'Player Joined Challenge',
+      body: `${playerName} joined "${challengeTitle}"`,
+      type: 'challenge_joined' as NotificationType,
+      team_id: teamId,
+      data: { challengeId },
+    });
+  } catch (err) {
+    if (__DEV__) console.error('[Notifications] notifyChallengeJoined error:', err);
+  }
+}
+
+/** Notify coach about progress submission needing verification */
+export async function notifyChallengeVerificationNeeded(params: {
+  coachUserId: string;
+  challengeId: string;
+  challengeTitle: string;
+  playerName: string;
+  teamId: string;
+}): Promise<void> {
+  try {
+    const { coachUserId, challengeId, challengeTitle, playerName, teamId } = params;
+
+    await supabase.from('notifications').insert({
+      user_id: coachUserId,
+      title: 'Verification Needed',
+      body: `${playerName} submitted progress for "${challengeTitle}" — please verify`,
+      type: 'challenge_verify' as NotificationType,
+      team_id: teamId,
+      data: { challengeId },
+    });
+  } catch (err) {
+    if (__DEV__) console.error('[Notifications] notifyChallengeVerificationNeeded error:', err);
+  }
+}
+
+/** Notify player that they completed a challenge */
+export async function notifyChallengeCompleted(params: {
+  playerUserId: string;
+  challengeId: string;
+  challengeTitle: string;
+  xpEarned: number;
+  teamId: string;
+}): Promise<void> {
+  try {
+    const { playerUserId, challengeId, challengeTitle, xpEarned, teamId } = params;
+
+    await supabase.from('notifications').insert({
+      user_id: playerUserId,
+      title: 'Challenge Complete!',
+      body: `You completed "${challengeTitle}" and earned +${xpEarned} XP!`,
+      type: 'challenge_completed' as NotificationType,
+      team_id: teamId,
+      data: { challengeId, xpEarned },
+    });
+  } catch (err) {
+    if (__DEV__) console.error('[Notifications] notifyChallengeCompleted error:', err);
+  }
+}
+
+/** Notify winner of a challenge */
+export async function notifyChallengeWinner(params: {
+  winnerUserId: string;
+  challengeId: string;
+  challengeTitle: string;
+  teamId: string;
+}): Promise<void> {
+  try {
+    const { winnerUserId, challengeId, challengeTitle, teamId } = params;
+
+    await supabase.from('notifications').insert({
+      user_id: winnerUserId,
+      title: 'You Won the Challenge!',
+      body: `Congratulations! You're the winner of "${challengeTitle}"!`,
+      type: 'challenge_winner' as NotificationType,
+      team_id: teamId,
+      data: { challengeId },
+    });
+  } catch (err) {
+    if (__DEV__) console.error('[Notifications] notifyChallengeWinner error:', err);
+  }
 }

@@ -4,6 +4,16 @@
 
 import { supabase } from './supabase';
 import { getLevelFromXP, XP_BY_SOURCE } from './engagement-constants';
+import {
+  postChallengeMilestoneToWall,
+  postChallengeCompletionToWall,
+  postChallengeWinnerToWall,
+} from './engagement-events';
+import {
+  notifyChallengeCreated,
+  notifyChallengeCompleted,
+  notifyChallengeWinner,
+} from './notifications';
 import type { CoachChallenge, ChallengeParticipant } from './engagement-types';
 
 // =============================================================================
@@ -105,6 +115,14 @@ export async function createChallenge(params: CreateChallengeParams): Promise<{
       return { success: false, error: challengeError.message };
     }
 
+    // Fire-and-forget: notify team players about the new challenge
+    notifyChallengeCreated({
+      teamId: params.teamId,
+      challengeId: challenge.id,
+      challengeTitle: params.title,
+      coachName: params.coachName,
+    }).catch(() => {});
+
     return {
       success: true,
       challengeId: challenge?.id,
@@ -142,9 +160,54 @@ export async function optInToChallenge(
       }
       return { success: false, error: error.message };
     }
+
+    // Fire-and-forget: check for join milestone (50% of roster)
+    checkJoinMilestone(challengeId).catch(() => {});
+
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message };
+  }
+}
+
+/** Check if a join milestone was reached (50% of roster) and auto-post */
+async function checkJoinMilestone(challengeId: string): Promise<void> {
+  try {
+    const { data: challenge } = await supabase
+      .from('coach_challenges')
+      .select('id, title, team_id, coach_id')
+      .eq('id', challengeId)
+      .single();
+    if (!challenge) return;
+
+    // Count participants
+    const { count: participantCount } = await supabase
+      .from('challenge_participants')
+      .select('id', { count: 'exact', head: true })
+      .eq('challenge_id', challengeId);
+
+    // Count team roster
+    const { count: rosterCount } = await supabase
+      .from('team_players')
+      .select('id', { count: 'exact', head: true })
+      .eq('team_id', challenge.team_id);
+
+    const pCount = participantCount ?? 0;
+    const rCount = rosterCount ?? 1;
+    const pct = Math.round((pCount / rCount) * 100);
+
+    // Post milestone at 50% join rate
+    if (pCount > 1 && pct >= 50 && pct - Math.round(((pCount - 1) / rCount) * 100) < 50) {
+      await postChallengeMilestoneToWall({
+        challengeId: challenge.id,
+        challengeTitle: challenge.title,
+        teamId: challenge.team_id,
+        coachId: challenge.coach_id,
+        milestoneText: `${pCount} players have joined — ${pct}% of the team!`,
+      });
+    }
+  } catch {
+    // Swallow errors — milestones are non-critical
   }
 }
 
@@ -156,18 +219,29 @@ export async function updateChallengeProgress(
   challengeId: string,
   playerId: string,
   newValue: number,
+  playerName?: string,
 ): Promise<{ success: boolean; completed?: boolean; error?: string }> {
   try {
-    // Get challenge target
+    // Get challenge details
     const { data: challenge } = await supabase
       .from('coach_challenges')
-      .select('target_value, challenge_type')
+      .select('target_value, challenge_type, title, team_id, xp_reward')
       .eq('id', challengeId)
       .single();
 
     if (!challenge) return { success: false, error: 'Challenge not found' };
 
     const completed = newValue >= (challenge.target_value || 0);
+
+    // Check if already completed (avoid double-posting)
+    const { data: existing } = await supabase
+      .from('challenge_participants')
+      .select('completed')
+      .eq('challenge_id', challengeId)
+      .eq('player_id', playerId)
+      .single();
+
+    const wasAlreadyCompleted = existing?.completed;
 
     const { error } = await supabase
       .from('challenge_participants')
@@ -180,6 +254,20 @@ export async function updateChallengeProgress(
       .eq('player_id', playerId);
 
     if (error) return { success: false, error: error.message };
+
+    // Fire-and-forget: auto-post completion to team wall
+    if (completed && !wasAlreadyCompleted) {
+      const name = playerName || 'A player';
+      postChallengeCompletionToWall({
+        challengeId,
+        challengeTitle: challenge.title,
+        teamId: challenge.team_id,
+        playerId,
+        playerName: name,
+        xpEarned: challenge.xp_reward || 0,
+      }).catch(() => {});
+    }
+
     return { success: true, completed };
   } catch (err: any) {
     return { success: false, error: err.message };
@@ -365,6 +453,22 @@ export async function completeChallenge(challengeId: string): Promise<{
     const completedParticipants = participants.filter((p) => p.completed);
     const winnerId = participants[0]?.player_id;
 
+    // Auto-post winner/completion to team wall
+    const winnerProfile = winnerId
+      ? (await supabase.from('profiles').select('full_name').eq('id', winnerId).single()).data
+      : null;
+
+    postChallengeWinnerToWall({
+      challengeId,
+      challengeTitle: challenge.title,
+      teamId: challenge.team_id,
+      coachId: challenge.coach_id,
+      winnerId: winnerId || '',
+      winnerName: winnerProfile?.full_name || 'the team',
+      completedCount: completedParticipants.length,
+      totalParticipants: participants.length,
+    }).catch(() => {});
+
     // Award XP to completed participants
     const xpEntries: Array<{
       player_id: string;
@@ -419,6 +523,25 @@ export async function completeChallenge(challengeId: string): Promise<{
           .update({ total_xp: newXP, player_level: level })
           .eq('id', pid);
       }
+    }
+
+    // Fire-and-forget: notify winner and completers
+    if (challenge.challenge_type === 'individual' && winnerId) {
+      notifyChallengeWinner({
+        winnerUserId: winnerId,
+        challengeId,
+        challengeTitle: challenge.title,
+        teamId: challenge.team_id,
+      }).catch(() => {});
+    }
+    for (const cp of completedParticipants) {
+      notifyChallengeCompleted({
+        playerUserId: cp.player_id,
+        challengeId,
+        challengeTitle: challenge.title,
+        xpEarned: challenge.xp_reward || 0,
+        teamId: challenge.team_id,
+      }).catch(() => {});
     }
 
     return {

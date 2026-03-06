@@ -81,6 +81,119 @@ export async function postLevelUpToWall(params: {
 }
 
 // =============================================================================
+// Auto-post: Challenge Milestone → Team Wall
+// =============================================================================
+
+export async function postChallengeMilestoneToWall(params: {
+  challengeId: string;
+  challengeTitle: string;
+  teamId: string;
+  coachId: string;
+  milestoneText: string; // e.g. "50% of the team has joined!"
+}): Promise<void> {
+  const { challengeId, challengeTitle, teamId, coachId, milestoneText } = params;
+
+  const displayText = `Challenge "${challengeTitle}" — ${milestoneText}`;
+  const metadata = JSON.stringify({
+    type: 'challenge_milestone',
+    challengeId,
+    challengeTitle,
+    milestoneText,
+  });
+
+  const { error } = await supabase.from('team_posts').insert({
+    team_id: teamId,
+    author_id: coachId,
+    post_type: 'milestone',
+    title: metadata,
+    content: displayText,
+    is_pinned: false,
+    is_published: true,
+  });
+
+  if (__DEV__ && error) console.error('[EngagementEvents] challenge milestone post error:', error);
+}
+
+// =============================================================================
+// Auto-post: Challenge Completion → Team Wall
+// =============================================================================
+
+export async function postChallengeCompletionToWall(params: {
+  challengeId: string;
+  challengeTitle: string;
+  teamId: string;
+  playerId: string;
+  playerName: string;
+  xpEarned: number;
+}): Promise<void> {
+  const { challengeId, challengeTitle, teamId, playerId, playerName, xpEarned } = params;
+
+  const displayText = `${playerName} completed the challenge "${challengeTitle}" and earned +${xpEarned} XP!`;
+  const metadata = JSON.stringify({
+    type: 'challenge_completion',
+    challengeId,
+    challengeTitle,
+    playerId,
+    playerName,
+    xpEarned,
+  });
+
+  const { error } = await supabase.from('team_posts').insert({
+    team_id: teamId,
+    author_id: playerId,
+    post_type: 'milestone',
+    title: metadata,
+    content: displayText,
+    is_pinned: false,
+    is_published: true,
+  });
+
+  if (__DEV__ && error) console.error('[EngagementEvents] challenge completion post error:', error);
+}
+
+// =============================================================================
+// Auto-post: Challenge Winner → Team Wall
+// =============================================================================
+
+export async function postChallengeWinnerToWall(params: {
+  challengeId: string;
+  challengeTitle: string;
+  teamId: string;
+  coachId: string;
+  winnerId: string;
+  winnerName: string;
+  completedCount: number;
+  totalParticipants: number;
+}): Promise<void> {
+  const { challengeId, challengeTitle, teamId, coachId, winnerId, winnerName, completedCount, totalParticipants } = params;
+
+  const displayText = winnerId
+    ? `Challenge "${challengeTitle}" is complete! Winner: ${winnerName}! ${completedCount}/${totalParticipants} players finished.`
+    : `Challenge "${challengeTitle}" is complete! ${completedCount}/${totalParticipants} players finished.`;
+  const metadata = JSON.stringify({
+    type: 'challenge_winner',
+    challengeId,
+    challengeTitle,
+    winnerId,
+    winnerName,
+    completedCount,
+    totalParticipants,
+  });
+
+  const { error } = await supabase.from('team_posts').insert({
+    team_id: teamId,
+    author_id: coachId,
+    post_type: 'milestone',
+    title: metadata,
+    content: displayText,
+    is_pinned: false,
+    is_published: true,
+  });
+
+  if (__DEV__ && error) console.error('[EngagementEvents] challenge winner post error:', error);
+}
+
+// =============================================================================
 // Progress Nudges — achievements at 80%+ completion
 // =============================================================================
 
