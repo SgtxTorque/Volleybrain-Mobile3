@@ -113,6 +113,7 @@ const MENU_SECTIONS: MenuSection[] = [
     items: [
       { icon: 'analytics', label: 'Game Prep', route: '/game-prep' },
       { icon: 'grid', label: 'Lineup Builder', route: '/lineup-builder' },
+      { icon: 'clipboard', label: 'Player Evaluations', route: '/evaluation-session' },
       { icon: 'trophy', label: 'Challenges', route: '/coach-challenge-dashboard' },
       { icon: 'checkmark-circle', label: 'Attendance', route: '/attendance' },
       { icon: 'stats-chart', label: 'Game Results', route: '/game-results' },

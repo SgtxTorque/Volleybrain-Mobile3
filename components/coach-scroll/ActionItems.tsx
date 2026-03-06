@@ -63,7 +63,7 @@ export default function ActionItems({ teamId, pendingStatsCount }: Props) {
         <TouchableOpacity
           style={styles.item}
           activeOpacity={0.7}
-          onPress={() => router.push(`/player-evaluation?teamId=${teamId}` as any)}
+          onPress={() => router.push(`/evaluation-session?teamId=${teamId}` as any)}
         >
           <Text style={styles.itemText}>
             {'\u{1F4CB}'} {evalCount} player{evalCount > 1 ? 's' : ''} due for evaluation {'\u2192'}

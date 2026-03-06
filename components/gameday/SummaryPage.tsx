@@ -282,6 +282,23 @@ export default function SummaryPage() {
         </Text>
       </View>
 
+      {/* Post-game evaluation nudge */}
+      <TouchableOpacity
+        style={s.evalNudge}
+        activeOpacity={0.7}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          router.push(`/player-evaluations?teamId=${match?.teamId || ''}` as any);
+        }}
+      >
+        <Ionicons name="clipboard-outline" size={20} color={ACCENT} />
+        <View style={{ flex: 1 }}>
+          <Text style={s.evalNudgeTitle}>Evaluate player performance</Text>
+          <Text style={s.evalNudgeSubtitle}>Rate skills while observations are fresh</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={16} color="rgba(255,255,255,0.3)" />
+      </TouchableOpacity>
+
       {/* Actions */}
       <View style={s.actions}>
         <TouchableOpacity style={s.syncBtn} onPress={handleSync} disabled={syncing}>
@@ -505,5 +522,27 @@ const s = StyleSheet.create({
     fontFamily: FONTS.bodySemiBold,
     fontSize: 13,
     color: ACCENT,
+  },
+  evalNudge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: 'rgba(75,185,236,0.08)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(75,185,236,0.15)',
+    padding: 14,
+    marginBottom: 16,
+  },
+  evalNudgeTitle: {
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 14,
+    color: '#fff',
+  },
+  evalNudgeSubtitle: {
+    fontFamily: FONTS.bodyMedium,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.5)',
+    marginTop: 1,
   },
 });
