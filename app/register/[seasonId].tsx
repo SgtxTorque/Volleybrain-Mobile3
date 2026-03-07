@@ -825,15 +825,32 @@ export default function RegistrationWizardScreen() {
             style={s.successMascot}
             resizeMode="contain"
           />
-          <Text style={s.successTitle}>Registration Submitted!</Text>
+          <Text style={s.successTitle}>You're Registered!</Text>
           <Text style={s.successSubtitle}>
-            {children.length} child{children.length !== 1 ? 'ren' : ''} registered for{'\n'}
-            {season.name}{sport?.name ? ` ${sport.name}` : ''}{'\n'}
-            at {organization?.name || 'your organization'}
+            {children.length === 1
+              ? `${children[0].first_name} is signed up for`
+              : `${children.map(c => c.first_name).join(' & ')} are signed up for`}
+            {'\n'}{season.name}{sport?.name ? ` ${sport.name}` : ''}
           </Text>
-          <Text style={s.successHint}>
-            The admin will review your registration shortly.
-          </Text>
+
+          {/* What's next */}
+          <View style={s.whatsNextBox}>
+            <Text style={s.whatsNextTitle}>What's next?</Text>
+            <View style={s.whatsNextItem}>
+              <Ionicons name="mail-outline" size={16} color={BRAND.teal} />
+              <Text style={s.whatsNextText}>You'll receive a confirmation email</Text>
+            </View>
+            <View style={s.whatsNextItem}>
+              <Ionicons name="people-outline" size={16} color={BRAND.teal} />
+              <Text style={s.whatsNextText}>Team assignments coming soon</Text>
+            </View>
+            {feeBreakdown && feeBreakdown.total > 0 && (
+              <View style={s.whatsNextItem}>
+                <Ionicons name="wallet-outline" size={16} color={BRAND.teal} />
+                <Text style={s.whatsNextText}>Complete any outstanding payments</Text>
+              </View>
+            )}
+          </View>
 
           <View style={s.successButtons}>
             <TouchableOpacity
@@ -897,7 +914,19 @@ export default function RegistrationWizardScreen() {
           </View>
         </View>
 
-        {/* Progress bar */}
+        {/* Step dots + progress bar */}
+        <View style={s.stepDotsRow}>
+          {steps.map((step, idx) => (
+            <View
+              key={step.key}
+              style={[
+                s.stepDot,
+                idx < currentStep && { backgroundColor: accentColor },
+                idx === currentStep && { backgroundColor: accentColor, transform: [{ scale: 1.3 }] },
+              ]}
+            />
+          ))}
+        </View>
         <View style={s.progressBarBg}>
           <View
             style={[
@@ -1810,11 +1839,24 @@ const createStyles = (accentColor: string) => StyleSheet.create({
     color: BRAND.textMuted,
     fontFamily: FONTS.bodySemiBold,
   },
-  progressBarBg: {
-    height: 6,
+  stepDotsRow: {
+    flexDirection: 'row' as const,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    gap: 8,
+    marginBottom: 8,
+  },
+  stepDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: BRAND.border,
-    borderRadius: 3,
-    overflow: 'hidden',
+  },
+  progressBarBg: {
+    height: 4,
+    backgroundColor: BRAND.border,
+    borderRadius: 2,
+    overflow: 'hidden' as const,
   },
   progressBarFill: {
     height: '100%',
@@ -2137,11 +2179,31 @@ const createStyles = (accentColor: string) => StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
   },
-  successHint: {
+  whatsNextBox: {
+    backgroundColor: `${BRAND.teal}08`,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: `${BRAND.teal}20`,
+    padding: 16,
+    gap: 10,
+    width: '100%',
+  },
+  whatsNextTitle: {
     fontSize: 14,
+    fontFamily: FONTS.bodySemiBold,
+    color: BRAND.textPrimary,
+    marginBottom: 2,
+  },
+  whatsNextItem: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 10,
+  },
+  whatsNextText: {
+    fontSize: 14,
+    fontFamily: FONTS.bodyMedium,
     color: BRAND.textMuted,
-    textAlign: 'center',
-    marginBottom: 16,
+    flex: 1,
   },
   successButtons: {
     gap: 12,
