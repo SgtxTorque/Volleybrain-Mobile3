@@ -33,6 +33,8 @@ import {
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import SignaturePad from '@/components/SignaturePad';
+
 // ============================================
 // TYPES
 // ============================================
@@ -213,8 +215,9 @@ export default function RegistrationWizardScreen() {
   const [children, setChildren] = useState<ChildData[]>([]);
   const [sharedInfo, setSharedInfo] = useState<Record<string, string>>({});
   const [waiverState, setWaiverState] = useState<Record<string, boolean>>({});
+  const [waiverScrolled, setWaiverScrolled] = useState<Record<string, boolean>>({});
+  const [signatureData, setSignatureData] = useState<string | null>(null);
   const [customAnswers, setCustomAnswers] = useState<Record<string, string>>({});
-  const [signature, setSignature] = useState('');
 
   // Child management (Phase 2)
   const [returningPlayers, setReturningPlayers] = useState<ReturningPlayer[]>([]);
@@ -495,6 +498,10 @@ export default function RegistrationWizardScreen() {
     const signatureDate = new Date().toISOString();
     const createdPlayerIds: string[] = [];
     const createdRegistrationIds: string[] = [];
+    const createdWaiverSigIds: string[] = [];
+    const signatureName = signatureData?.startsWith('typed:')
+      ? signatureData.slice(6)
+      : (sharedInfo.parent1_name || 'Parent');
 
     try {
       // 1. Get or create family
@@ -570,7 +577,7 @@ export default function RegistrationWizardScreen() {
             waiver_liability: waiverState.liability || false,
             waiver_photo: waiverState.photo_release || false,
             waiver_conduct: waiverState.code_of_conduct || false,
-            waiver_signed_by: signature || null,
+            waiver_signed_by: signatureName,
             waiver_signed_date: signatureDate,
             family_id: familyId || null,
             season_id: seasonId,
@@ -603,15 +610,15 @@ export default function RegistrationWizardScreen() {
             registration_source: 'mobile',
             waivers_accepted: waiverState,
             custom_answers: Object.keys(customAnswers).length > 0 ? customAnswers : null,
-            signature_name: signature || null,
+            signature_name: signatureName,
             signature_date: signatureDate,
             registration_data: {
               player: child,
               shared: sharedInfo,
               waivers: waiverState,
               custom_questions: customAnswers,
-              signature: { name: signature, date: signatureDate },
-              source: 'mobile_app',
+              signature: { name: signatureName, date: signatureDate, hasCanvas: !!signatureData && !signatureData.startsWith('typed:') },
+              source: 'mobile_native',
               app_version: '1.0.0',
               submitted_by_user_id: user!.id,
             },
@@ -621,6 +628,30 @@ export default function RegistrationWizardScreen() {
           throw new Error(`Failed to create registration for ${child.first_name}`);
         }
         if (registration) createdRegistrationIds.push(registration.id);
+
+        // Insert waiver_signatures for each accepted waiver
+        const waiverEntries = Object.entries(waiverState).filter(([_, accepted]) => accepted);
+        if (waiverEntries.length > 0) {
+          const waiverRows = waiverEntries.map(([waiverType]) => ({
+            player_id: player.id,
+            organization_id: data!.season.organization_id,
+            season_id: seasonId,
+            signed_by_name: signatureName,
+            signed_by_email: sharedInfo.parent1_email || null,
+            signed_by_user_id: user!.id,
+            signed_by_relation: 'parent',
+            signature_data: signatureData || null,
+            status: 'signed',
+            signed_at: signatureDate,
+          }));
+          const { data: sigs, error: sigError } = await supabase
+            .from('waiver_signatures')
+            .insert(waiverRows)
+            .select('id');
+          if (!sigError && sigs) {
+            sigs.forEach(s => createdWaiverSigIds.push(s.id));
+          }
+        }
 
         // Link player to parent
         await supabase.from('player_parents').upsert({
@@ -636,6 +667,9 @@ export default function RegistrationWizardScreen() {
       setSubmitted(true);
     } catch (err: any) {
       // ROLLBACK
+      if (createdWaiverSigIds.length > 0) {
+        await supabase.from('waiver_signatures').delete().in('id', createdWaiverSigIds);
+      }
       if (createdRegistrationIds.length > 0) {
         await supabase.from('registrations').delete().in('id', createdRegistrationIds);
       }
@@ -734,8 +768,8 @@ export default function RegistrationWizardScreen() {
           return;
         }
       }
-      if (!signature.trim()) {
-        Alert.alert('Signature Required', 'Please type your full name as a digital signature.');
+      if (!signatureData) {
+        Alert.alert('Signature Required', 'Please provide your signature to continue.');
         return;
       }
     }
@@ -1368,44 +1402,91 @@ export default function RegistrationWizardScreen() {
           /* ============ WAIVERS & SIGNATURE STEP ============ */
           <View style={s.stepContainer}>
             <Text style={s.sectionTitle}>Waivers & Agreements</Text>
+            <Text style={s.waiverSubtitle}>
+              Please read and accept each waiver below, then sign at the bottom.
+            </Text>
 
             {Object.entries(data.config.waivers)
               .filter(([_, w]) => w.enabled)
               .map(([key, waiver]) => {
                 const accepted = waiverState[key] || false;
+                const hasScrolled = waiverScrolled[key] || false;
+                const canAccept = hasScrolled || !waiver.text || waiver.text.length < 200;
+
                 return (
-                  <View key={key} style={s.waiverCard}>
+                  <View key={key} style={[s.waiverCard, accepted && s.waiverCardAccepted]}>
+                    <Text style={s.waiverTitle}>
+                      {waiver.title}
+                      {waiver.required && <Text style={s.required}> *</Text>}
+                    </Text>
+
+                    {/* Scrollable waiver text */}
+                    {waiver.text && waiver.text.length > 0 && (
+                      <View style={s.waiverTextWrap}>
+                        <ScrollView
+                          style={s.waiverScroll}
+                          nestedScrollEnabled
+                          showsVerticalScrollIndicator
+                          onScroll={({ nativeEvent }) => {
+                            const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+                            const nearBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - 20;
+                            if (nearBottom && !waiverScrolled[key]) {
+                              setWaiverScrolled(prev => ({ ...prev, [key]: true }));
+                            }
+                          }}
+                          scrollEventThrottle={100}
+                        >
+                          <Text style={s.waiverText}>{waiver.text}</Text>
+                        </ScrollView>
+                        {!hasScrolled && waiver.text.length >= 200 && (
+                          <View style={s.scrollHint}>
+                            <Ionicons name="chevron-down" size={14} color={BRAND.textMuted} />
+                            <Text style={s.scrollHintText}>Scroll to read full waiver</Text>
+                          </View>
+                        )}
+                      </View>
+                    )}
+
+                    {/* Accept checkbox — only active after scrolling */}
                     <TouchableOpacity
-                      style={s.waiverHeader}
-                      onPress={() => setWaiverState(prev => ({ ...prev, [key]: !prev[key] }))}
-                      activeOpacity={0.7}
+                      style={[s.waiverAcceptRow, !canAccept && s.waiverAcceptDisabled]}
+                      onPress={() => {
+                        if (canAccept) {
+                          setWaiverState(prev => ({ ...prev, [key]: !prev[key] }));
+                        }
+                      }}
+                      activeOpacity={canAccept ? 0.7 : 1}
                     >
-                      <View style={[s.checkbox, accepted && { backgroundColor: accentColor, borderColor: accentColor }]}>
+                      <View style={[
+                        s.checkbox,
+                        accepted && { backgroundColor: accentColor, borderColor: accentColor },
+                        !canAccept && { opacity: 0.4 },
+                      ]}>
                         {accepted && <Ionicons name="checkmark" size={14} color={BRAND.white} />}
                       </View>
-                      <Text style={s.waiverTitle}>
-                        {waiver.title}
-                        {waiver.required && <Text style={s.required}> *</Text>}
+                      <Text style={[s.waiverAcceptLabel, !canAccept && { color: BRAND.textMuted }]}>
+                        I have read and agree to this waiver
                       </Text>
+                      {accepted && (
+                        <View style={s.signedBadge}>
+                          <Ionicons name="checkmark-circle" size={16} color={BRAND.teal} />
+                          <Text style={s.signedBadgeText}>Accepted</Text>
+                        </View>
+                      )}
                     </TouchableOpacity>
-                    <Text style={s.waiverText}>{waiver.text}</Text>
                   </View>
                 );
               })}
 
-            {/* Digital Signature */}
+            {/* Signature Pad */}
             <View style={s.signatureSection}>
-              <Text style={s.sectionTitle}>Digital Signature</Text>
-              <Text style={s.signatureHint}>
-                By typing your full name below, you agree to the terms above.
-              </Text>
-              <TextInput
-                style={s.signatureInput}
-                value={signature}
-                onChangeText={setSignature}
-                placeholder={sharedInfo.parent1_name || 'Full legal name'}
-                placeholderTextColor={BRAND.textMuted}
-                autoCapitalize="words"
+              <Text style={s.sectionTitle}>Your Signature</Text>
+              <SignaturePad
+                onSave={(base64) => setSignatureData(base64)}
+                onClear={() => setSignatureData(null)}
+                hasSigned={!!signatureData}
+                parentName={sharedInfo.parent1_name}
+                accentColor={accentColor}
               />
             </View>
           </View>
@@ -1492,12 +1573,25 @@ export default function RegistrationWizardScreen() {
                   {Object.entries(data.config.waivers)
                     .filter(([_, w]) => w.enabled)
                     .map(([key, w]) => (
-                      <Text key={key} style={s.reviewDetail}>
-                        {waiverState[key] ? '\u2713' : '\u2717'} {w.title}
-                      </Text>
+                      <View key={key} style={s.waiverSummaryItem}>
+                        <Ionicons
+                          name={waiverState[key] ? 'checkmark-circle' : 'close-circle'}
+                          size={16}
+                          color={waiverState[key] ? BRAND.teal : BRAND.error}
+                        />
+                        <Text style={s.reviewDetail}>{w.title}</Text>
+                      </View>
                     ))}
                 </View>
-                <Text style={s.reviewDetail}>Signed by: {signature}</Text>
+                {signatureData && (
+                  <View style={s.waiverSummaryItem}>
+                    <Ionicons name="create-outline" size={14} color={BRAND.teal} />
+                    <Text style={s.reviewDetail}>
+                      Signed by: {signatureData.startsWith('typed:') ? signatureData.slice(6) : sharedInfo.parent1_name || 'Parent'}
+                      {signatureData.startsWith('typed:') ? ' (typed)' : ' (drawn)'}
+                    </Text>
+                  </View>
+                )}
               </View>
             )}
 
@@ -2008,7 +2102,12 @@ const createStyles = (accentColor: string) => StyleSheet.create({
     lineHeight: 18,
   },
   waiverSummaryRow: {
-    gap: 2,
+    gap: 6,
+  },
+  waiverSummaryItem: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 6,
   },
 
   // Success screen
@@ -2049,51 +2148,92 @@ const createStyles = (accentColor: string) => StyleSheet.create({
   },
 
   // Waiver cards
+  waiverSubtitle: {
+    fontSize: 14,
+    fontFamily: FONTS.bodyMedium,
+    color: BRAND.textMuted,
+    lineHeight: 20,
+    marginBottom: 4,
+  },
   waiverCard: {
     backgroundColor: BRAND.white,
     borderRadius: radii.card,
     borderWidth: 1,
     borderColor: BRAND.border,
-    padding: 14,
-    gap: 10,
+    padding: 16,
+    gap: 12,
     ...shadows.card,
   },
-  waiverHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+  waiverCardAccepted: {
+    borderColor: BRAND.teal,
+    backgroundColor: `${BRAND.teal}06`,
   },
   waiverTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontFamily: FONTS.bodySemiBold,
     color: BRAND.textPrimary,
-    flex: 1,
+  },
+  waiverTextWrap: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: BRAND.border,
+    backgroundColor: BRAND.warmGray,
+    overflow: 'hidden' as const,
+  },
+  waiverScroll: {
+    maxHeight: 160,
+    padding: 12,
   },
   waiverText: {
     fontSize: 13,
     color: BRAND.textMuted,
     lineHeight: 19,
-    marginLeft: 36,
+  },
+  scrollHint: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: 4,
+    paddingVertical: 6,
+    backgroundColor: `${BRAND.textMuted}0A`,
+    borderTopWidth: 1,
+    borderTopColor: BRAND.border,
+  },
+  scrollHintText: {
+    fontSize: 12,
+    fontFamily: FONTS.bodyMedium,
+    color: BRAND.textMuted,
+  },
+  waiverAcceptRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 10,
+    paddingTop: 4,
+  },
+  waiverAcceptDisabled: {
+    opacity: 0.5,
+  },
+  waiverAcceptLabel: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: FONTS.bodyMedium,
+    color: BRAND.textPrimary,
+  },
+  signedBadge: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 4,
+  },
+  signedBadgeText: {
+    fontSize: 12,
+    fontFamily: FONTS.bodySemiBold,
+    color: BRAND.teal,
   },
 
   // Digital signature
   signatureSection: {
-    gap: 8,
-    marginTop: 8,
-  },
-  signatureHint: {
-    fontSize: 13,
-    color: BRAND.textMuted,
-    lineHeight: 18,
-  },
-  signatureInput: {
-    backgroundColor: BRAND.white,
-    borderBottomWidth: 2,
-    borderBottomColor: BRAND.border,
-    padding: 14,
-    fontSize: 18,
-    color: BRAND.textPrimary,
-    fontStyle: 'italic',
+    gap: 10,
+    marginTop: 12,
   },
 
   // Medical toggle
