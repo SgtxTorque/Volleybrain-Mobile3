@@ -52,9 +52,11 @@ type PlayerCardProps = {
   teamLogoUrl?: string | null;
   /** Overall rating (0-99) — shows mini OVR badge when provided */
   overallRating?: number | null;
+  /** Registration status badge: pending (gold clock), payment_due (coral $), complete (teal check) */
+  registrationStatus?: 'pending' | 'payment_due' | 'complete' | null;
 };
 
-export default function PlayerCard({ player, onPress, size = 'medium', teamLogoUrl, overallRating }: PlayerCardProps) {
+export default function PlayerCard({ player, onPress, size = 'medium', teamLogoUrl, overallRating, registrationStatus }: PlayerCardProps) {
   const { colors } = useTheme();
   const { isCoach, isAdmin } = usePermissions();
   // Derive dark mode from background color
@@ -177,6 +179,20 @@ export default function PlayerCard({ player, onPress, size = 'medium', teamLogoU
         >
           <Ionicons name="call" size={size === 'small' ? 12 : 14} color="#fff" />
         </TouchableOpacity>
+      )}
+
+      {/* Registration status badge */}
+      {registrationStatus && registrationStatus !== 'complete' && (
+        <View style={[
+          s.regBadge,
+          { backgroundColor: registrationStatus === 'pending' ? '#E5A100' : BRAND.coral },
+        ]}>
+          <Ionicons
+            name={registrationStatus === 'pending' ? 'time' : 'cash-outline'}
+            size={size === 'small' ? 10 : 12}
+            color="#fff"
+          />
+        </View>
       )}
 
       {/* Team color accent line at bottom */}
@@ -377,6 +393,17 @@ const createStyles = (colors: any, isDark: boolean, size: 'small' | 'medium' | '
       fontSize: size === 'small' ? 8 : 9,
       fontFamily: FONTS.bodyExtraBold,
       color: '#000',
+    },
+    regBadge: {
+      position: 'absolute',
+      top: size === 'small' ? 6 : 8,
+      right: size === 'small' ? 6 : 8,
+      width: size === 'small' ? 18 : 22,
+      height: size === 'small' ? 18 : 22,
+      borderRadius: size === 'small' ? 9 : 11,
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 20,
     },
   });
 };

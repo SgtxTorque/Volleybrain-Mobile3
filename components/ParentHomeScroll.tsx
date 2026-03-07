@@ -61,6 +61,7 @@ import ChallengeVerifyCard from './parent-scroll/ChallengeVerifyCard';
 import ParentEvaluationCard from './parent-scroll/EvaluationCard';
 import LevelUpCelebrationModal from './LevelUpCelebrationModal';
 import RegistrationCard from './parent-scroll/RegistrationCard';
+import RegistrationStatusCard from './parent-scroll/RegistrationStatusCard';
 import IncompleteProfileCard from './parent-scroll/IncompleteProfileCard';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
@@ -453,8 +454,9 @@ export default function ParentHomeScroll() {
           )}
         </Animated.View>
 
-        {/* ─── REGISTRATION CARD ─────────────────────────────── */}
+        {/* ─── REGISTRATION STATUS + OPEN REGISTRATION ─────── */}
         <View style={{ paddingHorizontal: SPACING.pagePadding }}>
+          <RegistrationStatusCard />
           <RegistrationCard childName={data.children.length > 0 ? data.children[0].first_name : null} />
           <IncompleteProfileCard />
         </View>

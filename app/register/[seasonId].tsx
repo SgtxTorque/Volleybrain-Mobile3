@@ -863,15 +863,24 @@ export default function RegistrationWizardScreen() {
           <View style={s.successButtons}>
             <TouchableOpacity
               style={[s.nextButton, { backgroundColor: accentColor }]}
-              onPress={() => router.replace('/parent-registration-hub' as any)}
-            >
-              <Text style={s.nextButtonText}>View My Registrations</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={s.backButton}
               onPress={() => router.replace('/(tabs)' as any)}
             >
-              <Text style={s.backButtonText}>Back to Home</Text>
+              <Text style={s.nextButtonText}>Go Home</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[s.backButton, { borderWidth: 1, borderColor: accentColor, borderRadius: 12, paddingVertical: 14, paddingHorizontal: 28, justifyContent: 'center', alignItems: 'center' }]}
+              onPress={() => {
+                setSubmitted(false);
+                setCurrentStep(0);
+                setChildren([]);
+                setSignatureData(null);
+                setWaiverState({});
+                setWaiverScrolled({});
+                setCustomAnswers({});
+                setSharedInfo({});
+              }}
+            >
+              <Text style={[s.backButtonText, { color: accentColor }]}>Register Another Child</Text>
             </TouchableOpacity>
           </View>
 
