@@ -9,7 +9,7 @@ import { useRouter } from 'expo-router';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 import { SPACING } from '@/theme/spacing';
-import type { SeasonRecord, PaymentStatus, LastChatPreview } from '@/hooks/useParentHomeData';
+import type { SeasonRecord, PaymentStatus, LastChatPreview, FamilyChild, SelectedContext } from '@/hooks/useParentHomeData';
 
 type Props = {
   record: SeasonRecord | null;
@@ -17,14 +17,25 @@ type Props = {
   xp: { totalXp: number; level: number; progress: number } | null;
   chat: LastChatPreview | null;
   childPlayerId?: string;
+  /** Optional: selected context for per-child XP display */
+  selectedContext?: SelectedContext;
+  /** Optional: all children for context-aware XP lookup */
+  allChildren?: FamilyChild[];
 };
 
-export default function MetricGrid({ record, payment, xp, chat, childPlayerId }: Props) {
+export default function MetricGrid({ record, payment, xp, chat, childPlayerId, selectedContext, allChildren }: Props) {
   const router = useRouter();
 
-  const showBalance = payment.balance > 0;
+  // Context-aware XP: use selected child's data when context is active
+  const contextChild = selectedContext && allChildren
+    ? allChildren.find(c => c.playerId === selectedContext.childId)
+    : null;
+  const displayXp = contextChild && contextChild.level > 0
+    ? { totalXp: contextChild.xp, level: contextChild.level, progress: contextChild.xpProgress }
+    : xp;
+  const displayPlayerId = contextChild?.playerId || childPlayerId;
 
-  // Balance amount color by urgency (simplified — we don't have due dates in current data)
+  const showBalance = payment.balance > 0;
   const balanceColor = showBalance ? BRAND.error : BRAND.success;
 
   return (
@@ -75,21 +86,21 @@ export default function MetricGrid({ record, payment, xp, chat, childPlayerId }:
         <TouchableOpacity
           style={styles.card}
           activeOpacity={0.7}
-          onPress={() => router.push(childPlayerId ? `/achievements?playerId=${childPlayerId}` as any : '/achievements' as any)}
+          onPress={() => router.push(displayPlayerId ? `/achievements?playerId=${displayPlayerId}` as any : '/achievements' as any)}
         >
           <Text style={styles.emoji}>{'\u{2B50}'}</Text>
           <Text style={styles.bigNumber}>
-            {xp ? `Level ${xp.level}` : '\u{2014}'}
+            {displayXp ? `Level ${displayXp.level}` : '\u{2014}'}
           </Text>
           <Text style={styles.subtitle}>
-            {xp ? `${xp.totalXp} XP` : 'No XP yet'}
+            {displayXp ? `${displayXp.totalXp} XP` : 'No XP yet'}
           </Text>
-          {xp && (
+          {displayXp && (
             <View style={styles.progressBarBg}>
               <View
                 style={[
                   styles.progressBarFill,
-                  { width: `${Math.min(xp.progress * 100, 100)}%` },
+                  { width: `${Math.min(displayXp.progress * 100, 100)}%` },
                 ]}
               />
             </View>

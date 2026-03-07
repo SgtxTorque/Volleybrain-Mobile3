@@ -51,6 +51,7 @@ import BillboardHero from './parent-scroll/BillboardHero';
 import AttentionBanner from './parent-scroll/AttentionBanner';
 import AthleteCardV2 from './parent-scroll/AthleteCardV2';
 import MetricGrid from './parent-scroll/MetricGrid';
+import ContextBar from './parent-scroll/ContextBar';
 import TeamHubPreview from './parent-scroll/TeamHubPreview';
 import SeasonSnapshot from './parent-scroll/SeasonSnapshot';
 import RecentBadges from './parent-scroll/RecentBadges';
@@ -462,6 +463,15 @@ export default function ParentHomeScroll() {
           <IncompleteProfileCard />
         </View>
 
+        {/* ─── CONTEXT BAR (only when context selected) ────────── */}
+        <ContextBar
+          context={data.selectedContext}
+          allChildren={data.allChildren}
+          isMulti={data.isMultiChild || data.isMultiSport}
+          onSwitch={() => data.setSelectedContext(null)}
+          onClear={() => data.setSelectedContext(null)}
+        />
+
         {/* ─── BILLBOARD HERO (auto-cycling events) ───────────── */}
         <BillboardHero
           events={data.allUpcomingEvents}
@@ -550,6 +560,8 @@ export default function ParentHomeScroll() {
           xp={data.childXp}
           chat={data.lastChat}
           childPlayerId={data.children[0]?.id}
+          selectedContext={data.selectedContext}
+          allChildren={data.allChildren}
         />
 
         {/* ─── TEAM HUB PREVIEW (flat) ──────────────────────── */}
