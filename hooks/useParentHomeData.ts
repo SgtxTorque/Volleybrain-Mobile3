@@ -86,6 +86,7 @@ export function useParentHomeData() {
   const [lastChat, setLastChat] = useState<LastChatPreview | null>(null);
   const [childStats, setChildStats] = useState<PlayerStats | null>(null);
   const [childXp, setChildXp] = useState<{ totalXp: number; level: number; progress: number } | null>(null);
+  const [heroRsvpStatus, setHeroRsvpStatus] = useState<'yes' | 'no' | 'maybe' | null>(null);
 
   const fetchAll = useCallback(async () => {
     if (!user?.id) {
@@ -226,8 +227,20 @@ export function useParentHomeData() {
             team_name: child?.team_name || '',
             opponent_name: first.opponent_name,
           });
+          // Fetch current RSVP status for hero event
+          const heroChild = formattedChildren.find((c) => c.team_id === first.team_id) || formattedChildren[0];
+          if (heroChild) {
+            const { data: rsvpData } = await supabase
+              .from('event_rsvps')
+              .select('status')
+              .eq('event_id', first.id)
+              .eq('player_id', heroChild.id)
+              .maybeSingle();
+            setHeroRsvpStatus((rsvpData?.status as 'yes' | 'no' | 'maybe') || null);
+          }
         } else {
           setHeroEvent(null);
+          setHeroRsvpStatus(null);
         }
 
         // ── Season record ──
@@ -427,6 +440,8 @@ export function useParentHomeData() {
   const rsvpHeroEvent = useCallback(async (status: 'yes' | 'no' | 'maybe') => {
     if (!user?.id || !heroEvent || children.length === 0) return;
     const child = children.find((c) => c.team_name === heroEvent.team_name) || children[0];
+    // Optimistic update for instant UI feedback
+    setHeroRsvpStatus(status);
     try {
       await supabase.from('event_rsvps').upsert(
         {
@@ -442,6 +457,7 @@ export function useParentHomeData() {
       await fetchAll();
     } catch (err) {
       if (__DEV__) console.error('[useParentHomeData] RSVP error:', err);
+      setHeroRsvpStatus(null); // revert on error
     }
   }, [user?.id, heroEvent, children, fetchAll]);
 
@@ -460,6 +476,7 @@ export function useParentHomeData() {
     lastChat,
     childStats,
     childXp,
+    heroRsvpStatus,
     rsvpHeroEvent,
   };
 }

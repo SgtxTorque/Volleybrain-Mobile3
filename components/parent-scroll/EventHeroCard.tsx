@@ -3,7 +3,7 @@
  * Features parallax gradient reveal on scroll approach.
  */
 import React, { useEffect } from 'react';
-import { Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -34,9 +34,12 @@ export type HeroEvent = {
   opponent_name: string | null;
 };
 
+type RsvpStatus = 'yes' | 'no' | 'maybe' | null;
+
 type Props = {
   event: HeroEvent | null;
   scrollY: SharedValue<number>;
+  rsvpStatus?: RsvpStatus;
   onPress?: () => void;
   onRsvp?: () => void;
   onDirections?: () => void;
@@ -68,7 +71,20 @@ function getEventLabel(event: HeroEvent): string {
   return isToday(event.event_date) ? 'TODAY' : 'UPCOMING';
 }
 
-export default function EventHeroCard({ event, scrollY, onPress, onRsvp, onDirections }: Props) {
+function getRsvpDisplay(status: RsvpStatus): { label: string; bg: string; textColor: string } {
+  switch (status) {
+    case 'yes':
+      return { label: 'GOING \u2713', bg: BRAND.success, textColor: BRAND.white };
+    case 'no':
+      return { label: 'NOT GOING', bg: BRAND.error, textColor: BRAND.white };
+    case 'maybe':
+      return { label: 'MAYBE', bg: '#F59E0B', textColor: BRAND.white };
+    default:
+      return { label: 'RSVP', bg: BRAND.skyBlue, textColor: BRAND.white };
+  }
+}
+
+export default function EventHeroCard({ event, scrollY, rsvpStatus, onPress, onRsvp, onDirections }: Props) {
   // Pulse animation for "TODAY" green dot (0.4–1.0 on 2s cycle)
   const pulseOpacity = useSharedValue(1);
   useEffect(() => {
@@ -125,27 +141,21 @@ export default function EventHeroCard({ event, scrollY, onPress, onRsvp, onDirec
       activeOpacity={0.85}
       onPress={onPress}
     >
-      {/* Background gradient with parallax reveal */}
+      {/* Sport-themed background image with parallax reveal */}
       <Animated.View style={[StyleSheet.absoluteFillObject, gradientAnimStyle]}>
+        <Image
+          source={require('@/assets/images/volleyball-game.jpg')}
+          style={StyleSheet.absoluteFillObject}
+          resizeMode="cover"
+        />
+        {/* Dark overlay for readability */}
         <LinearGradient
-          colors={['#0D1B3E', '#1A3560', '#0D1B3E']}
+          colors={['rgba(13,27,62,0.75)', 'rgba(13,27,62,0.85)', 'rgba(13,27,62,0.95)']}
           start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+          end={{ x: 0, y: 1 }}
           style={StyleSheet.absoluteFillObject}
         />
       </Animated.View>
-
-      {/* Inner glow — subtle lighter navy at top 20% */}
-      <LinearGradient
-        colors={['rgba(26,53,96,0.4)', 'transparent']}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 0.25 }}
-        style={StyleSheet.absoluteFillObject}
-        pointerEvents="none"
-      />
-
-      {/* Volleyball decoration */}
-      <Text style={styles.volleyballDecor}>{'\u{1F3D0}'}</Text>
 
       {/* Content */}
       <View style={styles.content}>
@@ -172,13 +182,20 @@ export default function EventHeroCard({ event, scrollY, onPress, onRsvp, onDirec
 
         {/* Action buttons */}
         <View style={styles.buttonRow}>
-          <TouchableOpacity
-            style={styles.rsvpBtn}
-            activeOpacity={0.8}
-            onPress={onRsvp}
-          >
-            <Text style={styles.rsvpBtnText}>RSVP</Text>
-          </TouchableOpacity>
+          {(() => {
+            const display = getRsvpDisplay(rsvpStatus ?? null);
+            return (
+              <TouchableOpacity
+                style={[styles.rsvpBtn, { backgroundColor: display.bg }]}
+                activeOpacity={0.8}
+                onPress={onRsvp}
+              >
+                <Text style={[styles.rsvpBtnText, { color: display.textColor }]}>
+                  {display.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })()}
           <TouchableOpacity
             style={styles.directionsBtn}
             activeOpacity={0.8}
@@ -217,13 +234,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: 'rgba(255,255,255,0.6)',
   },
-  volleyballDecor: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    fontSize: 40,
-    opacity: 0.15,
-  },
+  // volleyballDecor removed — replaced by background image
   content: {
     padding: 20,
     paddingTop: 18,

@@ -23,8 +23,15 @@ export default function SeasonSnapshot({ record, lastGameResult }: Props) {
   const winRate = record.games_played > 0 ? record.wins / record.games_played : 0;
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.sectionHeader}>SEASON</Text>
+    <TouchableOpacity
+      style={styles.container}
+      activeOpacity={0.7}
+      onPress={() => router.push('/standings' as any)}
+    >
+      <View style={styles.headerRow}>
+        <Text style={styles.sectionHeader}>SEASON</Text>
+        <Text style={styles.viewAll}>View Standings {'\u2192'}</Text>
+      </View>
 
       {/* Big numbers */}
       <View style={styles.numbersRow}>
@@ -49,15 +56,11 @@ export default function SeasonSnapshot({ record, lastGameResult }: Props) {
 
       {/* Last game line */}
       {lastGameResult && (
-        <TouchableOpacity
-          style={styles.lastGameRow}
-          activeOpacity={0.7}
-          onPress={() => router.push('/(tabs)/parent-schedule' as any)}
-        >
+        <View style={styles.lastGameRow}>
           <Text style={styles.lastGameText}>{lastGameResult}</Text>
-        </TouchableOpacity>
+        </View>
       )}
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -66,13 +69,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     marginBottom: 24,
   },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
   sectionHeader: {
     fontFamily: FONTS.bodyBold,
     fontSize: 11,
     letterSpacing: 1.1,
     color: BRAND.textMuted,
     textTransform: 'uppercase',
-    marginBottom: 12,
+  },
+  viewAll: {
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 12,
+    color: BRAND.skyBlue,
   },
   numbersRow: {
     flexDirection: 'row',

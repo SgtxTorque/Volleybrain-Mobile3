@@ -465,6 +465,7 @@ export default function ParentHomeScroll() {
         <EventHeroCard
           event={data.heroEvent}
           scrollY={scrollY}
+          rsvpStatus={data.heroRsvpStatus}
           onPress={() => {
             if (data.heroEvent) {
               router.push('/(tabs)/parent-schedule' as any);
@@ -472,7 +473,11 @@ export default function ParentHomeScroll() {
           }}
           onRsvp={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            data.rsvpHeroEvent('yes');
+            // Cycle: null → yes → no → maybe → null → ...
+            const cycle: Array<'yes' | 'no' | 'maybe'> = ['yes', 'no', 'maybe'];
+            const currentIdx = data.heroRsvpStatus ? cycle.indexOf(data.heroRsvpStatus) : -1;
+            const nextStatus = cycle[(currentIdx + 1) % cycle.length];
+            data.rsvpHeroEvent(nextStatus);
           }}
         />
 
