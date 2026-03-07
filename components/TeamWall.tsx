@@ -2047,31 +2047,42 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
             </ScrollView>
           ) : (
             <View style={{ flex: 1 }}>
-              <FlatList
-                ref={feedListRef}
-                data={posts}
-                keyExtractor={(item) => item.id}
-                renderItem={renderPostCard}
-                ListHeaderComponent={renderListHeaderFeed}
-                contentContainerStyle={s.listContent}
-                onScroll={handleScroll}
-                scrollEventThrottle={16}
-                keyboardShouldPersistTaps="handled"
-                onScrollToIndexFailed={(info) => {
-                  setTimeout(() => {
-                    feedListRef.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: true });
-                  }, 100);
-                }}
-                refreshControl={
-                  <RefreshControl
-                    refreshing={refreshingFeed}
-                    onRefresh={handleRefreshFeed}
-                    tintColor={teamColor}
-                    colors={[teamColor]}
-                  />
-                }
-                showsVerticalScrollIndicator={false}
-              />
+              {embedded ? (
+                <View style={s.listContent}>
+                  {renderListHeaderFeed()}
+                  {posts.map(post => (
+                    <React.Fragment key={post.id}>
+                      {renderPostCard({ item: post })}
+                    </React.Fragment>
+                  ))}
+                </View>
+              ) : (
+                <FlatList
+                  ref={feedListRef}
+                  data={posts}
+                  keyExtractor={(item) => item.id}
+                  renderItem={renderPostCard}
+                  ListHeaderComponent={renderListHeaderFeed}
+                  contentContainerStyle={s.listContent}
+                  onScroll={handleScroll}
+                  scrollEventThrottle={16}
+                  keyboardShouldPersistTaps="handled"
+                  onScrollToIndexFailed={(info) => {
+                    setTimeout(() => {
+                      feedListRef.current?.scrollToOffset({ offset: info.averageItemLength * info.index, animated: true });
+                    }, 100);
+                  }}
+                  refreshControl={
+                    <RefreshControl
+                      refreshing={refreshingFeed}
+                      onRefresh={handleRefreshFeed}
+                      tintColor={teamColor}
+                      colors={[teamColor]}
+                    />
+                  }
+                  showsVerticalScrollIndicator={false}
+                />
+              )}
 
               {/* "New Posts" floating pill */}
               {newPostsCount > 0 && (

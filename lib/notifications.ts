@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
-import { checkExpiredChallenges } from './challenge-service';
+// NOTE: checkExpiredChallenges is lazily imported inside runScheduledChecks()
+// to break the circular dependency between notifications.ts ↔ challenge-service.ts
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
@@ -618,6 +619,9 @@ export async function runScheduledChecks(): Promise<{
   expiredChallenges: number;
 }> {
   if (__DEV__) console.log('Running scheduled notification checks...');
+
+  // Lazy import to break circular dependency (challenge-service imports from notifications)
+  const { checkExpiredChallenges } = await import('./challenge-service');
 
   const [autoBlasts, rsvpReminders, expiredChallenges] = await Promise.all([
     runAutoBlastCheck(2),      // Check games in next 2 days

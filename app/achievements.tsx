@@ -573,6 +573,42 @@ export default function AchievementsScreen() {
     setSelectedAchievement(ach);
   }, []);
 
+  // Challenges derived data (must be above early returns — Rules of Hooks)
+  const activeChallenges = useMemo(() =>
+    challenges.filter(c => c.status === 'active'), [challenges]);
+
+  const completedChallenges = useMemo(() =>
+    challenges.filter(c => c.status === 'completed'), [challenges]);
+
+  // XP / level derived data
+  const levelInfo = getLevelFromXP(totalXp);
+  const tier = getLevelTier(levelInfo.level);
+
+  // Build stat power bars from season stats
+  const statBars = useMemo(() => {
+    const keys = [
+      { key: 'total_kills', label: 'KILLS', color: '#EF4444' },
+      { key: 'total_aces', label: 'ACES', color: '#F59E0B' },
+      { key: 'total_digs', label: 'DIGS', color: '#4BB9EC' },
+      { key: 'total_blocks', label: 'BLOCKS', color: '#A855F7' },
+      { key: 'total_assists', label: 'ASSISTS', color: '#10B981' },
+      { key: 'total_serves', label: 'SERVES', color: '#EC4899' },
+    ];
+    const gamesPlayed = seasonStats.games_played || seasonStats.total_games_played || 1;
+    return keys
+      .filter(k => seasonStats[k.key] != null && seasonStats[k.key] > 0)
+      .map(k => {
+        const total = seasonStats[k.key] || 0;
+        const perGame = total / gamesPlayed;
+        const maxPerGame: Record<string, number> = {
+          total_kills: 15, total_aces: 8, total_digs: 20,
+          total_blocks: 6, total_assists: 30, total_serves: 20,
+        };
+        const norm = Math.min(Math.round((perGame / (maxPerGame[k.key] || 10)) * 100), 100);
+        return { ...k, total, perGame: perGame.toFixed(1), value: norm };
+      });
+  }, [seasonStats]);
+
   // =========================================================================
   // LOADING STATE
   // =========================================================================
@@ -1124,12 +1160,6 @@ export default function AchievementsScreen() {
   // CHALLENGES TAB HELPERS
   // =========================================================================
 
-  const activeChallenges = useMemo(() =>
-    challenges.filter(c => c.status === 'active'), [challenges]);
-
-  const completedChallenges = useMemo(() =>
-    challenges.filter(c => c.status === 'completed'), [challenges]);
-
   const getDaysRemaining = (endsAt: string) => {
     const now = Date.now();
     const end = new Date(endsAt).getTime();
@@ -1243,35 +1273,6 @@ export default function AchievementsScreen() {
   // =========================================================================
   // RENDER PROGRESS TAB
   // =========================================================================
-
-  const levelInfo = getLevelFromXP(totalXp);
-  const tier = getLevelTier(levelInfo.level);
-
-  // Build stat power bars from season stats
-  const statBars = useMemo(() => {
-    const keys = [
-      { key: 'total_kills', label: 'KILLS', color: '#EF4444' },
-      { key: 'total_aces', label: 'ACES', color: '#F59E0B' },
-      { key: 'total_digs', label: 'DIGS', color: '#4BB9EC' },
-      { key: 'total_blocks', label: 'BLOCKS', color: '#A855F7' },
-      { key: 'total_assists', label: 'ASSISTS', color: '#10B981' },
-      { key: 'total_serves', label: 'SERVES', color: '#EC4899' },
-    ];
-    const gamesPlayed = seasonStats.games_played || seasonStats.total_games_played || 1;
-    return keys
-      .filter(k => seasonStats[k.key] != null && seasonStats[k.key] > 0)
-      .map(k => {
-        const total = seasonStats[k.key] || 0;
-        const perGame = total / gamesPlayed;
-        // Normalize to 0-100 scale (rough heuristic)
-        const maxPerGame: Record<string, number> = {
-          total_kills: 15, total_aces: 8, total_digs: 20,
-          total_blocks: 6, total_assists: 30, total_serves: 20,
-        };
-        const norm = Math.min(Math.round((perGame / (maxPerGame[k.key] || 10)) * 100), 100);
-        return { ...k, total, perGame: perGame.toFixed(1), value: norm };
-      });
-  }, [seasonStats]);
 
   const renderProgressTab = () => (
     <ScrollView
