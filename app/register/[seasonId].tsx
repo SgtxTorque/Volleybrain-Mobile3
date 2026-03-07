@@ -34,6 +34,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import SignaturePad from '@/components/SignaturePad';
+import FullScreenSignatureModal from '@/components/FullScreenSignatureModal';
 
 // ============================================
 // TYPES
@@ -238,6 +239,9 @@ export default function RegistrationWizardScreen() {
 
   // Emergency/Medical (Phase 4)
   const [showMedicalFields, setShowMedicalFields] = useState(false);
+
+  // Signature modal
+  const [showSignatureModal, setShowSignatureModal] = useState(false);
 
   // Submit (Phase 6)
   const [submitting, setSubmitting] = useState(false);
@@ -1509,17 +1513,39 @@ export default function RegistrationWizardScreen() {
                 );
               })}
 
-            {/* Signature Pad */}
+            {/* Signature — full-screen modal */}
             <View style={s.signatureSection}>
               <Text style={s.sectionTitle}>Your Signature</Text>
-              <SignaturePad
-                onSave={(base64) => setSignatureData(base64)}
-                onClear={() => setSignatureData(null)}
-                hasSigned={!!signatureData}
-                parentName={sharedInfo.parent1_name}
-                accentColor={accentColor}
-              />
+              {signatureData ? (
+                <View style={s.signedRow}>
+                  <Ionicons name="checkmark-circle" size={20} color={BRAND.teal} />
+                  <Text style={s.signedLabel}>Signature captured</Text>
+                  <TouchableOpacity onPress={() => setShowSignatureModal(true)}>
+                    <Text style={[s.resignLink, { color: accentColor }]}>Re-sign</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={[s.signButton, { backgroundColor: accentColor }]}
+                  onPress={() => setShowSignatureModal(true)}
+                >
+                  <Ionicons name="create-outline" size={18} color={BRAND.white} />
+                  <Text style={s.signButtonText}>Sign Waiver</Text>
+                </TouchableOpacity>
+              )}
             </View>
+
+            <FullScreenSignatureModal
+              visible={showSignatureModal}
+              waiverTitle="Sign Below"
+              parentName={sharedInfo.parent1_name}
+              accentColor={accentColor}
+              onConfirm={(base64) => {
+                setSignatureData(base64);
+                setShowSignatureModal(false);
+              }}
+              onCancel={() => setShowSignatureModal(false)}
+            />
           </View>
         ) : currentStepDef?.key === 'review' && data ? (
           /* ============ REVIEW & SUBMIT STEP ============ */
@@ -2298,6 +2324,35 @@ const createStyles = (accentColor: string) => StyleSheet.create({
   signatureSection: {
     gap: 10,
     marginTop: 12,
+  },
+  signButton: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 12,
+  },
+  signButtonText: {
+    fontSize: 16,
+    fontFamily: FONTS.bodySemiBold,
+    color: BRAND.white,
+  },
+  signedRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 8,
+    paddingVertical: 8,
+  },
+  signedLabel: {
+    fontSize: 15,
+    fontFamily: FONTS.bodySemiBold,
+    color: BRAND.teal,
+    flex: 1,
+  },
+  resignLink: {
+    fontSize: 14,
+    fontFamily: FONTS.bodyMedium,
   },
 
   // Medical toggle
