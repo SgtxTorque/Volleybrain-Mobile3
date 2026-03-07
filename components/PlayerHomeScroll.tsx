@@ -59,9 +59,12 @@ import EvaluationCard from './player-scroll/EvaluationCard';
 import LastGameStats from './player-scroll/LastGameStats';
 import ClosingMascot from './player-scroll/ClosingMascot';
 import LevelUpCelebrationModal from './LevelUpCelebrationModal';
+import StreakMilestoneCelebrationModal from './StreakMilestoneCelebrationModal';
 import GiveShoutoutModal from './GiveShoutoutModal';
 import TeamPulse from './TeamPulse';
 import RoleSelector from './RoleSelector';
+import { checkMilestoneReached, awardStreakMilestoneXP } from '@/lib/streak-engine';
+import type { StreakTier } from '@/lib/streak-engine';
 
 // ─── Player Dark Theme ──────────────────────────────────────────
 export const PLAYER_THEME = {
@@ -116,6 +119,25 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
       AsyncStorage.setItem(LEVEL_KEY, String(data.level));
     });
   }, [data.loading, data.level, playerId]);
+
+  // ─── Streak milestone celebration ──
+  const STREAK_KEY = `lynx_player_streak_${playerId}`;
+  const [showStreakMilestone, setShowStreakMilestone] = useState(false);
+  const [milestoneTier, setMilestoneTier] = useState<StreakTier | null>(null);
+  useEffect(() => {
+    if (data.loading || !playerId || data.attendanceStreak <= 0) return;
+    AsyncStorage.getItem(STREAK_KEY).then((stored) => {
+      const prevStreak = stored ? parseInt(stored, 10) : 0;
+      const crossed = checkMilestoneReached(prevStreak, data.attendanceStreak);
+      if (crossed) {
+        setMilestoneTier(crossed);
+        setShowStreakMilestone(true);
+        // Award XP (best-effort, fire and forget)
+        awardStreakMilestoneXP(playerId, crossed);
+      }
+      AsyncStorage.setItem(STREAK_KEY, String(data.attendanceStreak));
+    });
+  }, [data.loading, data.attendanceStreak, playerId]);
 
   const displayName = data.playerName || externalName || 'Player';
   const initials = useMemo(() => {
@@ -267,7 +289,7 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
         )}
 
         {/* ─── 2. STREAK BANNER (if streak ≥ 2) ──────────────── */}
-        <StreakBanner streak={data.attendanceStreak} />
+        <StreakBanner streak={data.attendanceStreak} freezeUsed={data.streakFreezeUsed} />
 
         {/* ─── 3. THE DROP ─────────────────────────────────────── */}
         <TheDrop
@@ -339,6 +361,16 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
         totalXp={data.xp}
         onDismiss={() => setShowLevelUp(false)}
       />
+
+      {/* ─── STREAK MILESTONE CELEBRATION ──────────────────────── */}
+      {milestoneTier && (
+        <StreakMilestoneCelebrationModal
+          visible={showStreakMilestone}
+          tier={milestoneTier}
+          streak={data.attendanceStreak}
+          onDismiss={() => setShowStreakMilestone(false)}
+        />
+      )}
 
       {/* ─── SHOUTOUT MODAL ──────────────────────────────────────── */}
       <GiveShoutoutModal

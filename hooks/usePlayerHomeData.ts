@@ -5,6 +5,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSeason } from '@/lib/season';
+import { calculateStreakWithFreeze } from '@/lib/streak-engine';
 import { supabase } from '@/lib/supabase';
 
 /** Local date string (YYYY-MM-DD) to avoid UTC timezone shift issues */
@@ -141,6 +142,7 @@ export function usePlayerHomeData(playerId: string | null) {
   const [nextEvent, setNextEvent] = useState<NextEvent | null>(null);
   const [rsvpStatus, setRsvpStatus] = useState<RsvpStatus>(null);
   const [attendanceStreak, setAttendanceStreak] = useState(0);
+  const [streakFreezeUsed, setStreakFreezeUsed] = useState(false);
 
   // Rankings
   const [bestRank, setBestRank] = useState<BestRank | null>(null);
@@ -356,16 +358,10 @@ export function usePlayerHomeData(playerId: string | null) {
             .eq('player_id', playerId);
 
           const rsvpMap = new Map((rsvps || []).map(r => [r.event_id, r.status]));
-          let streak = 0;
-          for (const evt of recentEvents) {
-            const status = rsvpMap.get(evt.id);
-            if (status === 'yes' || status === 'confirmed' || status === 'present') {
-              streak++;
-            } else {
-              break;
-            }
-          }
+          const rsvpStatuses = recentEvents.map(evt => ({ status: rsvpMap.get(evt.id) || '' }));
+          const { streak, freezeUsed } = calculateStreakWithFreeze(rsvpStatuses);
           setAttendanceStreak(streak);
+          setStreakFreezeUsed(freezeUsed);
         }
       }
 
@@ -524,6 +520,7 @@ export function usePlayerHomeData(playerId: string | null) {
     rsvpStatus,
     sendRsvp,
     attendanceStreak,
+    streakFreezeUsed,
     // Social
     recentPhotos,
     recentShoutouts,
