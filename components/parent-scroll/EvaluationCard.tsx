@@ -115,7 +115,7 @@ export default function ParentEvaluationCard({ children }: Props) {
           key={ev.childId}
           style={s.card}
           activeOpacity={0.8}
-          onPress={() => router.push(`/child-detail?childId=${ev.childId}` as any)}
+          onPress={() => router.push(`/child-detail?playerId=${ev.childId}` as any)}
         >
           <View style={s.badgeRow}>
             <View style={s.newBadge}>

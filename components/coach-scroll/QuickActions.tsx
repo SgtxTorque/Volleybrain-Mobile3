@@ -23,7 +23,7 @@ const ALL_ACTIONS: ActionItem[] = [
   { icon: '\u{1F31F}', label: 'Give a Shoutout', route: null },
   { icon: '\u{1F4CA}', label: 'Review Stats', route: '/game-results', badgeKey: 'stats' },
   { icon: '\u{1F465}', label: 'Manage Roster', route: '/(tabs)/coach-roster', offDayOnly: true, badgeKey: 'roster' },
-  { icon: '\u{1F3AF}', label: 'Create a Challenge', route: null },
+  { icon: '\u{1F3AF}', label: 'Create a Challenge', route: '/create-challenge' },
 ];
 
 type Props = {
