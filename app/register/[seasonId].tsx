@@ -8,18 +8,19 @@ import {
   type SeasonFee,
 } from '@/lib/registration-config';
 import { supabase } from '@/lib/supabase';
-import { useTheme } from '@/lib/theme';
 import { displayTextStyle, spacing, radii, shadows } from '@/lib/design-tokens';
+import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   FlatList,
   Image,
+  Keyboard,
   Modal,
   Platform,
   ScrollView,
@@ -29,6 +30,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // ============================================
@@ -117,13 +119,80 @@ function getPickerDisplay(field: string, value: string): string {
   return found?.label || value;
 }
 
+/** Phone number fields */
+const PHONE_FIELDS = new Set(['parent1_phone', 'parent2_phone', 'emergency_phone']);
+
+/** Format phone number as (XXX) XXX-XXXX */
+function formatPhone(text: string): string {
+  const cleaned = text.replace(/\D/g, '').slice(0, 10);
+  if (cleaned.length <= 3) return cleaned;
+  if (cleaned.length <= 6) return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3)}`;
+  return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+}
+
+/** Strip formatted phone to raw digits */
+function stripPhone(text: string): string {
+  return text.replace(/\D/g, '');
+}
+
+/** Email validation regex */
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Validate a single field — returns error message or null */
+function validateField(key: string, value: string, fieldCfg?: FieldConfig): string | null {
+  if (fieldCfg?.required && !value?.trim()) return `${fieldCfg.label} is required`;
+  if (!value?.trim()) return null;
+  if (key.includes('email') && !EMAIL_RE.test(value)) return 'Invalid email address';
+  if (PHONE_FIELDS.has(key) && stripPhone(value).length < 10) return 'Phone must be 10 digits';
+  if (key === 'birth_date') {
+    const age = Math.floor((Date.now() - new Date(value).getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+    if (age < 4 || age > 19) return 'Age must be between 4 and 19';
+  }
+  return null;
+}
+
+/** textContentType map for iOS autofill */
+const TEXT_CONTENT_TYPES: Record<string, string> = {
+  first_name: 'givenName',
+  last_name: 'familyName',
+  parent1_name: 'name',
+  parent1_email: 'emailAddress',
+  parent1_phone: 'telephoneNumber',
+  parent2_name: 'name',
+  parent2_email: 'emailAddress',
+  parent2_phone: 'telephoneNumber',
+  address: 'streetAddressLine1',
+  city: 'addressCity',
+  state: 'addressState',
+  zip: 'postalCode',
+  emergency_name: 'name',
+  emergency_phone: 'telephoneNumber',
+};
+
+/** autoComplete map for Android autofill */
+const AUTO_COMPLETE: Record<string, string> = {
+  first_name: 'given-name',
+  last_name: 'family-name',
+  parent1_name: 'name',
+  parent1_email: 'email',
+  parent1_phone: 'tel',
+  parent2_name: 'name',
+  parent2_email: 'email',
+  parent2_phone: 'tel',
+  address: 'street-address',
+  city: 'address-level2',
+  state: 'address-level1',
+  zip: 'postal-code',
+  emergency_name: 'name',
+  emergency_phone: 'tel',
+};
+
 // ============================================
 // COMPONENT
 // ============================================
 
 export default function RegistrationWizardScreen() {
   const { seasonId } = useLocalSearchParams<{ seasonId: string }>();
-  const { colors } = useTheme();
   const { user, profile } = useAuth();
   const router = useRouter();
 
@@ -131,6 +200,13 @@ export default function RegistrationWizardScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<LoadedRegistrationData | null>(null);
+
+  // Inline validation — tracks which fields have been touched (blurred)
+  const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string | null>>({});
+
+  // Refs for auto-advance between fields
+  const fieldRefs = useRef<Record<string, TextInput | null>>({});
 
   // Wizard state
   const [currentStep, setCurrentStep] = useState(0);
@@ -300,7 +376,7 @@ export default function RegistrationWizardScreen() {
   }, [data]);
 
   // Accent color: sport color → org color → theme primary
-  const accentColor = data?.sport?.color_primary || data?.organization?.primary_color || colors.primary;
+  const accentColor = data?.sport?.color_primary || data?.organization?.primary_color || BRAND.teal;
 
   // All children to register (returning selected + new)
   const allChildren = useMemo((): ChildData[] => {
@@ -382,9 +458,23 @@ export default function RegistrationWizardScreen() {
     }
   }, []);
 
-  // Update shared info field (parent, emergency, medical)
+  // Update shared info field (parent, emergency, medical) — with phone auto-formatting
   const updateSharedField = useCallback((field: string, value: string) => {
-    setSharedInfo(prev => ({ ...prev, [field]: value }));
+    const formatted = PHONE_FIELDS.has(field) ? formatPhone(value) : value;
+    setSharedInfo(prev => ({ ...prev, [field]: formatted }));
+  }, []);
+
+  // Handle field blur — mark as touched and validate
+  const handleFieldBlur = useCallback((fieldKey: string, value: string, fieldCfg?: FieldConfig) => {
+    setTouchedFields(prev => ({ ...prev, [fieldKey]: true }));
+    const err = validateField(fieldKey, value, fieldCfg);
+    setFieldErrors(prev => ({ ...prev, [fieldKey]: err }));
+  }, []);
+
+  // Focus the next field via ref
+  const focusNextField = useCallback((nextKey: string) => {
+    const ref = fieldRefs.current[nextKey];
+    if (ref) ref.focus();
   }, []);
 
   // Update custom answer
@@ -559,6 +649,7 @@ export default function RegistrationWizardScreen() {
   };
 
   const handleBack = () => {
+    Keyboard.dismiss();
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
     } else {
@@ -567,6 +658,7 @@ export default function RegistrationWizardScreen() {
   };
 
   const handleNext = () => {
+    Keyboard.dismiss();
     const stepKey = steps[currentStep]?.key;
 
     // Validate children step
@@ -653,14 +745,14 @@ export default function RegistrationWizardScreen() {
     }
   };
 
-  const s = createStyles(colors, accentColor);
+  const s = createStyles(accentColor);
 
   // ---- Loading state ----
   if (loading) {
     return (
       <SafeAreaView style={s.container}>
         <View style={s.centerContent}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={BRAND.teal} />
           <Text style={s.loadingText}>Loading registration form...</Text>
         </View>
       </SafeAreaView>
@@ -672,7 +764,7 @@ export default function RegistrationWizardScreen() {
     return (
       <SafeAreaView style={s.container}>
         <View style={s.centerContent}>
-          <Ionicons name="alert-circle-outline" size={48} color={colors.danger} />
+          <Ionicons name="alert-circle-outline" size={48} color={BRAND.error} />
           <Text style={s.errorTitle}>Unable to Load</Text>
           <Text style={s.errorText}>{error || 'Something went wrong.'}</Text>
           <TouchableOpacity style={s.retryBtn} onPress={() => router.back()}>
@@ -740,7 +832,7 @@ export default function RegistrationWizardScreen() {
       {/* ============ HEADER ============ */}
       <View style={s.header}>
         <TouchableOpacity onPress={handleBack} style={s.backBtn} hitSlop={8}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+          <Ionicons name="arrow-back" size={24} color={BRAND.textPrimary} />
         </TouchableOpacity>
 
         {/* Org branding */}
@@ -752,7 +844,7 @@ export default function RegistrationWizardScreen() {
               resizeMode="contain"
             />
           ) : (
-            <View style={[s.orgLogoFallback, { backgroundColor: organization?.primary_color || colors.primary }]}>
+            <View style={[s.orgLogoFallback, { backgroundColor: organization?.primary_color || BRAND.teal }]}>
               <Text style={s.orgLogoFallbackText}>
                 {(organization?.name || 'O')[0].toUpperCase()}
               </Text>
@@ -784,11 +876,13 @@ export default function RegistrationWizardScreen() {
       </View>
 
       {/* ============ STEP CONTENT ============ */}
-      <ScrollView
+      <KeyboardAwareScrollView
         style={s.scrollView}
         contentContainerStyle={s.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        enableOnAndroid={true}
+        extraScrollHeight={20}
       >
         {currentStepDef?.key === 'children' ? (
           /* ============ CHILDREN STEP ============ */
@@ -816,7 +910,7 @@ export default function RegistrationWizardScreen() {
                         >
                           <View style={s.returningCardLeft}>
                             <View style={[s.checkbox, selected && { backgroundColor: accentColor, borderColor: accentColor }]}>
-                              {selected && <Ionicons name="checkmark" size={14} color={colors.background} />}
+                              {selected && <Ionicons name="checkmark" size={14} color={BRAND.white} />}
                             </View>
                             <View style={s.returningInfo}>
                               <Text style={s.returningName}>{player.first_name} {player.last_name}</Text>
@@ -845,7 +939,7 @@ export default function RegistrationWizardScreen() {
                           <View style={s.newChildHeader}>
                             <Text style={s.newChildLabel}>New Child #{idx + 1}</Text>
                             <TouchableOpacity onPress={() => removeNewChild(idx)} hitSlop={8}>
-                              <Ionicons name="close-circle" size={22} color={colors.danger} />
+                              <Ionicons name="close-circle" size={22} color={BRAND.error} />
                             </TouchableOpacity>
                           </View>
                           <View style={s.newChildFields}>
@@ -856,7 +950,7 @@ export default function RegistrationWizardScreen() {
                                 value={child.first_name}
                                 onChangeText={v => updateNewChild(idx, 'first_name', v)}
                                 placeholder="First name"
-                                placeholderTextColor={colors.textMuted}
+                                placeholderTextColor={BRAND.textMuted}
                                 autoCapitalize="words"
                               />
                             </View>
@@ -867,7 +961,7 @@ export default function RegistrationWizardScreen() {
                                 value={child.last_name}
                                 onChangeText={v => updateNewChild(idx, 'last_name', v)}
                                 placeholder="Last name"
-                                placeholderTextColor={colors.textMuted}
+                                placeholderTextColor={BRAND.textMuted}
                                 autoCapitalize="words"
                               />
                             </View>
@@ -928,7 +1022,7 @@ export default function RegistrationWizardScreen() {
                     style={[s.childTab, activeChildIndex === idx && { backgroundColor: accentColor }]}
                     onPress={() => setActiveChildIndex(idx)}
                   >
-                    <Text style={[s.childTabText, activeChildIndex === idx && { color: colors.background }]}>
+                    <Text style={[s.childTabText, activeChildIndex === idx && { color: BRAND.white }]}>
                       {child.first_name || `Child ${idx + 1}`}
                     </Text>
                   </TouchableOpacity>
@@ -958,10 +1052,10 @@ export default function RegistrationWizardScreen() {
                             style={s.pickerButton}
                             onPress={() => setShowDatePicker(true)}
                           >
-                            <Text style={[s.pickerButtonText, !value && { color: colors.textMuted }]}>
+                            <Text style={[s.pickerButtonText, !value && { color: BRAND.textMuted }]}>
                               {value ? formatDate(value) : 'Select date'}
                             </Text>
-                            <Ionicons name="calendar-outline" size={18} color={colors.textMuted} />
+                            <Ionicons name="calendar-outline" size={18} color={BRAND.textMuted} />
                           </TouchableOpacity>
                           {showDatePicker && (
                             <View>
@@ -1004,10 +1098,10 @@ export default function RegistrationWizardScreen() {
                             style={s.pickerButton}
                             onPress={() => openPicker(key, fieldCfg.label)}
                           >
-                            <Text style={[s.pickerButtonText, !value && { color: colors.textMuted }]}>
+                            <Text style={[s.pickerButtonText, !value && { color: BRAND.textMuted }]}>
                               {value ? getPickerDisplay(key, value) : `Select ${fieldCfg.label.toLowerCase()}`}
                             </Text>
-                            <Ionicons name="chevron-down" size={18} color={colors.textMuted} />
+                            <Ionicons name="chevron-down" size={18} color={BRAND.textMuted} />
                           </TouchableOpacity>
                         </View>
                       );
@@ -1026,7 +1120,7 @@ export default function RegistrationWizardScreen() {
                             value={value}
                             onChangeText={v => updateChild(activeChildIndex, key, v)}
                             placeholder={fieldCfg.label}
-                            placeholderTextColor={colors.textMuted}
+                            placeholderTextColor={BRAND.textMuted}
                             keyboardType="number-pad"
                             maxLength={key === 'preferred_number' ? 2 : 4}
                           />
@@ -1046,7 +1140,7 @@ export default function RegistrationWizardScreen() {
                           value={value}
                           onChangeText={v => updateChild(activeChildIndex, key, v)}
                           placeholder={fieldCfg.label}
-                          placeholderTextColor={colors.textMuted}
+                          placeholderTextColor={BRAND.textMuted}
                           autoCapitalize={key.includes('name') ? 'words' : 'sentences'}
                           multiline={key === 'previous_teams'}
                         />
@@ -1063,11 +1157,16 @@ export default function RegistrationWizardScreen() {
             <Text style={s.sectionSubtitle}>This info is shared across all children</Text>
 
             <View style={s.fieldsContainer}>
-              {FIELD_ORDER.parent_fields
-                .filter(key => data.config.parent_fields[key]?.enabled)
-                .map(key => {
+              {(() => {
+                const enabledFields = FIELD_ORDER.parent_fields.filter(key => data.config.parent_fields[key]?.enabled);
+                return enabledFields.map((key, idx) => {
                   const fieldCfg = data.config.parent_fields[key];
                   const value = sharedInfo[key] || '';
+                  const isTouched = touchedFields[`parent_${key}`];
+                  const fieldError = isTouched ? fieldErrors[`parent_${key}`] : null;
+                  const isValid = isTouched && !fieldError && value.trim().length > 0;
+                  const nextField = enabledFields[idx + 1];
+                  const isLast = idx === enabledFields.length - 1;
 
                   // Group dividers
                   const showParent2Header = key === 'parent2_name';
@@ -1087,19 +1186,34 @@ export default function RegistrationWizardScreen() {
                           {fieldCfg.required && <Text style={s.required}> *</Text>}
                         </Text>
                         <TextInput
-                          style={s.input}
+                          ref={r => { fieldRefs.current[`parent_${key}`] = r; }}
+                          style={[
+                            s.input,
+                            fieldError && s.inputError,
+                            isValid && s.inputValid,
+                          ]}
                           value={value}
                           onChangeText={v => updateSharedField(key, v)}
+                          onBlur={() => handleFieldBlur(`parent_${key}`, value, fieldCfg)}
                           placeholder={fieldCfg.label}
-                          placeholderTextColor={colors.textMuted}
-                          keyboardType={key.includes('email') ? 'email-address' : key.includes('phone') ? 'phone-pad' : 'default'}
-                          autoCapitalize={key.includes('email') ? 'none' : key.includes('name') ? 'words' : 'sentences'}
-                          autoComplete={key.includes('email') ? 'email' : key.includes('phone') ? 'tel' : undefined}
+                          placeholderTextColor={BRAND.textMuted}
+                          keyboardType={key.includes('email') ? 'email-address' : PHONE_FIELDS.has(key) ? 'phone-pad' : key === 'zip' ? 'number-pad' : 'default'}
+                          autoCapitalize={key.includes('email') ? 'none' : key.includes('name') ? 'words' : key === 'state' ? 'characters' : 'sentences'}
+                          autoComplete={(AUTO_COMPLETE[key] as any) || undefined}
+                          textContentType={(TEXT_CONTENT_TYPES[key] as any) || undefined}
+                          returnKeyType={isLast ? 'done' : 'next'}
+                          blurOnSubmit={isLast}
+                          onSubmitEditing={() => {
+                            if (nextField) focusNextField(`parent_${nextField}`);
+                          }}
+                          maxLength={key === 'zip' ? 5 : PHONE_FIELDS.has(key) ? 14 : undefined}
                         />
+                        {fieldError && <Text style={s.fieldErrorText}>{fieldError}</Text>}
                       </View>
                     </View>
                   );
-                })}
+                });
+              })()}
             </View>
           </View>
         ) : currentStepDef?.key === 'emergency' && data ? (
@@ -1110,10 +1224,16 @@ export default function RegistrationWizardScreen() {
               <View style={s.sectionBlock}>
                 <Text style={s.sectionTitle}>Emergency Contact</Text>
                 <View style={s.fieldsContainer}>
-                  {FIELD_ORDER.emergency_fields
-                    .filter(key => data.config.emergency_fields[key]?.enabled)
-                    .map(key => {
+                  {(() => {
+                    const enabledFields = FIELD_ORDER.emergency_fields.filter(key => data.config.emergency_fields[key]?.enabled);
+                    return enabledFields.map((key, idx) => {
                       const fieldCfg = data.config.emergency_fields[key];
+                      const value = sharedInfo[key] || '';
+                      const isTouched = touchedFields[`emerg_${key}`];
+                      const fieldError = isTouched ? fieldErrors[`emerg_${key}`] : null;
+                      const isValid = isTouched && !fieldError && value.trim().length > 0;
+                      const nextField = enabledFields[idx + 1];
+                      const isLast = idx === enabledFields.length - 1;
                       return (
                         <View key={key} style={s.fieldBlock}>
                           <Text style={s.fieldLabel}>
@@ -1121,17 +1241,27 @@ export default function RegistrationWizardScreen() {
                             {fieldCfg.required && <Text style={s.required}> *</Text>}
                           </Text>
                           <TextInput
-                            style={s.input}
-                            value={sharedInfo[key] || ''}
+                            ref={r => { fieldRefs.current[`emerg_${key}`] = r; }}
+                            style={[s.input, fieldError && s.inputError, isValid && s.inputValid]}
+                            value={value}
                             onChangeText={v => updateSharedField(key, v)}
+                            onBlur={() => handleFieldBlur(`emerg_${key}`, value, fieldCfg)}
                             placeholder={fieldCfg.label}
-                            placeholderTextColor={colors.textMuted}
-                            keyboardType={key.includes('phone') ? 'phone-pad' : 'default'}
+                            placeholderTextColor={BRAND.textMuted}
+                            keyboardType={PHONE_FIELDS.has(key) ? 'phone-pad' : 'default'}
                             autoCapitalize={key.includes('name') ? 'words' : 'sentences'}
+                            autoComplete={(AUTO_COMPLETE[key] as any) || undefined}
+                            textContentType={(TEXT_CONTENT_TYPES[key] as any) || undefined}
+                            returnKeyType={isLast ? 'done' : 'next'}
+                            blurOnSubmit={isLast}
+                            onSubmitEditing={() => { if (nextField) focusNextField(`emerg_${nextField}`); }}
+                            maxLength={PHONE_FIELDS.has(key) ? 14 : undefined}
                           />
+                          {fieldError && <Text style={s.fieldErrorText}>{fieldError}</Text>}
                         </View>
                       );
-                    })}
+                    });
+                  })()}
                 </View>
               </View>
             )}
@@ -1146,7 +1276,7 @@ export default function RegistrationWizardScreen() {
                   </Text>
                   <View style={s.toggleRow}>
                     <TouchableOpacity
-                      style={[s.toggleBtn, !showMedicalFields && { backgroundColor: colors.border }]}
+                      style={[s.toggleBtn, !showMedicalFields && { backgroundColor: BRAND.border }]}
                       onPress={() => setShowMedicalFields(false)}
                     >
                       <Text style={[s.toggleBtnText, !showMedicalFields && { fontFamily: FONTS.bodyBold }]}>No</Text>
@@ -1155,7 +1285,7 @@ export default function RegistrationWizardScreen() {
                       style={[s.toggleBtn, showMedicalFields && { backgroundColor: accentColor }]}
                       onPress={() => setShowMedicalFields(true)}
                     >
-                      <Text style={[s.toggleBtnText, showMedicalFields && { color: colors.background, fontFamily: FONTS.bodyBold }]}>Yes</Text>
+                      <Text style={[s.toggleBtnText, showMedicalFields && { color: BRAND.white, fontFamily: FONTS.bodyBold }]}>Yes</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -1177,7 +1307,7 @@ export default function RegistrationWizardScreen() {
                               value={sharedInfo[key] || ''}
                               onChangeText={v => updateSharedField(key, v)}
                               placeholder={fieldCfg.label}
-                              placeholderTextColor={colors.textMuted}
+                              placeholderTextColor={BRAND.textMuted}
                               multiline
                               keyboardType={key.includes('phone') ? 'phone-pad' : 'default'}
                             />
@@ -1205,7 +1335,7 @@ export default function RegistrationWizardScreen() {
                         value={customAnswers[String(idx)] || ''}
                         onChangeText={v => updateCustomAnswer(idx, v)}
                         placeholder="Your answer"
-                        placeholderTextColor={colors.textMuted}
+                        placeholderTextColor={BRAND.textMuted}
                         multiline
                       />
                     </View>
@@ -1231,7 +1361,7 @@ export default function RegistrationWizardScreen() {
                       activeOpacity={0.7}
                     >
                       <View style={[s.checkbox, accepted && { backgroundColor: accentColor, borderColor: accentColor }]}>
-                        {accepted && <Ionicons name="checkmark" size={14} color={colors.background} />}
+                        {accepted && <Ionicons name="checkmark" size={14} color={BRAND.white} />}
                       </View>
                       <Text style={s.waiverTitle}>
                         {waiver.title}
@@ -1254,7 +1384,7 @@ export default function RegistrationWizardScreen() {
                 value={signature}
                 onChangeText={setSignature}
                 placeholder={sharedInfo.parent1_name || 'Full legal name'}
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={BRAND.textMuted}
                 autoCapitalize="words"
               />
             </View>
@@ -1370,14 +1500,14 @@ export default function RegistrationWizardScreen() {
             )}
           </View>
         ) : null}
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       {/* ============ FOOTER ============ */}
       <View style={s.footer}>
         <View style={s.footerButtons}>
           {currentStep > 0 && !submitted && (
             <TouchableOpacity style={s.backButton} onPress={handleBack}>
-              <Ionicons name="arrow-back" size={18} color={colors.text} />
+              <Ionicons name="arrow-back" size={18} color={BRAND.textPrimary} />
               <Text style={s.backButtonText}>Back</Text>
             </TouchableOpacity>
           )}
@@ -1389,11 +1519,11 @@ export default function RegistrationWizardScreen() {
               disabled={submitting}
             >
               {submitting ? (
-                <ActivityIndicator size="small" color={colors.background} />
+                <ActivityIndicator size="small" color={BRAND.white} />
               ) : (
                 <>
                   <Text style={s.nextButtonText}>{isLastStep ? 'Submit Registration' : 'Next'}</Text>
-                  <Ionicons name={isLastStep ? 'checkmark-circle' : 'arrow-forward'} size={18} color={colors.background} />
+                  <Ionicons name={isLastStep ? 'checkmark-circle' : 'arrow-forward'} size={18} color={BRAND.white} />
                 </>
               )}
             </TouchableOpacity>
@@ -1427,7 +1557,7 @@ export default function RegistrationWizardScreen() {
             <View style={s.modalHeader}>
               <Text style={s.modalTitle}>{pickerModal.title}</Text>
               <TouchableOpacity onPress={() => setPickerModal(prev => ({ ...prev, visible: false }))}>
-                <Ionicons name="close" size={24} color={colors.text} />
+                <Ionicons name="close" size={24} color={BRAND.textPrimary} />
               </TouchableOpacity>
             </View>
             <FlatList
@@ -1463,10 +1593,10 @@ export default function RegistrationWizardScreen() {
 // STYLES
 // ============================================
 
-const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
+const createStyles = (accentColor: string) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: BRAND.white,
   },
   centerContent: {
     flex: 1,
@@ -1477,17 +1607,17 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   },
   loadingText: {
     fontSize: 15,
-    color: colors.textMuted,
+    color: BRAND.textMuted,
     marginTop: 8,
   },
   errorTitle: {
     fontSize: 20,
     fontFamily: FONTS.bodyBold,
-    color: colors.text,
+    color: BRAND.textPrimary,
   },
   errorText: {
     fontSize: 14,
-    color: colors.textMuted,
+    color: BRAND.textMuted,
     textAlign: 'center',
     lineHeight: 20,
   },
@@ -1495,13 +1625,13 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
     marginTop: 16,
     paddingHorizontal: 24,
     paddingVertical: 12,
-    backgroundColor: colors.primary,
+    backgroundColor: BRAND.teal,
     borderRadius: 12,
   },
   retryBtnText: {
     fontSize: 16,
     fontFamily: FONTS.bodySemiBold,
-    color: colors.background,
+    color: BRAND.white,
   },
 
   // Header
@@ -1510,8 +1640,8 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: colors.glassBorder,
-    backgroundColor: colors.glassCard,
+    borderBottomColor: BRAND.border,
+    backgroundColor: BRAND.white,
   },
   backBtn: {
     width: 40,
@@ -1540,7 +1670,7 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   orgLogoFallbackText: {
     fontSize: 20,
     fontFamily: FONTS.bodyExtraBold,
-    color: colors.background,
+    color: BRAND.white,
   },
   orgTextCol: {
     flex: 1,
@@ -1548,7 +1678,7 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   orgName: {
     fontSize: 17,
     fontFamily: FONTS.bodyBold,
-    color: colors.text,
+    color: BRAND.textPrimary,
   },
   sportRow: {
     flexDirection: 'row',
@@ -1561,12 +1691,12 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   },
   seasonLabel: {
     fontSize: 13,
-    color: colors.textSecondary,
+    color: BRAND.textMuted,
     fontFamily: FONTS.bodySemiBold,
   },
   progressBarBg: {
     height: 6,
-    backgroundColor: colors.border,
+    backgroundColor: BRAND.border,
     borderRadius: 3,
     overflow: 'hidden',
   },
@@ -1576,7 +1706,7 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   },
   stepLabel: {
     fontSize: 12,
-    color: colors.textMuted,
+    color: BRAND.textMuted,
     marginTop: 6,
     textAlign: 'center',
     fontFamily: FONTS.bodySemiBold,
@@ -1603,20 +1733,20 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontFamily: FONTS.bodyBold,
-    color: colors.text,
+    color: BRAND.textPrimary,
   },
   sectionSubtitle: {
     fontSize: 13,
-    color: colors.textMuted,
+    color: BRAND.textMuted,
     marginTop: -4,
   },
 
   // Returning player cards
   returningCard: {
-    backgroundColor: colors.glassCard,
+    backgroundColor: BRAND.white,
     borderRadius: radii.card,
     borderWidth: 1,
-    borderColor: colors.glassBorder,
+    borderColor: BRAND.border,
     padding: 14,
     flexDirection: 'row',
     alignItems: 'center',
@@ -1634,7 +1764,7 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
     height: 24,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: colors.border,
+    borderColor: BRAND.border,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1644,11 +1774,11 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   returningName: {
     fontSize: 15,
     fontFamily: FONTS.bodySemiBold,
-    color: colors.text,
+    color: BRAND.textPrimary,
   },
   returningDetail: {
     fontSize: 13,
-    color: colors.textSecondary,
+    color: BRAND.textMuted,
     marginTop: 2,
   },
   returningBadge: {
@@ -1664,10 +1794,10 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
 
   // New child cards
   newChildCard: {
-    backgroundColor: colors.glassCard,
+    backgroundColor: BRAND.white,
     borderRadius: radii.card,
     borderWidth: 1,
-    borderColor: colors.glassBorder,
+    borderColor: BRAND.border,
     padding: 14,
     gap: 10,
     ...shadows.card,
@@ -1680,7 +1810,7 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   newChildLabel: {
     fontSize: 14,
     fontFamily: FONTS.bodySemiBold,
-    color: colors.text,
+    color: BRAND.textPrimary,
   },
   newChildFields: {
     flexDirection: 'row',
@@ -1693,19 +1823,35 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   fieldLabel: {
     fontSize: 13,
     fontFamily: FONTS.bodySemiBold,
-    color: colors.textSecondary,
+    color: BRAND.textMuted,
   },
   required: {
-    color: colors.danger,
+    color: BRAND.error,
   },
   input: {
-    backgroundColor: colors.background,
+    backgroundColor: BRAND.white,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: BRAND.border,
     borderRadius: radii.card,
     padding: 12,
     fontSize: 15,
-    color: colors.text,
+    fontFamily: FONTS.bodyMedium,
+    color: BRAND.textPrimary,
+  },
+  inputError: {
+    borderColor: BRAND.error,
+    borderWidth: 1.5,
+  },
+  inputValid: {
+    borderColor: BRAND.teal,
+    borderWidth: 1.5,
+  },
+  fieldErrorText: {
+    fontFamily: FONTS.bodyMedium,
+    fontSize: 12,
+    color: BRAND.error,
+    marginTop: 4,
+    marginLeft: 4,
   },
 
   // Add child button
@@ -1727,10 +1873,10 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
 
   // Fee preview
   feeCard: {
-    backgroundColor: colors.glassCard,
+    backgroundColor: BRAND.white,
     borderRadius: radii.card,
     borderWidth: 1,
-    borderColor: colors.glassBorder,
+    borderColor: BRAND.border,
     padding: 16,
     gap: 8,
     ...shadows.card,
@@ -1738,7 +1884,7 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   feeTitle: {
     fontSize: 15,
     fontFamily: FONTS.bodyBold,
-    color: colors.text,
+    color: BRAND.textPrimary,
     marginBottom: 4,
   },
   feeLine: {
@@ -1748,31 +1894,31 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   },
   feeLabel: {
     fontSize: 14,
-    color: colors.textSecondary,
+    color: BRAND.textMuted,
   },
   feeAmount: {
     fontSize: 14,
-    color: colors.text,
+    color: BRAND.textPrimary,
     fontFamily: FONTS.bodySemiBold,
   },
   feeDivider: {
     height: 1,
-    backgroundColor: colors.border,
+    backgroundColor: BRAND.border,
     marginVertical: 4,
   },
   feeTotalLabel: {
     fontSize: 15,
     fontFamily: FONTS.bodyBold,
-    color: colors.text,
+    color: BRAND.textPrimary,
   },
   feeTotalAmount: {
     fontSize: 16,
     fontFamily: FONTS.bodyExtraBold,
-    color: colors.text,
+    color: BRAND.textPrimary,
   },
   feeDisclaimer: {
     fontSize: 12,
-    color: colors.textMuted,
+    color: BRAND.textMuted,
     textAlign: 'center',
     marginTop: 2,
   },
@@ -1788,15 +1934,15 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   selectionText: {
     fontSize: 14,
     fontFamily: FONTS.bodySemiBold,
-    color: colors.textSecondary,
+    color: BRAND.textMuted,
   },
 
   // Review step
   reviewSection: {
-    backgroundColor: colors.glassCard,
+    backgroundColor: BRAND.white,
     borderRadius: radii.card,
     borderWidth: 1,
-    borderColor: colors.glassBorder,
+    borderColor: BRAND.border,
     padding: 14,
     gap: 4,
     ...shadows.card,
@@ -1810,7 +1956,7 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   reviewSectionTitle: {
     fontSize: 14,
     fontFamily: FONTS.bodyBold,
-    color: colors.textMuted,
+    color: BRAND.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -1821,11 +1967,11 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   reviewItem: {
     fontSize: 15,
     fontFamily: FONTS.bodySemiBold,
-    color: colors.text,
+    color: BRAND.textPrimary,
   },
   reviewDetail: {
     fontSize: 13,
-    color: colors.textSecondary,
+    color: BRAND.textMuted,
     lineHeight: 18,
   },
   waiverSummaryRow: {
@@ -1848,18 +1994,18 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   successTitle: {
     ...displayTextStyle,
     fontSize: 24,
-    color: colors.text,
+    color: BRAND.textPrimary,
     textAlign: 'center',
   },
   successSubtitle: {
     fontSize: 16,
-    color: colors.text,
+    color: BRAND.textPrimary,
     textAlign: 'center',
     lineHeight: 22,
   },
   successHint: {
     fontSize: 14,
-    color: colors.textMuted,
+    color: BRAND.textMuted,
     textAlign: 'center',
     marginBottom: 16,
   },
@@ -1871,10 +2017,10 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
 
   // Waiver cards
   waiverCard: {
-    backgroundColor: colors.glassCard,
+    backgroundColor: BRAND.white,
     borderRadius: radii.card,
     borderWidth: 1,
-    borderColor: colors.glassBorder,
+    borderColor: BRAND.border,
     padding: 14,
     gap: 10,
     ...shadows.card,
@@ -1887,12 +2033,12 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   waiverTitle: {
     fontSize: 15,
     fontFamily: FONTS.bodySemiBold,
-    color: colors.text,
+    color: BRAND.textPrimary,
     flex: 1,
   },
   waiverText: {
     fontSize: 13,
-    color: colors.textSecondary,
+    color: BRAND.textMuted,
     lineHeight: 19,
     marginLeft: 36,
   },
@@ -1904,31 +2050,31 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   },
   signatureHint: {
     fontSize: 13,
-    color: colors.textMuted,
+    color: BRAND.textMuted,
     lineHeight: 18,
   },
   signatureInput: {
-    backgroundColor: colors.background,
+    backgroundColor: BRAND.white,
     borderBottomWidth: 2,
-    borderBottomColor: colors.border,
+    borderBottomColor: BRAND.border,
     padding: 14,
     fontSize: 18,
-    color: colors.text,
+    color: BRAND.textPrimary,
     fontStyle: 'italic',
   },
 
   // Medical toggle
   medicalToggle: {
-    backgroundColor: colors.glassCard,
+    backgroundColor: BRAND.white,
     borderRadius: radii.card,
     borderWidth: 1,
-    borderColor: colors.glassBorder,
+    borderColor: BRAND.border,
     padding: 14,
     gap: 10,
   },
   medicalToggleText: {
     fontSize: 14,
-    color: colors.text,
+    color: BRAND.textPrimary,
     lineHeight: 20,
   },
   toggleRow: {
@@ -1940,13 +2086,13 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 8,
     alignItems: 'center',
-    backgroundColor: colors.background,
+    backgroundColor: BRAND.white,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: BRAND.border,
   },
   toggleBtnText: {
     fontSize: 15,
-    color: colors.text,
+    color: BRAND.textPrimary,
   },
 
   // Player info — child tabs
@@ -1959,14 +2105,14 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: colors.glassCard,
+    backgroundColor: BRAND.white,
     borderWidth: 1,
-    borderColor: colors.glassBorder,
+    borderColor: BRAND.border,
   },
   childTabText: {
     fontSize: 14,
     fontFamily: FONTS.bodySemiBold,
-    color: colors.text,
+    color: BRAND.textPrimary,
   },
 
   // Player info — fields
@@ -1977,9 +2123,9 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
     gap: 4,
   },
   pickerButton: {
-    backgroundColor: colors.background,
+    backgroundColor: BRAND.white,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: BRAND.border,
     borderRadius: radii.card,
     padding: 12,
     flexDirection: 'row',
@@ -1988,7 +2134,7 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   },
   pickerButtonText: {
     fontSize: 15,
-    color: colors.text,
+    color: BRAND.textPrimary,
     flex: 1,
   },
   datePickerDone: {
@@ -2001,7 +2147,7 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   datePickerDoneText: {
     fontSize: 14,
     fontFamily: FONTS.bodySemiBold,
-    color: colors.background,
+    color: BRAND.white,
   },
 
   // Picker modal
@@ -2011,7 +2157,7 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalSheet: {
-    backgroundColor: colors.glassCard,
+    backgroundColor: BRAND.white,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: '60%',
@@ -2023,12 +2169,12 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.glassBorder,
+    borderBottomColor: BRAND.border,
   },
   modalTitle: {
     fontSize: 17,
     fontFamily: FONTS.bodyBold,
-    color: colors.text,
+    color: BRAND.textPrimary,
   },
   modalList: {
     paddingHorizontal: 8,
@@ -2043,15 +2189,15 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   },
   modalOptionText: {
     fontSize: 16,
-    color: colors.text,
+    color: BRAND.textPrimary,
   },
 
   // Placeholder (for remaining steps)
   stepPlaceholder: {
-    backgroundColor: colors.glassCard,
+    backgroundColor: BRAND.white,
     borderRadius: radii.card,
     borderWidth: 1,
-    borderColor: colors.glassBorder,
+    borderColor: BRAND.border,
     padding: 32,
     alignItems: 'center',
     gap: 8,
@@ -2060,11 +2206,11 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   placeholderTitle: {
     fontSize: 18,
     fontFamily: FONTS.bodySemiBold,
-    color: colors.text,
+    color: BRAND.textPrimary,
   },
   placeholderText: {
     fontSize: 13,
-    color: colors.textMuted,
+    color: BRAND.textMuted,
     textAlign: 'center',
   },
 
@@ -2074,8 +2220,8 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 8,
     borderTopWidth: 1,
-    borderTopColor: colors.glassBorder,
-    backgroundColor: colors.glassCard,
+    borderTopColor: BRAND.border,
+    backgroundColor: BRAND.white,
   },
   footerButtons: {
     flexDirection: 'row',
@@ -2092,7 +2238,7 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   backButtonText: {
     fontSize: 16,
     fontFamily: FONTS.bodySemiBold,
-    color: colors.text,
+    color: BRAND.textPrimary,
   },
   nextButton: {
     flexDirection: 'row',
@@ -2106,7 +2252,7 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   nextButtonText: {
     fontSize: 16,
     fontFamily: FONTS.bodySemiBold,
-    color: colors.background,
+    color: BRAND.white,
   },
   poweredByRow: {
     flexDirection: 'row',
@@ -2122,6 +2268,6 @@ const createStyles = (colors: any, accentColor: string) => StyleSheet.create({
   },
   poweredByText: {
     fontSize: 11,
-    color: colors.textMuted,
+    color: BRAND.textMuted,
   },
 });
