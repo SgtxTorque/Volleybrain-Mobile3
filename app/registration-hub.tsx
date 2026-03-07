@@ -1663,6 +1663,38 @@ export default function RegistrationHubScreen() {
           </View>
         )}
 
+        {/* Profile Completeness Alert */}
+        {(() => {
+          const missingWaiverCount = filteredRegistrations.filter(r =>
+            !r.player.waiver_liability || !r.player.waiver_signed_by
+          ).length;
+          const missingContactCount = filteredRegistrations.filter(r =>
+            !r.player.parent_email || !r.player.parent_phone || !r.player.emergency_contact_name
+          ).length;
+          const totalIssues = missingWaiverCount + missingContactCount;
+          if (totalIssues === 0) return null;
+          return (
+            <View style={{ backgroundColor: `${BRAND.coral}10`, borderRadius: radii.card, borderWidth: 1, borderColor: `${BRAND.coral}30`, padding: 14, marginBottom: 16 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <Ionicons name="alert-circle" size={18} color={BRAND.coral} />
+                <Text style={{ fontSize: 14, fontFamily: FONTS.bodySemiBold, color: BRAND.textPrimary }}>Profile Completeness</Text>
+              </View>
+              <View style={{ gap: 4 }}>
+                {missingWaiverCount > 0 && (
+                  <Text style={{ fontSize: 13, color: BRAND.textMuted, fontFamily: FONTS.bodyMedium }}>
+                    {missingWaiverCount} player{missingWaiverCount !== 1 ? 's' : ''} missing waivers
+                  </Text>
+                )}
+                {missingContactCount > 0 && (
+                  <Text style={{ fontSize: 13, color: BRAND.textMuted, fontFamily: FONTS.bodyMedium }}>
+                    {missingContactCount} player{missingContactCount !== 1 ? 's' : ''} missing contact info
+                  </Text>
+                )}
+              </View>
+            </View>
+          );
+        })()}
+
         {/* Search */}
         <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, borderRadius: radii.card, paddingHorizontal: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.border, ...shadows.card }}>
           <Ionicons name="search" size={20} color={colors.textSecondary} />
