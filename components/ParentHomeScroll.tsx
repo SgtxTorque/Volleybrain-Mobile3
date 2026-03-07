@@ -49,7 +49,7 @@ import RoleSelector from './RoleSelector';
 import DayStripCalendar from './parent-scroll/DayStripCalendar';
 import BillboardHero from './parent-scroll/BillboardHero';
 import AttentionBanner from './parent-scroll/AttentionBanner';
-import AthleteCard from './parent-scroll/AthleteCard';
+import AthleteCardV2 from './parent-scroll/AthleteCardV2';
 import MetricGrid from './parent-scroll/MetricGrid';
 import TeamHubPreview from './parent-scroll/TeamHubPreview';
 import SeasonSnapshot from './parent-scroll/SeasonSnapshot';
@@ -484,22 +484,33 @@ export default function ParentHomeScroll() {
           onPress={() => router.push('/(tabs)/parent-schedule' as any)}
         />
 
-        {/* ─── MY ATHLETE SECTION ─────────────────────────────── */}
-        {data.children.length > 0 && (
+        {/* ─── MY ATHLETES SECTION ────────────────────────────── */}
+        {data.allChildren.length > 0 && (
           <View style={styles.athleteSection}>
-            <Text style={styles.sectionHeader}>MY ATHLETE</Text>
-            {data.children.map((child, i) => (
-              <View key={child.id + '-' + (child.team_id || i)} style={{ marginBottom: 10 }}>
-                <AthleteCard
-                  child={child}
-                  stats={i === 0 ? data.childStats : null}
-                  xp={i === 0 ? data.childXp : null}
-                  scrollY={scrollY}
-                  isSlowScroll={isSlowScroll}
-                  screenHeight={SCREEN_HEIGHT}
-                />
-              </View>
-            ))}
+            <Text style={styles.sectionHeader}>
+              {data.allChildren.length === 1 ? 'MY ATHLETE' : 'MY ATHLETES'}
+            </Text>
+            {data.allChildren.map((child) => {
+              const nextEvent = data.allUpcomingEvents.find(e => e.childId === child.playerId) || null;
+              return (
+                <View key={child.playerId} style={{ marginBottom: 8 }}>
+                  <AthleteCardV2
+                    child={child}
+                    selectedTeamId={data.selectedContext?.teamId || null}
+                    onSelectTeam={(childId, teamId) => {
+                      const current = data.selectedContext;
+                      if (current?.childId === childId && current?.teamId === teamId) {
+                        data.setSelectedContext(null);
+                      } else {
+                        data.setSelectedContext({ childId, teamId });
+                      }
+                    }}
+                    nextEvent={nextEvent}
+                    isMultiOrg={data.isMultiOrg}
+                  />
+                </View>
+              );
+            })}
           </View>
         )}
 
