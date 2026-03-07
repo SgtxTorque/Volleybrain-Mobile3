@@ -1067,7 +1067,7 @@ export default function RegistrationHubScreen() {
         {/* Sport icon */}
         {sport && <Text style={{ fontSize: 16, marginRight: 6 }}>{sport.icon}</Text>}
         {/* Source indicator */}
-        {registration.registration_source === 'mobile' && (
+        {(registration.registration_source === 'mobile' || registration.registration_source === 'mobile_native') && (
           <Text style={{ fontSize: 10, marginRight: 4 }}>{'\ud83d\udcf1'}</Text>
         )}
         {/* Name */}
@@ -1155,9 +1155,9 @@ export default function RegistrationHubScreen() {
               </View>
               {selectedRegistration.registration_source && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: colors.border }}>
-                  <Text style={{ fontSize: 13, marginRight: 4 }}>{selectedRegistration.registration_source === 'mobile' ? '\ud83d\udcf1' : '\ud83c\udf10'}</Text>
+                  <Text style={{ fontSize: 13, marginRight: 4 }}>{selectedRegistration.registration_source?.includes('mobile') ? '\ud83d\udcf1' : '\ud83c\udf10'}</Text>
                   <Text style={{ fontSize: 12, color: colors.textSecondary, fontFamily: FONTS.bodySemiBold }}>
-                    {selectedRegistration.registration_source === 'mobile' ? 'Mobile App' : 'Web Form'}
+                    {selectedRegistration.registration_source === 'mobile_native' ? 'Mobile App (Native)' : selectedRegistration.registration_source === 'mobile' ? 'Mobile App' : 'Web Form'}
                   </Text>
                 </View>
               )}
@@ -1251,10 +1251,16 @@ export default function RegistrationHubScreen() {
               </View>
             </View>
 
-            {/* Siblings */}
+            {/* Siblings (Family Group) */}
             {siblings && siblings.length > 0 && (
               <View style={{ backgroundColor: colors.card, borderRadius: radii.card, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: colors.border, ...shadows.card }}>
-                <Text style={{ fontSize: 14, fontFamily: FONTS.bodySemiBold, color: colors.primary, marginBottom: 12 }}>SIBLINGS</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                  <Ionicons name="people" size={18} color="#AF52DE" />
+                  <Text style={{ fontSize: 14, fontFamily: FONTS.bodySemiBold, color: colors.primary, marginLeft: 8 }}>FAMILY GROUP</Text>
+                  <View style={{ backgroundColor: '#AF52DE20', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, marginLeft: 8 }}>
+                    <Text style={{ fontSize: 11, color: '#AF52DE', fontFamily: FONTS.bodySemiBold }}>{siblings.length + 1} siblings</Text>
+                  </View>
+                </View>
                 <View style={{ gap: 8 }}>
                   {siblings.map((sibling) => (
                     <View key={sibling.id} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.background, padding: 12, borderRadius: 8 }}>
@@ -1286,10 +1292,31 @@ export default function RegistrationHubScreen() {
                   <Text style={{ color: colors.text, marginLeft: 8 }}>Code of Conduct</Text>
                 </View>
               </View>
+              {/* Additional waivers from registration_data (mobile native) */}
+              {selectedRegistration.waivers_accepted && Object.keys(selectedRegistration.waivers_accepted).length > 0 && (
+                <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.06)', gap: 6 }}>
+                  {Object.entries(selectedRegistration.waivers_accepted)
+                    .filter(([k]) => !['liability', 'photo_release', 'code_of_conduct'].includes(k))
+                    .map(([key, accepted]) => (
+                      <View key={key} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Ionicons name={accepted ? 'checkmark-circle' : 'close-circle'} size={20} color={accepted ? '#34C759' : '#8E8E93'} />
+                        <Text style={{ color: colors.text, marginLeft: 8, textTransform: 'capitalize' }}>{key.replace(/_/g, ' ')}</Text>
+                      </View>
+                    ))}
+                </View>
+              )}
               {/* Signature info */}
               {(selectedRegistration.signature_name || player.waiver_signed_by) && (
                 <View style={{ marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.06)' }}>
-                  <Text style={{ fontSize: 12, color: colors.textSecondary }}>Signed by</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Text style={{ fontSize: 12, color: colors.textSecondary }}>Signed by</Text>
+                    {selectedRegistration.registration_data?.signature?.hasCanvas && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: BRAND.teal + '15', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                        <Ionicons name="create-outline" size={12} color={BRAND.teal} />
+                        <Text style={{ fontSize: 11, color: BRAND.teal, marginLeft: 4, fontFamily: FONTS.bodySemiBold }}>Drawn</Text>
+                      </View>
+                    )}
+                  </View>
                   <Text style={{ fontSize: 14, color: colors.text, fontStyle: 'italic', fontFamily: FONTS.bodySemiBold }}>
                     {selectedRegistration.signature_name || player.waiver_signed_by}
                   </Text>

@@ -618,8 +618,10 @@ export default function RegistrationWizardScreen() {
               waivers: waiverState,
               custom_questions: customAnswers,
               signature: { name: signatureName, date: signatureDate, hasCanvas: !!signatureData && !signatureData.startsWith('typed:') },
+              fees: feeBreakdown ? { lines: feeBreakdown.lines, total: feeBreakdown.total } : null,
               source: 'mobile_native',
               app_version: '1.0.0',
+              submitted_at: signatureDate,
               submitted_by_user_id: user!.id,
             },
           }).select().single();
