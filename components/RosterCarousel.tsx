@@ -301,7 +301,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(75,185,236,0.15)',
     ...(Platform.OS === 'ios'
-      ? { shadowColor: '#000', shadowOffset: { width: 0, height: 20 }, shadowOpacity: 0.5, shadowRadius: 60 }
+      ? { shadowColor: '#000', shadowOffset: { width: 0, height: 20 }, shadowOpacity: 0.2, shadowRadius: 60 }
       : { elevation: 10 }),
   },
   cardPhotoArea: {

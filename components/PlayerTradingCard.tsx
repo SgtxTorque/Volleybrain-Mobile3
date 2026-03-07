@@ -353,7 +353,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(75,185,236,0.20)',
     ...(Platform.OS === 'ios'
-      ? { shadowColor: '#000', shadowOffset: { width: 0, height: 25 }, shadowOpacity: 0.6, shadowRadius: 80 }
+      ? { shadowColor: '#000', shadowOffset: { width: 0, height: 25 }, shadowOpacity: 0.2, shadowRadius: 80 }
       : { elevation: 12 }),
   },
 

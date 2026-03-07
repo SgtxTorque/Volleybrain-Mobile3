@@ -1411,7 +1411,7 @@ const s = StyleSheet.create({
   addMemberBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, marginTop: 8, borderTopWidth: 1, borderTopColor: BRAND.border },
   addMemberBtnText: { color: BRAND.teal, fontSize: 15, fontFamily: FONTS.bodySemiBold },
   profileOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' },
-  profileCard: { backgroundColor: BRAND.white, borderRadius: 20, padding: 28, alignItems: 'center', width: 280, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8 },
+  profileCard: { backgroundColor: BRAND.white, borderRadius: 20, padding: 28, alignItems: 'center', width: 280, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 8 },
   profileAvatarLg: { width: 72, height: 72, borderRadius: 36, backgroundColor: BRAND.teal + '20', justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
   profileInitials: { color: BRAND.teal, fontSize: 24, fontFamily: FONTS.bodyBold },
   profileName: { fontSize: 20, fontFamily: FONTS.bodyBold, color: BRAND.textPrimary, marginBottom: 6 },

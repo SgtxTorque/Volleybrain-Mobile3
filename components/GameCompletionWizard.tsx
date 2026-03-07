@@ -559,7 +559,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     borderColor: colors.glassBorder,
     borderRadius: 20,
     ...Platform.select({
-      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 12 },
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12 },
       android: { elevation: 8 },
     }),
   },

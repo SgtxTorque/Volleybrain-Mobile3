@@ -955,7 +955,7 @@ const s = StyleSheet.create({
     paddingVertical: 16,
     shadowColor: BRAND.teal,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.12,
     shadowRadius: 8,
     elevation: 4,
   },

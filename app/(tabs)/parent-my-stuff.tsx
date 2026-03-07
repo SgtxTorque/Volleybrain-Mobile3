@@ -897,7 +897,7 @@ const createStyles = (colors: any) =>
         ios: {
           shadowColor: '#000',
           shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.3,
+          shadowOpacity: 0.15,
           shadowRadius: 4,
         },
         android: { elevation: 4 },

@@ -3173,7 +3173,7 @@ const createStyles = (colors: any) =>
       paddingVertical: 10,
       borderRadius: 24,
       ...Platform.select({
-        ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8 },
+        ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.12, shadowRadius: 8 },
         android: { elevation: 8 },
       }),
     },

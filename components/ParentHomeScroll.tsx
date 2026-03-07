@@ -766,8 +766,8 @@ const styles = StyleSheet.create({
   sectionHeader: {
     fontFamily: FONTS.bodyBold,
     fontSize: 11,
-    letterSpacing: 1.1,
-    color: BRAND.textFaint,
+    letterSpacing: 1.2,
+    color: BRAND.textMuted,
     textTransform: 'uppercase',
     marginBottom: 10,
   },

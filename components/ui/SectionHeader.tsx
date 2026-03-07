@@ -33,9 +33,11 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sectionHeaderPaddingB,
   },
   title: {
-    ...displayTextStyle,
-    fontSize: fontSizes.sectionHeader,
-    color: BRAND.navy,
+    fontFamily: FONTS.bodyBold,
+    fontSize: 11,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    color: BRAND.textMuted,
   },
   action: {
     fontFamily: FONTS.bodySemiBold,

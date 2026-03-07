@@ -2151,10 +2151,10 @@ const s = StyleSheet.create({
     color: DARK.gold,
   },
   tabSectionLabel: {
-    fontSize: 10,
+    fontSize: 11,
     fontFamily: FONTS.bodyBold,
-    color: 'rgba(255,255,255,0.20)',
-    letterSpacing: 1.5,
+    color: 'rgba(255,255,255,0.40)',
+    letterSpacing: 1.2,
     textTransform: 'uppercase',
     marginBottom: 10,
   },

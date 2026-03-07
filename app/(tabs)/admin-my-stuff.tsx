@@ -852,7 +852,7 @@ const createStyles = (colors: any) =>
     accentCircleActive: {
       borderWidth: 2.5, borderColor: '#FFFFFF',
       ...Platform.select({
-        ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4 },
+        ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 4 },
         android: { elevation: 4 },
       }),
     },

@@ -754,7 +754,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     shadowColor: BRAND.skyBlue,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.12,
     shadowRadius: 8,
     elevation: 5,
   },

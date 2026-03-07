@@ -1,40 +1,37 @@
-import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { BRAND } from '@/theme/colors';
+import { FONTS } from '@/theme/fonts';
 
 type Props = {
   count: number;
 };
 
 export default function RegistrationBanner({ count }: Props) {
-  const { colors } = useTheme();
   const router = useRouter();
 
   if (count === 0) return null;
 
   return (
     <TouchableOpacity
-      style={[styles.container, {
-        backgroundColor: colors.primary + '10',
-        borderColor: colors.primary + '30',
-      }]}
+      style={styles.container}
       onPress={() => router.push('/parent-registration-hub' as any)}
       activeOpacity={0.8}
     >
-      <View style={[styles.iconWrap, { backgroundColor: colors.primary + '20' }]}>
-        <Ionicons name="clipboard" size={20} color={colors.primary} />
+      <View style={styles.iconWrap}>
+        <Ionicons name="clipboard" size={20} color={BRAND.teal} />
       </View>
       <View style={styles.content}>
-        <Text style={[styles.title, { color: colors.text }]}>
+        <Text style={styles.title}>
           {count} Open Registration{count !== 1 ? 's' : ''}
         </Text>
-        <Text style={[styles.subtitle, { color: colors.textMuted }]}>
+        <Text style={styles.subtitle}>
           Tap to view and register
         </Text>
       </View>
-      <Ionicons name="chevron-forward" size={18} color={colors.primary} />
+      <Ionicons name="chevron-forward" size={18} color={BRAND.teal} />
     </TouchableOpacity>
   );
 }
@@ -43,9 +40,11 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 14,
+    backgroundColor: BRAND.teal + '10',
+    borderColor: BRAND.teal + '30',
+    borderRadius: 16,
     borderWidth: 1,
-    padding: 14,
+    padding: 16,
     marginBottom: 16,
     gap: 12,
     ...Platform.select({
@@ -59,16 +58,20 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: BRAND.teal + '20',
   },
   content: {
     flex: 1,
   },
   title: {
+    fontFamily: FONTS.bodySemiBold,
     fontSize: 15,
-    fontWeight: '700',
+    color: BRAND.textPrimary,
   },
   subtitle: {
+    fontFamily: FONTS.bodyMedium,
     fontSize: 12,
     marginTop: 2,
+    color: BRAND.textMuted,
   },
 });
