@@ -554,6 +554,12 @@ export default function ParentHomeScroll() {
         {/* ─── RECENT BADGES ─────────────────────────────────── */}
         <RecentBadges playerIds={data.children.map((c) => c.id)} childPlayerId={data.children[0]?.id} />
 
+        {/* ─── UPCOMING SEASON REGISTRATION (below current content) ─── */}
+        <RegistrationCard
+          childName={data.children.length > 0 ? data.children[0].first_name : null}
+          variant="bottom"
+        />
+
         {/* ─── END OF SCROLL (contextual closing) ────────────── */}
         <View style={styles.endSection}>
           <Image source={require('@/assets/images/mascot/SleepLynx.png')} style={styles.endMascot} resizeMode="contain" />

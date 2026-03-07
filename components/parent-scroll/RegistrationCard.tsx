@@ -1,6 +1,8 @@
 /**
  * RegistrationCard — Branded registration entry point for parent home scroll.
  * Shows when open registrations exist. Replaces the old RegistrationBanner + ReenrollmentBanner.
+ * variant='top' (default): shown at the top of the scroll with the standard card style.
+ * variant='bottom': shown below current season content with a subtle section divider.
  */
 import React, { useEffect, useState } from 'react';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -11,10 +13,11 @@ import { useAuth } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
-import { radii } from '@/lib/design-tokens';
+import { radii, spacing } from '@/lib/design-tokens';
 
 type Props = {
   childName: string | null;
+  variant?: 'top' | 'bottom';
 };
 
 type OpenSeasonInfo = {
@@ -22,7 +25,7 @@ type OpenSeasonInfo = {
   name: string;
 };
 
-export default function RegistrationCard({ childName }: Props) {
+export default function RegistrationCard({ childName, variant = 'top' }: Props) {
   const { user, profile } = useAuth();
   const router = useRouter();
   const [seasons, setSeasons] = useState<OpenSeasonInfo[]>([]);
@@ -66,6 +69,26 @@ export default function RegistrationCard({ childName }: Props) {
     }
   };
 
+  // Bottom variant: subtle link below current season content
+  if (variant === 'bottom') {
+    return (
+      <View style={styles.bottomWrapper}>
+        <View style={styles.dividerRow}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerLabel}>UPCOMING</Text>
+          <View style={styles.dividerLine} />
+        </View>
+        <TouchableOpacity style={styles.bottomCard} activeOpacity={0.7} onPress={handlePress}>
+          <Ionicons name="calendar-outline" size={18} color={BRAND.teal} />
+          <Text style={styles.bottomText}>
+            Register for {seasonLabel} {'\u2192'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // Top variant: standard card
   return (
     <TouchableOpacity style={styles.card} activeOpacity={0.7} onPress={handlePress}>
       <View style={styles.accentBorder} />
@@ -131,5 +154,45 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bodySemiBold,
     fontSize: 15,
     color: BRAND.textPrimary,
+  },
+  // Bottom variant styles
+  bottomWrapper: {
+    paddingHorizontal: spacing.screenPadding,
+    marginTop: 8,
+    marginBottom: 16,
+    gap: 12,
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: BRAND.border,
+  },
+  dividerLabel: {
+    fontFamily: FONTS.bodyBold,
+    fontSize: 11,
+    color: BRAND.textMuted,
+    letterSpacing: 1,
+  },
+  bottomCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: radii.card,
+    borderWidth: 1,
+    borderColor: `${BRAND.teal}30`,
+    backgroundColor: `${BRAND.teal}08`,
+  },
+  bottomText: {
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 15,
+    color: BRAND.teal,
   },
 });
