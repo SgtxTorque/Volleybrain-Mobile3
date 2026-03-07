@@ -164,7 +164,7 @@ Last updated: 2026-03-07
 
 ---
 
-## Totals
+## Totals (Pre-Fix)
 
 | Category | Count |
 |----------|-------|
@@ -172,3 +172,44 @@ Last updated: 2026-03-07
 | ✅ 2+ entry points | 52 |
 | ⚠️ 1 entry point | 19 |
 | ❌ 0 entry points (orphaned) | 19 |
+
+---
+
+## Completeness Summary (Post-Fix)
+
+### Screens with 2+ entry points: 71
+All major feature screens now have at least drawer + natural screen entry.
+
+### Screens with 1 entry point: 15
+Mostly settings/legal pages where a single drawer entry is sufficient:
+- `notification-preferences`, `privacy-policy`, `terms-of-service`, `help`, `invite-friends`
+- `coach-availability`, `coach-profile` (drawer only)
+- `bulk-event-create`, `season-reports` (manage tab only)
+- `venue-manager`, `coach-background-checks`, `volunteer-assignment` (drawer only — stubs)
+- `my-waivers` (drawer only)
+- `(tabs)/manage`, `(tabs)/gameday` (tab bar only)
+
+### Screens with 0 entry points (true orphans): 4
+Intentionally not wired — flow/system/redundant screens:
+- `challenge-celebration` — programmatic navigation after challenge completion
+- `notification` — system screen, triggered by notification bell
+- `report-viewer` — 3-line stub wrapper
+- `team-wall` — redundant with `(tabs)/connect`
+
+### Gesture Drawer Coverage
+
+| Role | Sections Visible | Feature Items | Coverage |
+|------|-----------------|---------------|----------|
+| Admin | 7 (Quick, Admin, Game Day, Coaching, Community, Settings, Help) | 47 | Complete |
+| Coach | 6 (Quick, Game Day, Coaching, Community, Settings, Help) | 30 | Complete |
+| Parent | 5 (Quick, Family, Community, Settings, Help) | 22 | Complete |
+| Player | 5 (Quick, My Stuff, Community, Settings, Help) | 23 | Complete |
+
+### Button Verification Results (Phase 4)
+- **Screens verified**: Coach Home Scroll, Parent Home Scroll, Game Day Tab
+- **Total buttons checked**: 75+
+- **Correct**: 73
+- **Fixed**: 2
+  - `parent-scroll/EvaluationCard.tsx`: `?childId=` → `?playerId=` (param mismatch)
+  - `coach-scroll/QuickActions.tsx`: Create Challenge route `null` → `/create-challenge`
+- **Still broken**: 0
