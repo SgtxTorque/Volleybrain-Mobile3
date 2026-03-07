@@ -63,6 +63,7 @@ import LevelUpCelebrationModal from './LevelUpCelebrationModal';
 import RegistrationCard from './parent-scroll/RegistrationCard';
 import RegistrationStatusCard from './parent-scroll/RegistrationStatusCard';
 import IncompleteProfileCard from './parent-scroll/IncompleteProfileCard';
+import { TapDebug } from './TapDebugger';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
@@ -463,33 +464,38 @@ export default function ParentHomeScroll() {
         </View>
 
         {/* ─── EVENT HERO CARD ────────────────────────────────── */}
-        <EventHeroCard
-          event={data.heroEvent}
-          scrollY={scrollY}
-          rsvpStatus={data.heroRsvpStatus}
-          onPress={() => {
-            if (data.heroEvent) {
-              router.push('/(tabs)/parent-schedule' as any);
-            }
-          }}
-          onRsvp={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            // Cycle: RSVP → Going → Not Sure → Not Going → Going → ...
-            const cycle: Array<'yes' | 'maybe' | 'no'> = ['yes', 'maybe', 'no'];
-            const currentIdx = data.heroRsvpStatus ? cycle.indexOf(data.heroRsvpStatus) : -1;
-            const nextStatus = cycle[(currentIdx + 1) % cycle.length];
-            data.rsvpHeroEvent(nextStatus);
-          }}
-        />
+        <TapDebug label="Hero Card">
+          <EventHeroCard
+            event={data.heroEvent}
+            scrollY={scrollY}
+            rsvpStatus={data.heroRsvpStatus}
+            onPress={() => {
+              if (data.heroEvent) {
+                router.push('/(tabs)/parent-schedule' as any);
+              }
+            }}
+            onRsvp={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              // Cycle: RSVP → Going → Not Sure → Not Going → Going → ...
+              const cycle: Array<'yes' | 'maybe' | 'no'> = ['yes', 'maybe', 'no'];
+              const currentIdx = data.heroRsvpStatus ? cycle.indexOf(data.heroRsvpStatus) : -1;
+              const nextStatus = cycle[(currentIdx + 1) % cycle.length];
+              data.rsvpHeroEvent(nextStatus);
+            }}
+          />
+        </TapDebug>
 
         {/* ─── SECONDARY EVENTS (flat lines) ───────────────────── */}
         <SecondaryEvents events={data.upcomingEvents} />
 
         {/* ─── ATTENTION NUDGE ──────────────────────────────────── */}
-        <AttentionBanner
-          count={data.attentionCount}
-          onPress={() => router.push('/(tabs)/parent-schedule' as any)}
-        />
+        <TapDebug label="Attention Banner">
+          <AttentionBanner
+            count={data.attentionCount}
+            items={data.attentionItems}
+            onPress={() => router.push('/(tabs)/parent-schedule' as any)}
+          />
+        </TapDebug>
 
         {/* ─── MY ATHLETE SECTION ─────────────────────────────── */}
         {data.children.length > 0 && (
@@ -497,14 +503,16 @@ export default function ParentHomeScroll() {
             <Text style={styles.sectionHeader}>MY ATHLETE</Text>
             {data.children.map((child, i) => (
               <View key={child.id + '-' + (child.team_id || i)} style={{ marginBottom: 10 }}>
-                <AthleteCard
-                  child={child}
-                  stats={i === 0 ? data.childStats : null}
-                  xp={i === 0 ? data.childXp : null}
-                  scrollY={scrollY}
-                  isSlowScroll={isSlowScroll}
-                  screenHeight={SCREEN_HEIGHT}
-                />
+                <TapDebug label={`Player: ${child.first_name}`}>
+                  <AthleteCard
+                    child={child}
+                    stats={i === 0 ? data.childStats : null}
+                    xp={i === 0 ? data.childXp : null}
+                    scrollY={scrollY}
+                    isSlowScroll={isSlowScroll}
+                    screenHeight={SCREEN_HEIGHT}
+                  />
+                </TapDebug>
               </View>
             ))}
           </View>
@@ -531,34 +539,44 @@ export default function ParentHomeScroll() {
 
         {/* ─── EVALUATIONS ─────────────────────────────────────── */}
         {data.children.length > 0 && (
-          <ParentEvaluationCard
-            children={data.children.map((c) => ({
-              id: c.id,
-              first_name: c.first_name,
-            }))}
-          />
+          <TapDebug label="Evaluation Card">
+            <ParentEvaluationCard
+              children={data.children.map((c) => ({
+                id: c.id,
+                first_name: c.first_name,
+              }))}
+            />
+          </TapDebug>
         )}
 
         {/* ─── METRIC GRID ─────────────────────────────────────── */}
-        <MetricGrid
-          record={data.seasonRecord}
-          payment={data.paymentStatus}
-          xp={data.childXp}
-          chat={data.lastChat}
-          childPlayerId={data.children[0]?.id}
-        />
+        <TapDebug label="Metric Grid">
+          <MetricGrid
+            record={data.seasonRecord}
+            payment={data.paymentStatus}
+            xp={data.childXp}
+            chat={data.lastChat}
+            childPlayerId={data.children[0]?.id}
+          />
+        </TapDebug>
 
         {/* ─── TEAM HUB PREVIEW (flat) ──────────────────────── */}
-        <TeamHubPreview post={data.latestPost} />
+        <TapDebug label="Team Hub">
+          <TeamHubPreview post={data.latestPost} />
+        </TapDebug>
 
         {/* ─── CHAT PREVIEW (flat) ─────────────────────────── */}
         <FlatChatPreview chat={data.lastChat} />
 
         {/* ─── SEASON SCOREBOARD (flat) ────────────────────── */}
-        <SeasonSnapshot record={data.seasonRecord} />
+        <TapDebug label="Season Snapshot">
+          <SeasonSnapshot record={data.seasonRecord} />
+        </TapDebug>
 
         {/* ─── RECENT BADGES ─────────────────────────────────── */}
-        <RecentBadges playerIds={data.children.map((c) => c.id)} childPlayerId={data.children[0]?.id} />
+        <TapDebug label="Recent Badges">
+          <RecentBadges playerIds={data.children.map((c) => c.id)} childPlayerId={data.children[0]?.id} />
+        </TapDebug>
 
         {/* ─── UPCOMING SEASON REGISTRATION (below current content) ─── */}
         <RegistrationCard

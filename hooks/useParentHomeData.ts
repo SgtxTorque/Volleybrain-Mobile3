@@ -67,6 +67,13 @@ export type PlayerStats = {
   total_assists: number;
 };
 
+export type AttentionItem = {
+  id: string;
+  label: string;
+  icon: string;
+  route: string;
+};
+
 // ─── Hook ──────────────────────────────────────────────────────
 
 export function useParentHomeData() {
@@ -80,6 +87,7 @@ export function useParentHomeData() {
   const [upcomingEvents, setUpcomingEvents] = useState<any[]>([]);
   const [eventDates, setEventDates] = useState<Set<string>>(new Set());
   const [attentionCount, setAttentionCount] = useState(0);
+  const [attentionItems, setAttentionItems] = useState<AttentionItem[]>([]);
   const [seasonRecord, setSeasonRecord] = useState<SeasonRecord | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>({ total_owed: 0, total_paid: 0, balance: 0 });
   const [latestPost, setLatestPost] = useState<LatestPost | null>(null);
@@ -281,8 +289,9 @@ export function useParentHomeData() {
         } catch {}
       }
 
-      // ── Step 4: Attention count (un-RSVPed + unpaid + unread DMs) ──
+      // ── Step 4: Attention count + structured items ──
       let attention = 0;
+      const items: AttentionItem[] = [];
       const childIds = formattedChildren.map((c) => c.id);
 
       if (teamIds.length > 0 && childIds.length > 0) {
@@ -294,7 +303,7 @@ export function useParentHomeData() {
 
           const { data: nextEvents } = await supabase
             .from('schedule_events')
-            .select('id')
+            .select('id, title, event_type, event_date')
             .in('team_id', teamIds)
             .gte('event_date', today)
             .lte('event_date', fiveDays);
@@ -312,6 +321,15 @@ export function useParentHomeData() {
               childIds.some((cid) => !rsvpSet.has(`${evt.id}-${cid}`)),
             );
             attention += unRsvped.length;
+            unRsvped.forEach((evt) => {
+              const dayLabel = (() => { try { return new Date(evt.event_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }); } catch { return evt.event_date; } })();
+              items.push({
+                id: `rsvp-${evt.id}`,
+                label: `RSVP needed: ${evt.event_type || evt.title} ${dayLabel}`,
+                icon: '\u{1F4CB}',
+                route: '/(tabs)/parent-schedule',
+              });
+            });
           }
         } catch {}
       }
@@ -340,11 +358,20 @@ export function useParentHomeData() {
           const balance = totalOwed - totalPaid;
           setPaymentStatus({ total_owed: totalOwed, total_paid: totalPaid, balance });
 
-          if (balance > 0) attention += 1;
+          if (balance > 0) {
+            attention += 1;
+            items.push({
+              id: 'balance-due',
+              label: `$${balance.toFixed(0)} balance due`,
+              icon: '\u{1F4B3}',
+              route: '/family-payments',
+            });
+          }
         } catch {}
       }
 
       setAttentionCount(attention);
+      setAttentionItems(items);
 
       // ── Step 5: Child stats (first child) ──
       if (formattedChildren.length > 0 && workingSeason?.id) {
@@ -470,6 +497,7 @@ export function useParentHomeData() {
     upcomingEvents,
     eventDates,
     attentionCount,
+    attentionItems,
     seasonRecord,
     paymentStatus,
     latestPost,
