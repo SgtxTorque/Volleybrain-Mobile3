@@ -27,11 +27,12 @@ import { useEffect, useMemo, useRef } from 'react';
 import { Dimensions, KeyboardAvoidingView, Platform } from 'react-native';
 import { lockPortrait, unlockOrientation } from '@/lib/orientation';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { determineOnboardingPath, getOnboardingRoute } from '@/lib/onboarding-router';
 
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
-  const { session, loading, profile, needsOnboarding, hasOrphanRecords } = useAuth();
+  const { session, user, loading, profile, needsOnboarding, hasOrphanRecords } = useAuth();
   const { colors, isDark } = useTheme();
   const segments = useSegments();
   const router = useRouter();
@@ -53,12 +54,18 @@ function RootLayoutNav() {
       if (profile?.pending_approval) {
         hasNavigated.current = true;
         router.replace('/(auth)/pending-approval');
-      } else if (needsOnboarding) {
-        hasNavigated.current = true;
-        router.replace('/(tabs)');
       } else if (hasOrphanRecords) {
         hasNavigated.current = true;
         router.replace('/claim-account' as any);
+      } else if (needsOnboarding && user?.email && profile?.id) {
+        // Use onboarding router to determine the best entry path
+        hasNavigated.current = true;
+        determineOnboardingPath(user.id, user.email, profile.id).then(path => {
+          const route = getOnboardingRoute(path);
+          router.replace(route as any);
+        }).catch(() => {
+          router.replace('/(tabs)');
+        });
       } else {
         hasNavigated.current = true;
         router.replace('/(tabs)');
@@ -66,9 +73,6 @@ function RootLayoutNav() {
     } else if (session && !inAuthGroup && profile?.pending_approval) {
       hasNavigated.current = true;
       router.replace('/(auth)/pending-approval');
-    } else if (session && !inAuthGroup && needsOnboarding) {
-      hasNavigated.current = true;
-      router.replace('/(tabs)');
     }
   }, [session, loading, profile?.pending_approval, needsOnboarding, hasOrphanRecords]);
 
