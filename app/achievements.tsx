@@ -22,7 +22,7 @@ import { FONTS } from '@/theme/fonts';
 import { fetchActiveChallenges, type ChallengeWithParticipants } from '@/lib/challenge-service';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -208,20 +208,22 @@ export default function AchievementsScreen() {
   const [totalXp, setTotalXp] = useState(0);
   const [unseenAchievements, setUnseenAchievements] = useState<UnseenAchievement[]>([]);
   const [showCelebration, setShowCelebration] = useState(false);
+  const hasRunAutoUnlock = useRef(false);
 
   useEffect(() => {
+    hasRunAutoUnlock.current = false; // Reset when deps change
     if (user?.id && workingSeason?.id) {
       loadData();
     }
   }, [user?.id, workingSeason?.id]);
 
-  // Auto-unlock after data loads
-  const seasonStatsCount = Object.keys(seasonStats).length;
+  // Auto-unlock after data loads — runs ONCE per load cycle, not on every stats change
   useEffect(() => {
-    if (!loading && playerId && allAchievements.length > 0) {
+    if (!loading && playerId && allAchievements.length > 0 && !hasRunAutoUnlock.current) {
+      hasRunAutoUnlock.current = true;
       runAutoUnlock();
     }
-  }, [loading, playerId, allAchievements.length, seasonStatsCount]);
+  }, [loading, playerId, allAchievements.length]);
 
   const resolvePlayerId = async (): Promise<string | null> => {
     // Use route param if provided (parent viewing child's achievements)
@@ -439,23 +441,31 @@ export default function AchievementsScreen() {
   const runAutoUnlock = async () => {
     if (!playerId || !workingSeason?.id || allAchievements.length === 0) return;
 
-    const result = await checkAllAchievements(playerId, workingSeason.id);
+    try {
+      // Only run checkAllAchievements for PLAYER role — it writes to player_achievements
+      // which has an FK on players.id. For parents/coaches/admins, role achievements
+      // are already handled in loadRoleData via checkRoleAchievements.
+      if (effectiveRole === 'player') {
+        const result = await checkAllAchievements(playerId, workingSeason.id);
 
-    // Update season stats with the comprehensive stats gathered by engine
-    if (Object.keys(result.allStats).length > 0) {
-      setSeasonStats(result.allStats);
-    }
+        if (Object.keys(result.allStats).length > 0) {
+          setSeasonStats(result.allStats);
+        }
 
-    if (result.newUnlocks.length > 0) {
-      // Refresh to show newly unlocked
-      await loadData();
-    }
+        if (result.newUnlocks.length > 0) {
+          await loadData();
+        }
 
-    // Check for unseen achievements to celebrate
-    const unseen = await getUnseenAchievements(playerId);
-    if (unseen.length > 0) {
-      setUnseenAchievements(unseen);
-      setShowCelebration(true);
+        // Check for unseen achievements to celebrate
+        const unseen = await getUnseenAchievements(playerId);
+        if (unseen.length > 0) {
+          setUnseenAchievements(unseen);
+          setShowCelebration(true);
+        }
+      }
+    } catch (err: any) {
+      if (__DEV__) console.log('Achievement check skipped:', err?.message);
+      return; // Fail silently, don't retry
     }
   };
 

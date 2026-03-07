@@ -174,6 +174,18 @@ export async function checkAllAchievements(
   organizationId?: string,
 ): Promise<CheckAllResult> {
   try {
+    // Guard: verify playerId is actually a players.id, not a profiles.id
+    // player_achievements has an FK on players.id — passing a profile.id causes FK violations
+    const { data: playerRow } = await supabase
+      .from('players')
+      .select('id')
+      .eq('id', playerId)
+      .maybeSingle();
+    if (!playerRow) {
+      if (__DEV__) console.log('checkAllAchievements: skipped — playerId is not in players table:', playerId);
+      return { newUnlocks: [], allStats: {} };
+    }
+
     // Fetch all active achievements
     const { data: achievements } = await supabase
       .from('achievements')
