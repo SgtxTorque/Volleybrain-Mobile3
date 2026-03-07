@@ -61,6 +61,7 @@ import FlatChatPreview from './parent-scroll/FlatChatPreview';
 import ChallengeVerifyCard from './parent-scroll/ChallengeVerifyCard';
 import ParentEvaluationCard from './parent-scroll/EvaluationCard';
 import LevelUpCelebrationModal from './LevelUpCelebrationModal';
+import FamilyPanel from './FamilyPanel';
 import RegistrationCard from './parent-scroll/RegistrationCard';
 import RegistrationStatusCard from './parent-scroll/RegistrationStatusCard';
 import IncompleteProfileCard from './parent-scroll/IncompleteProfileCard';
@@ -173,6 +174,9 @@ export default function ParentHomeScroll() {
   });
   const data = useParentHomeData();
   const { isTabletAny, contentMaxWidth, contentPadding } = useResponsive();
+
+  // ─── Family Panel ──
+  const [familyPanelOpen, setFamilyPanelOpen] = useState(false);
 
   // ─── Level-up celebration for child ──
   const [showLevelUp, setShowLevelUp] = useState(false);
@@ -468,7 +472,7 @@ export default function ParentHomeScroll() {
           context={data.selectedContext}
           allChildren={data.allChildren}
           isMulti={data.isMultiChild || data.isMultiSport}
-          onSwitch={() => data.setSelectedContext(null)}
+          onSwitch={() => setFamilyPanelOpen(true)}
           onClear={() => data.setSelectedContext(null)}
         />
 
@@ -626,6 +630,20 @@ export default function ParentHomeScroll() {
         totalXp={levelUpXp}
         onDismiss={() => setShowLevelUp(false)}
       />
+
+      {/* ─── FAMILY PANEL (right-side drawer) ──────────────────── */}
+      {(data.isMultiChild || data.isMultiSport) && (
+        <FamilyPanel
+          visible={familyPanelOpen}
+          onClose={() => setFamilyPanelOpen(false)}
+          allChildren={data.allChildren}
+          allEvents={data.allUpcomingEvents}
+          payment={data.paymentStatus}
+          onSelectContext={(ctx) => {
+            data.setSelectedContext(ctx);
+          }}
+        />
+      )}
     </View>
   );
 }
