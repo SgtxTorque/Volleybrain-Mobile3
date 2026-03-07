@@ -54,6 +54,7 @@ export type PaymentStatus = {
   total_owed: number;
   total_paid: number;
   balance: number;
+  nextInstallment?: { amount: number; due_date: string } | null;
 };
 
 export type LatestPost = {
@@ -573,7 +574,23 @@ export function useParentHomeData() {
 
           const totalPaid = (payments || []).filter((p) => p.status === 'verified').reduce((sum, p) => sum + (p.amount || 0), 0);
           const balance = totalOwed - totalPaid;
-          setPaymentStatus({ total_owed: totalOwed, total_paid: totalPaid, balance });
+
+          // Check for installment plans
+          let nextInstallment: { amount: number; due_date: string } | null = null;
+          try {
+            const { data: instData } = await supabase
+              .from('payment_installments')
+              .select('amount, due_date')
+              .eq('parent_id', user.id)
+              .eq('paid', false)
+              .order('due_date', { ascending: true })
+              .limit(1);
+            if (instData && instData.length > 0) {
+              nextInstallment = { amount: instData[0].amount, due_date: instData[0].due_date };
+            }
+          } catch { /* table may not exist yet */ }
+
+          setPaymentStatus({ total_owed: totalOwed, total_paid: totalPaid, balance, nextInstallment });
 
           if (balance > 0) {
             attention++;

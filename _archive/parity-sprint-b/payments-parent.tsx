@@ -1,12 +1,6 @@
 import { useAuth } from '@/lib/auth';
-import {
-  getInstallmentsForParent,
-  type PaymentInstallment,
-  type PaymentPlan,
-} from '@/lib/payment-plans';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
-import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -175,10 +169,6 @@ export default function ParentPaymentsScreen({ hideHeader = false }: Props) {
 
   // Stripe availability
   const stripeEnabled = !!organization?.stripe_enabled;
-
-  // Installment plan state
-  const [installments, setInstallments] = useState<PaymentInstallment[]>([]);
-  const [installmentPlans, setInstallmentPlans] = useState<Map<string, PaymentPlan>>(new Map());
 
   // =============================================================================
   // DATA FETCHING
@@ -362,32 +352,9 @@ export default function ParentPaymentsScreen({ hideHeader = false }: Props) {
     }
   }, [user?.id, profile?.email, organization]);
 
-  const fetchInstallments = useCallback(async () => {
-    if (!user?.id) return;
-    try {
-      const data = await getInstallmentsForParent(user.id);
-      setInstallments(data);
-
-      // Fetch plan details for each unique plan
-      const planIds = [...new Set(data.map(i => i.payment_plan_id))];
-      if (planIds.length > 0) {
-        const { data: planData } = await supabase
-          .from('payment_plans')
-          .select('*')
-          .in('id', planIds);
-        const map = new Map<string, PaymentPlan>();
-        (planData || []).forEach((p: any) => map.set(p.id, p));
-        setInstallmentPlans(map);
-      }
-    } catch {
-      // silently fail - installments are additive
-    }
-  }, [user?.id]);
-
   useEffect(() => {
     fetchPayments();
-    fetchInstallments();
-  }, [fetchPayments, fetchInstallments]);
+  }, [fetchPayments]);
 
   useEffect(() => {
     if (profile?.full_name) {
@@ -398,8 +365,7 @@ export default function ParentPaymentsScreen({ hideHeader = false }: Props) {
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     fetchPayments();
-    fetchInstallments();
-  }, [fetchPayments, fetchInstallments]);
+  }, [fetchPayments]);
 
   // =============================================================================
   // SELECTION
@@ -843,177 +809,6 @@ export default function ParentPaymentsScreen({ hideHeader = false }: Props) {
             <Text style={s.instructionsText}>{settings.instructions}</Text>
           </View>
         )}
-
-        {/* Installment Plans (if any exist) */}
-        {installments.length > 0 && (() => {
-          // Group installments by plan
-          const byPlan = new Map<string, PaymentInstallment[]>();
-          installments.forEach(inst => {
-            const existing = byPlan.get(inst.payment_plan_id) || [];
-            existing.push(inst);
-            byPlan.set(inst.payment_plan_id, existing);
-          });
-
-          return (
-            <View style={{ marginBottom: 20 }}>
-              <Text style={{
-                fontSize: 12,
-                fontWeight: '700',
-                color: colors.textMuted,
-                marginBottom: 10,
-                textTransform: 'uppercase' as const,
-                letterSpacing: 1,
-              }}>
-                INSTALLMENT PLANS
-              </Text>
-
-              {Array.from(byPlan.entries()).map(([planId, planInstallments]) => {
-                const plan = installmentPlans.get(planId);
-                const paidCount = planInstallments.filter(i => i.paid).length;
-                const totalCount = planInstallments.length;
-                const progress = totalCount > 0 ? paidCount / totalCount : 0;
-                const now = new Date();
-                const nextDue = planInstallments.find(i => !i.paid);
-                const overdueCount = planInstallments.filter(
-                  i => !i.paid && new Date(i.due_date + 'T00:00:00') < now
-                ).length;
-
-                return (
-                  <View key={planId} style={{
-                    backgroundColor: colors.glassCard,
-                    borderRadius: 16,
-                    marginBottom: 12,
-                    borderWidth: 1,
-                    borderColor: overdueCount > 0 ? '#FF3B30' + '40' : colors.glassBorder,
-                    overflow: 'hidden',
-                    ...Platform.select({
-                      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8 },
-                      android: { elevation: 4 },
-                    }),
-                  }}>
-                    <View style={{ padding: 16 }}>
-                      {/* Plan header */}
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>
-                          {plan?.name || 'Payment Plan'}
-                        </Text>
-                        <Text style={{ fontSize: 14, fontWeight: '700', color: colors.text }}>
-                          ${plan?.total_amount || 0}
-                        </Text>
-                      </View>
-
-                      {/* Progress bar */}
-                      <View style={{ marginTop: 12 }}>
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-                          <Text style={{ fontSize: 12, color: colors.textSecondary }}>
-                            {paidCount} of {totalCount} paid
-                          </Text>
-                          <Text style={{ fontSize: 12, fontWeight: '600', color: progress === 1 ? colors.success : colors.text }}>
-                            {Math.round(progress * 100)}%
-                          </Text>
-                        </View>
-                        <View style={{
-                          height: 6,
-                          backgroundColor: colors.border,
-                          borderRadius: 3,
-                          overflow: 'hidden',
-                        }}>
-                          <View style={{
-                            height: '100%',
-                            width: `${Math.min(progress * 100, 100)}%`,
-                            backgroundColor: progress === 1 ? colors.success : colors.primary,
-                            borderRadius: 3,
-                          }} />
-                        </View>
-                      </View>
-
-                      {/* Installment rows */}
-                      <View style={{ marginTop: 12 }}>
-                        {planInstallments.map((inst) => {
-                          const isOverdue = !inst.paid && new Date(inst.due_date + 'T00:00:00') < now;
-                          const statusColor = inst.paid ? colors.success : isOverdue ? '#FF3B30' : '#FF9500';
-                          const statusLabel = inst.paid ? 'Paid' : isOverdue ? 'Overdue' : 'Due';
-                          const dateStr = inst.paid && inst.paid_at
-                            ? new Date(inst.paid_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                            : new Date(inst.due_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-
-                          return (
-                            <View key={inst.id} style={{
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                              paddingVertical: 8,
-                              borderTopWidth: 1,
-                              borderTopColor: colors.glassBorder,
-                            }}>
-                              <View style={{
-                                width: 24,
-                                height: 24,
-                                borderRadius: 12,
-                                backgroundColor: statusColor + '20',
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                                marginRight: 10,
-                              }}>
-                                {inst.paid ? (
-                                  <Ionicons name="checkmark" size={14} color={statusColor} />
-                                ) : (
-                                  <Text style={{ fontSize: 10, fontWeight: '700', color: statusColor }}>
-                                    {inst.installment_number}
-                                  </Text>
-                                )}
-                              </View>
-                              <View style={{ flex: 1 }}>
-                                <Text style={{ fontSize: 14, fontWeight: '500', color: colors.text }}>
-                                  ${inst.amount}
-                                </Text>
-                                <Text style={{ fontSize: 11, color: colors.textSecondary }}>
-                                  {inst.paid ? 'Paid' : 'Due'} {dateStr}
-                                </Text>
-                              </View>
-                              <View style={{
-                                backgroundColor: statusColor + '20',
-                                paddingHorizontal: 8,
-                                paddingVertical: 3,
-                                borderRadius: 4,
-                              }}>
-                                <Text style={{ fontSize: 10, fontWeight: '600', color: statusColor }}>
-                                  {statusLabel}
-                                </Text>
-                              </View>
-                            </View>
-                          );
-                        })}
-                      </View>
-
-                      {/* Next due highlight */}
-                      {nextDue && !nextDue.paid && (
-                        <View style={{
-                          backgroundColor: colors.primary + '15',
-                          borderRadius: 10,
-                          padding: 12,
-                          marginTop: 12,
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          gap: 10,
-                        }}>
-                          <Ionicons name="calendar-outline" size={18} color={colors.primary} />
-                          <View style={{ flex: 1 }}>
-                            <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>
-                              Next: ${nextDue.amount}
-                            </Text>
-                            <Text style={{ fontSize: 11, color: colors.textSecondary }}>
-                              Due {new Date(nextDue.due_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                            </Text>
-                          </View>
-                        </View>
-                      )}
-                    </View>
-                  </View>
-                );
-              })}
-            </View>
-          );
-        })()}
 
         {/* Select All (if unpaid items exist) */}
         {unpaidPayments.length > 0 && (

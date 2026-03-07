@@ -63,7 +63,17 @@ export default function MetricGrid({ record, payment, xp, chat, childPlayerId, s
           activeOpacity={0.7}
           onPress={() => router.push('/family-payments' as any)}
         >
-          {showBalance ? (
+          {payment.nextInstallment ? (
+            <>
+              <Text style={styles.emoji}>{'\u{1F4B3}'}</Text>
+              <Text style={[styles.bigNumber, { color: BRAND.coral }]}>
+                ${payment.nextInstallment.amount}
+              </Text>
+              <Text style={styles.subtitle}>
+                Due {new Date(payment.nextInstallment.due_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </Text>
+            </>
+          ) : showBalance ? (
             <>
               <Text style={styles.emoji}>{'\u{1F4B3}'}</Text>
               <Text style={[styles.bigNumber, { color: balanceColor }]}>
