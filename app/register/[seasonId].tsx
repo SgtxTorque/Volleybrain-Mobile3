@@ -898,9 +898,13 @@ export default function RegistrationWizardScreen() {
                 {returningPlayers.length > 0 && (
                   <View style={s.sectionBlock}>
                     <Text style={s.sectionTitle}>Returning Players</Text>
-                    <Text style={s.sectionSubtitle}>Select children to re-register</Text>
+                    <Text style={s.sectionSubtitle}>Select children to re-register for this season</Text>
                     {returningPlayers.map(player => {
                       const selected = selectedReturningIds.includes(player.id);
+                      const initials = `${(player.first_name || '?')[0]}${(player.last_name || '?')[0]}`.toUpperCase();
+                      const age = player.birth_date
+                        ? Math.floor((Date.now() - new Date(player.birth_date).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+                        : null;
                       return (
                         <TouchableOpacity
                           key={player.id}
@@ -909,19 +913,22 @@ export default function RegistrationWizardScreen() {
                           activeOpacity={0.7}
                         >
                           <View style={s.returningCardLeft}>
-                            <View style={[s.checkbox, selected && { backgroundColor: accentColor, borderColor: accentColor }]}>
-                              {selected && <Ionicons name="checkmark" size={14} color={BRAND.white} />}
+                            <View style={[s.returningAvatar, selected && { backgroundColor: accentColor }]}>
+                              <Text style={[s.returningAvatarText, selected && { color: BRAND.white }]}>
+                                {initials}
+                              </Text>
                             </View>
                             <View style={s.returningInfo}>
                               <Text style={s.returningName}>{player.first_name} {player.last_name}</Text>
                               <Text style={s.returningDetail}>
-                                {player.grade != null ? `Grade ${player.grade === 0 ? 'K' : player.grade}` : ''}
+                                {age ? `Age ${age}` : ''}
+                                {player.grade != null ? `${age ? ' · ' : ''}Grade ${player.grade === 0 ? 'K' : player.grade}` : ''}
                                 {player.school ? ` · ${player.school}` : ''}
                               </Text>
                             </View>
                           </View>
-                          <View style={[s.returningBadge, { backgroundColor: accentColor + '20' }]}>
-                            <Text style={[s.returningBadgeText, { color: accentColor }]}>Returning</Text>
+                          <View style={[s.checkbox, selected && { backgroundColor: accentColor, borderColor: accentColor }]}>
+                            {selected && <Ionicons name="checkmark" size={14} color={BRAND.white} />}
                           </View>
                         </TouchableOpacity>
                       );
@@ -1013,21 +1020,34 @@ export default function RegistrationWizardScreen() {
         ) : currentStepDef?.key === 'player' && data ? (
           /* ============ PLAYER INFO STEP ============ */
           <View style={s.stepContainer}>
-            {/* Multi-child tab bar */}
-            {children.length > 1 && (
-              <View style={s.childTabs}>
+            {/* Multi-child tab bar — scrollable with add button */}
+            {children.length > 0 && (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={s.childTabsScroll}
+                contentContainerStyle={s.childTabsContent}
+              >
                 {children.map((child, idx) => (
                   <TouchableOpacity
                     key={idx}
                     style={[s.childTab, activeChildIndex === idx && { backgroundColor: accentColor }]}
                     onPress={() => setActiveChildIndex(idx)}
                   >
+                    <View style={[s.childTabAvatar, activeChildIndex === idx && { backgroundColor: BRAND.white + '30' }]}>
+                      <Text style={[s.childTabInitial, activeChildIndex === idx && { color: BRAND.white }]}>
+                        {(child.first_name || `${idx + 1}`)[0].toUpperCase()}
+                      </Text>
+                    </View>
                     <Text style={[s.childTabText, activeChildIndex === idx && { color: BRAND.white }]}>
                       {child.first_name || `Child ${idx + 1}`}
                     </Text>
+                    {child._isReturning === 'true' && (
+                      <Ionicons name="refresh-circle" size={14} color={activeChildIndex === idx ? BRAND.white : BRAND.teal} />
+                    )}
                   </TouchableOpacity>
                 ))}
-              </View>
+              </ScrollView>
             )}
 
             {/* Dynamic fields for active child */}
@@ -1759,6 +1779,19 @@ const createStyles = (accentColor: string) => StyleSheet.create({
     gap: 12,
     flex: 1,
   },
+  returningAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: BRAND.warmGray,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  returningAvatarText: {
+    fontSize: 14,
+    fontFamily: FONTS.bodyBold,
+    color: BRAND.textPrimary,
+  },
   checkbox: {
     width: 24,
     height: 24,
@@ -2096,18 +2129,36 @@ const createStyles = (accentColor: string) => StyleSheet.create({
   },
 
   // Player info — child tabs
-  childTabs: {
-    flexDirection: 'row',
+  childTabsScroll: {
+    marginBottom: 16,
+  },
+  childTabsContent: {
     gap: 8,
-    flexWrap: 'wrap',
+    paddingRight: 16,
   },
   childTab: {
-    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
     backgroundColor: BRAND.white,
     borderWidth: 1,
     borderColor: BRAND.border,
+  },
+  childTabAvatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: BRAND.warmGray,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  childTabInitial: {
+    fontSize: 11,
+    fontFamily: FONTS.bodyBold,
+    color: BRAND.textPrimary,
   },
   childTabText: {
     fontSize: 14,
