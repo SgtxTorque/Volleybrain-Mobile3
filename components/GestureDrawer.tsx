@@ -441,7 +441,6 @@ export default function GestureDrawer() {
 
   const scrimStyle = useAnimatedStyle(() => ({
     opacity: interpolate(progress.value, [0, 1], [0, 0.55]),
-    pointerEvents: progress.value > 0.01 ? 'auto' as const : 'none' as const,
   }));
 
   return (
@@ -451,8 +450,11 @@ export default function GestureDrawer() {
         <Animated.View style={styles.edgeZone} />
       </GestureDetector>
 
-      {/* Scrim overlay */}
-      <Animated.View style={[styles.scrim, scrimStyle]}>
+      {/* Scrim overlay — pointerEvents must be a View prop, not animated style */}
+      <Animated.View
+        pointerEvents={isOpen ? 'auto' : 'none'}
+        style={[styles.scrim, scrimStyle]}
+      >
         <Pressable style={StyleSheet.absoluteFill} onPress={closeDrawer} />
       </Animated.View>
 

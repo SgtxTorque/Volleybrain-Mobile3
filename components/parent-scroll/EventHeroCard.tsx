@@ -3,7 +3,7 @@
  * Features parallax gradient reveal on scroll approach.
  */
 import React, { useEffect } from 'react';
-import { Image, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Linking, Platform, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -75,10 +75,10 @@ function getRsvpDisplay(status: RsvpStatus): { label: string; bg: string; textCo
   switch (status) {
     case 'yes':
       return { label: 'GOING \u2713', bg: BRAND.success, textColor: BRAND.white };
+    case 'maybe':
+      return { label: 'NOT SURE', bg: '#F59E0B', textColor: BRAND.white };
     case 'no':
       return { label: 'NOT GOING', bg: BRAND.error, textColor: BRAND.white };
-    case 'maybe':
-      return { label: 'MAYBE', bg: '#F59E0B', textColor: BRAND.white };
     default:
       return { label: 'RSVP', bg: BRAND.skyBlue, textColor: BRAND.white };
   }
@@ -136,9 +136,8 @@ export default function EventHeroCard({ event, scrollY, rsvpStatus, onPress, onR
   };
 
   return (
-    <TouchableOpacity
-      style={styles.card}
-      activeOpacity={0.85}
+    <Pressable
+      style={({ pressed }) => [styles.card, pressed && { opacity: 0.85 }]}
       onPress={onPress}
     >
       {/* Sport-themed background image with parallax reveal */}
@@ -206,7 +205,7 @@ export default function EventHeroCard({ event, scrollY, rsvpStatus, onPress, onR
           </TouchableOpacity>
         </View>
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 

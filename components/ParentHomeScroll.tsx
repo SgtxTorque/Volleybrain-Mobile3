@@ -368,6 +368,7 @@ export default function ParentHomeScroll() {
         onScroll={scrollHandler}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
         contentContainerStyle={[
           { paddingBottom: 120 },
           isTabletAny && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%', paddingHorizontal: contentPadding },
@@ -473,8 +474,8 @@ export default function ParentHomeScroll() {
           }}
           onRsvp={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            // Cycle: null → yes → no → maybe → null → ...
-            const cycle: Array<'yes' | 'no' | 'maybe'> = ['yes', 'no', 'maybe'];
+            // Cycle: RSVP → Going → Not Sure → Not Going → Going → ...
+            const cycle: Array<'yes' | 'maybe' | 'no'> = ['yes', 'maybe', 'no'];
             const currentIdx = data.heroRsvpStatus ? cycle.indexOf(data.heroRsvpStatus) : -1;
             const nextStatus = cycle[(currentIdx + 1) % cycle.length];
             data.rsvpHeroEvent(nextStatus);
