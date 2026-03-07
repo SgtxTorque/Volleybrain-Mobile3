@@ -109,7 +109,8 @@ const MENU_SECTIONS: MenuSection[] = [
       { icon: 'document-text', label: 'Form Builder', route: '/web-features', webOnly: true },
       { icon: 'shield-checkmark', label: 'Waiver Editor', route: '/web-features', webOnly: true },
       { icon: 'card-outline', label: 'Payment Gateway', route: '/web-features', webOnly: true },
-      { icon: 'settings-outline', label: 'Org Settings', route: '/web-features', webOnly: true },
+      { icon: 'add-circle-outline', label: 'Bulk Event Create', route: '/bulk-event-create' },
+      { icon: 'settings-outline', label: 'Org Settings', route: '/org-settings' },
     ],
   },
   // ── Game Day (admin + coach) ──────────────────────────────────
@@ -125,6 +126,7 @@ const MENU_SECTIONS: MenuSection[] = [
       { icon: 'grid', label: 'Lineup Builder', route: '/lineup-builder' },
       { icon: 'checkmark-circle', label: 'Attendance', route: '/attendance' },
       { icon: 'stats-chart', label: 'Game Results', route: '/game-results' },
+      { icon: 'newspaper-outline', label: 'Game Recap', route: '/game-recap' },
     ],
   },
   // ── Coaching Tools (admin + coach) ────────────────────────────
@@ -138,6 +140,7 @@ const MENU_SECTIONS: MenuSection[] = [
       { icon: 'clipboard', label: 'Player Evaluations', route: '/evaluation-session' },
       { icon: 'trophy', label: 'Challenges', route: '/coach-challenge-dashboard' },
       { icon: 'library-outline', label: 'Challenge Library', route: '/challenge-library' },
+      { icon: 'flag-outline', label: 'Player Goals', route: '/player-goals' },
       { icon: 'megaphone', label: 'Blast Composer', route: '/blast-composer' },
       { icon: 'time', label: 'Blast History', route: '/blast-history' },
       { icon: 'calendar-outline', label: 'Coach Availability', route: '/coach-availability' },

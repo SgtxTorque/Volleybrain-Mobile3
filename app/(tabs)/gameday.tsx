@@ -790,6 +790,7 @@ export default function GameDayScreen() {
                 { icon: 'checkmark-circle-outline', color: BRAND.teal, label: 'Attendance', route: '/attendance' },
                 { icon: 'grid-outline', color: BRAND.skyBlue, label: 'Lineup', route: '/lineup-builder' },
                 { icon: 'analytics-outline', color: BRAND.coral, label: 'Game Prep', route: '/game-prep-wizard' },
+                { icon: 'newspaper-outline', color: BRAND.goldBrand, label: 'Recap', route: '/game-recap' },
               ].map((tool) => (
                 <Card
                   key={tool.label}

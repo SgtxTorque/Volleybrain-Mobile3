@@ -527,6 +527,22 @@ export default function ChildDetailScreen() {
             <Text style={[s.prideText, { color: BRAND.textPrimary }]}>{prideMoment.text}</Text>
           </View>
         </View>
+
+        {/* Goals & Notes link */}
+        <TouchableOpacity
+          style={[s.glassCard, s.goalsLink, { backgroundColor: BRAND.white, borderColor: BRAND.border }]}
+          onPress={() => router.push(`/player-goals?playerId=${playerId}` as any)}
+          activeOpacity={0.7}
+        >
+          <View style={[s.prideIconWrap, { backgroundColor: BRAND.skyBlue + '15' }]}>
+            <Ionicons name="flag-outline" size={24} color={BRAND.skyBlue} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[s.goalsLinkTitle, { color: BRAND.textPrimary }]}>Goals & Notes</Text>
+            <Text style={[s.goalsLinkSub, { color: BRAND.textMuted }]}>View session notes from coach</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={BRAND.textMuted} />
+        </TouchableOpacity>
       </View>
     );
   };
@@ -1308,6 +1324,22 @@ const s = StyleSheet.create({
     fontSize: 15,
     lineHeight: 22,
     fontFamily: FONTS.bodyMedium,
+  },
+  goalsLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    marginHorizontal: 16,
+    marginTop: 12,
+  },
+  goalsLinkTitle: {
+    fontSize: 15,
+    fontFamily: FONTS.bodySemiBold,
+  },
+  goalsLinkSub: {
+    fontSize: 12,
+    fontFamily: FONTS.bodyMedium,
+    marginTop: 2,
   },
 
   // ========== STATS TAB ==========
