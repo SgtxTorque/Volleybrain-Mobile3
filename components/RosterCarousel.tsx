@@ -22,6 +22,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { getPlayerPlaceholder } from '@/lib/default-images';
 import { getPositionInfo } from '@/constants/sport-display';
+import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 import { PLAYER_THEME } from './PlayerHomeScroll';
 import type { PlayerTradingCardPlayer } from './PlayerTradingCard';
@@ -70,7 +71,7 @@ function CarouselCard({
   onTap: () => void;
 }) {
   const posInfo = getPositionInfo(player.position, player.sportName);
-  const posColor = posInfo?.color || '#4BB9EC';
+  const posColor = posInfo?.color || BRAND.skyBlue;
   const teamColor = player.teamColor || '#C41E3A';
   const hasPhoto = player.photoUrl && player.photoUrl.length > 0;
   const initials = ((player.firstName?.[0] || '') + (player.lastName?.[0] || '')).toUpperCase();
@@ -237,7 +238,7 @@ export default function RosterCarousel({
             style={[
               s.dot,
               i === activeIndex
-                ? { width: 24, backgroundColor: '#4BB9EC' }
+                ? { width: 24, backgroundColor: BRAND.skyBlue }
                 : { width: 8, backgroundColor: 'rgba(255,255,255,0.10)' },
             ]}
           />
@@ -277,7 +278,7 @@ const s = StyleSheet.create({
   headerTeamName: {
     fontFamily: FONTS.display,
     fontSize: 28,
-    color: '#FFFFFF',
+    color: BRAND.white,
     letterSpacing: 1,
     lineHeight: 30,
   },
@@ -296,12 +297,12 @@ const s = StyleSheet.create({
 
   // Carousel card
   carouselCard: {
-    borderRadius: 20,
+    borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(75,185,236,0.15)',
     ...(Platform.OS === 'ios'
-      ? { shadowColor: '#000', shadowOffset: { width: 0, height: 20 }, shadowOpacity: 0.2, shadowRadius: 60 }
+      ? { shadowColor: '#000', shadowOffset: { width: 0, height: 20 }, shadowOpacity: 0.12, shadowRadius: 60 }
       : { elevation: 10 }),
   },
   cardPhotoArea: {
@@ -337,7 +338,7 @@ const s = StyleSheet.create({
   cardLynxText: {
     fontSize: 16,
     fontFamily: FONTS.bodyExtraBold,
-    color: '#4BB9EC',
+    color: BRAND.skyBlue,
   },
   cardHeroPhoto: {
     position: 'absolute',
@@ -390,7 +391,7 @@ const s = StyleSheet.create({
 
   // Name plate
   cardNamePlate: {
-    backgroundColor: '#0D1B3E',
+    backgroundColor: BRAND.navyDeep,
     paddingHorizontal: 16,
     paddingVertical: 14,
     position: 'relative',
@@ -406,7 +407,7 @@ const s = StyleSheet.create({
   cardPosText: {
     fontSize: 10,
     fontFamily: FONTS.bodyBold,
-    color: '#0D1B3E',
+    color: BRAND.navyDeep,
     letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
@@ -414,14 +415,14 @@ const s = StyleSheet.create({
     fontFamily: FONTS.display,
     fontSize: 36,
     lineHeight: 36,
-    color: '#FFFFFF',
+    color: BRAND.white,
     letterSpacing: 1,
   },
   cardLastName: {
     fontFamily: FONTS.display,
     fontSize: 36,
     lineHeight: 36,
-    color: '#FFFFFF',
+    color: BRAND.white,
     letterSpacing: 1,
   },
   cardMetaRow: {

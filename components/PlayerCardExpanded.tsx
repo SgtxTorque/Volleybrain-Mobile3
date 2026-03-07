@@ -4,6 +4,8 @@ import { getSportDisplay, getPositionInfo } from '@/constants/sport-display';
 import { useAuth } from '@/lib/auth';
 import { usePermissions } from '@/lib/permissions-context';
 import { supabase } from '@/lib/supabase';
+import { BRAND } from '@/theme/colors';
+import { FONTS } from '@/theme/fonts';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -381,7 +383,7 @@ export default function PlayerCardExpanded({ player, visible, onClose, onUpdate 
                 onPress={() => setActiveTab('stats')}
               >
                 <Ionicons name="stats-chart" size={18} color={activeTab === 'stats' ? colors.primary : colors.textMuted} />
-                <Text style={[s.tabText, activeTab === 'stats' && { color: colors.primary, fontWeight: '600' }]}>Stats</Text>
+                <Text style={[s.tabText, activeTab === 'stats' && { color: colors.primary, fontFamily: FONTS.bodySemiBold }]}>Stats</Text>
               </TouchableOpacity>
               {isVolleyball && (
                 <TouchableOpacity
@@ -389,7 +391,7 @@ export default function PlayerCardExpanded({ player, visible, onClose, onUpdate 
                   onPress={() => setActiveTab('skills')}
                 >
                   <Ionicons name="fitness" size={18} color={activeTab === 'skills' ? colors.primary : colors.textMuted} />
-                  <Text style={[s.tabText, activeTab === 'skills' && { color: colors.primary, fontWeight: '600' }]}>Skills</Text>
+                  <Text style={[s.tabText, activeTab === 'skills' && { color: colors.primary, fontFamily: FONTS.bodySemiBold }]}>Skills</Text>
                 </TouchableOpacity>
               )}
               {(isAdmin || isCoach) && (
@@ -398,7 +400,7 @@ export default function PlayerCardExpanded({ player, visible, onClose, onUpdate 
                   onPress={() => setActiveTab('info')}
                 >
                   <Ionicons name="information-circle" size={18} color={activeTab === 'info' ? colors.primary : colors.textMuted} />
-                  <Text style={[s.tabText, activeTab === 'info' && { color: colors.primary, fontWeight: '600' }]}>Info</Text>
+                  <Text style={[s.tabText, activeTab === 'info' && { color: colors.primary, fontFamily: FONTS.bodySemiBold }]}>Info</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -529,8 +531,8 @@ function InfoRow({ icon, label, value }: { icon: string; label: string; value: s
 }
 
 const statStyles = StyleSheet.create({
-  box: { width: '23%', backgroundColor: '#1a1a2e', borderRadius: 12, padding: 12, alignItems: 'center', marginBottom: 10 },
-  value: { fontSize: 24, fontWeight: 'bold' },
+  box: { width: '23%', backgroundColor: '#1a1a2e', borderRadius: 16, padding: 12, alignItems: 'center', marginBottom: 10 },
+  value: { fontSize: 24, fontFamily: FONTS.bodyBold },
   label: { fontSize: 10, color: '#888', marginTop: 4, letterSpacing: 1 },
 });
 
@@ -540,38 +542,38 @@ const skillStyles = StyleSheet.create({
   barContainer: { flex: 1, height: 8, backgroundColor: '#2a2a4a', borderRadius: 4, marginHorizontal: 10, overflow: 'hidden' },
   barFill: { height: '100%', borderRadius: 4 },
   grade: { width: 32, height: 24, borderRadius: 6, justifyContent: 'center', alignItems: 'center', marginRight: 8 },
-  gradeText: { fontSize: 12, fontWeight: 'bold' },
-  value: { width: 30, fontSize: 14, fontWeight: 'bold', color: '#fff', textAlign: 'right' },
+  gradeText: { fontSize: 12, fontFamily: FONTS.bodyBold },
+  value: { width: 30, fontSize: 14, fontFamily: FONTS.bodyBold, color: BRAND.white, textAlign: 'right' },
 });
 
 const infoStyles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#2a2a4a' },
   label: { flex: 1, fontSize: 14, color: '#888', marginLeft: 12 },
-  value: { fontSize: 14, color: '#fff', textAlign: 'right' },
+  value: { fontSize: 14, color: BRAND.white, textAlign: 'right' },
 });
 
 const createStyles = (colors: any) => StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.9)', justifyContent: 'center', alignItems: 'center' },
-  card: { width: SCREEN_WIDTH - 32, maxHeight: SCREEN_HEIGHT - 100, backgroundColor: colors.card, borderRadius: 24, overflow: 'hidden' },
+  card: { width: SCREEN_WIDTH - 32, maxHeight: SCREEN_HEIGHT - 100, backgroundColor: colors.card, borderRadius: 16, overflow: 'hidden' },
   closeBtn: { position: 'absolute', top: 16, right: 16, zIndex: 100, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 20, padding: 4 },
   emergencyBtn: { position: 'absolute', top: 16, left: 16, zIndex: 100, backgroundColor: 'rgba(239, 68, 68, 0.7)', borderRadius: 20, padding: 6 },
   
   header: { paddingTop: 50, paddingBottom: 24, alignItems: 'center' },
-  overallBadge: { position: 'absolute', top: 16, left: 16, backgroundColor: '#FFD700', borderRadius: 8, padding: 8, alignItems: 'center' },
-  overallLabel: { fontSize: 10, fontWeight: 'bold', color: '#000' },
-  overallNumber: { fontSize: 28, fontWeight: '900', color: '#000' },
+  overallBadge: { position: 'absolute', top: 16, left: 16, backgroundColor: BRAND.gold, borderRadius: 8, padding: 8, alignItems: 'center' },
+  overallLabel: { fontSize: 10, fontFamily: FONTS.bodyBold, color: '#000' },
+  overallNumber: { fontSize: 28, fontFamily: FONTS.bodyExtraBold, color: '#000' },
   
   photoWrapper: { position: 'relative' },
   photo: { width: 140, height: 140, borderRadius: 70, borderWidth: 4, borderColor: 'rgba(255,255,255,0.3)' },
   silhouette: { width: 140, height: 140, borderRadius: 70, backgroundColor: '#2a2a4a', justifyContent: 'center', alignItems: 'center', borderWidth: 4, borderColor: 'rgba(255,255,255,0.1)', overflow: 'hidden' as const },
   cameraOverlay: { position: 'absolute', bottom: 0, right: 0, borderRadius: 16, padding: 6 },
   
-  jerseyNumber: { fontSize: 20, fontWeight: 'bold', color: '#888', marginTop: 12 },
-  playerName: { fontSize: 28, fontWeight: '900', color: '#fff', marginTop: 4, textTransform: 'uppercase' },
+  jerseyNumber: { fontSize: 20, fontFamily: FONTS.bodyBold, color: '#888', marginTop: 12 },
+  playerName: { fontSize: 28, fontFamily: FONTS.bodyExtraBold, color: BRAND.white, marginTop: 4, textTransform: 'uppercase' },
   
   infoRow: { flexDirection: 'row', alignItems: 'center', marginTop: 12, gap: 12 },
   positionPill: { paddingHorizontal: 16, paddingVertical: 6, borderRadius: 20 },
-  positionPillText: { fontSize: 12, fontWeight: 'bold', color: '#000' },
+  positionPillText: { fontSize: 12, fontFamily: FONTS.bodyBold, color: '#000' },
   teamName: { fontSize: 14, color: '#aaa' },
   
   quickInfo: { flexDirection: 'row', gap: 20, marginTop: 16 },
@@ -580,7 +582,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   
   badgesSection: { padding: 16 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#fff' },
+  sectionTitle: { fontSize: 16, fontFamily: FONTS.bodyBold, color: BRAND.white },
   addBadgeBtn: { padding: 4 },
   noBadges: { fontSize: 13, color: '#666', fontStyle: 'italic' },
   badgesList: { flexDirection: 'row' },
@@ -601,7 +603,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   badgeModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center' },
   badgeModal: { width: SCREEN_WIDTH - 48, maxHeight: 400, borderRadius: 16, overflow: 'hidden' },
   badgeModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1 },
-  badgeModalTitle: { fontSize: 18, fontWeight: 'bold' },
+  badgeModalTitle: { fontSize: 18, fontFamily: FONTS.bodyBold },
   badgeOptions: { padding: 8 },
   badgeOption: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 12 },
   badgeOptionIcon: { width: 48, height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 12 },

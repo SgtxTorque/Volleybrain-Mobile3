@@ -216,7 +216,7 @@ export default function HeroBanner({ team, nextGame, seasonPulse, canEdit, onBan
       />
       {canEdit && (
         <TouchableOpacity style={s.cameraBtn} onPress={handleUploadBanner} activeOpacity={0.7}>
-          <Ionicons name="camera" size={18} color="#FFF" />
+          <Ionicons name="camera" size={18} color={BRAND.white} />
         </TouchableOpacity>
       )}
     </View>
@@ -314,7 +314,7 @@ export default function HeroBanner({ team, nextGame, seasonPulse, canEdit, onBan
           <CarouselDots
             total={slides.length}
             activeIndex={activeIndex}
-            activeColor="#FFF"
+            activeColor={BRAND.white}
             inactiveColor="rgba(255,255,255,0.4)"
           />
         </View>
@@ -378,7 +378,7 @@ const s = StyleSheet.create({
   countdownOpponent: {
     fontFamily: FONTS.display,
     fontSize: 28,
-    color: '#FFF',
+    color: BRAND.white,
     marginBottom: 16,
   },
   countdownRow: {
@@ -391,7 +391,7 @@ const s = StyleSheet.create({
   countdownValue: {
     fontFamily: FONTS.display,
     fontSize: 32,
-    color: '#FFF',
+    color: BRAND.white,
     lineHeight: 36,
   },
   countdownUnitLabel: {
@@ -427,7 +427,7 @@ const s = StyleSheet.create({
   pulseRecord: {
     fontFamily: FONTS.display,
     fontSize: 36,
-    color: '#FFF',
+    color: BRAND.white,
     lineHeight: 40,
   },
   pulseStreak: {

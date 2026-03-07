@@ -1189,7 +1189,7 @@ const s = StyleSheet.create({
   gameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     marginBottom: 8,
     overflow: 'hidden',
@@ -1303,7 +1303,7 @@ const s = StyleSheet.create({
 
   // Evaluation Timeline
   evalTimelineCard: {
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     padding: 12,
     overflow: 'hidden',
@@ -1337,7 +1337,7 @@ const s = StyleSheet.create({
     marginTop: 12,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopColor: BRAND.border,
     gap: 6,
   },
   evalSkillRow: {

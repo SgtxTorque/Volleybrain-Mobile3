@@ -150,7 +150,7 @@ const s = StyleSheet.create({
   headerLabel: {
     fontFamily: FONTS.bodyBold,
     fontSize: 11,
-    color: BRAND.textFaint,
+    color: BRAND.textMuted,
     letterSpacing: 1.2,
   },
   viewAll: {

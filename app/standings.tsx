@@ -48,7 +48,7 @@ const MAIN_TABS: { key: MainTab; label: string }[] = [
   { key: 'leaderboards', label: 'Player Leaderboards' },
 ];
 
-const MEDAL_COLORS = ['#FFD700', '#C0C0C0', '#CD7F32'];
+const MEDAL_COLORS = [BRAND.gold, '#C0C0C0', '#CD7F32'];
 
 // ============================================
 // COMPONENT

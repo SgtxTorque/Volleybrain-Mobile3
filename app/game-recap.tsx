@@ -434,7 +434,7 @@ export default function GameRecapScreen() {
           <View style={s.section}>
             <View style={s.mvpCard}>
               <View style={s.mvpIconWrap}>
-                <Ionicons name="star" size={24} color="#FFD700" />
+                <Ionicons name="star" size={24} color={BRAND.gold} />
               </View>
               <View style={s.mvpInfo}>
                 <Text style={s.mvpLabel}>MATCH MVP</Text>
@@ -460,7 +460,7 @@ export default function GameRecapScreen() {
                       : { backgroundColor: BRAND.surfaceCard, borderColor: BRAND.cardBorder },
                   ]}
                 >
-                  <Text style={[s.personalStatNum, stat.highlight ? { color: '#fff' } : { color: BRAND.textTertiary }]}>
+                  <Text style={[s.personalStatNum, stat.highlight ? { color: BRAND.white } : { color: BRAND.textTertiary }]}>
                     {stat.value}
                   </Text>
                   <Text style={s.personalStatLabel}>{stat.label}</Text>
@@ -748,7 +748,7 @@ const s = StyleSheet.create({
   setCard: {
     flex: 1,
     backgroundColor: BRAND.surfaceCard,
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 12,
     alignItems: 'center',
     borderWidth: 1,
@@ -773,7 +773,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     backgroundColor: 'rgba(255,215,0,0.08)',
-    borderRadius: 18,
+    borderRadius: 16,
     padding: 16,
     borderWidth: 1,
     borderColor: 'rgba(255,215,0,0.20)',
@@ -816,7 +816,7 @@ const s = StyleSheet.create({
   },
   personalStatCard: {
     width: '47%' as any,
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 14,
     alignItems: 'center',
     borderWidth: 1,
@@ -843,7 +843,7 @@ const s = StyleSheet.create({
   performerCard: {
     flex: 1,
     backgroundColor: BRAND.surfaceCard,
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 12,
     alignItems: 'center',
     borderWidth: 1,
@@ -894,7 +894,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     backgroundColor: BRAND.surfaceCard,
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 14,
     borderWidth: 1,
     borderColor: BRAND.cardBorder,
@@ -936,7 +936,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
     backgroundColor: BRAND.surfaceCard,
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 14,
     borderWidth: 1,
     borderColor: BRAND.cardBorder,

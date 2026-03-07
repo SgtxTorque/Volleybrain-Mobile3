@@ -17,6 +17,7 @@ import { getLevelFromXP, getLevelTier } from '@/lib/engagement-constants';
 import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
+import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 import { fetchActiveChallenges, type ChallengeWithParticipants } from '@/lib/challenge-service';
 import { Ionicons } from '@expo/vector-icons';
@@ -784,7 +785,7 @@ export default function AchievementsScreen() {
         {almostThere.length > 0 && (
           <View style={s.nudgeSection}>
             <View style={s.nudgeHeader}>
-              <Ionicons name="flash" size={14} color="#F59E0B" />
+              <Ionicons name="flash" size={14} color={BRAND.warning} />
               <Text style={s.nudgeTitle}>Almost There!</Text>
             </View>
             {almostThere.map((n) => (
@@ -1568,7 +1569,7 @@ const s = StyleSheet.create({
     marginHorizontal: 16,
     marginTop: 12,
     backgroundColor: DARK.card,
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 14,
     borderWidth: 1,
     borderColor: DARK.border,
@@ -1582,7 +1583,7 @@ const s = StyleSheet.create({
   nudgeTitle: {
     fontSize: 13,
     fontFamily: FONTS.bodyExtraBold,
-    color: '#F59E0B',
+    color: BRAND.warning,
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
@@ -1613,7 +1614,7 @@ const s = StyleSheet.create({
   nudgeProgressFill: {
     height: '100%',
     borderRadius: 2.5,
-    backgroundColor: '#F59E0B',
+    backgroundColor: BRAND.warning,
   },
   nudgePct: {
     fontSize: 12,
@@ -1635,7 +1636,7 @@ const s = StyleSheet.create({
       ios: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.25,
+        shadowOpacity: 0.12,
         shadowRadius: 12,
       },
       android: { elevation: 6 },
@@ -1749,7 +1750,7 @@ const s = StyleSheet.create({
   },
   badgeCell: {
     width: CELL_WIDTH,
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 10,
     alignItems: 'center',
     borderWidth: 1,
@@ -1930,7 +1931,7 @@ const s = StyleSheet.create({
     width: '100%',
     marginTop: 28,
     backgroundColor: DARK.card,
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 18,
     borderWidth: 1,
     borderColor: DARK.border,
@@ -2044,7 +2045,7 @@ const s = StyleSheet.create({
     gap: 8,
     marginTop: 20,
     backgroundColor: DARK.cardAlt,
-    borderRadius: 14,
+    borderRadius: 16,
     paddingVertical: 14,
     paddingHorizontal: 32,
     borderWidth: 1,
@@ -2075,7 +2076,7 @@ const s = StyleSheet.create({
   modalBottomCloseBtn: {
     marginTop: 32,
     backgroundColor: DARK.cardAlt,
-    borderRadius: 14,
+    borderRadius: 16,
     paddingVertical: 14,
     paddingHorizontal: 48,
     borderWidth: 1,
@@ -2164,7 +2165,7 @@ const s = StyleSheet.create({
   // =========================================================================
   challengeCard: {
     backgroundColor: DARK.card,
-    borderRadius: 18,
+    borderRadius: 16,
     padding: 16,
     marginBottom: 10,
     borderWidth: 1,
@@ -2292,7 +2293,7 @@ const s = StyleSheet.create({
   personalBestCard: {
     width: (SCREEN_WIDTH - 32 - 32 - 20) / 3,
     backgroundColor: DARK.cardAlt,
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 12,
     alignItems: 'center',
   },

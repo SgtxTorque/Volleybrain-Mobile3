@@ -41,7 +41,7 @@ export default function TeamIdentityBar({
         </View>
         {canEdit && (
           <TouchableOpacity style={s.editLogoBtn} onPress={onEditLogo} activeOpacity={0.7}>
-            <Ionicons name="camera" size={12} color="#FFF" />
+            <Ionicons name="camera" size={12} color={BRAND.white} />
           </TouchableOpacity>
         )}
       </View>
@@ -89,7 +89,7 @@ const s = StyleSheet.create({
   logoInitial: {
     fontFamily: FONTS.display,
     fontSize: 24,
-    color: '#FFF',
+    color: BRAND.white,
   },
   editLogoBtn: {
     position: 'absolute',
@@ -102,7 +102,7 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: '#FFF',
+    borderColor: BRAND.white,
   },
   infoWrap: {
     flex: 1,

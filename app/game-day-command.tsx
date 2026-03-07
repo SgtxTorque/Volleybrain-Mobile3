@@ -27,11 +27,12 @@ import LiveMatchPage from '@/components/gameday/LiveMatchPage';
 import EndSetPage from '@/components/gameday/EndSetPage';
 import SummaryPage from '@/components/gameday/SummaryPage';
 import { FONTS } from '@/theme/fonts';
+import { BRAND } from '@/theme/colors';
 import { useResponsive } from '@/lib/responsive';
 import { unlockOrientation } from '@/lib/orientation';
 
 const PAGE_LABELS = ['GAME PREP', 'LIVE MATCH', 'END SET', 'SUMMARY'];
-const ACCENT = '#4BB9EC';
+const ACCENT = BRAND.skyBlue;
 
 // ── Inner content (has access to MatchContext) ──────────────────
 
@@ -63,7 +64,7 @@ function CommandCenterContent() {
 
   return (
     <View style={[s.root, { paddingTop: insets.top }]}>
-      <StatusBar barStyle="light-content" backgroundColor="#0D1B3E" />
+      <StatusBar barStyle="light-content" backgroundColor={BRAND.navyDeep} />
       <Stack.Screen options={{ headerShown: false }} />
 
       {/* Header */}
@@ -100,8 +101,8 @@ function CommandCenterContent() {
         {/* Sync status */}
         <View style={[s.syncDot, {
           backgroundColor: match?.syncStatus === 'synced' ? '#10B981'
-            : match?.syncStatus === 'syncing' ? '#F59E0B'
-            : '#EF4444',
+            : match?.syncStatus === 'syncing' ? BRAND.warning
+            : BRAND.error,
         }]} />
       </View>
 
@@ -144,7 +145,7 @@ export default function GameDayCommandScreen() {
 const s = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#0D1B3E',
+    backgroundColor: BRAND.navyDeep,
   },
   header: {
     flexDirection: 'row',

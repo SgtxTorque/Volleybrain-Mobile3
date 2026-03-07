@@ -135,9 +135,9 @@ export default function ChallengeDetailModal({ visible, challengeId, onClose, on
               return (
                 <View style={s.detailHeader}>
                   {/* Title & Timer */}
-                  <View style={[s.timerBadge, { backgroundColor: '#F59E0B20' }]}>
-                    <Ionicons name="time" size={14} color="#F59E0B" />
-                    <Text style={[s.timerText, { color: '#F59E0B' }]}>{timeLeft}</Text>
+                  <View style={[s.timerBadge, { backgroundColor: `${BRAND.warning}20` }]}>
+                    <Ionicons name="time" size={14} color={BRAND.warning} />
+                    <Text style={[s.timerText, { color: BRAND.warning }]}>{timeLeft}</Text>
                   </View>
 
                   <Text style={[s.challengeTitle, { color: BRAND.textPrimary }]}>{challenge.title}</Text>
@@ -166,9 +166,9 @@ export default function ChallengeDetailModal({ visible, challengeId, onClose, on
                         Target: {challenge.target_value}
                       </Text>
                     </View>
-                    <View style={[s.metaPill, { backgroundColor: '#FFD70020' }]}>
-                      <Ionicons name="star" size={12} color="#FFD700" />
-                      <Text style={[s.metaText, { color: '#FFD700' }]}>+{challenge.xp_reward} XP</Text>
+                    <View style={[s.metaPill, { backgroundColor: `${BRAND.gold}20` }]}>
+                      <Ionicons name="star" size={12} color={BRAND.gold} />
+                      <Text style={[s.metaText, { color: BRAND.gold }]}>+{challenge.xp_reward} XP</Text>
                     </View>
                   </View>
 
@@ -194,7 +194,7 @@ export default function ChallengeDetailModal({ visible, challengeId, onClose, on
                             s.progressFill,
                             {
                               width: `${totalPct}%` as any,
-                              backgroundColor: totalPct >= 100 ? '#10B981' : BRAND.teal,
+                              backgroundColor: totalPct >= 100 ? BRAND.success : BRAND.teal,
                             },
                           ]}
                         />
@@ -211,10 +211,10 @@ export default function ChallengeDetailModal({ visible, challengeId, onClose, on
                       activeOpacity={0.7}
                     >
                       {optingIn ? (
-                        <ActivityIndicator size="small" color="#fff" />
+                        <ActivityIndicator size="small" color={BRAND.white} />
                       ) : (
                         <>
-                          <Ionicons name="add-circle" size={18} color="#fff" />
+                          <Ionicons name="add-circle" size={18} color={BRAND.white} />
                           <Text style={s.optInBtnText}>Join Challenge</Text>
                         </>
                       )}
@@ -246,14 +246,14 @@ export default function ChallengeDetailModal({ visible, challengeId, onClose, on
                   {/* Rank */}
                   <View style={[
                     s.rankBadge,
-                    index === 0 && { backgroundColor: '#FFD70030' },
+                    index === 0 && { backgroundColor: `${BRAND.gold}30` },
                     index === 1 && { backgroundColor: '#C0C0C030' },
                     index === 2 && { backgroundColor: '#CD7F3230' },
                   ]}>
                     <Text style={[
                       s.rankText,
                       { color: BRAND.textPrimary },
-                      index === 0 && { color: '#FFD700' },
+                      index === 0 && { color: BRAND.gold },
                       index === 1 && { color: '#C0C0C0' },
                       index === 2 && { color: '#CD7F32' },
                     ]}>
@@ -278,7 +278,7 @@ export default function ChallengeDetailModal({ visible, challengeId, onClose, on
                             s.miniProgressFill,
                             {
                               width: `${pct}%` as any,
-                              backgroundColor: isCompleted ? '#10B981' : BRAND.teal,
+                              backgroundColor: isCompleted ? BRAND.success : BRAND.teal,
                             },
                           ]}
                         />
@@ -290,7 +290,7 @@ export default function ChallengeDetailModal({ visible, challengeId, onClose, on
                   </View>
 
                   {isCompleted && (
-                    <Ionicons name="checkmark-circle" size={20} color="#10B981" />
+                    <Ionicons name="checkmark-circle" size={20} color={BRAND.success} />
                   )}
                 </View>
               );
@@ -339,7 +339,7 @@ const s = StyleSheet.create({
   },
   timerText: { fontSize: 13, fontFamily: FONTS.bodyBold },
   challengeTitle: { fontSize: 22, fontFamily: FONTS.bodyExtraBold },
-  challengeDesc: { fontSize: 15, lineHeight: 22 },
+  challengeDesc: { fontSize: 15, fontFamily: FONTS.bodyMedium, lineHeight: 22 },
   metaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   metaPill: {
     flexDirection: 'row',
@@ -371,7 +371,7 @@ const s = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 14,
   },
-  optInBtnText: { color: '#fff', fontSize: 16, fontFamily: FONTS.bodyBold },
+  optInBtnText: { color: BRAND.white, fontSize: 16, fontFamily: FONTS.bodyBold },
   leaderboardHeader: {
     flexDirection: 'row',
     alignItems: 'center',

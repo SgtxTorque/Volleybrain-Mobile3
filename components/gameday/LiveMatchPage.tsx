@@ -28,11 +28,12 @@ import ServeTracker from './ServeTracker';
 import RallyStatPanel from './RallyStatPanel';
 import { useResponsive } from '@/lib/responsive';
 import { FONTS } from '@/theme/fonts';
+import { BRAND } from '@/theme/colors';
 
-const ACCENT = '#4BB9EC';
+const ACCENT = BRAND.skyBlue;
 const TEAL = '#10B981';
-const CORAL = '#EF4444';
-const GOLD = '#FFD700';
+const CORAL = BRAND.error;
+const GOLD = BRAND.gold;
 
 export default function LiveMatchPage() {
   const {
@@ -605,7 +606,7 @@ const s = StyleSheet.create({
     gap: 8,
     width: '31%' as any,
     backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 10,
+    borderRadius: 16,
     paddingHorizontal: 10,
     paddingVertical: 8,
     borderWidth: 1,
@@ -681,7 +682,7 @@ const s = StyleSheet.create({
   // Tablet subs panel (base style; overridden by landscapeRightCol in landscape)
   tabletSubsPanel: {
     backgroundColor: 'rgba(255,255,255,0.03)',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 10,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.06)',
@@ -768,7 +769,7 @@ const s = StyleSheet.create({
   phoneSubCard: {
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 10,
+    borderRadius: 16,
     paddingHorizontal: 10,
     paddingVertical: 6,
     minWidth: 44,
@@ -880,7 +881,7 @@ const s = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 12,
+    borderRadius: 16,
     backgroundColor: 'rgba(255,255,255,0.04)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.06)',
@@ -914,7 +915,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   modalSheet: {
-    backgroundColor: '#0D1B3E',
+    backgroundColor: BRAND.navyDeep,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,

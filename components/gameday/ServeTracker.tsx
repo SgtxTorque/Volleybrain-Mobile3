@@ -24,11 +24,12 @@ import { generateActionId } from '@/lib/gameday/match-store';
 import type { ServeEvent, ServeResult } from '@/lib/gameday/match-state';
 import { useResponsive } from '@/lib/responsive';
 import { FONTS } from '@/theme/fonts';
+import { BRAND } from '@/theme/colors';
 
-const ACCENT = '#4BB9EC';
+const ACCENT = BRAND.skyBlue;
 const TEAL = '#10B981';
-const CORAL = '#EF4444';
-const GOLD = '#FFD700';
+const CORAL = BRAND.error;
+const GOLD = BRAND.gold;
 
 // Court padding inside the container for the playable area
 const COURT_PAD = 12;

@@ -92,12 +92,12 @@ const VARIANT_CONFIG: Record<ChallengeCardVariant, {
   opacity: number;
 }> = {
   active: {
-    borderColor: '#FFD700',
-    bannerBg: '#FFD70015',
+    borderColor: BRAND.gold,
+    bannerBg: `${BRAND.gold}15`,
     bannerLabel: 'COACH CHALLENGE',
-    bannerLabelColor: '#D4A017',
+    bannerLabelColor: BRAND.goldWarm,
     bannerIcon: 'trophy',
-    bannerIconColor: '#FFD700',
+    bannerIconColor: BRAND.gold,
     opacity: 1,
   },
   needs_verification: {
@@ -217,9 +217,9 @@ export default function ChallengeCard({
             <Ionicons name="flag" size={12} color={BRAND.textMuted} />
             <Text style={s.metaText}>Target: {cardTarget}</Text>
           </View>
-          <View style={[s.metaPill, { backgroundColor: '#FFD70020' }]}>
-            <Ionicons name="star" size={12} color="#FFD700" />
-            <Text style={[s.metaText, { color: '#FFD700' }]}>+{cardXp} XP</Text>
+          <View style={[s.metaPill, { backgroundColor: `${BRAND.gold}20` }]}>
+            <Ionicons name="star" size={12} color={BRAND.gold} />
+            <Text style={[s.metaText, { color: BRAND.gold }]}>+{cardXp} XP</Text>
           </View>
         </View>
 
@@ -288,7 +288,7 @@ export default function ChallengeCard({
               onPress={onVerify}
               activeOpacity={0.7}
             >
-              <Ionicons name="shield-checkmark" size={14} color="#fff" />
+              <Ionicons name="shield-checkmark" size={14} color={BRAND.white} />
               <Text style={s.verifyBtnText}>Verify</Text>
             </TouchableOpacity>
           )}
@@ -434,7 +434,7 @@ const s = StyleSheet.create({
     backgroundColor: BRAND.teal,
   },
   optInText: {
-    color: '#fff',
+    color: BRAND.white,
     fontSize: 13,
     fontFamily: FONTS.bodyBold,
   },
@@ -462,7 +462,7 @@ const s = StyleSheet.create({
     backgroundColor: BRAND.warning,
   },
   verifyBtnText: {
-    color: '#fff',
+    color: BRAND.white,
     fontSize: 13,
     fontFamily: FONTS.bodyBold,
   },

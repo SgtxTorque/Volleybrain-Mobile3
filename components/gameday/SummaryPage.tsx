@@ -24,12 +24,13 @@ import { useRouter } from 'expo-router';
 import { useMatch } from '@/lib/gameday/use-match';
 import type { ServeEvent } from '@/lib/gameday/match-state';
 import { FONTS } from '@/theme/fonts';
+import { BRAND } from '@/theme/colors';
 import { useResponsive } from '@/lib/responsive';
 
-const ACCENT = '#4BB9EC';
+const ACCENT = BRAND.skyBlue;
 const TEAL = '#10B981';
-const CORAL = '#EF4444';
-const GOLD = '#FFD700';
+const CORAL = BRAND.error;
+const GOLD = BRAND.gold;
 
 export default function SummaryPage() {
   const { match } = useMatch();
@@ -376,7 +377,7 @@ const s = StyleSheet.create({
   // Set cards
   setCard: {
     backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 10,
+    borderRadius: 16,
     padding: 12,
     marginBottom: 6,
     borderWidth: 1,
@@ -416,7 +417,7 @@ const s = StyleSheet.create({
     minWidth: 90,
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 12,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.06)',
@@ -445,7 +446,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-around',
     backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 10,
+    borderRadius: 16,
     paddingVertical: 12,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.06)',
@@ -513,7 +514,7 @@ const s = StyleSheet.create({
   doneBtn: {
     paddingHorizontal: 24,
     paddingVertical: 10,
-    borderRadius: 10,
+    borderRadius: 16,
     backgroundColor: 'rgba(255,255,255,0.06)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
@@ -528,7 +529,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     backgroundColor: 'rgba(75,185,236,0.08)',
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(75,185,236,0.15)',
     padding: 14,

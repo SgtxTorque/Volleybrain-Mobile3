@@ -21,8 +21,9 @@ import { getCourtPositions, getRoleTemplates } from '@/lib/gameday/rotation-engi
 import type { Formation, Phase, PlayerSlot } from '@/lib/gameday/match-state';
 import CourtView from './CourtView';
 import { FONTS } from '@/theme/fonts';
+import { BRAND } from '@/theme/colors';
 
-const ACCENT = '#4BB9EC';
+const ACCENT = BRAND.skyBlue;
 const TEAL = '#10B981';
 const FORMATIONS: Formation[] = ['5-1', '6-2', '6-6'];
 const ROTATIONS = [1, 2, 3, 4, 5, 6];
@@ -264,7 +265,7 @@ export default function GamePrepPage() {
               <View style={s.liberoBox}>
                 <Text style={s.sectionLabel}>LIBERO</Text>
                 <View style={s.liberoRow}>
-                  <View style={[s.benchJersey, { backgroundColor: '#FFD700' }]}>
+                  <View style={[s.benchJersey, { backgroundColor: BRAND.gold }]}>
                     <Text style={[s.benchJerseyText, { color: '#000' }]}>
                       {libero.jerseyNumber}
                     </Text>
@@ -307,8 +308,8 @@ export default function GamePrepPage() {
             <Text style={s.actionBtnText}>Auto-Fill</Text>
           </TouchableOpacity>
           <TouchableOpacity style={s.actionBtn} onPress={clearLineup}>
-            <Ionicons name="trash" size={16} color="#EF4444" />
-            <Text style={[s.actionBtnText, { color: '#EF4444' }]}>Clear</Text>
+            <Ionicons name="trash" size={16} color={BRAND.error} />
+            <Text style={[s.actionBtnText, { color: BRAND.error }]}>Clear</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={s.actionBtn}
@@ -371,7 +372,7 @@ export default function GamePrepPage() {
             <Text style={s.sectionLabel}>BENCH ({benchPlayers.length})</Text>
             {libero && (
               <View style={s.liberoRowCompact}>
-                <Ionicons name="shield" size={14} color="#FFD700" />
+                <Ionicons name="shield" size={14} color={BRAND.gold} />
                 <Text style={s.liberoNameSmall}>L: #{libero.jerseyNumber}</Text>
               </View>
             )}
@@ -409,8 +410,8 @@ export default function GamePrepPage() {
             <Text style={s.actionBtnText}>Auto-Fill</Text>
           </TouchableOpacity>
           <TouchableOpacity style={s.actionBtn} onPress={clearLineup}>
-            <Ionicons name="trash" size={16} color="#EF4444" />
-            <Text style={[s.actionBtnText, { color: '#EF4444' }]}>Clear</Text>
+            <Ionicons name="trash" size={16} color={BRAND.error} />
+            <Text style={[s.actionBtnText, { color: BRAND.error }]}>Clear</Text>
           </TouchableOpacity>
         </View>
 
@@ -470,7 +471,7 @@ export default function GamePrepPage() {
           <Text style={s.sectionLabel}>BENCH ({benchPlayers.length})</Text>
           {libero && (
             <View style={s.liberoRowCompact}>
-              <Ionicons name="shield" size={12} color="#FFD700" />
+              <Ionicons name="shield" size={12} color={BRAND.gold} />
               <Text style={s.liberoNameSmall}>L: #{libero.jerseyNumber}</Text>
             </View>
           )}
@@ -505,8 +506,8 @@ export default function GamePrepPage() {
           <Text style={s.actionBtnText}>Auto-Fill</Text>
         </TouchableOpacity>
         <TouchableOpacity style={s.actionBtn} onPress={clearLineup}>
-          <Ionicons name="trash" size={14} color="#EF4444" />
-          <Text style={[s.actionBtnText, { color: '#EF4444' }]}>Clear</Text>
+          <Ionicons name="trash" size={14} color={BRAND.error} />
+          <Text style={[s.actionBtnText, { color: BRAND.error }]}>Clear</Text>
         </TouchableOpacity>
       </View>
 
@@ -670,7 +671,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 10,
     width: '48%',
     borderWidth: 1,
@@ -742,7 +743,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 10,
+    borderRadius: 16,
     padding: 8,
     marginBottom: 6,
     borderWidth: 1,
@@ -795,7 +796,7 @@ const s = StyleSheet.create({
   benchCardPhone: {
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.06)',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 10,
     minWidth: 56,
     borderWidth: 1,
@@ -832,7 +833,7 @@ const s = StyleSheet.create({
     marginTop: 16,
     padding: 8,
     backgroundColor: 'rgba(255,215,0,0.06)',
-    borderRadius: 10,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(255,215,0,0.15)',
   },
@@ -844,7 +845,7 @@ const s = StyleSheet.create({
   liberoName: {
     fontFamily: FONTS.bodySemiBold,
     fontSize: 12,
-    color: '#FFD700',
+    color: BRAND.gold,
     flex: 1,
   },
   liberoRowCompact: {
@@ -855,7 +856,7 @@ const s = StyleSheet.create({
   liberoNameSmall: {
     fontFamily: FONTS.bodySemiBold,
     fontSize: 10,
-    color: '#FFD700',
+    color: BRAND.gold,
   },
 
   // Action buttons
@@ -915,7 +916,7 @@ const s = StyleSheet.create({
   previewCard: {
     width: 90,
     padding: 8,
-    borderRadius: 10,
+    borderRadius: 16,
     backgroundColor: 'rgba(255,255,255,0.04)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.06)',

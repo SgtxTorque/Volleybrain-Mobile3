@@ -347,7 +347,7 @@ export default function CoachChallengeDashboard() {
         activeOpacity={0.8}
         onPress={() => router.push('/challenge-library')}
       >
-        <Ionicons name="add" size={28} color="#fff" />
+        <Ionicons name="add" size={28} color={BRAND.white} />
       </TouchableOpacity>
     </View>
   );
@@ -690,7 +690,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: BRAND.cardBg,
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 14,
     marginBottom: 8,
     borderWidth: 1,

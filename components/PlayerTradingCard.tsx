@@ -20,6 +20,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { getPlayerPlaceholder } from '@/lib/default-images';
 import { getPositionInfo, getSportDisplay, StatConfig } from '@/constants/sport-display';
+import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 import { PLAYER_THEME } from './PlayerHomeScroll';
 
@@ -297,7 +298,7 @@ function FullCard({ player, onShare, onViewStats }: PlayerTradingCardProps) {
       {/* ── ACTION BUTTONS ─────────────────────────────────── */}
       <View style={[s.actions, { width: cardWidth }]}>
         <TouchableOpacity style={s.shareBtn} onPress={onShare} activeOpacity={0.8}>
-          <Ionicons name="share-outline" size={16} color="#0D1B3E" />
+          <Ionicons name="share-outline" size={16} color={BRAND.navyDeep} />
           <Text style={s.shareBtnText}>Share Card</Text>
         </TouchableOpacity>
         <TouchableOpacity style={s.statsBtn} onPress={onViewStats} activeOpacity={0.8}>
@@ -348,12 +349,12 @@ const s = StyleSheet.create({
   },
   card: {
     width: CARD_WIDTH,
-    borderRadius: 14,
+    borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(75,185,236,0.20)',
     ...(Platform.OS === 'ios'
-      ? { shadowColor: '#000', shadowOffset: { width: 0, height: 25 }, shadowOpacity: 0.2, shadowRadius: 80 }
+      ? { shadowColor: '#000', shadowOffset: { width: 0, height: 25 }, shadowOpacity: 0.12, shadowRadius: 80 }
       : { elevation: 12 }),
   },
 
@@ -409,7 +410,7 @@ const s = StyleSheet.create({
   lynxBadgeText: {
     fontSize: 16,
     fontFamily: FONTS.bodyExtraBold,
-    color: '#4BB9EC',
+    color: BRAND.skyBlue,
   },
   heroPhoto: {
     position: 'absolute',
@@ -467,7 +468,7 @@ const s = StyleSheet.create({
   seasonBadgeText: {
     fontSize: 9,
     fontFamily: FONTS.bodyBold,
-    color: '#FFD700',
+    color: BRAND.gold,
     letterSpacing: 1.5,
   },
   teamBar: {
@@ -519,7 +520,7 @@ const s = StyleSheet.create({
     left: 20,
     paddingHorizontal: 10,
     paddingVertical: 3,
-    backgroundColor: '#FFD700',
+    backgroundColor: BRAND.gold,
     borderRadius: 2,
   },
   tagText: {
@@ -532,14 +533,14 @@ const s = StyleSheet.create({
     fontFamily: FONTS.display,
     fontSize: 44,
     lineHeight: 42,
-    color: '#FFFFFF',
+    color: BRAND.white,
     letterSpacing: 1.5,
   },
   playerLast: {
     fontFamily: FONTS.display,
     fontSize: 44,
     lineHeight: 42,
-    color: '#FFFFFF',
+    color: BRAND.white,
     letterSpacing: 1.5,
   },
   posTeamRow: {
@@ -636,12 +637,12 @@ const s = StyleSheet.create({
     gap: 8,
     paddingVertical: 14,
     borderRadius: 12,
-    backgroundColor: '#4BB9EC',
+    backgroundColor: BRAND.skyBlue,
   },
   shareBtnText: {
     fontSize: 12,
     fontFamily: FONTS.bodyBold,
-    color: '#0D1B3E',
+    color: BRAND.navyDeep,
   },
   statsBtn: {
     flex: 1,
@@ -651,22 +652,22 @@ const s = StyleSheet.create({
     gap: 8,
     paddingVertical: 14,
     borderRadius: 12,
-    backgroundColor: '#10284C',
+    backgroundColor: BRAND.navy,
     borderWidth: 1,
     borderColor: 'rgba(75,185,236,0.15)',
   },
   statsBtnText: {
     fontSize: 12,
     fontFamily: FONTS.bodyBold,
-    color: '#FFFFFF',
+    color: BRAND.white,
   },
 
   // Compact card
   compactCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#10284C',
-    borderRadius: 14,
+    backgroundColor: BRAND.navy,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(75,185,236,0.10)',
     paddingHorizontal: 12,
@@ -721,7 +722,7 @@ const s = StyleSheet.create({
   compactName: {
     fontSize: 14,
     fontFamily: FONTS.bodyBold,
-    color: '#FFFFFF',
+    color: BRAND.white,
   },
   compactMeta: {
     flexDirection: 'row',

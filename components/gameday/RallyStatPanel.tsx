@@ -22,11 +22,12 @@ import { useMatch } from '@/lib/gameday/use-match';
 import type { RallyActionType, RallyEvent } from '@/lib/gameday/match-state';
 import { useResponsive } from '@/lib/responsive';
 import { FONTS } from '@/theme/fonts';
+import { BRAND } from '@/theme/colors';
 
-const ACCENT = '#4BB9EC';
+const ACCENT = BRAND.skyBlue;
 const TEAL = '#10B981';
-const CORAL = '#EF4444';
-const GOLD = '#FFD700';
+const CORAL = BRAND.error;
+const GOLD = BRAND.gold;
 
 // Action buttons definition
 const ACTION_GROUPS = [

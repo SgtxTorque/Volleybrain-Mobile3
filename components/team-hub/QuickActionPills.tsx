@@ -47,7 +47,7 @@ export default function QuickActionPills({ activeSection, onPress }: QuickAction
               <Ionicons
                 name={pill.icon}
                 size={14}
-                color={isActive ? '#FFF' : BRAND.textMuted}
+                color={isActive ? BRAND.white : BRAND.textMuted}
               />
               <Text style={[s.pillText, isActive && s.pillTextActive]}>
                 {pill.label}
@@ -91,6 +91,6 @@ const s = StyleSheet.create({
     color: BRAND.textPrimary,
   },
   pillTextActive: {
-    color: '#FFF',
+    color: BRAND.white,
   },
 });

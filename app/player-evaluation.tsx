@@ -60,7 +60,7 @@ type RosterPlayer = {
 
 // Rating circle color: 1-4 warm, 5-6 neutral, 7-10 teal
 function getRatingColor(value: number): string {
-  if (value <= 4) return '#EF4444';
+  if (value <= 4) return BRAND.error;
   if (value <= 6) return BRAND.warning;
   return BRAND.teal;
 }

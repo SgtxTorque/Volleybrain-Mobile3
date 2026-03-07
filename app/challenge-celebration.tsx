@@ -25,6 +25,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 
 // =============================================================================
@@ -33,20 +34,20 @@ import { FONTS } from '@/theme/fonts';
 
 const MASCOT_CHEER = require('@/assets/images/coachlynxmalecheer.png');
 
-/** Dark player-theme palette (matches challenge-cta, player hub, etc.) */
+/** Dark player-theme palette — aliased from BRAND tokens */
 const PT = {
-  bg: '#0D1B3E',
-  cardBg: '#10284C',
-  gold: '#FFD700',
-  teal: '#4BB9EC',
-  textPrimary: '#FFFFFF',
+  bg: BRAND.navyDeep,
+  cardBg: BRAND.navy,
+  gold: BRAND.gold,
+  teal: BRAND.skyBlue,
+  textPrimary: BRAND.white,
   textMuted: 'rgba(255,255,255,0.50)',
   textFaint: 'rgba(255,255,255,0.20)',
-  success: '#22C55E',
+  success: BRAND.success,
 };
 
 /** Confetti-style dot colors used for winner animation. */
-const CONFETTI_COLORS = ['#FFD700', '#4BB9EC', '#22C55E', '#A855F7', '#E76F51', '#FFFFFF'];
+const CONFETTI_COLORS = [BRAND.gold, BRAND.skyBlue, BRAND.success, '#A855F7', BRAND.coral, BRAND.white];
 
 // =============================================================================
 // Confetti Dot (static decorative dots rendered around the header area)

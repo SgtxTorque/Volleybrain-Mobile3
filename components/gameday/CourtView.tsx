@@ -23,6 +23,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getPlayerPlaceholder } from '@/lib/default-images';
 import type { CourtPosition } from '@/lib/gameday/match-state';
 import { FONTS } from '@/theme/fonts';
+import { BRAND } from '@/theme/colors';
 
 // ── Props ───────────────────────────────────────────────────────
 
@@ -69,9 +70,9 @@ function PositionNode({
 
   const hasPhoto = pos.playerId && (pos as any).photoUrl;
   const borderColor = pos.isLibero
-    ? '#FFD700'
+    ? BRAND.gold
     : isSelected
-    ? '#4BB9EC'
+    ? BRAND.skyBlue
     : pos.isFrontRow
     ? 'rgba(255,255,255,0.4)'
     : 'rgba(255,255,255,0.2)';
@@ -116,7 +117,7 @@ function PositionNode({
         {/* Server icon */}
         {pos.isServer && (
           <View style={styles.serverBadge}>
-            <Ionicons name="tennisball" size={nodeSize * 0.22} color="#FFD700" />
+            <Ionicons name="tennisball" size={nodeSize * 0.22} color={BRAND.gold} />
           </View>
         )}
 
@@ -208,13 +209,13 @@ export default function CourtView({
 
 function getRoleColor(label: string): string {
   switch (label) {
-    case 'S': return '#10B981';     // teal — setter
-    case 'OPP': return '#F59E0B';   // amber — opposite
-    case 'OH': return '#3B82F6';    // blue — outside
-    case 'MB': return '#EF4444';    // red — middle
-    case 'L': return '#FFD700';     // gold — libero
-    case 'DS': return '#8B5CF6';    // purple — DS
-    default: return '#64748B';      // gray
+    case 'S': return '#10B981';         // teal — setter
+    case 'OPP': return BRAND.warning;   // amber — opposite
+    case 'OH': return '#3B82F6';        // blue — outside
+    case 'MB': return BRAND.error;      // red — middle
+    case 'L': return BRAND.gold;        // gold — libero
+    case 'DS': return '#8B5CF6';        // purple — DS
+    default: return '#64748B';          // gray
   }
 }
 
@@ -240,7 +241,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 3,
-    backgroundColor: '#4BB9EC',
+    backgroundColor: BRAND.skyBlue,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1,
@@ -250,7 +251,7 @@ const styles = StyleSheet.create({
     top: -14,
     fontFamily: FONTS.bodyBold,
     fontSize: 9,
-    color: '#4BB9EC',
+    color: BRAND.skyBlue,
     letterSpacing: 2,
   },
   attackLine: {
@@ -331,7 +332,7 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     borderRadius: 8,
-    backgroundColor: '#FFD700',
+    backgroundColor: BRAND.gold,
     justifyContent: 'center',
     alignItems: 'center',
   },
