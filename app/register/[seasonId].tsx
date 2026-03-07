@@ -35,6 +35,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import SignaturePad from '@/components/SignaturePad';
 import FullScreenSignatureModal from '@/components/FullScreenSignatureModal';
+import FullScreenWaiverViewer from '@/components/FullScreenWaiverViewer';
 
 // ============================================
 // TYPES
@@ -242,6 +243,9 @@ export default function RegistrationWizardScreen() {
 
   // Signature modal
   const [showSignatureModal, setShowSignatureModal] = useState(false);
+
+  // Waiver viewer modal
+  const [activeWaiverKey, setActiveWaiverKey] = useState<string | null>(null);
 
   // Submit (Phase 6)
   const [submitting, setSubmitting] = useState(false);
@@ -1445,73 +1449,68 @@ export default function RegistrationWizardScreen() {
               .filter(([_, w]) => w.enabled)
               .map(([key, waiver]) => {
                 const accepted = waiverState[key] || false;
-                const hasScrolled = waiverScrolled[key] || false;
-                const canAccept = hasScrolled || !waiver.text || waiver.text.length < 200;
 
                 return (
                   <View key={key} style={[s.waiverCard, accepted && s.waiverCardAccepted]}>
-                    <Text style={s.waiverTitle}>
-                      {waiver.title}
-                      {waiver.required && <Text style={s.required}> *</Text>}
-                    </Text>
-
-                    {/* Scrollable waiver text */}
-                    {waiver.text && waiver.text.length > 0 && (
-                      <View style={s.waiverTextWrap}>
-                        <ScrollView
-                          style={s.waiverScroll}
-                          nestedScrollEnabled
-                          showsVerticalScrollIndicator
-                          onScroll={({ nativeEvent }) => {
-                            const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
-                            const nearBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - 20;
-                            if (nearBottom && !waiverScrolled[key]) {
-                              setWaiverScrolled(prev => ({ ...prev, [key]: true }));
-                            }
-                          }}
-                          scrollEventThrottle={100}
-                        >
-                          <Text style={s.waiverText}>{waiver.text}</Text>
-                        </ScrollView>
-                        {!hasScrolled && waiver.text.length >= 200 && (
-                          <View style={s.scrollHint}>
-                            <Ionicons name="chevron-down" size={14} color={BRAND.textMuted} />
-                            <Text style={s.scrollHintText}>Scroll to read full waiver</Text>
-                          </View>
+                    <View style={s.waiverCardHeader}>
+                      <Ionicons
+                        name={accepted ? 'checkmark-circle' : 'document-text-outline'}
+                        size={20}
+                        color={accepted ? BRAND.teal : BRAND.textMuted}
+                      />
+                      <View style={{ flex: 1 }}>
+                        <Text style={s.waiverTitle}>
+                          {waiver.title}
+                          {waiver.required && <Text style={s.required}> *</Text>}
+                        </Text>
+                        {accepted && (
+                          <Text style={s.waiverAcceptedLabel}>Read & accepted</Text>
                         )}
                       </View>
-                    )}
+                    </View>
 
-                    {/* Accept checkbox — only active after scrolling */}
-                    <TouchableOpacity
-                      style={[s.waiverAcceptRow, !canAccept && s.waiverAcceptDisabled]}
-                      onPress={() => {
-                        if (canAccept) {
-                          setWaiverState(prev => ({ ...prev, [key]: !prev[key] }));
-                        }
-                      }}
-                      activeOpacity={canAccept ? 0.7 : 1}
-                    >
-                      <View style={[
-                        s.checkbox,
-                        accepted && { backgroundColor: accentColor, borderColor: accentColor },
-                        !canAccept && { opacity: 0.4 },
-                      ]}>
-                        {accepted && <Ionicons name="checkmark" size={14} color={BRAND.white} />}
-                      </View>
-                      <Text style={[s.waiverAcceptLabel, !canAccept && { color: BRAND.textMuted }]}>
-                        I have read and agree to this waiver
-                      </Text>
-                      {accepted && (
-                        <View style={s.signedBadge}>
-                          <Ionicons name="checkmark-circle" size={16} color={BRAND.teal} />
-                          <Text style={s.signedBadgeText}>Accepted</Text>
-                        </View>
-                      )}
-                    </TouchableOpacity>
+                    {accepted ? (
+                      <TouchableOpacity
+                        style={s.waiverRereadBtn}
+                        onPress={() => setActiveWaiverKey(key)}
+                      >
+                        <Text style={[s.waiverRereadText, { color: accentColor }]}>Read again</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <TouchableOpacity
+                        style={[s.waiverReadSignBtn, { backgroundColor: accentColor }]}
+                        onPress={() => {
+                          if (waiver.text && waiver.text.length > 0) {
+                            setActiveWaiverKey(key);
+                          } else {
+                            // No text to read — accept directly
+                            setWaiverState(prev => ({ ...prev, [key]: true }));
+                          }
+                        }}
+                      >
+                        <Ionicons name="reader-outline" size={16} color={BRAND.white} />
+                        <Text style={s.waiverReadSignBtnText}>Read & Accept</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
                 );
               })}
+
+            {/* Full-screen waiver viewer modal */}
+            {activeWaiverKey && data.config.waivers[activeWaiverKey] && (
+              <FullScreenWaiverViewer
+                visible={!!activeWaiverKey}
+                title={data.config.waivers[activeWaiverKey].title}
+                text={data.config.waivers[activeWaiverKey].text || ''}
+                accentColor={accentColor}
+                onAgree={() => {
+                  setWaiverState(prev => ({ ...prev, [activeWaiverKey]: true }));
+                  setWaiverScrolled(prev => ({ ...prev, [activeWaiverKey]: true }));
+                  setActiveWaiverKey(null);
+                }}
+                onCancel={() => setActiveWaiverKey(null)}
+              />
+            )}
 
             {/* Signature — full-screen modal */}
             <View style={s.signatureSection}>
@@ -2258,10 +2257,41 @@ const createStyles = (accentColor: string) => StyleSheet.create({
     borderColor: BRAND.teal,
     backgroundColor: `${BRAND.teal}06`,
   },
+  waiverCardHeader: {
+    flexDirection: 'row' as const,
+    alignItems: 'flex-start' as const,
+    gap: 10,
+  },
   waiverTitle: {
     fontSize: 16,
     fontFamily: FONTS.bodySemiBold,
     color: BRAND.textPrimary,
+  },
+  waiverAcceptedLabel: {
+    fontSize: 13,
+    fontFamily: FONTS.bodyMedium,
+    color: BRAND.teal,
+    marginTop: 2,
+  },
+  waiverReadSignBtn: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  waiverReadSignBtnText: {
+    fontSize: 15,
+    fontFamily: FONTS.bodySemiBold,
+    color: BRAND.white,
+  },
+  waiverRereadBtn: {
+    alignSelf: 'flex-start' as const,
+  },
+  waiverRereadText: {
+    fontSize: 14,
+    fontFamily: FONTS.bodyMedium,
   },
   waiverTextWrap: {
     borderRadius: 10,
