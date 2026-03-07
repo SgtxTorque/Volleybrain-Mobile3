@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
   },
   jerseyText: {
     fontFamily: FONTS.bodyExtraBold,
-    color: '#fff',
+    color: BRAND.white,
     textAlign: 'center',
   },
   roleBadge: {

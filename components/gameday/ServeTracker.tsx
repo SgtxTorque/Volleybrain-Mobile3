@@ -373,7 +373,7 @@ const s = StyleSheet.create({
   serverName: {
     fontFamily: FONTS.bodySemiBold,
     fontSize: 14,
-    color: '#fff',
+    color: BRAND.white,
   },
   serverNameTablet: {
     fontSize: 17,
@@ -513,7 +513,7 @@ const s = StyleSheet.create({
   statValue: {
     fontFamily: FONTS.bodyExtraBold,
     fontSize: 18,
-    color: '#fff',
+    color: BRAND.white,
   },
   statLabel: {
     fontFamily: FONTS.bodyBold,

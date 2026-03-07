@@ -303,7 +303,7 @@ export default function SummaryPage() {
       {/* Actions */}
       <View style={s.actions}>
         <TouchableOpacity style={s.syncBtn} onPress={handleSync} disabled={syncing}>
-          <Ionicons name={syncing ? 'sync' : 'cloud-upload'} size={18} color="#fff" />
+          <Ionicons name={syncing ? 'sync' : 'cloud-upload'} size={18} color={BRAND.white} />
           <Text style={s.syncBtnText}>
             {syncing ? 'Saving...' : 'Save to Lynx'}
           </Text>
@@ -356,7 +356,7 @@ const s = StyleSheet.create({
   heroOpponent: {
     fontFamily: FONTS.bodySemiBold,
     fontSize: 15,
-    color: '#fff',
+    color: BRAND.white,
   },
   heroScore: {
     fontFamily: FONTS.bodyMedium,
@@ -392,12 +392,12 @@ const s = StyleSheet.create({
   setNum: {
     fontFamily: FONTS.bodySemiBold,
     fontSize: 12,
-    color: '#fff',
+    color: BRAND.white,
   },
   setScoreText: {
     fontFamily: FONTS.display,
     fontSize: 20,
-    color: '#fff',
+    color: BRAND.white,
   },
   setMeta: {
     fontFamily: FONTS.bodyMedium,
@@ -432,7 +432,7 @@ const s = StyleSheet.create({
   awardPlayer: {
     fontFamily: FONTS.bodySemiBold,
     fontSize: 11,
-    color: '#fff',
+    color: BRAND.white,
     textAlign: 'center',
   },
   awardStat: {
@@ -458,7 +458,7 @@ const s = StyleSheet.create({
   serveStatValue: {
     fontFamily: FONTS.bodyExtraBold,
     fontSize: 18,
-    color: '#fff',
+    color: BRAND.white,
   },
   serveStatLabel: {
     fontFamily: FONTS.bodyBold,
@@ -483,7 +483,7 @@ const s = StyleSheet.create({
   infoValue: {
     fontFamily: FONTS.bodySemiBold,
     fontSize: 13,
-    color: '#fff',
+    color: BRAND.white,
   },
 
   // Actions
@@ -509,7 +509,7 @@ const s = StyleSheet.create({
   syncBtnText: {
     fontFamily: FONTS.bodyBold,
     fontSize: 16,
-    color: '#fff',
+    color: BRAND.white,
   },
   doneBtn: {
     paddingHorizontal: 24,
@@ -538,7 +538,7 @@ const s = StyleSheet.create({
   evalNudgeTitle: {
     fontFamily: FONTS.bodySemiBold,
     fontSize: 14,
-    color: '#fff',
+    color: BRAND.white,
   },
   evalNudgeSubtitle: {
     fontFamily: FONTS.bodyMedium,

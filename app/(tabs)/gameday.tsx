@@ -476,7 +476,7 @@ export default function GameDayScreen() {
                     style={s.heroActionPrimary}
                     onPress={() => router.push(`/game-day-command?eventId=${nextEvent.id}&teamId=${nextEvent.team_id}&opponent=${encodeURIComponent(nextEvent.opponent_name || nextEvent.opponent || 'Opponent')}` as any)}
                   >
-                    <Ionicons name="game-controller" size={14} color="#FFF" />
+                    <Ionicons name="game-controller" size={14} color={BRAND.white} />
                     <Text style={s.heroActionPrimaryText}>Live Command</Text>
                   </TouchableOpacity>
                 )}
@@ -485,13 +485,13 @@ export default function GameDayScreen() {
                     style={s.heroActionPrimary}
                     onPress={() => router.push('/lineup-builder' as any)}
                   >
-                    <Ionicons name="grid-outline" size={14} color="#FFF" />
+                    <Ionicons name="grid-outline" size={14} color={BRAND.white} />
                     <Text style={s.heroActionPrimaryText}>Prep Lineup</Text>
                   </TouchableOpacity>
                 )}
                 {(nextEvent.venue_address || nextEvent.venue_name || nextEvent.location) && (
                   <TouchableOpacity style={s.heroActionSecondary} onPress={() => openDirections(nextEvent)}>
-                    <Ionicons name="navigate-outline" size={14} color="#FFF" />
+                    <Ionicons name="navigate-outline" size={14} color={BRAND.white} />
                     <Text style={s.heroActionSecondaryText}>Get Directions</Text>
                   </TouchableOpacity>
                 )}
@@ -885,7 +885,7 @@ const styles = StyleSheet.create({
     heroBadgeText: {
       fontSize: 9,
       fontFamily: FONTS.bodyExtraBold,
-      color: '#FFF',
+      color: BRAND.white,
       textTransform: 'uppercase',
       letterSpacing: 0.5,
     },
@@ -906,7 +906,7 @@ const styles = StyleSheet.create({
     },
     heroTitle: {
       ...displayTextStyle,
-      color: '#FFF',
+      color: BRAND.white,
       fontSize: 28,
       marginBottom: 4,
     },
@@ -942,7 +942,7 @@ const styles = StyleSheet.create({
       gap: 6,
     },
     heroActionPrimaryText: {
-      color: '#FFF',
+      color: BRAND.white,
       fontSize: 13,
       fontFamily: FONTS.bodyBold,
     },
@@ -959,7 +959,7 @@ const styles = StyleSheet.create({
       gap: 6,
     },
     heroActionSecondaryText: {
-      color: '#FFF',
+      color: BRAND.white,
       fontSize: 13,
       fontFamily: FONTS.bodyBold,
     },
@@ -978,7 +978,7 @@ const styles = StyleSheet.create({
     },
     emptyHeroTitle: {
       ...displayTextStyle,
-      color: '#FFF',
+      color: BRAND.white,
       fontSize: 18,
       marginTop: 12,
     },

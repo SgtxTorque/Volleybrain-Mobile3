@@ -867,9 +867,9 @@ export default function ChildDetailScreen() {
         disabled={photoUploading}
       >
         {photoUploading ? (
-          <ActivityIndicator size="small" color="#FFFFFF" />
+          <ActivityIndicator size="small" color={BRAND.white} />
         ) : (
-          <Ionicons name="camera" size={20} color="#FFFFFF" />
+          <Ionicons name="camera" size={20} color={BRAND.white} />
         )}
       </TouchableOpacity>
 
@@ -921,7 +921,7 @@ export default function ChildDetailScreen() {
         )}
         scrollEventThrottle={16}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FFFFFF" />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={BRAND.white} />
         }
       >
         {/* Transparent spacer — lets photo show through */}
@@ -979,7 +979,7 @@ export default function ChildDetailScreen() {
           onPress={() => router.back()}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+          <Ionicons name="arrow-back" size={22} color={BRAND.white} />
         </TouchableOpacity>
       </View>
     </View>
@@ -1085,7 +1085,7 @@ const s = StyleSheet.create({
   overlayPlayerName: {
     fontSize: 36,
     fontFamily: FONTS.bodyExtraBold,
-    color: '#FFFFFF',
+    color: BRAND.white,
     letterSpacing: -0.5,
     textShadowColor: 'rgba(0,0,0,0.6)',
     textShadowOffset: { width: 0, height: 2 },
@@ -1094,7 +1094,7 @@ const s = StyleSheet.create({
   overlayTeamName: {
     fontSize: 18,
     fontFamily: FONTS.bodyBold,
-    color: '#FFFFFF',
+    color: BRAND.white,
     marginTop: 4,
     textShadowColor: 'rgba(0,0,0,0.5)',
     textShadowOffset: { width: 0, height: 1 },
@@ -1118,7 +1118,7 @@ const s = StyleSheet.create({
   overlayPillText: {
     fontSize: 12,
     fontFamily: FONTS.bodyBold,
-    color: '#FFFFFF',
+    color: BRAND.white,
     textShadowColor: 'rgba(0,0,0,0.3)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,

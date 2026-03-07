@@ -358,7 +358,7 @@ export default function LiveMatchPage() {
             onPress={() => handleScore('home')}
             activeOpacity={0.7}
           >
-            <Ionicons name="add" size={32} color="#fff" />
+            <Ionicons name="add" size={32} color={BRAND.white} />
           </TouchableOpacity>
         </View>
 
@@ -386,7 +386,7 @@ export default function LiveMatchPage() {
             onPress={() => handleScore('away')}
             activeOpacity={0.7}
           >
-            <Ionicons name="add" size={32} color="#fff" />
+            <Ionicons name="add" size={32} color={BRAND.white} />
           </TouchableOpacity>
         </View>
       </View>
@@ -726,7 +726,7 @@ const s = StyleSheet.create({
   benchJersey: {
     fontFamily: FONTS.bodyExtraBold,
     fontSize: 14,
-    color: '#fff',
+    color: BRAND.white,
     width: 28,
     textAlign: 'center',
   },
@@ -736,7 +736,7 @@ const s = StyleSheet.create({
   benchName: {
     fontFamily: FONTS.bodySemiBold,
     fontSize: 11,
-    color: '#fff',
+    color: BRAND.white,
   },
   benchPos: {
     fontFamily: FONTS.bodyMedium,
@@ -779,7 +779,7 @@ const s = StyleSheet.create({
   phoneSubJersey: {
     fontFamily: FONTS.bodyExtraBold,
     fontSize: 14,
-    color: '#fff',
+    color: BRAND.white,
   },
   phoneSubName: {
     fontFamily: FONTS.bodyMedium,
@@ -826,7 +826,7 @@ const s = StyleSheet.create({
   bigScore: {
     fontFamily: FONTS.display,
     fontSize: 56,
-    color: '#fff',
+    color: BRAND.white,
     lineHeight: 62,
   },
   scoreBtn: {
@@ -939,7 +939,7 @@ const s = StyleSheet.create({
   modalTitle: {
     fontFamily: FONTS.bodySemiBold,
     fontSize: 16,
-    color: '#fff',
+    color: BRAND.white,
     textAlign: 'center',
     marginBottom: 4,
   },
@@ -968,7 +968,7 @@ const s = StyleSheet.create({
   subPickerName: {
     fontFamily: FONTS.bodySemiBold,
     fontSize: 15,
-    color: '#fff',
+    color: BRAND.white,
     flex: 1,
   },
   subPickerPos: {

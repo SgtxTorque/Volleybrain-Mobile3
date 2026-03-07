@@ -27,6 +27,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChallengeDetail } from '@/hooks/useChallenges';
 import { optInToChallenge, updateChallengeProgress } from '@/lib/challenge-service';
 import { useAuth } from '@/lib/auth';
+import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 
 // =============================================================================
@@ -41,14 +42,14 @@ const MASCOT_CHEER = require('@/assets/images/coach-mascot/coachlynxmalecheer.pn
 // =============================================================================
 
 const PT = {
-  bg: '#0D1B3E',
-  cardBg: '#10284C',
-  gold: '#FFD700',
-  teal: '#4BB9EC',
-  textPrimary: '#FFFFFF',
+  bg: BRAND.navyDeep,
+  cardBg: BRAND.navy,
+  gold: BRAND.gold,
+  teal: BRAND.skyBlue,
+  textPrimary: BRAND.white,
   textMuted: 'rgba(255,255,255,0.50)',
   textFaint: 'rgba(255,255,255,0.20)',
-  success: '#22C55E',
+  success: BRAND.success,
   epic: '#A855F7',
 };
 

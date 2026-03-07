@@ -353,7 +353,7 @@ const s = StyleSheet.create({
   playerJersey: {
     fontFamily: FONTS.bodyExtraBold,
     fontSize: 16,
-    color: '#fff',
+    color: BRAND.white,
   },
   playerJerseyTablet: {
     fontSize: 19,

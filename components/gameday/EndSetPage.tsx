@@ -196,7 +196,7 @@ export default function EndSetPage() {
           <>
             {lastSet?.setComplete && (
               <TouchableOpacity style={s.primaryBtn} onPress={handleStartNextSet}>
-                <Ionicons name="play" size={20} color="#fff" />
+                <Ionicons name="play" size={20} color={BRAND.white} />
                 <Text style={s.primaryBtnText}>Start Set {currentSetNum + 1}</Text>
               </TouchableOpacity>
             )}
@@ -214,7 +214,7 @@ export default function EndSetPage() {
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
               endMatch();
             }}>
-              <Ionicons name="checkmark-circle" size={20} color="#fff" />
+              <Ionicons name="checkmark-circle" size={20} color={BRAND.white} />
               <Text style={s.primaryBtnText}>View Summary</Text>
             </TouchableOpacity>
           </>
@@ -289,12 +289,12 @@ const s = StyleSheet.create({
   setNumber: {
     fontFamily: FONTS.bodySemiBold,
     fontSize: 13,
-    color: '#fff',
+    color: BRAND.white,
   },
   setScore: {
     fontFamily: FONTS.display,
     fontSize: 22,
-    color: '#fff',
+    color: BRAND.white,
     flex: 1,
     textAlign: 'center',
   },
@@ -335,12 +335,12 @@ const s = StyleSheet.create({
   performerJersey: {
     fontFamily: FONTS.bodyExtraBold,
     fontSize: 12,
-    color: '#fff',
+    color: BRAND.white,
   },
   performerName: {
     fontFamily: FONTS.bodySemiBold,
     fontSize: 13,
-    color: '#fff',
+    color: BRAND.white,
     flex: 1,
   },
   performerStats: {
@@ -375,7 +375,7 @@ const s = StyleSheet.create({
   primaryBtnText: {
     fontFamily: FONTS.bodyBold,
     fontSize: 16,
-    color: '#fff',
+    color: BRAND.white,
   },
   secondaryBtn: {
     paddingHorizontal: 24,

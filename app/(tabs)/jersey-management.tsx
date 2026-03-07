@@ -3,6 +3,7 @@ import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
+import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
@@ -481,7 +482,7 @@ export default function JerseyManagementScreen() {
                   disabled={saving}
                 >
                   {saving ? (
-                    <ActivityIndicator size="small" color="#fff" />
+                    <ActivityIndicator size="small" color={BRAND.white} />
                   ) : (
                     <Text style={s.saveBtnText}>Save Changes</Text>
                   )}
@@ -524,13 +525,13 @@ const createStyles = (colors: any) => StyleSheet.create({
   numberCellAssigned: { backgroundColor: colors.primary, borderColor: colors.primary },
   numberCellNeedsOrder: { borderColor: colors.warning, borderWidth: 2 },
   numberText: { fontSize: 14, fontFamily: FONTS.bodySemiBold, color: colors.textMuted },
-  numberTextAssigned: { color: '#fff' },
+  numberTextAssigned: { color: BRAND.white },
   numberInitials: { fontSize: 8, color: 'rgba(255,255,255,0.8)', marginTop: -2 },
   orderDot: { position: 'absolute', top: 2, right: 2, width: 6, height: 6, borderRadius: 3, backgroundColor: colors.warning },
   playerList: { paddingHorizontal: 16 },
   playerRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.glassCard, padding: 12, borderRadius: 12, marginBottom: 8, borderWidth: 1, borderColor: colors.glassBorder },
   jerseyBadge: { width: 44, height: 44, borderRadius: 8, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  jerseyBadgeText: { ...displayTextStyle, fontSize: 18, color: '#fff' },
+  jerseyBadgeText: { ...displayTextStyle, fontSize: 18, color: BRAND.white },
   playerInfo: { flex: 1 },
   playerName: { fontSize: 16, fontFamily: FONTS.bodySemiBold, color: colors.text },
   prefText: { fontSize: 12, color: colors.textMuted, fontFamily: FONTS.bodyMedium, marginTop: 2 },
@@ -557,5 +558,5 @@ const createStyles = (colors: any) => StyleSheet.create({
   quickPickText: { fontSize: 14, fontFamily: FONTS.bodySemiBold, color: colors.text },
   saveBtn: { backgroundColor: colors.primary, paddingVertical: 14, borderRadius: 12, alignItems: 'center', marginTop: 20 },
   saveBtnDisabled: { opacity: 0.6 },
-  saveBtnText: { fontSize: 16, fontFamily: FONTS.bodySemiBold, color: '#fff' },
+  saveBtnText: { fontSize: 16, fontFamily: FONTS.bodySemiBold, color: BRAND.white },
 });

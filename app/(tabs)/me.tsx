@@ -1,5 +1,6 @@
 import { useAuth } from '@/lib/auth';
 import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
+import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 import { usePermissions } from '@/lib/permissions-context';
 import { AccentColor, accentColors, useTheme } from '@/lib/theme';
@@ -240,7 +241,7 @@ export default function MeScreen() {
   const PLAYER_ACCENT_COLORS = ['#F97316', '#3B82F6', '#A855F7', '#10B981', '#F43F5E', '#64748B'];
   const THEME_VARIANT_OPTIONS = [
     { key: 'midnight', label: 'Midnight', desc: 'Dark with glow', colors: ['#0A0F1A', '#111827', '#F97316'] },
-    { key: 'clean', label: 'Clean', desc: 'Light & minimal', colors: ['#F8FAFC', '#FFFFFF', '#F97316'] },
+    { key: 'clean', label: 'Clean', desc: 'Light & minimal', colors: ['#F8FAFC', BRAND.white, '#F97316'] },
     { key: 'fire', label: 'Fire', desc: 'Warm embers', colors: ['#1A0A0A', '#2D1111', '#FF6B35'] },
   ];
   const LAYOUT_OPTIONS = [
@@ -372,7 +373,7 @@ export default function MeScreen() {
                     activeOpacity={0.7}
                   >
                     {accentColor === key && (
-                      <Ionicons name="checkmark" size={14} color="#fff" />
+                      <Ionicons name="checkmark" size={14} color={BRAND.white} />
                     )}
                   </TouchableOpacity>
                 ))}
@@ -407,7 +408,7 @@ export default function MeScreen() {
                           <View key={i} style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: c }} />
                         ))}
                       </View>
-                      <Text style={[s.themeCardLabel, { color: opt.key === 'clean' ? '#1E293B' : '#FFF' }]}>
+                      <Text style={[s.themeCardLabel, { color: opt.key === 'clean' ? '#1E293B' : BRAND.white }]}>
                         {opt.label}
                       </Text>
                       <Text style={{ fontSize: 10, color: opt.key === 'clean' ? '#64748B' : '#94A3B8' }}>
@@ -433,7 +434,7 @@ export default function MeScreen() {
                       onPress={() => { setPlayerAccent(c); savePlayerPref('vb_player_accent', c); }}
                       activeOpacity={0.7}
                     >
-                      {playerAccent === c && <Ionicons name="checkmark" size={14} color="#fff" />}
+                      {playerAccent === c && <Ionicons name="checkmark" size={14} color={BRAND.white} />}
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -578,7 +579,7 @@ const createStyles = (colors: any, isDark: boolean) =>
     avatarText: {
       fontSize: 28,
       fontFamily: FONTS.bodyExtraBold,
-      color: '#FFFFFF',
+      color: BRAND.white,
     },
     heroName: {
       ...displayTextStyle,
@@ -674,7 +675,7 @@ const createStyles = (colors: any, isDark: boolean) =>
     },
     accentCircleSelected: {
       borderWidth: 2,
-      borderColor: '#fff',
+      borderColor: BRAND.white,
       ...Platform.select({
         ios: {
           shadowColor: '#000',
@@ -765,7 +766,7 @@ const createStyles = (colors: any, isDark: boolean) =>
     callingCardName: {
       fontSize: 9,
       fontFamily: FONTS.bodyBold,
-      color: '#FFF',
+      color: BRAND.white,
       textAlign: 'center',
     },
     callingCardCheck: {

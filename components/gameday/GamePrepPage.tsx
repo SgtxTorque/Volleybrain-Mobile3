@@ -551,7 +551,7 @@ const s = StyleSheet.create({
   topBarTitle: {
     fontFamily: FONTS.bodyBold,
     fontSize: 16,
-    color: '#fff',
+    color: BRAND.white,
   },
   topBarRight: {
     flexDirection: 'row',
@@ -765,7 +765,7 @@ const s = StyleSheet.create({
   benchJerseyText: {
     fontFamily: FONTS.bodyExtraBold,
     fontSize: 12,
-    color: '#fff',
+    color: BRAND.white,
   },
   benchInfo: {
     flex: 1,
@@ -773,7 +773,7 @@ const s = StyleSheet.create({
   benchName: {
     fontFamily: FONTS.bodySemiBold,
     fontSize: 12,
-    color: '#fff',
+    color: BRAND.white,
   },
   benchPos: {
     fontFamily: FONTS.bodyMedium,
@@ -805,7 +805,7 @@ const s = StyleSheet.create({
   benchJerseyTextPhone: {
     fontFamily: FONTS.bodyExtraBold,
     fontSize: 16,
-    color: '#fff',
+    color: BRAND.white,
   },
   benchNamePhone: {
     fontFamily: FONTS.bodyMedium,
@@ -956,6 +956,6 @@ const s = StyleSheet.create({
   previewNodeText: {
     fontFamily: FONTS.bodyBold,
     fontSize: 8,
-    color: '#fff',
+    color: BRAND.white,
   },
 });

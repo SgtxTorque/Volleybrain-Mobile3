@@ -234,7 +234,7 @@ export default function TeamScreen() {
                   onPress={() => setSelectedTeamId(team.teamId)}
                   activeOpacity={0.7}
                 >
-                  <Text style={[s.teamPillText, isActive && { color: '#FFF' }]}>{team.teamName}</Text>
+                  <Text style={[s.teamPillText, isActive && { color: BRAND.white }]}>{team.teamName}</Text>
                 </TouchableOpacity>
               );
             })}

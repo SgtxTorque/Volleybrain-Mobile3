@@ -40,7 +40,7 @@ export default function PillTabs({ tabs, activeKey, onChange }: PillTabsProps) {
             <Text
               style={[
                 styles.tabText,
-                { color: isActive ? '#FFFFFF' : BRAND.textMuted },
+                { color: isActive ? BRAND.white : BRAND.textMuted },
               ]}
               numberOfLines={1}
             >
