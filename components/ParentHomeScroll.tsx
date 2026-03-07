@@ -54,7 +54,7 @@ import MetricGrid from './parent-scroll/MetricGrid';
 import TeamHubPreview from './parent-scroll/TeamHubPreview';
 import SeasonSnapshot from './parent-scroll/SeasonSnapshot';
 import RecentBadges from './parent-scroll/RecentBadges';
-import SecondaryEvents from './parent-scroll/SecondaryEvents';
+import AlsoStrip from './parent-scroll/AlsoStrip';
 import AmbientCelebration from './parent-scroll/AmbientCelebration';
 import FlatChatPreview from './parent-scroll/FlatChatPreview';
 import ChallengeVerifyCard from './parent-scroll/ChallengeVerifyCard';
@@ -472,8 +472,8 @@ export default function ParentHomeScroll() {
           isMultiChild={data.isMultiChild}
         />
 
-        {/* ─── SECONDARY EVENTS (flat lines) ───────────────────── */}
-        <SecondaryEvents events={data.upcomingEvents} />
+        {/* ─── ALSO TODAY / THIS WEEK STRIP ───────────────────── */}
+        <AlsoStrip events={data.allUpcomingEvents} isMultiChild={data.isMultiChild} />
 
         {/* ─── ATTENTION NUDGE ──────────────────────────────────── */}
         <AttentionBanner
