@@ -477,8 +477,10 @@ export default function ParentHomeScroll() {
 
         {/* ─── ATTENTION NUDGE ──────────────────────────────────── */}
         <AttentionBanner
+          familyItems={data.familyAttentionItems}
           count={data.attentionCount}
           items={data.attentionItems}
+          isMultiChild={data.isMultiChild}
           onPress={() => router.push('/(tabs)/parent-schedule' as any)}
         />
 
