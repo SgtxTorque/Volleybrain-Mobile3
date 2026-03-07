@@ -47,7 +47,7 @@ import { FONTS } from '@/theme/fonts';
 
 import RoleSelector from './RoleSelector';
 import DayStripCalendar from './parent-scroll/DayStripCalendar';
-import EventHeroCard from './parent-scroll/EventHeroCard';
+import BillboardHero from './parent-scroll/BillboardHero';
 import AttentionBanner from './parent-scroll/AttentionBanner';
 import AthleteCard from './parent-scroll/AthleteCard';
 import MetricGrid from './parent-scroll/MetricGrid';
@@ -296,19 +296,12 @@ export default function ParentHomeScroll() {
 
   const currentMessage = messages[activeMessageIndex];
 
-  // ─── Loading state ──
-  if (data.loading) {
-    return (
-      <View style={[styles.root, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={BRAND.skyBlue} />
-      </View>
-    );
+  // Smart empty states (only check after loading is done)
+  if (!data.loading) {
+    if (!organization) return <NoOrgState />;
+    if (!data.children || data.children.length === 0) return <NoTeamState role="parent" />;
+    if (!data.upcomingEvents || data.upcomingEvents.length === 0) return <EmptySeasonState role="parent" />;
   }
-
-  // Smart empty states
-  if (!organization) return <NoOrgState />;
-  if (!data.children || data.children.length === 0) return <NoTeamState role="parent" />;
-  if (!data.upcomingEvents || data.upcomingEvents.length === 0) return <EmptySeasonState role="parent" />;
 
   return (
     <View style={[styles.root, { backgroundColor: BRAND.offWhite }]}>
@@ -381,6 +374,13 @@ export default function ParentHomeScroll() {
           />
         }
       >
+        {data.loading ? (
+          /* Loading: keep ScrollView mounted so its gesture handler stays registered */
+          <View style={{ justifyContent: 'center', alignItems: 'center', height: SCREEN_HEIGHT - 150 }}>
+            <ActivityIndicator size="large" color={BRAND.skyBlue} />
+          </View>
+        ) : (
+        <>
         {/* ─── WELCOME SECTION ────────────────────────────────── */}
         <Animated.View
           style={[styles.welcomeSection, { paddingTop: insets.top + 16 }, welcomeAnimStyle]}
@@ -462,24 +462,14 @@ export default function ParentHomeScroll() {
           <IncompleteProfileCard />
         </View>
 
-        {/* ─── EVENT HERO CARD ────────────────────────────────── */}
-        <EventHeroCard
-          event={data.heroEvent}
-          scrollY={scrollY}
-          rsvpStatus={data.heroRsvpStatus}
-          onPress={() => {
-            if (data.heroEvent) {
-              router.push('/(tabs)/parent-schedule' as any);
-            }
-          }}
-          onRsvp={() => {
+        {/* ─── BILLBOARD HERO (auto-cycling events) ───────────── */}
+        <BillboardHero
+          events={data.allUpcomingEvents}
+          onRsvp={(eventId, childId, status) => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            // Cycle: RSVP → Going → Not Sure → Not Going → Going → ...
-            const cycle: Array<'yes' | 'maybe' | 'no'> = ['yes', 'maybe', 'no'];
-            const currentIdx = data.heroRsvpStatus ? cycle.indexOf(data.heroRsvpStatus) : -1;
-            const nextStatus = cycle[(currentIdx + 1) % cycle.length];
-            data.rsvpHeroEvent(nextStatus);
+            data.rsvpEvent(eventId, childId, status);
           }}
+          isMultiChild={data.isMultiChild}
         />
 
         {/* ─── SECONDARY EVENTS (flat lines) ───────────────────── */}
@@ -600,6 +590,8 @@ export default function ParentHomeScroll() {
             })()}
           </Text>
         </View>
+        </>
+        )}
       </Animated.ScrollView>
 
       {/* ─── LEVEL-UP CELEBRATION (child) ──────────────────────── */}
