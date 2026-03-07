@@ -66,6 +66,7 @@ type MenuSection = {
 };
 
 const MENU_SECTIONS: MenuSection[] = [
+  // ── Quick Access (all roles) ──────────────────────────────────
   {
     id: 'quick',
     title: 'Quick Access',
@@ -79,6 +80,7 @@ const MENU_SECTIONS: MenuSection[] = [
       { icon: 'people', label: 'Team Wall', route: '/(tabs)/connect' },
     ],
   },
+  // ── Admin Tools (admin only) ──────────────────────────────────
   {
     id: 'admin',
     title: 'Admin Tools',
@@ -89,21 +91,43 @@ const MENU_SECTIONS: MenuSection[] = [
       { icon: 'person-add', label: 'Registration Hub', route: '/registration-hub', badgeKey: 'pendingRegistrations' },
       { icon: 'people-circle', label: 'User Management', route: '/users', badgeKey: 'pendingApprovals' },
       { icon: 'card', label: 'Payment Admin', route: '/(tabs)/payments', badgeKey: 'unpaidPaymentsAdmin' },
+      { icon: 'notifications', label: 'Payment Reminders', route: '/payment-reminders' },
       { icon: 'shirt', label: 'Team Management', route: '/team-management', badgeKey: 'unrosteredPlayers' },
       { icon: 'shirt-outline', label: 'Jersey Management', route: '/(tabs)/jersey-management' },
-      { icon: 'clipboard', label: 'Coach Directory', route: '/coach-directory' },
+      { icon: 'school', label: 'Coach Directory', route: '/coach-directory' },
       { icon: 'calendar-outline', label: 'Season Management', route: '/season-settings' },
+      { icon: 'rocket-outline', label: 'Season Setup Wizard', route: '/season-setup-wizard' },
       { icon: 'bar-chart', label: 'Reports & Analytics', route: '/(tabs)/reports-tab' },
+      { icon: 'search', label: 'Admin Search', route: '/admin-search' },
       { icon: 'business', label: 'Org Directory', route: '/org-directory' },
       { icon: 'archive', label: 'Season Archives', route: '/season-archives' },
       { icon: 'megaphone', label: 'Blast Composer', route: '/blast-composer' },
       { icon: 'time', label: 'Blast History', route: '/blast-history' },
+      { icon: 'location-outline', label: 'Venue Manager', route: '/venue-manager' },
+      { icon: 'finger-print', label: 'Background Checks', route: '/coach-background-checks' },
+      { icon: 'hand-left-outline', label: 'Volunteer Assignment', route: '/volunteer-assignment' },
       { icon: 'document-text', label: 'Form Builder', route: '/web-features', webOnly: true },
       { icon: 'shield-checkmark', label: 'Waiver Editor', route: '/web-features', webOnly: true },
       { icon: 'card-outline', label: 'Payment Gateway', route: '/web-features', webOnly: true },
       { icon: 'settings-outline', label: 'Org Settings', route: '/web-features', webOnly: true },
     ],
   },
+  // ── Game Day (admin + coach) ──────────────────────────────────
+  {
+    id: 'gameday',
+    title: 'Game Day',
+    collapsible: true,
+    defaultOpen: false,
+    roleGate: 'admin_coach',
+    items: [
+      { icon: 'flash-outline', label: 'Game Day Command', route: '/game-day-command' },
+      { icon: 'analytics', label: 'Game Prep', route: '/game-prep' },
+      { icon: 'grid', label: 'Lineup Builder', route: '/lineup-builder' },
+      { icon: 'checkmark-circle', label: 'Attendance', route: '/attendance' },
+      { icon: 'stats-chart', label: 'Game Results', route: '/game-results' },
+    ],
+  },
+  // ── Coaching Tools (admin + coach) ────────────────────────────
   {
     id: 'coaching',
     title: 'Coaching Tools',
@@ -111,18 +135,18 @@ const MENU_SECTIONS: MenuSection[] = [
     defaultOpen: false,
     roleGate: 'admin_coach',
     items: [
-      { icon: 'analytics', label: 'Game Prep', route: '/game-prep' },
-      { icon: 'grid', label: 'Lineup Builder', route: '/lineup-builder' },
       { icon: 'clipboard', label: 'Player Evaluations', route: '/evaluation-session' },
       { icon: 'trophy', label: 'Challenges', route: '/coach-challenge-dashboard' },
-      { icon: 'checkmark-circle', label: 'Attendance', route: '/attendance' },
-      { icon: 'stats-chart', label: 'Game Results', route: '/game-results' },
+      { icon: 'library-outline', label: 'Challenge Library', route: '/challenge-library' },
+      { icon: 'megaphone', label: 'Blast Composer', route: '/blast-composer' },
+      { icon: 'time', label: 'Blast History', route: '/blast-history' },
       { icon: 'calendar-outline', label: 'Coach Availability', route: '/coach-availability' },
       { icon: 'person-circle', label: 'Coach Profile', route: '/coach-profile' },
       { icon: 'shirt', label: 'My Teams', route: '/(tabs)/my-teams' },
       { icon: 'people', label: 'Roster', route: '/(tabs)/players' },
     ],
   },
+  // ── My Family (parent only) ───────────────────────────────────
   {
     id: 'family',
     title: 'My Family',
@@ -134,10 +158,12 @@ const MENU_SECTIONS: MenuSection[] = [
       { icon: 'clipboard', label: 'Registration', route: '/parent-registration-hub' },
       { icon: 'wallet', label: 'Payments', route: '/family-payments', badgeKey: 'unpaidPaymentsParent' },
       { icon: 'document-text', label: 'Waivers', route: '/my-waivers', badgeKey: 'unsignedWaivers' },
+      { icon: 'trophy', label: 'Standings', route: '/standings' },
+      { icon: 'ribbon', label: 'Achievements', route: '/achievements' },
       { icon: 'share-social', label: 'Invite Friends', route: '/invite-friends' },
-      { icon: 'lock-closed', label: 'Data Rights', route: '/data-rights' },
     ],
   },
+  // ── My Stuff (player only) ────────────────────────────────────
   {
     id: 'player',
     title: 'My Stuff',
@@ -147,11 +173,15 @@ const MENU_SECTIONS: MenuSection[] = [
     items: [
       { icon: 'shirt', label: 'My Teams', route: '/(tabs)/my-teams' },
       { icon: 'stats-chart', label: 'My Stats', route: '/my-stats' },
+      { icon: 'id-card-outline', label: 'My Player Card', route: '/player-card' },
       { icon: 'trophy', label: 'Challenges', route: '/challenges' },
       { icon: 'ribbon', label: 'Achievements', route: '/achievements' },
+      { icon: 'trending-up-outline', label: 'Season Progress', route: '/season-progress' },
+      { icon: 'podium-outline', label: 'Standings', route: '/standings' },
       { icon: 'calendar', label: 'Schedule', route: '/(tabs)/schedule' },
     ],
   },
+  // ── League & Community (all roles) ────────────────────────────
   {
     id: 'community',
     title: 'League & Community',
@@ -165,6 +195,7 @@ const MENU_SECTIONS: MenuSection[] = [
       { icon: 'business', label: 'Find Organizations', route: '/org-directory' },
     ],
   },
+  // ── Settings & Privacy (all roles) ────────────────────────────
   {
     id: 'settings',
     title: 'Settings & Privacy',
@@ -179,6 +210,7 @@ const MENU_SECTIONS: MenuSection[] = [
       { icon: 'document', label: 'Terms of Service', route: '/terms-of-service' },
     ],
   },
+  // ── Help & Support (all roles) ────────────────────────────────
   {
     id: 'help',
     title: 'Help & Support',
