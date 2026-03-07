@@ -4,15 +4,6 @@ import StatBox from '@/components/ui/StatBox';
 import { useAuth } from '@/lib/auth';
 import { queuePaymentConfirmation } from '@/lib/email-queue';
 import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
-import {
-  createPlan,
-  generateInstallments,
-  getOverdueInstallments,
-  getPlansForSeason,
-  markInstallmentPaid,
-  type PaymentInstallment,
-  type PaymentPlan,
-} from '@/lib/payment-plans';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
@@ -82,7 +73,7 @@ type FamilyGroup = {
 };
 type ViewMode = 'player' | 'family';
 
-type Tab = 'verification' | 'all' | 'plans';
+type Tab = 'verification' | 'all';
 type RecordMethod = 'cash' | 'check' | 'venmo' | 'zelle' | 'cashapp' | 'other';
 
 type Props = {
@@ -118,26 +109,6 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
   const [recordingPlayer, setRecordingPlayer] = useState<PlayerGroup | null>(null);
   const [recordMethod, setRecordMethod] = useState<RecordMethod>('cash');
   const [recordNote, setRecordNote] = useState('');
-
-  // Payment Plans
-  const [plans, setPlans] = useState<PaymentPlan[]>([]);
-  const [overdueInstallments, setOverdueInstallments] = useState<(PaymentInstallment & { plan_name: string; player_name?: string })[]>([]);
-  const [showCreatePlanModal, setShowCreatePlanModal] = useState(false);
-  const [showAssignPlanModal, setShowAssignPlanModal] = useState(false);
-  const [planName, setPlanName] = useState('');
-  const [planTotal, setPlanTotal] = useState('');
-  const [planCount, setPlanCount] = useState(3);
-  const [planFrequency, setPlanFrequency] = useState<'weekly' | 'biweekly' | 'monthly'>('monthly');
-  const [planDefault, setPlanDefault] = useState(false);
-  const [creatingPlan, setCreatingPlan] = useState(false);
-  const [assigningPlanId, setAssigningPlanId] = useState<string | null>(null);
-  const [assignPlayerId, setAssignPlayerId] = useState('');
-  const [assignStartDate, setAssignStartDate] = useState(new Date().toISOString().split('T')[0]);
-  const [assigningPlan, setAssigningPlan] = useState(false);
-  const [playerInstallments, setPlayerInstallments] = useState<PaymentInstallment[]>([]);
-  const [showInstallmentsModal, setShowInstallmentsModal] = useState(false);
-  const [installmentPlayerName, setInstallmentPlayerName] = useState('');
-  const [installmentPlanName, setInstallmentPlanName] = useState('');
 
   // Stats
   const [stats, setStats] = useState({
@@ -492,32 +463,16 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
     }
   };
 
-  const fetchPlans = useCallback(async () => {
-    if (!workingSeason?.id || !profile?.current_organization_id) return;
-    try {
-      const [planData, overdueData] = await Promise.all([
-        getPlansForSeason(workingSeason.id),
-        getOverdueInstallments(profile.current_organization_id),
-      ]);
-      setPlans(planData);
-      setOverdueInstallments(overdueData);
-    } catch {
-      // silently fail - plans are additive
-    }
-  }, [workingSeason?.id, profile?.current_organization_id]);
-
   useEffect(() => {
     fetchPayments();
-    fetchPlans();
-  }, [fetchPayments, fetchPlans]);
+  }, [fetchPayments]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     setSelectedFees(new Set());
     setExpandedPlayers(new Set());
     fetchPayments();
-    fetchPlans();
-  }, [fetchPayments, fetchPlans]);
+  }, [fetchPayments]);
 
   // =============================================================================
   // FILTERING
@@ -861,116 +816,6 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
   };
 
   // =============================================================================
-  // PAYMENT PLAN ACTIONS
-  // =============================================================================
-
-  const handleCreatePlan = async () => {
-    if (!planName.trim() || !planTotal || !workingSeason?.id || !profile?.current_organization_id) {
-      Alert.alert('Missing Fields', 'Please fill in plan name and total amount.');
-      return;
-    }
-
-    setCreatingPlan(true);
-    try {
-      await createPlan({
-        season_id: workingSeason.id,
-        organization_id: profile.current_organization_id,
-        name: planName.trim(),
-        total_amount: parseFloat(planTotal),
-        installment_count: planCount,
-        frequency: planFrequency,
-        is_default: planDefault,
-      });
-
-      Alert.alert('Plan Created', `"${planName}" has been created.`);
-      setShowCreatePlanModal(false);
-      setPlanName('');
-      setPlanTotal('');
-      setPlanCount(3);
-      setPlanFrequency('monthly');
-      setPlanDefault(false);
-      fetchPlans();
-    } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to create plan');
-    } finally {
-      setCreatingPlan(false);
-    }
-  };
-
-  const handleAssignPlan = async () => {
-    if (!assigningPlanId || !assignPlayerId.trim()) {
-      Alert.alert('Missing Fields', 'Please select a player.');
-      return;
-    }
-
-    setAssigningPlan(true);
-    try {
-      const installments = await generateInstallments(
-        assigningPlanId,
-        assignPlayerId,
-        null,
-        new Date(assignStartDate + 'T00:00:00'),
-      );
-
-      Alert.alert('Plan Assigned', `${installments.length} installments created.`);
-      setShowAssignPlanModal(false);
-      setAssignPlayerId('');
-      fetchPlans();
-    } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to assign plan');
-    } finally {
-      setAssigningPlan(false);
-    }
-  };
-
-  const handleMarkInstallmentPaid = async (installment: PaymentInstallment) => {
-    Alert.alert(
-      'Mark Paid',
-      `Mark installment #${installment.installment_number} ($${installment.amount}) as paid?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Mark Paid',
-          onPress: async () => {
-            try {
-              await markInstallmentPaid(installment.id, 'manual');
-              // Refresh the installment list
-              const updated = playerInstallments.map(i =>
-                i.id === installment.id
-                  ? { ...i, paid: true, paid_at: new Date().toISOString() }
-                  : i
-              );
-              setPlayerInstallments(updated);
-              fetchPlans();
-            } catch (err: any) {
-              Alert.alert('Error', err.message || 'Failed to mark paid');
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const openPlayerInstallments = async (playerId: string, playerName: string, planId: string, planName: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('payment_installments')
-        .select('*')
-        .eq('player_id', playerId)
-        .eq('payment_plan_id', planId)
-        .order('installment_number');
-
-      if (error) throw error;
-      setPlayerInstallments((data || []) as PaymentInstallment[]);
-      setInstallmentPlayerName(playerName);
-      setInstallmentPlanName(planName);
-      setShowInstallmentsModal(true);
-    } catch (err: any) {
-      Alert.alert('Error', err.message || 'Failed to load installments');
-    }
-  };
-
-  // =============================================================================
   // RENDER HELPERS
   // =============================================================================
 
@@ -1197,10 +1042,9 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
         >
           <Text style={{
             fontFamily: FONTS.bodySemiBold,
-            fontSize: 12,
             color: activeTab === 'verification' ? '#000' : colors.text,
           }}>
-            Verify
+            Needs Verification
           </Text>
           {stats.pendingCount > 0 && (
             <View style={{
@@ -1226,47 +1070,15 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
           <Text style={{
             textAlign: 'center',
             fontFamily: FONTS.bodySemiBold,
-            fontSize: 12,
             color: activeTab === 'all' ? '#000' : colors.text,
           }}>
-            All
+            All Payments
           </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => { setActiveTab('plans'); setSelectedFees(new Set()); setExpandedPlayers(new Set()); }}
-          style={{
-            flex: 1,
-            paddingVertical: 10,
-            borderRadius: 8,
-            backgroundColor: activeTab === 'plans' ? colors.primary : 'transparent',
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Text style={{
-            fontFamily: FONTS.bodySemiBold,
-            fontSize: 12,
-            color: activeTab === 'plans' ? '#000' : colors.text,
-          }}>
-            Plans
-          </Text>
-          {overdueInstallments.length > 0 && (
-            <View style={{
-              backgroundColor: activeTab === 'plans' ? '#00000030' : colors.danger,
-              borderRadius: 10,
-              paddingHorizontal: 6,
-              paddingVertical: 2,
-              marginLeft: 4,
-            }}>
-              <Text style={{ fontSize: 11, fontFamily: FONTS.bodyBold, color: colors.background }}>{overdueInstallments.length}</Text>
-            </View>
-          )}
         </TouchableOpacity>
       </View>
 
-      {/* View Mode & Filters (hidden on Plans tab) */}
-      {activeTab !== 'plans' && <View style={{
+      {/* View Mode & Filters */}
+      <View style={{
         flexDirection: 'row',
         paddingHorizontal: 16,
         marginBottom: 8,
@@ -1317,39 +1129,37 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
             Outstanding
           </Text>
         </TouchableOpacity>
-      </View>}
+      </View>
 
-      {/* Search (hidden on Plans tab) */}
-      {activeTab !== 'plans' && (
-        <View style={{ paddingHorizontal: 16, marginBottom: 12 }}>
-          <View style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            backgroundColor: colors.card,
-            borderRadius: 12,
-            paddingHorizontal: 12,
-          }}>
-            <Ionicons name="search" size={18} color={colors.textSecondary} />
-            <TextInput
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholder="Search player or family..."
-              placeholderTextColor={colors.textSecondary}
-              style={{
-                flex: 1,
-                padding: 12,
-                fontSize: 15,
-                color: colors.text,
-              }}
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery('')}>
-                <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
-              </TouchableOpacity>
-            )}
-          </View>
+      {/* Search */}
+      <View style={{ paddingHorizontal: 16, marginBottom: 12 }}>
+        <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          backgroundColor: colors.card,
+          borderRadius: 12,
+          paddingHorizontal: 12,
+        }}>
+          <Ionicons name="search" size={18} color={colors.textSecondary} />
+          <TextInput
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search player or family..."
+            placeholderTextColor={colors.textSecondary}
+            style={{
+              flex: 1,
+              padding: 12,
+              fontSize: 15,
+              color: colors.text,
+            }}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
+            </TouchableOpacity>
+          )}
         </View>
-      )}
+      </View>
 
       {/* Player Groups List */}
       <ScrollView
@@ -1357,193 +1167,7 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
         contentContainerStyle={{ padding: 16, paddingTop: 0, paddingBottom: 100 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        {activeTab === 'plans' ? (
-          // Plans tab content
-          <View>
-            {/* Create Plan Button */}
-            <TouchableOpacity
-              onPress={() => setShowCreatePlanModal(true)}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: colors.primary,
-                borderRadius: 12,
-                padding: 14,
-                marginBottom: 16,
-                gap: 8,
-              }}
-            >
-              <Ionicons name="add-circle-outline" size={20} color="#000" />
-              <Text style={{ fontSize: 15, fontFamily: FONTS.bodySemiBold, color: '#000' }}>
-                Create Payment Plan
-              </Text>
-            </TouchableOpacity>
-
-            {/* Overdue Alert */}
-            {overdueInstallments.length > 0 && (
-              <View style={{
-                backgroundColor: colors.danger + '15',
-                borderRadius: 12,
-                padding: 14,
-                marginBottom: 16,
-                borderWidth: 1,
-                borderColor: colors.danger + '30',
-              }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                  <Ionicons name="alert-circle" size={20} color={colors.danger} />
-                  <Text style={{ fontSize: 14, fontFamily: FONTS.bodyBold, color: colors.danger }}>
-                    {overdueInstallments.length} Overdue Installment{overdueInstallments.length !== 1 ? 's' : ''}
-                  </Text>
-                </View>
-                {overdueInstallments.slice(0, 5).map(inst => (
-                  <View key={inst.id} style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    paddingVertical: 6,
-                    borderTopWidth: 1,
-                    borderTopColor: colors.danger + '20',
-                  }}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 13, fontFamily: FONTS.bodySemiBold, color: colors.text }}>
-                        {inst.player_name || 'Unknown'}
-                      </Text>
-                      <Text style={{ fontSize: 11, color: colors.textSecondary }}>
-                        {inst.plan_name} - #{inst.installment_number}
-                      </Text>
-                    </View>
-                    <View style={{ alignItems: 'flex-end' }}>
-                      <Text style={{ fontSize: 14, fontFamily: FONTS.bodyBold, color: colors.danger }}>
-                        ${inst.amount}
-                      </Text>
-                      <Text style={{ fontSize: 10, color: colors.danger }}>
-                        Due {inst.due_date}
-                      </Text>
-                    </View>
-                  </View>
-                ))}
-                {overdueInstallments.length > 5 && (
-                  <Text style={{ fontSize: 12, color: colors.danger, marginTop: 6, textAlign: 'center' }}>
-                    + {overdueInstallments.length - 5} more
-                  </Text>
-                )}
-              </View>
-            )}
-
-            {/* Plans List */}
-            {plans.length === 0 ? (
-              <View style={{
-                backgroundColor: colors.card,
-                borderRadius: 16,
-                padding: 32,
-                alignItems: 'center',
-                borderWidth: 1,
-                borderColor: colors.border,
-              }}>
-                <Ionicons name="calendar-outline" size={48} color={colors.textSecondary} />
-                <Text style={{ color: colors.text, marginTop: 12, fontSize: 16, fontFamily: FONTS.bodySemiBold }}>
-                  No Payment Plans
-                </Text>
-                <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 13, textAlign: 'center' }}>
-                  Create a plan to offer installment payments.
-                </Text>
-              </View>
-            ) : (
-              plans.map(plan => (
-                <View key={plan.id} style={{
-                  backgroundColor: colors.card,
-                  borderRadius: radii.card,
-                  marginBottom: 12,
-                  overflow: 'hidden',
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                  ...shadows.card,
-                }}>
-                  <View style={{ padding: 14 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <View style={{ flex: 1 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                          <Text style={{ fontSize: 16, fontFamily: FONTS.bodySemiBold, color: colors.text }}>
-                            {plan.name}
-                          </Text>
-                          {plan.is_default && (
-                            <View style={{
-                              backgroundColor: colors.primary + '20',
-                              paddingHorizontal: 8,
-                              paddingVertical: 2,
-                              borderRadius: 6,
-                            }}>
-                              <Text style={{ fontSize: 10, fontFamily: FONTS.bodyBold, color: colors.primary }}>DEFAULT</Text>
-                            </View>
-                          )}
-                        </View>
-                        {plan.description && (
-                          <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 2 }}>{plan.description}</Text>
-                        )}
-                      </View>
-                      <Text style={{ fontSize: 18, fontFamily: FONTS.bodyBold, color: colors.text }}>
-                        ${plan.total_amount}
-                      </Text>
-                    </View>
-
-                    <View style={{
-                      flexDirection: 'row',
-                      marginTop: 10,
-                      gap: 12,
-                    }}>
-                      <View style={{
-                        backgroundColor: colors.background,
-                        paddingHorizontal: 10,
-                        paddingVertical: 6,
-                        borderRadius: 8,
-                      }}>
-                        <Text style={{ fontSize: 12, fontFamily: FONTS.bodySemiBold, color: colors.textSecondary }}>
-                          {plan.installment_count}x ${plan.installment_amount}
-                        </Text>
-                      </View>
-                      <View style={{
-                        backgroundColor: colors.background,
-                        paddingHorizontal: 10,
-                        paddingVertical: 6,
-                        borderRadius: 8,
-                      }}>
-                        <Text style={{ fontSize: 12, fontFamily: FONTS.bodySemiBold, color: colors.textSecondary }}>
-                          {plan.frequency}
-                        </Text>
-                      </View>
-                    </View>
-
-                    {/* Assign to Player button */}
-                    <TouchableOpacity
-                      onPress={() => {
-                        setAssigningPlanId(plan.id);
-                        setAssignPlayerId('');
-                        setAssignStartDate(new Date().toISOString().split('T')[0]);
-                        setShowAssignPlanModal(true);
-                      }}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        marginTop: 12,
-                        paddingVertical: 10,
-                        borderRadius: 8,
-                        backgroundColor: colors.primary + '15',
-                        gap: 6,
-                      }}
-                    >
-                      <Ionicons name="person-add-outline" size={16} color={colors.primary} />
-                      <Text style={{ fontSize: 13, fontFamily: FONTS.bodySemiBold, color: colors.primary }}>
-                        Assign to Player
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ))
-            )}
-          </View>
-        ) : viewMode === 'player' ? (
+        {viewMode === 'player' ? (
           // Player view
           filteredGroups.filter(g => !showOutstandingOnly || g.totalDue > 0).length === 0 ? (
             <View style={{
@@ -2047,440 +1671,6 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
               }}
             >
               <Text style={{ fontSize: 16, fontFamily: FONTS.bodySemiBold, color: colors.text }}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Create Plan Modal */}
-      <Modal
-        visible={showCreatePlanModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowCreatePlanModal(false)}
-      >
-        <View style={{
-          flex: 1,
-          backgroundColor: 'rgba(0,0,0,0.6)',
-          justifyContent: 'flex-end',
-        }}>
-          <View style={{
-            backgroundColor: colors.card,
-            borderTopLeftRadius: 24,
-            borderTopRightRadius: 24,
-            padding: 24,
-            paddingBottom: Platform.OS === 'ios' ? 40 : 24,
-          }}>
-            <View style={{ alignItems: 'center', marginBottom: 20 }}>
-              <View style={{ width: 40, height: 4, backgroundColor: colors.border, borderRadius: 2, marginBottom: 16 }} />
-              <Text style={{ fontSize: 20, fontFamily: FONTS.bodySemiBold, color: colors.text }}>
-                Create Payment Plan
-              </Text>
-            </View>
-
-            <Text style={{ fontSize: 12, fontFamily: FONTS.bodyBold, color: colors.textSecondary, marginBottom: 8, letterSpacing: 1 }}>
-              PLAN NAME
-            </Text>
-            <TextInput
-              value={planName}
-              onChangeText={setPlanName}
-              placeholder="e.g. 3-Month Installment Plan"
-              placeholderTextColor={colors.textSecondary}
-              style={{
-                backgroundColor: colors.background,
-                borderRadius: 12,
-                paddingHorizontal: 16,
-                paddingVertical: 14,
-                fontSize: 15,
-                color: colors.text,
-                marginBottom: 16,
-                borderWidth: 1,
-                borderColor: colors.border,
-              }}
-            />
-
-            <Text style={{ fontSize: 12, fontFamily: FONTS.bodyBold, color: colors.textSecondary, marginBottom: 8, letterSpacing: 1 }}>
-              TOTAL AMOUNT ($)
-            </Text>
-            <TextInput
-              value={planTotal}
-              onChangeText={setPlanTotal}
-              placeholder="e.g. 300"
-              placeholderTextColor={colors.textSecondary}
-              keyboardType="numeric"
-              style={{
-                backgroundColor: colors.background,
-                borderRadius: 12,
-                paddingHorizontal: 16,
-                paddingVertical: 14,
-                fontSize: 15,
-                color: colors.text,
-                marginBottom: 16,
-                borderWidth: 1,
-                borderColor: colors.border,
-              }}
-            />
-
-            <Text style={{ fontSize: 12, fontFamily: FONTS.bodyBold, color: colors.textSecondary, marginBottom: 8, letterSpacing: 1 }}>
-              NUMBER OF INSTALLMENTS
-            </Text>
-            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
-              {[2, 3, 4, 6].map(n => (
-                <TouchableOpacity
-                  key={n}
-                  onPress={() => setPlanCount(n)}
-                  style={{
-                    flex: 1,
-                    paddingVertical: 12,
-                    borderRadius: 10,
-                    backgroundColor: planCount === n ? colors.primary : colors.background,
-                    borderWidth: 1,
-                    borderColor: planCount === n ? colors.primary : colors.border,
-                    alignItems: 'center',
-                  }}
-                >
-                  <Text style={{
-                    fontSize: 16,
-                    fontFamily: FONTS.bodyBold,
-                    color: planCount === n ? '#000' : colors.text,
-                  }}>
-                    {n}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <Text style={{ fontSize: 12, fontFamily: FONTS.bodyBold, color: colors.textSecondary, marginBottom: 8, letterSpacing: 1 }}>
-              FREQUENCY
-            </Text>
-            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
-              {(['monthly', 'biweekly', 'weekly'] as const).map(f => (
-                <TouchableOpacity
-                  key={f}
-                  onPress={() => setPlanFrequency(f)}
-                  style={{
-                    flex: 1,
-                    paddingVertical: 10,
-                    borderRadius: 10,
-                    backgroundColor: planFrequency === f ? colors.primary : colors.background,
-                    borderWidth: 1,
-                    borderColor: planFrequency === f ? colors.primary : colors.border,
-                    alignItems: 'center',
-                  }}
-                >
-                  <Text style={{
-                    fontSize: 12,
-                    fontFamily: FONTS.bodySemiBold,
-                    color: planFrequency === f ? '#000' : colors.text,
-                    textTransform: 'capitalize',
-                  }}>
-                    {f}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* Auto-calculate preview */}
-            {planTotal && parseFloat(planTotal) > 0 && (
-              <View style={{
-                backgroundColor: colors.primary + '10',
-                borderRadius: 10,
-                padding: 12,
-                marginBottom: 16,
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 10,
-              }}>
-                <Ionicons name="calculator-outline" size={18} color={colors.primary} />
-                <Text style={{ fontSize: 13, color: colors.text }}>
-                  {planCount} payments of ${(parseFloat(planTotal) / planCount).toFixed(2)} ({planFrequency})
-                </Text>
-              </View>
-            )}
-
-            {/* Default checkbox */}
-            <TouchableOpacity
-              onPress={() => setPlanDefault(!planDefault)}
-              style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20 }}
-            >
-              <View style={{
-                width: 22, height: 22, borderRadius: 4, borderWidth: 2,
-                borderColor: planDefault ? colors.primary : colors.border,
-                backgroundColor: planDefault ? colors.primary : 'transparent',
-                justifyContent: 'center', alignItems: 'center',
-              }}>
-                {planDefault && <Ionicons name="checkmark" size={14} color="#fff" />}
-              </View>
-              <Text style={{ fontSize: 14, color: colors.text }}>Set as default plan for this season</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={handleCreatePlan}
-              disabled={creatingPlan}
-              style={{
-                backgroundColor: colors.success,
-                borderRadius: 12,
-                padding: 16,
-                alignItems: 'center',
-                marginBottom: 10,
-              }}
-            >
-              {creatingPlan ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={{ fontSize: 16, fontFamily: FONTS.bodySemiBold, color: colors.background }}>Create Plan</Text>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => setShowCreatePlanModal(false)}
-              style={{ backgroundColor: colors.background, borderRadius: 12, padding: 16, alignItems: 'center' }}
-            >
-              <Text style={{ fontSize: 16, fontFamily: FONTS.bodySemiBold, color: colors.text }}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Assign Plan Modal */}
-      <Modal
-        visible={showAssignPlanModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowAssignPlanModal(false)}
-      >
-        <View style={{
-          flex: 1,
-          backgroundColor: 'rgba(0,0,0,0.6)',
-          justifyContent: 'flex-end',
-        }}>
-          <View style={{
-            backgroundColor: colors.card,
-            borderTopLeftRadius: 24,
-            borderTopRightRadius: 24,
-            padding: 24,
-            paddingBottom: Platform.OS === 'ios' ? 40 : 24,
-          }}>
-            <View style={{ alignItems: 'center', marginBottom: 20 }}>
-              <View style={{ width: 40, height: 4, backgroundColor: colors.border, borderRadius: 2, marginBottom: 16 }} />
-              <Text style={{ fontSize: 20, fontFamily: FONTS.bodySemiBold, color: colors.text }}>
-                Assign Plan to Player
-              </Text>
-            </View>
-
-            <Text style={{ fontSize: 12, fontFamily: FONTS.bodyBold, color: colors.textSecondary, marginBottom: 8, letterSpacing: 1 }}>
-              SELECT PLAYER
-            </Text>
-            <ScrollView style={{ maxHeight: 200, marginBottom: 16 }}>
-              {playerGroups.map(group => (
-                <TouchableOpacity
-                  key={group.player_id}
-                  onPress={() => setAssignPlayerId(group.player_id)}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    padding: 12,
-                    borderRadius: 10,
-                    backgroundColor: assignPlayerId === group.player_id ? colors.primary + '20' : colors.background,
-                    borderWidth: 1,
-                    borderColor: assignPlayerId === group.player_id ? colors.primary : colors.border,
-                    marginBottom: 6,
-                    gap: 8,
-                  }}
-                >
-                  <Text style={{ fontSize: 16 }}>{group.sport_icon}</Text>
-                  <Text style={{ fontSize: 14, fontFamily: FONTS.bodySemiBold, color: colors.text, flex: 1 }}>
-                    {group.player_name}
-                  </Text>
-                  {assignPlayerId === group.player_id && (
-                    <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            <Text style={{ fontSize: 12, fontFamily: FONTS.bodyBold, color: colors.textSecondary, marginBottom: 8, letterSpacing: 1 }}>
-              START DATE
-            </Text>
-            <TextInput
-              value={assignStartDate}
-              onChangeText={setAssignStartDate}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor={colors.textSecondary}
-              style={{
-                backgroundColor: colors.background,
-                borderRadius: 12,
-                paddingHorizontal: 16,
-                paddingVertical: 14,
-                fontSize: 15,
-                color: colors.text,
-                marginBottom: 16,
-                borderWidth: 1,
-                borderColor: colors.border,
-              }}
-            />
-
-            {/* Preview */}
-            {assigningPlanId && assignPlayerId && (() => {
-              const plan = plans.find(p => p.id === assigningPlanId);
-              if (!plan) return null;
-              return (
-                <View style={{
-                  backgroundColor: colors.primary + '10',
-                  borderRadius: 10,
-                  padding: 12,
-                  marginBottom: 16,
-                }}>
-                  <Text style={{ fontSize: 13, fontFamily: FONTS.bodySemiBold, color: colors.text }}>
-                    {plan.installment_count} installments of ${plan.installment_amount} ({plan.frequency})
-                  </Text>
-                  <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 4 }}>
-                    Starting {assignStartDate}
-                  </Text>
-                </View>
-              );
-            })()}
-
-            <TouchableOpacity
-              onPress={handleAssignPlan}
-              disabled={assigningPlan || !assignPlayerId}
-              style={{
-                backgroundColor: assignPlayerId ? colors.success : colors.border,
-                borderRadius: 12,
-                padding: 16,
-                alignItems: 'center',
-                marginBottom: 10,
-              }}
-            >
-              {assigningPlan ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={{ fontSize: 16, fontFamily: FONTS.bodySemiBold, color: colors.background }}>
-                  Create Installments
-                </Text>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={() => setShowAssignPlanModal(false)}
-              style={{ backgroundColor: colors.background, borderRadius: 12, padding: 16, alignItems: 'center' }}
-            >
-              <Text style={{ fontSize: 16, fontFamily: FONTS.bodySemiBold, color: colors.text }}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* View Installments Modal */}
-      <Modal
-        visible={showInstallmentsModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowInstallmentsModal(false)}
-      >
-        <View style={{
-          flex: 1,
-          backgroundColor: 'rgba(0,0,0,0.6)',
-          justifyContent: 'flex-end',
-        }}>
-          <View style={{
-            backgroundColor: colors.card,
-            borderTopLeftRadius: 24,
-            borderTopRightRadius: 24,
-            padding: 24,
-            paddingBottom: Platform.OS === 'ios' ? 40 : 24,
-            maxHeight: '80%',
-          }}>
-            <View style={{ alignItems: 'center', marginBottom: 16 }}>
-              <View style={{ width: 40, height: 4, backgroundColor: colors.border, borderRadius: 2, marginBottom: 16 }} />
-              <Text style={{ fontSize: 18, fontFamily: FONTS.bodySemiBold, color: colors.text }}>
-                {installmentPlayerName}
-              </Text>
-              <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 2 }}>
-                {installmentPlanName}
-              </Text>
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {playerInstallments.map(inst => {
-                const isOverdue = !inst.paid && new Date(inst.due_date + 'T00:00:00') < new Date();
-                const statusColor = inst.paid ? colors.success : isOverdue ? colors.danger : colors.warning;
-                const statusLabel = inst.paid ? 'Paid' : isOverdue ? 'Overdue' : 'Due';
-
-                return (
-                  <View key={inst.id} style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    paddingVertical: 12,
-                    borderBottomWidth: 1,
-                    borderBottomColor: colors.border,
-                  }}>
-                    <View style={{
-                      width: 30,
-                      height: 30,
-                      borderRadius: 15,
-                      backgroundColor: statusColor + '20',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      marginRight: 12,
-                    }}>
-                      <Text style={{ fontSize: 12, fontFamily: FONTS.bodyBold, color: statusColor }}>
-                        {inst.installment_number}
-                      </Text>
-                    </View>
-
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 15, fontFamily: FONTS.bodySemiBold, color: colors.text }}>
-                        ${inst.amount}
-                      </Text>
-                      <Text style={{ fontSize: 12, color: colors.textSecondary }}>
-                        {inst.paid && inst.paid_at
-                          ? `Paid ${new Date(inst.paid_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
-                          : `Due ${new Date(inst.due_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
-                        }
-                      </Text>
-                    </View>
-
-                    <View style={{
-                      backgroundColor: statusColor + '20',
-                      paddingHorizontal: 8,
-                      paddingVertical: 4,
-                      borderRadius: 6,
-                    }}>
-                      <Text style={{ fontSize: 11, fontFamily: FONTS.bodyBold, color: statusColor }}>
-                        {statusLabel}
-                      </Text>
-                    </View>
-
-                    {!inst.paid && (
-                      <TouchableOpacity
-                        onPress={() => handleMarkInstallmentPaid(inst)}
-                        style={{
-                          marginLeft: 8,
-                          padding: 6,
-                          backgroundColor: colors.success + '20',
-                          borderRadius: 6,
-                        }}
-                      >
-                        <Ionicons name="checkmark" size={16} color={colors.success} />
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                );
-              })}
-            </ScrollView>
-
-            <TouchableOpacity
-              onPress={() => setShowInstallmentsModal(false)}
-              style={{
-                backgroundColor: colors.background,
-                borderRadius: 12,
-                padding: 16,
-                alignItems: 'center',
-                marginTop: 16,
-              }}
-            >
-              <Text style={{ fontSize: 16, fontFamily: FONTS.bodySemiBold, color: colors.text }}>Close</Text>
             </TouchableOpacity>
           </View>
         </View>
