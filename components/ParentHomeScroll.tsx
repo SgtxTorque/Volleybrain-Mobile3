@@ -40,7 +40,6 @@ import { useResponsive } from '@/lib/responsive';
 
 import NoOrgState from './empty-states/NoOrgState';
 import NoTeamState from './empty-states/NoTeamState';
-import EmptySeasonState from './empty-states/EmptySeasonState';
 import { BRAND } from '@/theme/colors';
 import { SPACING } from '@/theme/spacing';
 import { FONTS } from '@/theme/fonts';
@@ -302,10 +301,10 @@ export default function ParentHomeScroll() {
   const currentMessage = messages[activeMessageIndex];
 
   // Smart empty states (only check after loading is done)
+  // Note: no upcomingEvents check — BillboardHero handles the 0-events case
   if (!data.loading) {
     if (!organization) return <NoOrgState />;
     if (!data.children || data.children.length === 0) return <NoTeamState role="parent" />;
-    if (!data.upcomingEvents || data.upcomingEvents.length === 0) return <EmptySeasonState role="parent" />;
   }
 
   return (
