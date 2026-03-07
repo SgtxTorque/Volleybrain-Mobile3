@@ -24,7 +24,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useRef } from 'react';
-import { Dimensions, KeyboardAvoidingView, Platform, Text, View } from 'react-native';
+import { Dimensions, KeyboardAvoidingView, Platform } from 'react-native';
 import { lockPortrait, unlockOrientation } from '@/lib/orientation';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { determineOnboardingPath, getOnboardingRoute } from '@/lib/onboarding-router';
@@ -157,25 +157,6 @@ function RootLayoutNav() {
       </KeyboardAvoidingView>
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <CoppaConsentModal />
-      {/* DEBUG MODE badge — REMOVE after tap debugging */}
-      {__DEV__ && (
-        <View
-          pointerEvents="none"
-          style={{
-            position: 'absolute',
-            top: 100,
-            left: 10,
-            zIndex: 99999,
-            backgroundColor: 'yellow',
-            padding: 4,
-            borderRadius: 4,
-          }}
-        >
-          <Text style={{ fontSize: 10, fontWeight: '800', color: '#000' }}>
-            DEBUG MODE
-          </Text>
-        </View>
-      )}
     </NavThemeProvider>
   );
 }
