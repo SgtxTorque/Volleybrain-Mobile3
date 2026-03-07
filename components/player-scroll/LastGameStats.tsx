@@ -118,7 +118,7 @@ export default function LastGameStats({ lastGame, position, personalBest }: Prop
 const styles = StyleSheet.create({
   card: {
     marginHorizontal: 20,
-    borderRadius: 18,
+    borderRadius: 16,
     backgroundColor: PT.cardBg,
     borderWidth: 1,
     borderColor: PT.border,
@@ -126,8 +126,8 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   header: {
+    fontFamily: FONTS.bodyBold,
     fontSize: 10,
-    fontWeight: '700',
     color: PT.textFaint,
     letterSpacing: 1.2,
     marginBottom: 14,
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
   statBox: {
     flex: 1,
     backgroundColor: 'rgba(255,255,255,0.03)',
-    borderRadius: 12,
+    borderRadius: 16,
     paddingVertical: 12,
     alignItems: 'center',
   },
@@ -150,14 +150,14 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   statLabel: {
+    fontFamily: FONTS.bodySemiBold,
     fontSize: 9,
-    fontWeight: '600',
     color: PT.textFaint,
     marginTop: 4,
   },
   bestCallout: {
+    fontFamily: FONTS.bodyBold,
     fontSize: 12,
-    fontWeight: '700',
     color: PT.gold,
     textAlign: 'center',
     marginTop: 12,

@@ -71,7 +71,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bodyBold,
     fontSize: 10,
     letterSpacing: 1.2,
-    color: BRAND.textFaint,
+    color: BRAND.textMuted,
   },
   countLabel: {
     fontFamily: FONTS.bodySemiBold,

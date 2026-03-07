@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -456,7 +457,7 @@ export default function BulkEventCreate() {
 
             {activeEvents.length === 0 ? (
               <View style={styles.emptyWrap}>
-                <Text style={styles.emptyMascot}>{'\u{1F431}'}</Text>
+                <Image source={require('../assets/images/mascot/HiLynx.png')} style={styles.emptyMascotImg} resizeMode="contain" />
                 <Text style={styles.emptyText}>
                   No events to create. Adjust your settings above.
                 </Text>
@@ -782,8 +783,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 40,
   },
-  emptyMascot: {
-    fontSize: 36,
+  emptyMascotImg: {
+    width: 36,
+    height: 36,
     marginBottom: 8,
     opacity: 0.5,
   },

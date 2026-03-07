@@ -374,7 +374,7 @@ export default function PlayerEvaluationsScreen() {
           <View style={{ width: 40 }} />
         </View>
         <View style={s.emptyWrap}>
-          <Text style={s.emptyIcon}>{'\u{1F431}'}</Text>
+          <Image source={require('../assets/images/mascot/HiLynx.png')} style={s.emptyIconImg} resizeMode="contain" />
           <Text style={s.emptyText}>No players found for this team</Text>
         </View>
       </View>
@@ -693,7 +693,7 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  emptyIcon: { fontSize: 36, opacity: 0.5 },
+  emptyIconImg: { width: 36, height: 36, opacity: 0.5 },
   emptyText: {
     fontFamily: FONTS.bodyMedium,
     fontSize: 14,

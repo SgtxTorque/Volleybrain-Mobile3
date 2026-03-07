@@ -144,7 +144,7 @@ export default function GamePlanCard({ event, rsvpSummary }: Props) {
 const styles = StyleSheet.create({
   card: {
     marginHorizontal: SPACING.pagePadding,
-    backgroundColor: '#0D1B3E',
+    backgroundColor: BRAND.navyDeep,
     borderRadius: SPACING.heroCardRadius,
     padding: 20,
     marginBottom: 8,
@@ -225,11 +225,11 @@ const styles = StyleSheet.create({
   missingText: {
     fontFamily: FONTS.bodyMedium,
     fontSize: 13,
-    color: '#F59E0B',
+    color: BRAND.warning,
   },
   gameDayBtn: {
     backgroundColor: BRAND.skyBlue,
-    borderRadius: 14,
+    borderRadius: 16,
     height: 52,
     justifyContent: 'center',
     alignItems: 'center',

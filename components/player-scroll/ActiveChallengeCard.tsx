@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
   },
   card: {
     marginHorizontal: 20,
-    borderRadius: 18,
+    borderRadius: 16,
     backgroundColor: PT.cardBg,
     borderWidth: 1,
     borderColor: PT.borderGold,

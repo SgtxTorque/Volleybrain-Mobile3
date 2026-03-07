@@ -23,12 +23,12 @@ import { FONTS } from '@/theme/fonts';
 // ─── Design tokens ──────────────────────────────────────────
 const CARD_STYLE = {
   backgroundColor: '#FFFBF0',
-  borderRadius: 18,
+  borderRadius: 16,
   borderWidth: 1,
   borderColor: '#F5E6C8',
   padding: 18,
   marginHorizontal: 20,
-  shadowColor: '#D9994A',
+  shadowColor: BRAND.goldWarm,
   shadowOffset: { width: 0, height: 2 },
   shadowOpacity: 0.08,
   shadowRadius: 8,
@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
   headerRight: {
     fontFamily: FONTS.bodyBold,
     fontSize: 13,
-    color: '#D9994A',
+    color: BRAND.goldWarm,
   },
   progressRow: {
     flexDirection: 'row',
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
   progressPercent: {
     fontFamily: FONTS.bodyBold,
     fontSize: 13,
-    color: '#D9994A',
+    color: BRAND.goldWarm,
     width: 36,
     textAlign: 'right',
   },
@@ -345,7 +345,7 @@ const styles = StyleSheet.create({
   },
   ctaButton: {
     backgroundColor: BRAND.gold,
-    borderRadius: 12,
+    borderRadius: 16,
     height: 44,
     justifyContent: 'center',
     alignItems: 'center',
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
   ctaText: {
     fontFamily: FONTS.display,
     fontSize: 14,
-    color: '#0D1B3E',
+    color: BRAND.navyDeep,
     letterSpacing: 0.5,
   },
 });

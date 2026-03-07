@@ -29,7 +29,7 @@ export default function SeasonSnapshot({ record, lastGameResult }: Props) {
       {/* Big numbers */}
       <View style={styles.numbersRow}>
         <View style={styles.numBlock}>
-          <Text style={[styles.bigNum, { color: '#22C55E' }]}>{record.wins}</Text>
+          <Text style={[styles.bigNum, { color: BRAND.success }]}>{record.wins}</Text>
           <Text style={styles.numLabel}>WINS</Text>
         </View>
         <Text style={styles.divider}>|</Text>
@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bodyBold,
     fontSize: 11,
     letterSpacing: 1.1,
-    color: BRAND.textFaint,
+    color: BRAND.textMuted,
     textTransform: 'uppercase',
     marginBottom: 12,
   },
@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
   barFill: {
     height: '100%',
     borderRadius: 3,
-    backgroundColor: '#22C55E',
+    backgroundColor: BRAND.success,
   },
   barLabel: {
     fontFamily: FONTS.bodySemiBold,

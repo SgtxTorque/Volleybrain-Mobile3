@@ -3,13 +3,10 @@
  * Phase 6B: Mirrors the opening XP bar — scroll starts and ends with aspiration.
  */
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import type { NextEvent } from '@/hooks/usePlayerHomeData';
-
-const PT = {
-  textMuted: 'rgba(255,255,255,0.30)',
-  textFaint: 'rgba(255,255,255,0.15)',
-};
+import { BRAND } from '@/theme/colors';
+import { FONTS } from '@/theme/fonts';
 
 type Props = {
   xpToNext: number;
@@ -32,7 +29,7 @@ export default function ClosingMascot({ xpToNext, level, nextEvent }: Props) {
 
   return (
     <View style={styles.wrap}>
-      <Text style={styles.mascot}>{'\u{1F431}'}</Text>
+      <Image source={require('../../assets/images/mascot/HiLynx.png')} style={styles.mascotImg} resizeMode="contain" />
       <Text style={styles.xpLine}>
         {xpToNext} XP to Level {level + 1}.
       </Text>
@@ -48,22 +45,23 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 24,
   },
-  mascot: {
-    fontSize: 36,
+  mascotImg: {
+    width: 36,
+    height: 36,
     marginBottom: 10,
     opacity: 0.5,
   },
   xpLine: {
     fontSize: 13,
-    fontWeight: '700',
-    color: PT.textMuted,
+    fontFamily: FONTS.bodyBold,
+    color: BRAND.textMuted,
     textAlign: 'center',
     marginBottom: 4,
   },
   contextLine: {
     fontSize: 12,
-    fontWeight: '500',
-    color: PT.textFaint,
+    fontFamily: FONTS.bodyMedium,
+    color: BRAND.textFaint,
     textAlign: 'center',
   },
 });

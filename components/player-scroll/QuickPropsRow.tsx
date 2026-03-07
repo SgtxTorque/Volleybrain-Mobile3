@@ -4,6 +4,7 @@
  */
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { FONTS } from '@/theme/fonts';
 
 const PT = {
   gold: '#FFD700',
@@ -35,7 +36,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginHorizontal: 20,
-    borderRadius: 14,
+    borderRadius: 16,
     backgroundColor: 'rgba(255,215,0,0.08)',
     borderWidth: 1,
     borderColor: PT.borderGold,
@@ -49,8 +50,8 @@ const styles = StyleSheet.create({
   },
   text: {
     flex: 1,
+    fontFamily: FONTS.bodyBold,
     fontSize: 12,
-    fontWeight: '700',
     color: PT.textSecondary,
   },
 });

@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   card: {
-    borderRadius: 22,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: PT.borderAccent,
     padding: 20,
@@ -176,8 +176,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   playerLabel: {
+    fontFamily: FONTS.bodyBold,
     fontSize: 11,
-    fontWeight: '700',
     letterSpacing: 2,
     textTransform: 'uppercase',
     color: 'rgba(75,185,236,0.60)',
@@ -216,14 +216,14 @@ const styles = StyleSheet.create({
     color: PT.gold,
   },
   ovrLabel: {
+    fontFamily: FONTS.bodyBold,
     fontSize: 8,
-    fontWeight: '700',
     color: 'rgba(255,215,0,0.60)',
     letterSpacing: 1.5,
   },
   infoRow: {
+    fontFamily: FONTS.bodySemiBold,
     fontSize: 11,
-    fontWeight: '600',
     color: PT.textMuted,
     marginBottom: 16,
   },
@@ -241,8 +241,8 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   lvlText: {
+    fontFamily: FONTS.bodyBold,
     fontSize: 10,
-    fontWeight: '700',
     color: PT.gold,
   },
   xpBarTrack: {
@@ -269,8 +269,8 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   xpText: {
+    fontFamily: FONTS.bodySemiBold,
     fontSize: 10,
-    fontWeight: '600',
     color: PT.textMuted,
   },
 });

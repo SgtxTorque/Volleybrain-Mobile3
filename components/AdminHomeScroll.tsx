@@ -38,6 +38,7 @@ import NoTeamState from './empty-states/NoTeamState';
 import EmptySeasonState from './empty-states/EmptySeasonState';
 
 import RoleSelector from './RoleSelector';
+import SeasonSelector from './SeasonSelector';
 import WelcomeBriefing from './admin-scroll/WelcomeBriefing';
 import SmartQueueCard from './admin-scroll/SmartQueueCard';
 import TeamHealthTiles from './admin-scroll/TeamHealthTiles';
@@ -120,6 +121,9 @@ export default function AdminHomeScroll() {
               </View>
             )}
             <View style={styles.roleSelectorWrap}>
+              <SeasonSelector />
+            </View>
+            <View style={styles.roleSelectorWrap}>
               <RoleSelector />
             </View>
           </View>
@@ -145,9 +149,12 @@ export default function AdminHomeScroll() {
       >
         <View style={{ height: insets.top + 16 }} />
 
-        {/* ─── ROLE SELECTOR (in-scroll) ────────────────────── */}
+        {/* ─── SEASON + ROLE SELECTORS (in-scroll) ────────────── */}
         <View style={styles.roleRow}>
           <View style={{ flex: 1 }} />
+          <View style={styles.roleSelectorWrap}>
+            <SeasonSelector />
+          </View>
           <View style={styles.roleSelectorWrap}>
             <RoleSelector />
           </View>
@@ -334,6 +341,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     marginBottom: 8,
+    gap: 6,
   },
   searchBar: {
     flexDirection: 'row',
@@ -402,7 +410,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontFamily: FONTS.bodyBold,
     letterSpacing: 1.2,
-    color: BRAND.textFaint,
+    color: BRAND.textMuted,
   },
   activePill: {
     flexDirection: 'row',
@@ -439,7 +447,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bodyBold,
     fontSize: 10,
     letterSpacing: 1.2,
-    color: BRAND.textFaint,
+    color: BRAND.textMuted,
   },
   planningPill: {
     flexDirection: 'row',
@@ -465,7 +473,7 @@ const styles = StyleSheet.create({
   },
   setupBtn: {
     backgroundColor: BRAND.skyBlue,
-    borderRadius: 12,
+    borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 8,
     alignSelf: 'flex-start',

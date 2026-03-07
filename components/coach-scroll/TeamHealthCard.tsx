@@ -19,19 +19,19 @@ import type { RsvpSummary } from '@/hooks/useCoachHomeData';
 
 // ─── Design tokens ──────────────────────────────────────────
 const PLAYER_DOT = {
-  good: '#22C55E',
-  warning: '#F59E0B',
-  critical: '#EF4444',
+  good: BRAND.success,
+  warning: BRAND.warning,
+  critical: BRAND.error,
 };
 
 const CARD_STYLE = {
-  backgroundColor: '#F8FAFC',
-  borderRadius: 18,
+  backgroundColor: BRAND.offWhite,
+  borderRadius: 16,
   borderWidth: 1,
-  borderColor: '#E8ECF2',
+  borderColor: BRAND.border,
   padding: 18,
   marginHorizontal: 20,
-  shadowColor: '#10284C',
+  shadowColor: BRAND.navy,
   shadowOffset: { width: 0, height: 2 },
   shadowOpacity: 0.04,
   shadowRadius: 8,
@@ -189,7 +189,7 @@ export default function TeamHealthCard({
 
   // Compute bar values
   const attRate = attendanceRate ?? 0;
-  const attBarColor = attRate >= 90 ? BRAND.success : attRate >= 70 ? '#F59E0B' : BRAND.error;
+  const attBarColor = attRate >= 90 ? BRAND.success : attRate >= 70 ? BRAND.warning : BRAND.error;
 
   const rsvpConfirmed = rsvpSummary?.confirmed ?? 0;
   const rsvpTotal = rsvpSummary?.total ?? rosterSize;

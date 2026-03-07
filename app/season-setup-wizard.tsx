@@ -10,6 +10,7 @@ import {
   Alert,
   Dimensions,
   FlatList,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -543,7 +544,7 @@ export default function SeasonSetupWizard() {
 
             {/* Mascot */}
             <View style={styles.mascotWrap}>
-              <Text style={styles.mascotIcon}>{'\u{1F431}'}</Text>
+              <Image source={require('../assets/images/mascot/HiLynx.png')} style={styles.mascotIconImg} resizeMode="contain" />
               <Text style={styles.mascotText}>
                 Looking good! Ready to kick off {seasonName || 'the season'}?
               </Text>
@@ -919,8 +920,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 16,
   },
-  mascotIcon: {
-    fontSize: 36,
+  mascotIconImg: {
+    width: 36,
+    height: 36,
     marginBottom: 8,
     opacity: 0.5,
   },

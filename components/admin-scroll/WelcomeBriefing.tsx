@@ -4,7 +4,7 @@
  * Phase 2: parallax mascot, celebratory all-clear variant.
  */
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -45,9 +45,11 @@ export default function WelcomeBriefing({
   return (
     <View style={styles.wrap}>
       <Animated.View style={mascotStyle}>
-        <Text style={styles.mascot}>
-          {allClear ? '\u{1F389}' : '\u{1F431}'}
-        </Text>
+        {allClear ? (
+          <Text style={styles.celebrationEmoji}>{'\u{1F389}'}</Text>
+        ) : (
+          <Image source={require('../../assets/images/mascot/HiLynx.png')} style={styles.mascotImg} resizeMode="contain" />
+        )}
       </Animated.View>
 
       <Text style={styles.greeting}>
@@ -90,7 +92,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     marginBottom: 8,
   },
-  mascot: {
+  mascotImg: {
+    width: 48,
+    height: 48,
+    marginBottom: 12,
+  },
+  celebrationEmoji: {
     fontSize: 48,
     marginBottom: 12,
   },
@@ -133,7 +140,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
   },
   dot: {

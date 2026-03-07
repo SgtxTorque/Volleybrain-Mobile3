@@ -11,6 +11,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import type { NextEvent, RsvpStatus } from '@/hooks/usePlayerHomeData';
+import { FONTS } from '@/theme/fonts';
 
 const PT = {
   cardBg: '#10284C',
@@ -168,8 +169,8 @@ const styles = StyleSheet.create({
     backgroundColor: PT.success,
   },
   label: {
+    fontFamily: FONTS.bodyBold,
     fontSize: 10,
-    fontWeight: '700',
     color: PT.accent,
     letterSpacing: 1.2,
   },
@@ -188,8 +189,8 @@ const styles = StyleSheet.create({
     borderColor: PT.textFaint,
   },
   rsvpBtnText: {
+    fontFamily: FONTS.bodyBold,
     fontSize: 11,
-    fontWeight: '700',
     color: '#0D1B3E',
     letterSpacing: 0.5,
   },
@@ -200,26 +201,26 @@ const styles = StyleSheet.create({
     color: PT.textMuted,
   },
   eventTitle: {
+    fontFamily: FONTS.bodyExtraBold,
     fontSize: 20,
-    fontWeight: '800',
     color: PT.textPrimary,
     marginBottom: 4,
   },
   eventDate: {
+    fontFamily: FONTS.bodySemiBold,
     fontSize: 13,
-    fontWeight: '600',
     color: PT.textMuted,
     marginBottom: 4,
   },
   eventLocation: {
+    fontFamily: FONTS.bodyMedium,
     fontSize: 11,
-    fontWeight: '500',
     color: PT.textFaint,
     marginBottom: 4,
   },
   streakLine: {
+    fontFamily: FONTS.bodySemiBold,
     fontSize: 11,
-    fontWeight: '600',
     color: PT.gold,
     marginTop: 8,
   },
@@ -235,8 +236,8 @@ const styles = StyleSheet.create({
     opacity: 0.4,
   },
   ambientText: {
+    fontFamily: FONTS.bodySemiBold,
     fontSize: 13,
-    fontWeight: '600',
     color: 'rgba(255,255,255,0.40)',
     textAlign: 'center',
   },

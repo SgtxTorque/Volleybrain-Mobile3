@@ -42,6 +42,7 @@ import { useScrollAnimations } from '@/hooks/useScrollAnimations';
 import { usePlayerHomeData } from '@/hooks/usePlayerHomeData';
 
 import { useResponsive } from '@/lib/responsive';
+import { FONTS } from '@/theme/fonts';
 
 import NoOrgState from './empty-states/NoOrgState';
 import NoTeamState from './empty-states/NoTeamState';
@@ -386,8 +387,8 @@ const styles = StyleSheet.create({
     marginTop: -25,
   },
   compactBrand: {
+    fontFamily: FONTS.display,
     fontSize: 20,
-    fontWeight: '800',
     color: PLAYER_THEME.accent,
     letterSpacing: -0.5,
   },
@@ -405,8 +406,8 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   streakPillText: {
+    fontFamily: FONTS.bodyBold,
     fontSize: 10,
-    fontWeight: '700',
     color: PLAYER_THEME.gold,
   },
   levelPill: {
@@ -418,8 +419,8 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   levelPillText: {
+    fontFamily: FONTS.bodyBold,
     fontSize: 10,
-    fontWeight: '700',
     color: PLAYER_THEME.gold,
   },
   compactAvatar: {
@@ -432,8 +433,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   compactAvatarText: {
+    fontFamily: FONTS.bodyBold,
     fontSize: 11,
-    fontWeight: '700',
     color: PLAYER_THEME.textPrimary,
   },
   roleSelectorWrap: {
@@ -454,8 +455,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   leaderboardLinkText: {
+    fontFamily: FONTS.bodySemiBold,
     fontSize: 13,
-    fontWeight: '600',
     color: PLAYER_THEME.accent,
     letterSpacing: 0.3,
   },
@@ -477,20 +478,20 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   myTeamLabel: {
+    fontFamily: FONTS.bodyBold,
     fontSize: 10,
-    fontWeight: '700',
     color: PLAYER_THEME.accent,
     letterSpacing: 1.5,
     opacity: 0.6,
   },
   myTeamName: {
+    fontFamily: FONTS.bodyExtraBold,
     fontSize: 16,
-    fontWeight: '800',
     color: PLAYER_THEME.textPrimary,
   },
   myTeamCta: {
+    fontFamily: FONTS.bodyMedium,
     fontSize: 12,
-    fontWeight: '500',
     color: PLAYER_THEME.textMuted,
     marginTop: 2,
   },

@@ -8,6 +8,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -261,7 +262,7 @@ export default function ChallengesScreen() {
   // ─── Empty state ──
   const EmptyState = () => (
     <View style={styles.emptyWrap}>
-      <Text style={styles.emptyMascot}>{'\u{1F431}'}</Text>
+      <Image source={require('../assets/images/mascot/HiLynx.png')} style={styles.emptyMascotImg} resizeMode="contain" />
       {isCoach ? (
         <>
           <Text style={styles.emptyTitle}>No challenges yet</Text>
@@ -573,8 +574,9 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingHorizontal: 40,
   },
-  emptyMascot: {
-    fontSize: 48,
+  emptyMascotImg: {
+    width: 48,
+    height: 48,
     marginBottom: 16,
     opacity: 0.6,
   },

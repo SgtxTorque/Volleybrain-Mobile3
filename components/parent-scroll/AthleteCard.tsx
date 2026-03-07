@@ -172,14 +172,14 @@ const styles = StyleSheet.create({
   // Tier 1: Full card
   card: {
     backgroundColor: BRAND.white,
-    borderRadius: 18,
+    borderRadius: 16,
     padding: 18,
     ...SHADOWS.light,
   },
   // Tier 1.5: Lightweight card
   lightCard: {
     backgroundColor: BRAND.offWhite,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: '#F0F2F5',
     padding: 14,

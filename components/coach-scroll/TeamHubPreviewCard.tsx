@@ -17,13 +17,13 @@ import { FONTS } from '@/theme/fonts';
 
 // ─── Design tokens ──────────────────────────────────────────
 const CARD_STYLE = {
-  backgroundColor: '#FFFFFF',
+  backgroundColor: BRAND.white,
   borderRadius: 16,
   borderWidth: 1,
-  borderColor: '#F0F2F5',
+  borderColor: BRAND.border,
   padding: 16,
   marginHorizontal: 20,
-  shadowColor: '#10284C',
+  shadowColor: BRAND.navy,
   shadowOffset: { width: 0, height: 1 },
   shadowOpacity: 0.03,
   shadowRadius: 6,

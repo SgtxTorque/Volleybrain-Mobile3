@@ -3,7 +3,7 @@
  * Phase 6: fade-in animation, scope summary + motivational sign-off.
  */
 import React, { useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -41,7 +41,7 @@ export default function ClosingMotivation({
 
   return (
     <Animated.View style={[styles.wrap, fadeStyle]}>
-      <Text style={styles.mascot}>{'\u{1F431}'}</Text>
+      <Image source={require('../../assets/images/mascot/HiLynx.png')} style={styles.mascotImg} resizeMode="contain" />
       <Text style={styles.scopeLine}>
         You're managing {teamCount} team{teamCount !== 1 ? 's' : ''},{' '}
         {playerCount} player{playerCount !== 1 ? 's' : ''}
@@ -67,8 +67,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 16,
   },
-  mascot: {
-    fontSize: 36,
+  mascotImg: {
+    width: 36,
+    height: 36,
     marginBottom: 12,
   },
   scopeLine: {

@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
   rsvpBtn: {
     flex: 1,
     height: 44,
-    borderRadius: 12,
+    borderRadius: 16,
     backgroundColor: BRAND.skyBlue,
     justifyContent: 'center',
     alignItems: 'center',
@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
   directionsBtn: {
     flex: 1,
     height: 44,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.3)',
     flexDirection: 'row',

@@ -5,6 +5,7 @@
  */
 import React, { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { FONTS } from '@/theme/fonts';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -65,13 +66,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
+    fontFamily: FONTS.bodyBold,
     fontSize: 13,
-    fontWeight: '700',
     color: '#FFD700',
   },
   subtitle: {
+    fontFamily: FONTS.bodyMedium,
     fontSize: 10,
-    fontWeight: '500',
     color: 'rgba(255,255,255,0.30)',
     marginTop: 1,
   },

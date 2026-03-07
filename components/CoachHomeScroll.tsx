@@ -7,6 +7,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -323,7 +324,7 @@ export default function CoachHomeScroll() {
       >
         <View style={styles.compactHeaderInner}>
           <View style={styles.compactLeft}>
-            <Text style={styles.compactMascot}>{'\u{1F431}'}</Text>
+            <Image source={require('../assets/images/mascot/HiLynx.png')} style={styles.compactMascotImg} resizeMode="contain" />
             <Text style={styles.compactBrand}>LYNX</Text>
           </View>
           <View style={styles.compactRight}>
@@ -426,9 +427,9 @@ export default function CoachHomeScroll() {
           </View>
 
           <View style={styles.welcomeContent}>
-            <Animated.Text style={[styles.mascotEmoji, mascotParallaxStyle]}>
-              {'\u{1F431}'}
-            </Animated.Text>
+            <Animated.View style={mascotParallaxStyle}>
+              <Image source={require('../assets/images/mascot/HiLynx.png')} style={styles.mascotImg} resizeMode="contain" />
+            </Animated.View>
             <Text style={styles.welcomeGreeting}>
               {getTimeGreeting()}, Coach
             </Text>
@@ -581,7 +582,7 @@ export default function CoachHomeScroll() {
 
         {/* ─── 13. CLOSING (Tier 3) ── ↕ 140px bottom ──────── */}
         <View style={styles.endSection}>
-          <Text style={styles.endEmoji}>{'\u{1F431}'}</Text>
+          <Image source={require('../assets/images/mascot/HiLynx.png')} style={styles.endMascotImg} resizeMode="contain" />
           <Text style={styles.endText}>
             {buildClosingMessage(data.heroEvent, data.seasonRecord)}
           </Text>
@@ -635,7 +636,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
-  compactMascot: { fontSize: 24 },
+  compactMascotImg: { width: 24, height: 24 },
   compactBrand: {
     fontFamily: FONTS.display,
     fontSize: 22,
@@ -736,7 +737,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
-  mascotEmoji: { fontSize: 48, marginBottom: 6 },
+  mascotImg: { width: 48, height: 48, marginBottom: 6 },
   welcomeGreeting: {
     fontFamily: FONTS.bodyBold,
     fontSize: 22,
@@ -758,8 +759,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 24,
   },
-  endEmoji: {
-    fontSize: 40,
+  endMascotImg: {
+    width: 40,
+    height: 40,
     opacity: 0.3,
     marginBottom: 8,
   },
@@ -808,7 +810,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(75,185,236,0.10)',
+    backgroundColor: `${BRAND.skyBlue}1A`,
     justifyContent: 'center',
     alignItems: 'center',
   },

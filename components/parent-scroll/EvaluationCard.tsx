@@ -154,7 +154,7 @@ const s = StyleSheet.create({
   },
   card: {
     backgroundColor: BRAND.cardBg,
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: BRAND.goldBrand + '25',
     padding: 14,

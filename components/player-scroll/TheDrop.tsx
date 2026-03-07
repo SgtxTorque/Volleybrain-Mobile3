@@ -5,6 +5,7 @@
  */
 import React, { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { FONTS } from '@/theme/fonts';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -151,7 +152,7 @@ function buildDropItems(
     } else {
       items.push({
         type: 'contextual',
-        icon: '\u{1F431}',
+        icon: '\u{1F4C5}',
         title: 'No events on the schedule.',
         subtitle: 'Enjoy the off day. You earned it.',
       });
@@ -253,7 +254,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginHorizontal: 20,
-    borderRadius: 18,
+    borderRadius: 16,
     borderWidth: 1,
     padding: 14,
     gap: 12,
@@ -273,14 +274,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   dropTitle: {
+    fontFamily: FONTS.bodySemiBold,
     fontSize: 13,
-    fontWeight: '600',
     color: 'rgba(255,255,255,0.80)',
     lineHeight: 18,
   },
   dropSub: {
+    fontFamily: FONTS.bodyMedium,
     fontSize: 10,
-    fontWeight: '500',
     color: 'rgba(255,255,255,0.25)',
     marginTop: 3,
   },
@@ -295,15 +296,15 @@ const styles = StyleSheet.create({
     opacity: 0.4,
   },
   contextualTitle: {
+    fontFamily: FONTS.bodySemiBold,
     fontSize: 14,
-    fontWeight: '600',
     color: 'rgba(255,255,255,0.50)',
     textAlign: 'center',
     marginBottom: 2,
   },
   contextualSub: {
+    fontFamily: FONTS.bodyMedium,
     fontSize: 12,
-    fontWeight: '500',
     color: 'rgba(255,255,255,0.25)',
     textAlign: 'center',
   },

@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bodyBold,
     fontSize: 11,
     letterSpacing: 1.1,
-    color: BRAND.textFaint,
+    color: BRAND.textMuted,
     textTransform: 'uppercase',
   },
   viewAll: {
@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F2F5',
+    borderBottomColor: BRAND.border,
   },
   avatarCircle: {
     width: 36,

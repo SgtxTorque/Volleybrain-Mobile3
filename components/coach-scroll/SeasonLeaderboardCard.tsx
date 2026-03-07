@@ -21,21 +21,21 @@ import type { SeasonRecord, TopPerformer } from '@/hooks/useCoachHomeData';
 
 // ─── Design tokens ──────────────────────────────────────────
 const BAR_COLORS = {
-  kills: '#EF4444',
-  aces: '#10B981',
-  digs: '#F59E0B',
+  kills: BRAND.error,
+  aces: BRAND.success,
+  digs: BRAND.warning,
   assists: '#8B5CF6',
   blocks: '#6366F1',
 };
 
 const CARD_STYLE = {
-  backgroundColor: '#FFFFFF',
-  borderRadius: 18,
+  backgroundColor: BRAND.white,
+  borderRadius: 16,
   borderWidth: 1,
-  borderColor: '#E8ECF2',
+  borderColor: BRAND.border,
   padding: 18,
   marginHorizontal: 20,
-  shadowColor: '#10284C',
+  shadowColor: BRAND.navy,
   shadowOffset: { width: 0, height: 3 },
   shadowOpacity: 0.06,
   shadowRadius: 12,

@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bodyBold,
     fontSize: 11,
     letterSpacing: 1.1,
-    color: BRAND.textFaint,
+    color: BRAND.textMuted,
     textTransform: 'uppercase',
   },
   unreadHint: {

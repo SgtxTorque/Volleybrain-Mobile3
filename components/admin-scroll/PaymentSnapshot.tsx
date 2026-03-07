@@ -103,7 +103,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
+    shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 2,
   },
@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bodyBold,
     fontSize: 10,
     letterSpacing: 1.2,
-    color: BRAND.textFaint,
+    color: BRAND.textMuted,
   },
   seasonLabel: {
     fontFamily: FONTS.bodyMedium,
@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
   },
   reminderBtn: {
     backgroundColor: BRAND.skyBlue,
-    borderRadius: 12,
+    borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 8,
   },

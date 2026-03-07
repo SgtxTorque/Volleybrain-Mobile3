@@ -11,6 +11,7 @@ import {
   Alert,
   Dimensions,
   FlatList,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -358,7 +359,7 @@ export default function PlayerEvaluationScreen() {
             )}
             ListEmptyComponent={
               <View style={styles.emptyWrap}>
-                <Text style={styles.emptyMascot}>{'\u{1F431}'}</Text>
+                <Image source={require('../assets/images/mascot/HiLynx.png')} style={styles.emptyMascotImg} resizeMode="contain" />
                 <Text style={styles.emptyText}>No players found</Text>
               </View>
             }
@@ -413,7 +414,7 @@ export default function PlayerEvaluationScreen() {
 
           {/* Mascot moment */}
           <View style={styles.mascotWrap}>
-            <Text style={styles.mascotIcon}>{'\u{1F431}'}</Text>
+            <Image source={require('../assets/images/mascot/HiLynx.png')} style={styles.mascotIconImg} resizeMode="contain" />
             <Text style={styles.mascotText}>
               Looking good! Ready to save {selectedPlayer?.first_name}'s eval?
             </Text>
@@ -806,8 +807,9 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     marginBottom: 16,
   },
-  mascotIcon: {
-    fontSize: 36,
+  mascotIconImg: {
+    width: 36,
+    height: 36,
     marginBottom: 8,
     opacity: 0.5,
   },
@@ -837,8 +839,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 40,
   },
-  emptyMascot: {
-    fontSize: 36,
+  emptyMascotImg: {
+    width: 36,
+    height: 36,
     marginBottom: 8,
     opacity: 0.5,
   },
