@@ -458,9 +458,10 @@ export default function GestureDrawer() {
         <Pressable style={StyleSheet.absoluteFill} onPress={closeDrawer} />
       </Animated.View>
 
-      {/* Drawer panel */}
+      {/* Drawer panel — pointerEvents guard prevents touch interception when closed */}
       <GestureDetector gesture={drawerPan}>
         <Animated.View
+          pointerEvents={isOpen ? 'auto' : 'none'}
           style={[
             styles.drawer,
             drawerStyle,
