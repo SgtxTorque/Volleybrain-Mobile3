@@ -21,8 +21,8 @@ import type { UserRole } from '@/lib/permissions';
 import { useDrawerBadges } from '@/hooks/useDrawerBadges';
 import type { DrawerBadges } from '@/hooks/useDrawerBadges';
 import { useSeason } from '@/lib/season';
-import { useSport } from '@/lib/sport';
 import { supabase } from '@/lib/supabase';
+import { useTheme } from '@/lib/theme';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 
@@ -236,6 +236,7 @@ export default function GestureDrawer() {
   const { user, profile, organization, signOut } = useAuth();
   const { actualRoles, isAdmin, isCoach, isParent, isPlayer, devViewAs, setDevViewAs } = usePermissions();
   const { allSeasons, workingSeason, setWorkingSeason } = useSeason();
+  const { isDark, toggleTheme } = useTheme();
   const router = useRouter();
   const { width: screenWidth } = useWindowDimensions();
   const isTablet = screenWidth >= 744;
@@ -246,7 +247,6 @@ export default function GestureDrawer() {
   const avatarUrl = profile?.avatar_url || null;
   const displayName = profile?.full_name || user?.email?.split('@')[0] || 'User';
   const firstInitial = displayName.charAt(0).toUpperCase();
-  const roleLabels = actualRoles.map((r) => ROLE_DISPLAY[r] || r).join(' · ');
   const orgName = organization?.name || 'Lynx Sports';
 
   // ====== ROLE SWITCHER DATA ======
@@ -272,9 +272,12 @@ export default function GestureDrawer() {
   };
 
   // ====== SEASON DATA ======
+  const [seasonExpanded, setSeasonExpanded] = useState(false);
+
   const handleSeasonSwitch = (season: (typeof allSeasons)[number]) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setWorkingSeason(season);
+    setSeasonExpanded(false);
   };
 
   const handleViewProfile = () => {
@@ -283,7 +286,6 @@ export default function GestureDrawer() {
   };
 
   // ====== CONTEXTUAL SELECTOR DATA ======
-  const { sports, activeSport, setActiveSport } = useSport();
 
   type ContextItem = {
     id: string;
@@ -391,34 +393,13 @@ export default function GestureDrawer() {
           setContextItems(items);
           if (items.length > 0 && !activeContextId) setActiveContextId(items[0].id);
         }
-      } else if (isAdmin) {
-        // Use sports from useSport() hook — build items from it
-        const allItem: ContextItem = {
-          id: 'all',
-          label: 'All',
-          imageUrl: null,
-          initials: '',
-          color: BRAND.teal,
-          emoji: '🏟️',
-        };
-        const sportItems: ContextItem[] = sports.map(s => ({
-          id: s.id,
-          label: s.name,
-          imageUrl: null,
-          initials: '',
-          color: s.color_primary || BRAND.teal,
-          emoji: s.icon || '🏐',
-        }));
-        const items = [allItem, ...sportItems];
-        setContextItems(items);
-        if (!activeContextId) setActiveContextId('all');
       }
     } catch (err) {
       // Silently fail — contextual selector is non-critical
     } finally {
       setContextLoading(false);
     }
-  }, [user?.id, isParent, isCoach, isPlayer, isAdmin, sports]);
+  }, [user?.id, isParent, isCoach, isPlayer]);
 
   useEffect(() => {
     if (isOpen) {
@@ -426,31 +407,9 @@ export default function GestureDrawer() {
     }
   }, [isOpen, fetchContextItems]);
 
-  // Sync admin sport selection with activeSport context
-  useEffect(() => {
-    if (isAdmin && activeSport) {
-      setActiveContextId(activeSport.id);
-    } else if (isAdmin && !activeSport) {
-      setActiveContextId('all');
-    }
-  }, [isAdmin, activeSport]);
-
   const handleContextSelect = (item: ContextItem) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setActiveContextId(item.id);
-
-    if (isAdmin) {
-      // Switch sport filter
-      if (item.id === 'all') {
-        // Clear sport filter — set to first sport or null
-        // The useSport hook doesn't have a "clear" — just keep current
-      } else {
-        const sport = sports.find(s => s.id === item.id);
-        if (sport) setActiveSport(sport);
-      }
-    }
-    // For parent/coach/player, context selection is local to drawer for now
-    // Future: wire to a global child/team context
   };
 
   // Centralized badge counts (fetched via hook when drawer opens)
@@ -630,7 +589,7 @@ export default function GestureDrawer() {
             },
           ]}
         >
-          {/* ====== PROFILE HEADER ====== */}
+          {/* ====== COMPACT PROFILE HEADER ====== */}
           <LinearGradient
             colors={[BRAND.navy, BRAND.navyDeep]}
             start={{ x: 0, y: 0 }}
@@ -646,9 +605,9 @@ export default function GestureDrawer() {
               <Ionicons name="close" size={22} color={BRAND.textSecondary} />
             </Pressable>
 
-            {/* Avatar + Info row */}
+            {/* Photo + Info row */}
             <View style={styles.profileRow}>
-              {/* Avatar */}
+              {/* Rounded rectangle photo */}
               {avatarUrl ? (
                 <Image
                   source={{ uri: avatarUrl }}
@@ -665,123 +624,148 @@ export default function GestureDrawer() {
                 </LinearGradient>
               )}
 
-              {/* Name / Roles / Org */}
+              {/* Name, Org, Role pills, View Profile + Toggle */}
               <View style={styles.profileInfo}>
-                <Text
-                  style={[styles.profileName, { color: BRAND.textLight }]}
-                  numberOfLines={1}
-                >
+                <Text style={styles.profileName} numberOfLines={1}>
                   {displayName}
                 </Text>
-                {actualRoles.length > 0 && (
-                  <View style={styles.roleBadgeRow}>
-                    {actualRoles.map((r) => (
-                      <View key={r} style={[styles.roleBadge, { backgroundColor: ROLE_COLORS[r] + '25', borderColor: ROLE_COLORS[r] + '40' }]}>
-                        <Text style={[styles.roleBadgeText, { color: ROLE_COLORS[r] }]}>
-                          {ROLE_DISPLAY[r]}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                )}
-                <Text
-                  style={[styles.profileOrg, { color: BRAND.textTertiary }]}
-                  numberOfLines={1}
-                >
+                <Text style={styles.profileOrg} numberOfLines={1}>
                   {orgName}
                 </Text>
+
+                {/* Role pills — these ARE the role switcher */}
+                {rolePills.length > 0 && (
+                  <View style={styles.roleBadgeRow}>
+                    {rolePills.map((rp) => {
+                      const isActive = currentRoleKey === rp.key;
+                      return (
+                        <TouchableOpacity
+                          key={rp.key}
+                          style={[
+                            styles.roleBadge,
+                            isActive
+                              ? { backgroundColor: BRAND.teal, borderColor: BRAND.teal }
+                              : { backgroundColor: ROLE_COLORS[rp.key as UserRole] + '15', borderColor: ROLE_COLORS[rp.key as UserRole] + '30' },
+                          ]}
+                          onPress={() => handleRoleSwitch(rp.key)}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={[
+                            styles.roleBadgeText,
+                            { color: isActive ? '#FFF' : ROLE_COLORS[rp.key as UserRole] },
+                          ]}>
+                            {rp.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                )}
+
+                {/* View Profile + Dark mode toggle */}
+                <View style={styles.profileActions}>
+                  <TouchableOpacity
+                    style={styles.viewProfileButton}
+                    onPress={handleViewProfile}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.viewProfileText}>View Profile</Text>
+                    <Ionicons name="chevron-forward" size={12} color={BRAND.skyBlue} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={toggleTheme}
+                    activeOpacity={0.7}
+                    hitSlop={8}
+                  >
+                    <Ionicons
+                      name={isDark ? 'moon' : 'sunny'}
+                      size={18}
+                      color={isDark ? BRAND.goldBrand : BRAND.skyBlue}
+                    />
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
-
-            {/* View Profile link */}
-            <TouchableOpacity
-              style={[styles.viewProfileButton, { borderColor: BRAND.cardBorder }]}
-              onPress={handleViewProfile}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.viewProfileText, { color: BRAND.skyBlue }]}>
-                View Profile
-              </Text>
-              <Ionicons name="chevron-forward" size={14} color={BRAND.skyBlue} />
-            </TouchableOpacity>
           </LinearGradient>
 
-          {/* ====== ROLE SELECTOR (only if multiple roles) ====== */}
-          {rolePills.length > 1 && (
-            <View style={styles.drawerSelectorSection}>
-              <Text style={styles.drawerSelectorTitle}>ROLE</Text>
-              <View style={styles.rolePillRow}>
-                {rolePills.map(rp => {
-                  const isActive = currentRoleKey === rp.key;
+          {/* ====== COLLAPSIBLE SEASON SELECTOR ====== */}
+          {allSeasons.length > 1 && (() => {
+            const activeSeason = workingSeason || allSeasons.find(s => s.status === 'active') || allSeasons[0];
+            const activeStatusColor = activeSeason?.status === 'active' ? BRAND.teal
+              : activeSeason?.status === 'upcoming' ? BRAND.skyBlue
+              : BRAND.textTertiary;
+            const activeStatusLabel = activeSeason?.status === 'active' ? 'Active'
+              : activeSeason?.status === 'upcoming' ? 'Upcoming'
+              : activeSeason?.status === 'completed' ? 'Completed'
+              : 'Archived';
+            return (
+              <View style={styles.drawerSelectorSection}>
+                {/* Collapsed: single row showing active season */}
+                <TouchableOpacity
+                  style={styles.drawerSeasonRow}
+                  onPress={() => {
+                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                    setSeasonExpanded(prev => !prev);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.drawerSeasonDot, { backgroundColor: activeStatusColor }]} />
+                  <Text
+                    style={[styles.drawerSeasonName, { color: BRAND.textLight, fontFamily: FONTS.bodyBold }]}
+                    numberOfLines={1}
+                  >
+                    {activeSeason?.name || 'Season'}
+                  </Text>
+                  <View style={[styles.drawerSeasonBadge, { backgroundColor: activeStatusColor + '20' }]}>
+                    <Text style={[styles.drawerSeasonBadgeText, { color: activeStatusColor }]}>
+                      {activeStatusLabel}
+                    </Text>
+                  </View>
+                  <Ionicons
+                    name={seasonExpanded ? 'chevron-up' : 'chevron-down'}
+                    size={16}
+                    color={BRAND.textTertiary}
+                    style={{ marginLeft: 6 }}
+                  />
+                </TouchableOpacity>
+
+                {/* Expanded: all seasons list */}
+                {seasonExpanded && allSeasons.filter(s => s.id !== activeSeason?.id).map(season => {
+                  const statusColor = season.status === 'active' ? BRAND.teal
+                    : season.status === 'upcoming' ? BRAND.skyBlue
+                    : BRAND.textTertiary;
+                  const statusLabel = season.status === 'active' ? 'Active'
+                    : season.status === 'upcoming' ? 'Upcoming'
+                    : season.status === 'completed' ? 'Completed'
+                    : 'Archived';
                   return (
                     <TouchableOpacity
-                      key={rp.key}
-                      style={[
-                        styles.drawerRolePill,
-                        isActive
-                          ? { backgroundColor: BRAND.teal, borderColor: BRAND.teal }
-                          : { backgroundColor: 'transparent', borderColor: BRAND.cardBorder },
-                      ]}
-                      onPress={() => handleRoleSwitch(rp.key)}
+                      key={season.id}
+                      style={styles.drawerSeasonRow}
+                      onPress={() => handleSeasonSwitch(season)}
                       activeOpacity={0.7}
                     >
-                      <Text style={[
-                        styles.drawerRolePillText,
-                        { color: isActive ? '#FFF' : BRAND.textSecondary },
-                      ]}>
-                        {rp.label}
+                      <View style={[styles.drawerSeasonDot, { backgroundColor: statusColor }]} />
+                      <Text
+                        style={[
+                          styles.drawerSeasonName,
+                          season.status !== 'active' && season.status !== 'upcoming' && { opacity: 0.5 },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {season.name}
                       </Text>
+                      <View style={[styles.drawerSeasonBadge, { backgroundColor: statusColor + '20' }]}>
+                        <Text style={[styles.drawerSeasonBadgeText, { color: statusColor }]}>
+                          {statusLabel}
+                        </Text>
+                      </View>
                     </TouchableOpacity>
                   );
                 })}
               </View>
-            </View>
-          )}
-
-          {/* ====== SEASON SELECTOR ====== */}
-          {allSeasons.length > 1 && (
-            <View style={styles.drawerSelectorSection}>
-              <Text style={styles.drawerSelectorTitle}>SEASON</Text>
-              {allSeasons.map(season => {
-                const isActive = workingSeason?.id === season.id;
-                const statusColor = season.status === 'active' ? BRAND.teal
-                  : season.status === 'upcoming' ? BRAND.skyBlue
-                  : BRAND.textTertiary;
-                const statusLabel = season.status === 'active' ? 'Active'
-                  : season.status === 'upcoming' ? 'Upcoming'
-                  : season.status === 'completed' ? 'Completed'
-                  : 'Archived';
-                return (
-                  <TouchableOpacity
-                    key={season.id}
-                    style={[
-                      styles.drawerSeasonRow,
-                      isActive && { backgroundColor: BRAND.teal + '15' },
-                    ]}
-                    onPress={() => handleSeasonSwitch(season)}
-                    activeOpacity={0.7}
-                  >
-                    <View style={[styles.drawerSeasonDot, { backgroundColor: isActive ? BRAND.teal : statusColor }]} />
-                    <Text
-                      style={[
-                        styles.drawerSeasonName,
-                        isActive && { color: BRAND.textLight, fontFamily: FONTS.bodyBold },
-                        !isActive && season.status !== 'active' && season.status !== 'upcoming' && { opacity: 0.5 },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {season.name}
-                    </Text>
-                    <View style={[styles.drawerSeasonBadge, { backgroundColor: statusColor + '20' }]}>
-                      <Text style={[styles.drawerSeasonBadgeText, { color: statusColor }]}>
-                        {statusLabel}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          )}
+            );
+          })()}
 
           {/* ====== CONTEXTUAL SELECTOR ====== */}
           {contextItems.length > 0 && (
@@ -971,17 +955,17 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 20,
     backgroundColor: BRAND.surfaceDark,
   },
-  // Profile header
+  // Profile header — compact
   profileHeader: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 16,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 12,
     borderTopRightRadius: 20,
   },
   closeButton: {
     position: 'absolute',
-    top: 12,
-    right: 12,
+    top: 8,
+    right: 10,
     width: 32,
     height: 32,
     borderRadius: 16,
@@ -991,13 +975,12 @@ const styles = StyleSheet.create({
   },
   profileRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
+    alignItems: 'flex-start',
   },
   avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 64,
+    height: 80,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
@@ -1006,61 +989,62 @@ const styles = StyleSheet.create({
   },
   avatarInitial: {
     fontFamily: FONTS.bodyBold,
-    fontSize: 22,
+    fontSize: 24,
     color: '#fff',
   },
   profileInfo: {
     flex: 1,
-    marginLeft: 14,
-    marginRight: 36,
+    marginLeft: 12,
+    marginRight: 28,
   },
   profileName: {
     fontFamily: FONTS.bodyBold,
-    fontSize: 18,
-    lineHeight: 22,
+    fontSize: 16,
+    lineHeight: 20,
     color: BRAND.textLight,
+  },
+  profileOrg: {
+    fontFamily: FONTS.bodyMedium,
+    fontSize: 11,
+    marginTop: 2,
+    lineHeight: 14,
+    color: BRAND.textTertiary,
   },
   roleBadgeRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
-    marginTop: 6,
+    gap: 4,
+    marginTop: 5,
   },
   roleBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
     borderRadius: 6,
     borderWidth: 1,
   },
   roleBadgeText: {
     fontFamily: FONTS.bodySemiBold,
-    fontSize: 10,
+    fontSize: 9,
     letterSpacing: 0.3,
     textTransform: 'uppercase',
   },
-  profileOrg: {
-    fontFamily: FONTS.bodyMedium,
-    fontSize: 12,
-    marginTop: 4,
-    lineHeight: 16,
-    color: BRAND.textTertiary,
+  profileActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 6,
   },
   viewProfileButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 14,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    borderWidth: 1,
-    alignSelf: 'flex-start',
   },
   viewProfileText: {
     fontFamily: FONTS.bodySemiBold,
-    fontSize: 13,
-    marginRight: 4,
+    fontSize: 12,
+    marginRight: 2,
+    color: BRAND.skyBlue,
   },
-  // Contextual selector (children / teams / sports)
+  // Contextual selector (children / teams)
   contextSection: {
     paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
@@ -1125,35 +1109,12 @@ const styles = StyleSheet.create({
     color: BRAND.teal,
     fontFamily: FONTS.bodyBold,
   },
-  // Drawer selector sections (role + season)
+  // Season selector section
   drawerSelectorSection: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 6,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: BRAND.cardBorder,
-  },
-  drawerSelectorTitle: {
-    fontFamily: FONTS.bodyBold,
-    fontSize: 10,
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-    color: BRAND.textTertiary,
-    marginBottom: 8,
-  },
-  rolePillRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  drawerRolePill: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-  },
-  drawerRolePillText: {
-    fontFamily: FONTS.bodySemiBold,
-    fontSize: 12,
   },
   drawerSeasonRow: {
     flexDirection: 'row',
