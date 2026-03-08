@@ -114,18 +114,39 @@ export default function CreateChallengeScreen() {
     if (!user?.id) return;
     (async () => {
       setResolving(true);
+
+      // Try team_staff first (primary path)
       const { data: staffRow } = await supabase
         .from('team_staff')
         .select('team_id, teams(organization_id)')
         .eq('user_id', user.id)
         .eq('is_active', true)
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (staffRow) {
         setTeamId(staffRow.team_id);
         setOrgId((staffRow.teams as any)?.organization_id || null);
+        setResolving(false);
+        return;
       }
+
+      // Fallback: try team_coaches via coaches.profile_id
+      const { data: coachRecord } = await supabase
+        .from('coaches')
+        .select('id, team_coaches ( team_id, teams ( id, organization_id ) )')
+        .eq('profile_id', user.id)
+        .maybeSingle();
+
+      if (coachRecord) {
+        const tcEntries = (coachRecord.team_coaches as any[]) || [];
+        const firstTeam = tcEntries.find((tc: any) => tc.teams);
+        if (firstTeam) {
+          setTeamId(firstTeam.team_id);
+          setOrgId((firstTeam.teams as any)?.organization_id || null);
+        }
+      }
+
       setResolving(false);
     })();
   }, [user?.id]);
@@ -606,6 +627,11 @@ export default function CreateChallengeScreen() {
 
       {/* ─── Submit Button ──────────────────────────────────── */}
       <View style={[s.submitWrap, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+        {!resolving && !teamId && (
+          <Text style={{ color: BRAND.coral, fontSize: 12, fontFamily: FONTS.bodySemiBold, textAlign: 'center', marginBottom: 8 }}>
+            No team found for your account. Please contact your admin.
+          </Text>
+        )}
         <TouchableOpacity
           style={[s.submitBtn, !canSubmit && s.submitBtnDisabled]}
           activeOpacity={0.8}
