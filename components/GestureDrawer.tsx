@@ -269,6 +269,8 @@ export default function GestureDrawer() {
   const handleRoleSwitch = (roleKey: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setDevViewAs(roleKey as any);
+    closeDrawer();
+    setTimeout(() => router.push('/(tabs)' as never), 150);
   };
 
   // ====== SEASON DATA ======
@@ -769,11 +771,15 @@ export default function GestureDrawer() {
 
           {/* ====== CONTEXTUAL SELECTOR ====== */}
           {contextItems.length > 0 && (
-            <View style={[styles.contextSection, { borderBottomColor: BRAND.cardBorder }]}>
+            <View
+              style={[styles.contextSection, { borderBottomColor: BRAND.cardBorder }]}
+              onStartShouldSetResponder={() => true}
+            >
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.contextScroll}
+                nestedScrollEnabled
                 bounces
               >
                 {contextItems.map((item) => {
