@@ -46,7 +46,6 @@ import { FONTS } from '@/theme/fonts';
 
 import NoOrgState from './empty-states/NoOrgState';
 import NoTeamState from './empty-states/NoTeamState';
-import EmptySeasonState from './empty-states/EmptySeasonState';
 import HeroIdentityCard from './player-scroll/HeroIdentityCard';
 import StreakBanner from './player-scroll/StreakBanner';
 import TheDrop from './player-scroll/TheDrop';
@@ -62,6 +61,7 @@ import LevelUpCelebrationModal from './LevelUpCelebrationModal';
 import StreakMilestoneCelebrationModal from './StreakMilestoneCelebrationModal';
 import GiveShoutoutModal from './GiveShoutoutModal';
 import TeamPulse from './TeamPulse';
+import TrophyCaseWidget from './TrophyCaseWidget';
 import RoleSelector from './RoleSelector';
 import { checkMilestoneReached, awardStreakMilestoneXP } from '@/lib/streak-engine';
 import type { StreakTier } from '@/lib/streak-engine';
@@ -174,22 +174,12 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
     }],
   }));
 
-  if (data.loading) {
-    return (
-      <View style={[styles.root, { paddingTop: insets.top }]}>
-        <StatusBar barStyle="light-content" backgroundColor="#0D1B3E" />
-        <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={PLAYER_THEME.accent} />
-          <Text style={styles.loadingText}>Loading player data...</Text>
-        </View>
-      </View>
-    );
-  }
-
-  // Smart empty states
-  if (!organization) return <NoOrgState />;
-  if (!data.primaryTeam) return <NoTeamState role="player" />;
-  if (!data.nextEvent && !data.lastGame) return <EmptySeasonState role="player" />;
+  // ─── Empty state detection (rendered INSIDE scroll, never early return) ──
+  const emptyState: 'loading' | 'no-org' | 'no-team' | null =
+    data.loading ? 'loading'
+    : !organization ? 'no-org'
+    : !data.primaryTeam ? 'no-team'
+    : null;
 
   return (
     <View style={styles.root}>
@@ -255,6 +245,17 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           </View>
         </View>
 
+        {emptyState === 'loading' ? (
+          <View style={styles.loadingWrap}>
+            <ActivityIndicator size="large" color={PLAYER_THEME.accent} />
+            <Text style={styles.loadingText}>Loading player data...</Text>
+          </View>
+        ) : emptyState === 'no-org' ? (
+          <View style={{ paddingTop: 80 }}><NoOrgState /></View>
+        ) : emptyState === 'no-team' ? (
+          <View style={{ paddingTop: 80 }}><NoTeamState role="player" /></View>
+        ) : (
+        <>
         {/* ─── 1. HERO IDENTITY CARD ─────────────────────────── */}
         <HeroIdentityCard
           firstName={data.firstName}
@@ -346,12 +347,30 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           </Text>
         </TouchableOpacity>
 
+        {/* ─── 9c. TROPHY CASE / ACHIEVEMENTS ──────────────── */}
+        {playerId && (
+          <View style={{ marginBottom: 12 }}>
+            <TrophyCaseWidget userId={playerId} userRole="player" />
+          </View>
+        )}
+        <TouchableOpacity
+          style={styles.leaderboardLink}
+          onPress={() => router.push('/achievements' as any)}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.leaderboardLinkText}>
+            {'\u{1F3C5}'} View Trophy Case
+          </Text>
+        </TouchableOpacity>
+
         {/* ─── 10. CLOSING MASCOT + XP CALLBACK ──────────────── */}
         <ClosingMascot
           xpToNext={data.xpToNext}
           level={data.level}
           nextEvent={data.nextEvent}
         />
+        </>
+        )}
       </Animated.ScrollView>
 
       {/* ─── LEVEL-UP CELEBRATION ──────────────────────────────── */}
