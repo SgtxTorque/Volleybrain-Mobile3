@@ -421,7 +421,7 @@ export default function AdminMyStuffScreen() {
         {/* Admin Portal */}
         <TouchableOpacity
           style={s.portalCard}
-          onPress={() => Linking.openURL('https://volleybrain-admin.vercel.app')}
+          onPress={() => Linking.openURL('https://login.thelynxapp.com')}
           activeOpacity={0.8}
         >
           <View style={[s.menuIcon, { backgroundColor: colors.primary + '15' }]}>

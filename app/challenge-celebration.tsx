@@ -170,8 +170,8 @@ export default function ChallengeCelebrationScreen() {
   async function handleShare() {
     try {
       const message = isWinner
-        ? `I won the "${challengeTitle}" challenge and earned ${xpTarget} XP on VolleyBrain!`
-        : `I completed the "${challengeTitle}" challenge and earned ${xpTarget} XP on VolleyBrain!`;
+        ? `I won the "${challengeTitle}" challenge and earned ${xpTarget} XP on Lynx!`
+        : `I completed the "${challengeTitle}" challenge and earned ${xpTarget} XP on Lynx!`;
 
       await RNShare.share({
         message,

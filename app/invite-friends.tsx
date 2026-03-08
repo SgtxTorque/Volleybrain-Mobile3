@@ -34,8 +34,8 @@ export default function InviteFriendsScreen() {
   const orgSlug = (organization as any)?.slug || profile?.current_organization_id || '';
   const orgName = (organization as any)?.name || 'our team';
   const registrationUrl = orgSlug
-    ? `https://app.thelynxapp.com/register/${orgSlug}`
-    : 'https://app.thelynxapp.com/register';
+    ? `https://login.thelynxapp.com/register/${orgSlug}`
+    : 'https://login.thelynxapp.com/register';
 
   // -----------------------------------------------
   // Actions
