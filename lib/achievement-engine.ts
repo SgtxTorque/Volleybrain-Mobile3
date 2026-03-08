@@ -638,6 +638,10 @@ export async function checkRoleAchievements(
     allStats['shoutouts_given'] = givenRes.count || 0;
     allStats['shoutouts_received'] = receivedRes.count || 0;
 
+    // Get current level for level-gating
+    const xpData = await fetchUserXP(userId);
+    const currentLevel = xpData.level;
+
     const now = new Date().toISOString();
     const newUnlocks: Array<{
       user_id: string;
@@ -651,6 +655,8 @@ export async function checkRoleAchievements(
       if (ach.threshold == null) continue;
       if (ach.requires_verification) continue;
       if (!ach.stat_key) continue;
+      // Skip if user hasn't reached the required level
+      if (ach.min_level && currentLevel < ach.min_level) continue;
 
       const currentVal = allStats[ach.stat_key] ?? 0;
 

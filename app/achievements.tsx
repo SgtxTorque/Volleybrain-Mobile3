@@ -668,13 +668,14 @@ export default function AchievementsScreen() {
     }
 
     const isEarned = Boolean(earnedMap[item.id]?.earned_at);
+    const isLevelGated = !isEarned && item.min_level != null && item.min_level > levelInfo.level;
     const catConfig = CATEGORIES[item.category] || {
       color: DARK.textMuted,
       icon: 'star' as keyof typeof Ionicons.glyphMap,
     };
     const rarityConfig = RARITY_COLORS[item.rarity] || RARITY_COLORS.common;
     const prog = getProgressForAchievement(item, earnedMap[item.id], seasonStats);
-    const isInProgress = !isEarned && prog.pct > 0;
+    const isInProgress = !isEarned && !isLevelGated && prog.pct > 0;
 
     return (
       <TouchableOpacity
@@ -682,7 +683,9 @@ export default function AchievementsScreen() {
           s.badgeCell,
           isEarned
             ? { backgroundColor: catConfig.color + '33' }
-            : { backgroundColor: DARK.cardAlt },
+            : isLevelGated
+              ? { backgroundColor: DARK.cardAlt, opacity: 0.4 }
+              : { backgroundColor: DARK.cardAlt },
         ]}
         activeOpacity={0.7}
         onPress={() => handleBadgePress(item)}
@@ -697,13 +700,17 @@ export default function AchievementsScreen() {
                 : { backgroundColor: 'rgba(255,255,255,0.05)' },
             ]}
           >
-            <Text style={[s.badgeEmoji, !isEarned && { opacity: isInProgress ? 0.5 : 0.2 }]}>
+            <Text style={[s.badgeEmoji, !isEarned && { opacity: isLevelGated ? 0.15 : isInProgress ? 0.5 : 0.2 }]}>
               {item.icon || '\uD83C\uDFC6'}
             </Text>
-            {/* Overlay: checkmark or lock */}
+            {/* Overlay: checkmark, level lock, or regular lock */}
             {isEarned ? (
               <View style={s.badgeCheckOverlay}>
                 <Ionicons name="checkmark-circle" size={14} color="#10B981" />
+              </View>
+            ) : isLevelGated ? (
+              <View style={s.badgeLockOverlay}>
+                <Ionicons name="lock-closed" size={12} color={DARK.gold} />
               </View>
             ) : (
               <View style={s.badgeLockOverlay}>
@@ -721,8 +728,10 @@ export default function AchievementsScreen() {
           {item.name}
         </Text>
 
-        {/* Progress bar for in-progress (not earned, some progress) */}
-        {isInProgress ? (
+        {/* Level gate label, progress bar, or rarity dot */}
+        {isLevelGated ? (
+          <Text style={s.levelGateText}>Lvl {item.min_level}</Text>
+        ) : isInProgress ? (
           <View style={s.miniProgressBg}>
             <View style={[s.miniProgressFill, { width: `${prog.pct}%` as any, backgroundColor: rarityConfig.text }]} />
           </View>
@@ -731,7 +740,7 @@ export default function AchievementsScreen() {
         )}
 
         {/* Tracking indicator */}
-        {trackedIds.has(item.id) && !isEarned && (
+        {trackedIds.has(item.id) && !isEarned && !isLevelGated && (
           <View style={s.trackingIndicator}>
             <Ionicons name="eye" size={8} color={DARK.gold} />
           </View>
@@ -1011,6 +1020,9 @@ export default function AchievementsScreen() {
             <Text style={s.modalDescription}>
               {ach.description || 'Complete this achievement to earn it!'}
             </Text>
+            {ach.flavor_text && (
+              <Text style={s.modalFlavorText}>"{ach.flavor_text}"</Text>
+            )}
 
             {/* HOW TO EARN section */}
             <View style={s.modalSection}>
@@ -1080,10 +1092,16 @@ export default function AchievementsScreen() {
               ) : (
                 <View style={s.modalStatusLocked}>
                   <View style={s.modalStatusBanner}>
-                    <Ionicons name="lock-closed" size={20} color={DARK.textMuted} />
-                    <Text style={s.modalStatusLockedText}>LOCKED</Text>
+                    <Ionicons name="lock-closed" size={20} color={ach.min_level != null && ach.min_level > levelInfo.level ? DARK.gold : DARK.textMuted} />
+                    <Text style={s.modalStatusLockedText}>
+                      {ach.min_level != null && ach.min_level > levelInfo.level ? 'LEVEL LOCKED' : 'LOCKED'}
+                    </Text>
                   </View>
-                  {prog.pct > 50 ? (
+                  {ach.min_level != null && ach.min_level > levelInfo.level ? (
+                    <Text style={[s.modalMotivation, { color: DARK.gold }]}>
+                      Unlocks at Level {ach.min_level} (you{"'"}re Level {levelInfo.level})
+                    </Text>
+                  ) : prog.pct > 50 ? (
                     <Text style={s.modalMotivation}>
                       Keep going! You{"'"}re almost there!
                     </Text>
@@ -1824,6 +1842,12 @@ const s = StyleSheet.create({
     height: '100%',
     borderRadius: 1.5,
   },
+  levelGateText: {
+    fontSize: 9,
+    fontFamily: FONTS.bodyBold,
+    color: DARK.gold,
+    marginTop: 4,
+  },
 
   // Empty states
   emptyBox: {
@@ -1935,6 +1959,14 @@ const s = StyleSheet.create({
     textAlign: 'center',
     marginTop: 20,
     paddingHorizontal: 8,
+  },
+  modalFlavorText: {
+    fontSize: 13,
+    fontStyle: 'italic',
+    color: DARK.textMuted,
+    textAlign: 'center',
+    marginTop: 8,
+    paddingHorizontal: 16,
   },
 
   // Modal sections

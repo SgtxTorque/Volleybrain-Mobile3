@@ -30,6 +30,10 @@ export type AchievementFull = {
   unlock_effect_url: string | null;
   xp_reward: number | null;
   target_role: string | null; // 'player' | 'coach' | 'parent' | 'admin' | 'all'
+  min_level: number | null;
+  stacks_into: string | null;
+  flavor_text: string | null;
+  cadence: string | null;
 };
 
 /** A player_achievements row joined with its achievement */
