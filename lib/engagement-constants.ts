@@ -39,12 +39,31 @@ export const XP_BY_RARITY: Record<string, number> = {
 
 /** XP awarded for engagement actions */
 export const XP_BY_SOURCE: Record<string, number> = {
+  // Player actions
   shoutout_given: 10,
   shoutout_received: 15,
   challenge_completed: 50,
   challenge_won: 100,
   game_played: 10,
   practice_attended: 5,
+  // Coach actions
+  game_stats_entered: 15,
+  evaluation_completed: 20,
+  challenge_created: 15,
+  game_won: 25,
+  blast_sent: 10,
+  // Parent actions
+  rsvp_submitted: 5,
+  payment_on_time: 15,
+  volunteer_signup: 20,
+  photo_uploaded: 5,
+  referral_completed: 50,
+  // Admin actions
+  registration_processed: 5,
+  season_completed: 100,
+  // Universal
+  team_wall_post: 10,
+  daily_login: 2,
 };
 
 /** Level tier colors (1-5 bronze, 6-10 silver, 11-15 gold, 16-20 diamond) */
@@ -101,12 +120,48 @@ export const DEFAULT_SHOUTOUT_CATEGORIES = [
   { name: 'Coachable', emoji: '🧠', color: '#8E44AD', description: 'Listens, applies feedback, grows' },
 ] as const;
 
-/** Achievement categories with icons and colors (all categories incl. Community) */
+/** Achievement categories with icons and colors (all roles) */
 export const ACHIEVEMENT_CATEGORIES: Record<string, { label: string; icon: string; color: string }> = {
+  // Player categories
   Offensive: { label: 'Offensive', icon: 'flash', color: '#FF3B3B' },
   Defensive: { label: 'Defensive', icon: 'shield', color: '#3B82F6' },
   Playmaker: { label: 'Playmaker', icon: 'people', color: '#10B981' },
   Heart: { label: 'Heart', icon: 'heart', color: '#EC4899' },
   Community: { label: 'Community', icon: 'megaphone', color: '#F59E0B' },
   Elite: { label: 'Elite', icon: 'diamond', color: '#FFD700' },
+  // Coach categories
+  Coaching: { label: 'Coaching', icon: 'clipboard', color: '#6366F1' },
+  Management: { label: 'Management', icon: 'settings', color: '#64748B' },
+  Development: { label: 'Development', icon: 'trending-up', color: '#10B981' },
+  Winning: { label: 'Winning', icon: 'trophy', color: '#F59E0B' },
+  Engagement: { label: 'Engagement', icon: 'chatbubbles', color: '#EC4899' },
+  Communication: { label: 'Communication', icon: 'megaphone', color: '#3B82F6' },
+  Career: { label: 'Career', icon: 'ribbon', color: '#8B5CF6' },
+  // Parent categories
+  Reliability: { label: 'Reliability', icon: 'checkmark-circle', color: '#22C55E' },
+  Financial: { label: 'Financial', icon: 'wallet', color: '#10B981' },
+  Volunteer: { label: 'Volunteer', icon: 'hand-left', color: '#F97316' },
+  Social: { label: 'Social', icon: 'share-social', color: '#EC4899' },
+  Referral: { label: 'Referral', icon: 'gift', color: '#8B5CF6' },
+  Loyalty: { label: 'Loyalty', icon: 'heart-circle', color: '#EF4444' },
+  // Shared categories
+  Streaks: { label: 'Streaks', icon: 'flame', color: '#F59E0B' },
+  Challenges: { label: 'Challenges', icon: 'flag', color: '#6366F1' },
+  Levels: { label: 'Levels', icon: 'star', color: '#FFD700' },
+  Meta: { label: 'Meta', icon: 'infinite', color: '#64748B' },
+  Fun: { label: 'Fun', icon: 'happy', color: '#F472B6' },
+  // Basketball-specific
+  Scoring: { label: 'Scoring', icon: 'basketball', color: '#EF4444' },
+  Rebounding: { label: 'Rebounding', icon: 'arrow-up', color: '#F59E0B' },
+  Playmaking: { label: 'Playmaking', icon: 'git-branch', color: '#10B981' },
+  Defense: { label: 'Defense', icon: 'shield-checkmark', color: '#3B82F6' },
+  // Sport-specific
+  Volleyball: { label: 'Volleyball', icon: 'basketball', color: '#4BB9EC' },
+  Basketball: { label: 'Basketball', icon: 'basketball', color: '#F97316' },
+  // Admin / Lifecycle
+  Season: { label: 'Season', icon: 'calendar', color: '#6366F1' },
+  Onboarding: { label: 'Onboarding', icon: 'log-in', color: '#22C55E' },
+  Growth: { label: 'Growth', icon: 'trending-up', color: '#10B981' },
+  Operations: { label: 'Operations', icon: 'construct', color: '#64748B' },
+  Setup: { label: 'Setup', icon: 'build', color: '#6366F1' },
 };
