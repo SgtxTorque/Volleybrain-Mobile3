@@ -1,5 +1,8 @@
+import { checkRoleAchievements } from '@/lib/achievement-engine';
 import { useAuth } from '@/lib/auth';
 import { promoteBackupVolunteer, sendVolunteerBlast } from '@/lib/notifications';
+import { usePermissions } from '@/lib/permissions-context';
+import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
@@ -83,6 +86,8 @@ export default function EventDetailModal({
   isCoachOrAdmin = false,
 }: Props) {
   const { user } = useAuth();
+  const { isParent } = usePermissions();
+  const { workingSeason } = useSeason();
   const router = useRouter();
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const isTablet = screenWidth >= 744;
@@ -329,6 +334,11 @@ export default function EventDetailModal({
 
       await fetchRSVPs();
       onRefresh?.();
+
+      // Check parent achievements after RSVP
+      if (user?.id && isParent) {
+        checkRoleAchievements(user.id, 'parent', workingSeason?.id).catch(() => {});
+      }
     } catch (error) {
       if (__DEV__) console.error('RSVP error:', error);
       Alert.alert('Error', 'Failed to save RSVP');

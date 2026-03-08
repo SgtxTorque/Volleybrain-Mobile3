@@ -1,3 +1,4 @@
+import { checkRoleAchievements } from '@/lib/achievement-engine';
 import AdminContextBar from '@/components/AdminContextBar';
 import AppHeaderBar from '@/components/ui/AppHeaderBar';
 import StatBox from '@/components/ui/StatBox';
@@ -13,6 +14,7 @@ import {
   type PaymentInstallment,
   type PaymentPlan,
 } from '@/lib/payment-plans';
+import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
@@ -96,6 +98,7 @@ type Props = {
 export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
   const { colors } = useTheme();
   const { user, profile } = useAuth();
+  const { isAdmin, isParent } = usePermissions();
   const { workingSeason } = useSeason();
   const router = useRouter();
 
@@ -684,6 +687,12 @@ export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
                   }
                 }
               } catch {}
+
+              // Check achievements after payment verification
+              if (user?.id) {
+                if (isParent) checkRoleAchievements(user.id, 'parent', workingSeason?.id).catch(() => {});
+                if (isAdmin) checkRoleAchievements(user.id, 'admin', workingSeason?.id).catch(() => {});
+              }
 
               Alert.alert('Success', `${selected.length} payment${selected.length > 1 ? 's' : ''} verified!`);
               setSelectedFees(new Set());

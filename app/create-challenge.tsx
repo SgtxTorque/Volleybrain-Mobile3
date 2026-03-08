@@ -24,6 +24,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { checkRoleAchievements } from '@/lib/achievement-engine';
 import { useAuth } from '@/lib/auth';
 import { createChallenge } from '@/lib/challenge-service';
 import {
@@ -31,6 +32,7 @@ import {
   CHALLENGE_CATEGORIES,
   type ChallengeCategory,
 } from '@/lib/challenge-templates';
+import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
@@ -79,6 +81,7 @@ export default function CreateChallengeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, profile } = useAuth();
+  const { workingSeason } = useSeason();
   const { templateId } = useLocalSearchParams<{ templateId?: string }>();
 
   // ─── Team / Org resolution ─────────────────────────────────
@@ -222,6 +225,10 @@ export default function CreateChallengeScreen() {
     setSubmitting(false);
 
     if (result.success) {
+      // Check coach achievements after challenge created
+      if (user?.id) {
+        checkRoleAchievements(user.id, 'coach', workingSeason?.id).catch(() => {});
+      }
       router.back();
     } else {
       Alert.alert('Error', result.error || 'Failed to create challenge. Please try again.');

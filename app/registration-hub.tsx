@@ -5,6 +5,7 @@ import Badge from '@/components/ui/Badge';
 import Card from '@/components/ui/Card';
 import SectionHeader from '@/components/ui/SectionHeader';
 import StatBox from '@/components/ui/StatBox';
+import { checkRoleAchievements } from '@/lib/achievement-engine';
 import { useAuth } from '@/lib/auth';
 import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { queueRegistrationApproval, queueTeamAssignment } from '@/lib/email-queue';
@@ -520,6 +521,11 @@ export default function RegistrationHubScreen() {
           const seasonName = seasons.find(s => s.id === selectedRegistration.season_id)?.name || '';
           queueRegistrationApproval(orgId, p.parent_email, p.parent_name || '', `${p.first_name} ${p.last_name}`, seasonName, '');
         } catch {}
+      }
+
+      // Check admin achievements after registration processed
+      if (user?.id && newStatus === 'approved') {
+        checkRoleAchievements(user.id, 'admin', workingSeason?.id).catch(() => {});
       }
 
       await fetchData();

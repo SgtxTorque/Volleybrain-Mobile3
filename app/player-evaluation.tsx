@@ -24,6 +24,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 
+import { checkRoleAchievements } from '@/lib/achievement-engine';
 import { useAuth } from '@/lib/auth';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
@@ -237,6 +238,11 @@ export default function PlayerEvaluationScreen() {
         notes: overallNotes || null,
         is_initial: Object.keys(previousRatings).length === 0,
       });
+
+      // Check coach achievements after evaluation
+      if (user?.id) {
+        checkRoleAchievements(user.id, 'coach', workingSeason?.id).catch(() => {});
+      }
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert(

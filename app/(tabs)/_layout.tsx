@@ -1,8 +1,11 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { checkRoleAchievements } from '@/lib/achievement-engine';
 import { useAuth } from '@/lib/auth';
 import { useDrawer } from '@/lib/drawer-context';
 import { useFirstTimeWelcome } from '@/lib/first-time-welcome';
 import { useParentScroll } from '@/lib/parent-scroll-context';
 import { usePermissions } from '@/lib/permissions-context';
+import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useResponsive } from '@/lib/responsive';
 import { useTheme } from '@/lib/theme';
@@ -18,12 +21,27 @@ export default function TabLayout() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { loading, isAdmin, isCoach, isParent, isPlayer, viewAs } = usePermissions();
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
+  const { workingSeason } = useSeason();
   const { openDrawer } = useDrawer();
   const { isTabletAny } = useResponsive();
   const primaryRole = isCoach ? 'coach' : isParent ? 'parent' : null;
   useFirstTimeWelcome(primaryRole);
   const { isScrolling, isParentScrollActive } = useParentScroll();
+
+  // Daily achievement check (throttled — once per day)
+  useEffect(() => {
+    if (!user?.id || !profile) return;
+    AsyncStorage.getItem('lynx_daily_achievement_check').then(val => {
+      const today = new Date().toDateString();
+      if (val === today) return;
+      AsyncStorage.setItem('lynx_daily_achievement_check', today);
+      const role = isAdmin ? 'admin' : isCoach ? 'coach' : isParent ? 'parent' : null;
+      if (role) {
+        checkRoleAchievements(user.id, role, workingSeason?.id).catch(() => {});
+      }
+    });
+  }, [user?.id, profile]);
 
   // Detect when the player dashboard is active (dark theme needed)
   const isPlayerMode = (() => {

@@ -22,6 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 
+import { checkRoleAchievements } from '@/lib/achievement-engine';
 import { useAuth } from '@/lib/auth';
 import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { useSeason } from '@/lib/season';
@@ -361,6 +362,12 @@ export default function VolunteerAssignmentScreen() {
       }
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+      // Check parent achievements after volunteer assignment
+      if (user?.id) {
+        checkRoleAchievements(user.id, 'parent', workingSeason?.id).catch(() => {});
+      }
+
       setConfirmed(true);
     } catch (err: any) {
       if (__DEV__) console.error('[VolunteerAssignment] submit:', err);

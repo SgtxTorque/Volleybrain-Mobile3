@@ -1,3 +1,4 @@
+import { checkRoleAchievements } from '@/lib/achievement-engine';
 import EmojiPicker from '@/components/EmojiPicker';
 import ChallengeCard, { parseChallengeMetadata } from '@/components/ChallengeCard';
 import ChallengeDetailModal from '@/components/ChallengeDetailModal';
@@ -281,7 +282,7 @@ const SkeletonPostCard = ({ colors }: { colors: any }) => (
 export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnly = false, additionalTabs = [] }: TeamWallProps) {
   const { colors } = useTheme();
   const { user, profile, isAdmin } = useAuth();
-  const { isPlayer } = usePermissions();
+  const { isPlayer, isCoach, isParent } = usePermissions();
   const { workingSeason } = useSeason();
   const router = useRouter();
   const { selectedTeamId: contextTeamId } = useTeamContext();
@@ -1093,6 +1094,14 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
 
       if (data) {
         setPosts((prev) => [{ ...data, reaction_count: 0, comment_count: 0, share_count: 0 } as Post, ...prev]);
+      }
+
+      // Check role achievements after team wall post
+      if (user?.id) {
+        const role = isAdmin ? 'admin' : isCoach ? 'coach' : isParent ? 'parent' : null;
+        if (role) {
+          checkRoleAchievements(user.id, role, workingSeason?.id).catch(() => {});
+        }
       }
 
       setNewPostContent('');

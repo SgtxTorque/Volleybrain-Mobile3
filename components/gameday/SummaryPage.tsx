@@ -21,8 +21,11 @@ import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
+import { checkRoleAchievements } from '@/lib/achievement-engine';
+import { useAuth } from '@/lib/auth';
 import { useMatch } from '@/lib/gameday/use-match';
 import type { ServeEvent } from '@/lib/gameday/match-state';
+import { useSeason } from '@/lib/season';
 import { FONTS } from '@/theme/fonts';
 import { BRAND } from '@/theme/colors';
 import { useResponsive } from '@/lib/responsive';
@@ -34,6 +37,8 @@ const GOLD = BRAND.gold;
 
 export default function SummaryPage() {
   const { match } = useMatch();
+  const { user } = useAuth();
+  const { workingSeason } = useSeason();
   const router = useRouter();
   const [syncing, setSyncing] = useState(false);
   const { isTabletAny, contentMaxWidth } = useResponsive();
@@ -139,6 +144,11 @@ export default function SummaryPage() {
   const handleSync = useCallback(async () => {
     setSyncing(true);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    // Check coach achievements after game save
+    if (user?.id) {
+      checkRoleAchievements(user.id, 'coach', workingSeason?.id).catch(() => {});
+    }
 
     // TODO: Phase 7B — replay pendingActions to Supabase
     // For now, just simulate a delay
