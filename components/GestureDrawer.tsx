@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { UserRole } from '@/lib/permissions';
 import { useDrawerBadges } from '@/hooks/useDrawerBadges';
 import type { DrawerBadges } from '@/hooks/useDrawerBadges';
+import { useSeason } from '@/lib/season';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 
@@ -231,7 +232,8 @@ export default function GestureDrawer() {
   const { isOpen, closeDrawer, openDrawer } = useDrawer();
   const insets = useSafeAreaInsets();
   const { user, profile, organization, signOut } = useAuth();
-  const { actualRoles, isAdmin, isCoach, isParent, isPlayer } = usePermissions();
+  const { actualRoles, isAdmin, isCoach, isParent, isPlayer, devViewAs, setDevViewAs } = usePermissions();
+  const { allSeasons, workingSeason, setWorkingSeason } = useSeason();
   const router = useRouter();
   const { width: screenWidth } = useWindowDimensions();
   const isTablet = screenWidth >= 744;
@@ -244,6 +246,34 @@ export default function GestureDrawer() {
   const firstInitial = displayName.charAt(0).toUpperCase();
   const roleLabels = actualRoles.map((r) => ROLE_DISPLAY[r] || r).join(' · ');
   const orgName = organization?.name || 'Lynx Sports';
+
+  // ====== ROLE SWITCHER DATA ======
+  const rolePills = [
+    { key: 'league_admin', label: 'Admin' },
+    { key: 'head_coach', label: 'Coach' },
+    { key: 'assistant_coach', label: 'Asst Coach' },
+    { key: 'parent', label: 'Parent' },
+    { key: 'player', label: 'Player' },
+  ].filter(r => actualRoles.includes(r.key as any));
+
+  const currentRoleKey = devViewAs || (() => {
+    const order = ['league_admin', 'head_coach', 'assistant_coach', 'parent', 'player'];
+    for (const r of order) {
+      if (actualRoles.includes(r as any)) return r;
+    }
+    return actualRoles[0];
+  })();
+
+  const handleRoleSwitch = (roleKey: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setDevViewAs(roleKey as any);
+  };
+
+  // ====== SEASON DATA ======
+  const handleSeasonSwitch = (season: (typeof allSeasons)[number]) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setWorkingSeason(season);
+  };
 
   const handleViewProfile = () => {
     closeDrawer();
@@ -559,6 +589,83 @@ export default function GestureDrawer() {
             </TouchableOpacity>
           </LinearGradient>
 
+          {/* ====== ROLE SELECTOR (only if multiple roles) ====== */}
+          {rolePills.length > 1 && (
+            <View style={styles.drawerSelectorSection}>
+              <Text style={styles.drawerSelectorTitle}>ROLE</Text>
+              <View style={styles.rolePillRow}>
+                {rolePills.map(rp => {
+                  const isActive = currentRoleKey === rp.key;
+                  return (
+                    <TouchableOpacity
+                      key={rp.key}
+                      style={[
+                        styles.drawerRolePill,
+                        isActive
+                          ? { backgroundColor: BRAND.teal, borderColor: BRAND.teal }
+                          : { backgroundColor: 'transparent', borderColor: BRAND.cardBorder },
+                      ]}
+                      onPress={() => handleRoleSwitch(rp.key)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[
+                        styles.drawerRolePillText,
+                        { color: isActive ? '#FFF' : BRAND.textSecondary },
+                      ]}>
+                        {rp.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          )}
+
+          {/* ====== SEASON SELECTOR ====== */}
+          {allSeasons.length > 1 && (
+            <View style={styles.drawerSelectorSection}>
+              <Text style={styles.drawerSelectorTitle}>SEASON</Text>
+              {allSeasons.map(season => {
+                const isActive = workingSeason?.id === season.id;
+                const statusColor = season.status === 'active' ? BRAND.teal
+                  : season.status === 'upcoming' ? BRAND.skyBlue
+                  : BRAND.textTertiary;
+                const statusLabel = season.status === 'active' ? 'Active'
+                  : season.status === 'upcoming' ? 'Upcoming'
+                  : season.status === 'completed' ? 'Completed'
+                  : 'Archived';
+                return (
+                  <TouchableOpacity
+                    key={season.id}
+                    style={[
+                      styles.drawerSeasonRow,
+                      isActive && { backgroundColor: BRAND.teal + '15' },
+                    ]}
+                    onPress={() => handleSeasonSwitch(season)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.drawerSeasonDot, { backgroundColor: isActive ? BRAND.teal : statusColor }]} />
+                    <Text
+                      style={[
+                        styles.drawerSeasonName,
+                        isActive && { color: BRAND.textLight, fontFamily: FONTS.bodyBold },
+                        !isActive && season.status !== 'active' && season.status !== 'upcoming' && { opacity: 0.5 },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {season.name}
+                    </Text>
+                    <View style={[styles.drawerSeasonBadge, { backgroundColor: statusColor + '20' }]}>
+                      <Text style={[styles.drawerSeasonBadgeText, { color: statusColor }]}>
+                        {statusLabel}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+
           {/* ====== SHORTCUT ROW ====== */}
           <View style={[styles.shortcutSection, { borderBottomColor: BRAND.cardBorder }]}>
             <ScrollView
@@ -839,6 +946,66 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 13,
     color: BRAND.textSecondary,
+  },
+  // Drawer selector sections (role + season)
+  drawerSelectorSection: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: BRAND.cardBorder,
+  },
+  drawerSelectorTitle: {
+    fontFamily: FONTS.bodyBold,
+    fontSize: 10,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+    color: BRAND.textTertiary,
+    marginBottom: 8,
+  },
+  rolePillRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  drawerRolePill: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+  },
+  drawerRolePillText: {
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 12,
+  },
+  drawerSeasonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderRadius: 8,
+    marginBottom: 2,
+  },
+  drawerSeasonDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 10,
+  },
+  drawerSeasonName: {
+    flex: 1,
+    fontFamily: FONTS.bodyMedium,
+    fontSize: 14,
+    color: BRAND.textSecondary,
+  },
+  drawerSeasonBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  drawerSeasonBadgeText: {
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 10,
+    letterSpacing: 0.3,
   },
   // Menu sections
   menuBody: {
