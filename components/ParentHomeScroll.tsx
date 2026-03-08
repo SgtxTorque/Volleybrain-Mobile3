@@ -64,6 +64,7 @@ import FamilyPanel from './FamilyPanel';
 import RegistrationCard from './parent-scroll/RegistrationCard';
 import RegistrationStatusCard from './parent-scroll/RegistrationStatusCard';
 import IncompleteProfileCard from './parent-scroll/IncompleteProfileCard';
+import TrophyCaseWidget from './TrophyCaseWidget';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
@@ -576,8 +577,15 @@ export default function ParentHomeScroll() {
         {/* ─── SEASON SCOREBOARD (flat) ────────────────────── */}
         <SeasonSnapshot record={data.seasonRecord} />
 
-        {/* ─── RECENT BADGES ─────────────────────────────────── */}
+        {/* ─── RECENT BADGES (child's badges) ──────────────── */}
         <RecentBadges playerIds={data.children.map((c) => c.id)} childPlayerId={data.children[0]?.id} />
+
+        {/* ─── YOUR ACHIEVEMENTS (parent's own badges) ─────── */}
+        {profile?.id && (
+          <View style={{ marginHorizontal: 16, marginBottom: 16 }}>
+            <TrophyCaseWidget userId={profile.id} userRole="parent" />
+          </View>
+        )}
 
         {/* ─── UPCOMING SEASON REGISTRATION (below current content) ─── */}
         <RegistrationCard

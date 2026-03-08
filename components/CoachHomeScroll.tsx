@@ -59,6 +59,7 @@ import SeasonSetupCard from './coach-scroll/SeasonSetupCard';
 import GiveShoutoutModal from './GiveShoutoutModal';
 import TeamPulse from './TeamPulse';
 import ChallengeQuickCard from './coach-scroll/ChallengeQuickCard';
+import TrophyCaseWidget from './TrophyCaseWidget';
 
 // ─── Welcome briefing logic ─────────────────────────────────────
 
@@ -570,6 +571,13 @@ export default function CoachHomeScroll() {
         <View style={{ marginBottom: 20 }}>
           <TeamPulse teamId={data.selectedTeamId} variant="light" limit={4} />
         </View>
+
+        {/* ─── 11c. TROPHY CASE (Tier 2 — badges + XP) ── ↕ 20px ── */}
+        {profile?.id && (
+          <View style={{ marginBottom: 20 }}>
+            <TrophyCaseWidget userId={profile.id} userRole="coach" />
+          </View>
+        )}
 
         {/* ─── 12. SEASON SETUP (conditional — early season only) ── ↕ 24px ── */}
         <View style={{ marginBottom: 24 }}>

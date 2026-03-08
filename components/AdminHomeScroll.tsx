@@ -44,6 +44,7 @@ import SmartQueueCard from './admin-scroll/SmartQueueCard';
 import TeamHealthTiles from './admin-scroll/TeamHealthTiles';
 import PaymentSnapshot from './admin-scroll/PaymentSnapshot';
 import QuickActionsGrid from './admin-scroll/QuickActionsGrid';
+import TrophyCaseWidget from './TrophyCaseWidget';
 import CoachSection from './admin-scroll/CoachSection';
 import UpcomingEvents from './admin-scroll/UpcomingEvents';
 import ClosingMotivation from './admin-scroll/ClosingMotivation';
@@ -51,7 +52,7 @@ import ClosingMotivation from './admin-scroll/ClosingMotivation';
 export default function AdminHomeScroll() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { organization } = useAuth();
+  const { organization, profile } = useAuth();
   const { scrollY, scrollHandler } = useScrollAnimations();
   const data = useAdminHomeData();
   const { isTabletAny, contentMaxWidth, contentPadding } = useResponsive();
@@ -263,6 +264,13 @@ export default function AdminHomeScroll() {
         {/* ─── 7. COACHES ────────────────────────────────── */}
         {data.coaches.length > 0 && (
           <CoachSection coaches={data.coaches} />
+        )}
+
+        {/* ─── 7b. TROPHY CASE ─────────────────────────── */}
+        {profile?.id && (
+          <View style={{ marginHorizontal: 16, marginBottom: 16 }}>
+            <TrophyCaseWidget userId={profile.id} userRole="admin" />
+          </View>
         )}
 
         {/* ─── 8. UPCOMING EVENTS ────────────────────────── */}
