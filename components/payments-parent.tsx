@@ -256,10 +256,14 @@ export default function ParentPaymentsScreen({ hideHeader = false }: Props) {
         .select('id, name, sport_id')
         .in('id', seasonIds);
 
-      // Fetch sports
-      const { data: sports } = await supabase
-        .from('sports')
-        .select('id, name, icon, color_primary');
+      // Fetch sports (only the sport IDs referenced by parent's seasons)
+      const sportIds = [...new Set((seasons || []).map(s => s.sport_id).filter(Boolean))];
+      const { data: sports } = sportIds.length > 0
+        ? await supabase
+            .from('sports')
+            .select('id, name, icon, color_primary')
+            .in('id', sportIds)
+        : { data: [] as any[] };
 
       const sportsMap = new Map((sports || []).map(sp => [sp.id, sp]));
       const seasonsMap = new Map((seasons || []).map(sn => [sn.id, sn]));
@@ -342,7 +346,7 @@ export default function ParentPaymentsScreen({ hideHeader = false }: Props) {
       const { data: settingsData } = await supabase
         .from('payment_settings')
         .select('*')
-        .single();
+        .maybeSingle();
 
       const mergedSettings: PaymentSettings = {
         cashapp_handle: settingsData?.cashapp_handle || (organization as any)?.payment_cashapp || null,

@@ -275,20 +275,35 @@ export default function ParentChatListScreen() {
     async (user: User) => {
       if (!profile || !workingSeason) return;
 
-      // Check if DM already exists
-      const { data: existingDMs } = await supabase
-        .from('chat_channels')
-        .select('id, channel_members!inner (user_id)')
-        .eq('channel_type', 'dm')
-        .eq('season_id', workingSeason.id);
+      // Check if DM already exists (scope to current user's channels via RLS)
+      const { data: myDMs } = await supabase
+        .from('channel_members')
+        .select('channel_id')
+        .eq('user_id', profile.id)
+        .is('left_at', null);
 
       let existingDM = null;
-      if (existingDMs) {
-        for (const dm of existingDMs) {
-          const members = (dm.channel_members as any[]).map((m: any) => m.user_id);
-          if (members.includes(profile.id) && members.includes(user.id) && members.length === 2) {
-            existingDM = dm;
-            break;
+      if (myDMs && myDMs.length > 0) {
+        const myChannelIds = myDMs.map(m => m.channel_id);
+        const { data: dmChannels } = await supabase
+          .from('chat_channels')
+          .select('id')
+          .in('id', myChannelIds)
+          .eq('channel_type', 'dm')
+          .eq('season_id', workingSeason.id);
+
+        if (dmChannels) {
+          for (const dm of dmChannels) {
+            const { count } = await supabase
+              .from('channel_members')
+              .select('*', { count: 'exact', head: true })
+              .eq('channel_id', dm.id)
+              .eq('user_id', user.id)
+              .is('left_at', null);
+            if (count && count > 0) {
+              existingDM = dm;
+              break;
+            }
           }
         }
       }
