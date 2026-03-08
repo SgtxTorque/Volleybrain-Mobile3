@@ -65,6 +65,9 @@ import RegistrationCard from './parent-scroll/RegistrationCard';
 import RegistrationStatusCard from './parent-scroll/RegistrationStatusCard';
 import IncompleteProfileCard from './parent-scroll/IncompleteProfileCard';
 import TrophyCaseWidget from './TrophyCaseWidget';
+import AchievementCelebrationModal from './AchievementCelebrationModal';
+import { getUnseenRoleAchievements, markAchievementsSeen } from '@/lib/achievement-engine';
+import type { UnseenAchievement } from '@/lib/achievement-types';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
@@ -196,6 +199,19 @@ export default function ParentHomeScroll() {
       AsyncStorage.setItem(key, String(data.childXp!.level));
     });
   }, [data.loading, data.childXp?.level, data.children]);
+
+  // Unseen achievement celebration (parent's own badges)
+  const [unseenBadges, setUnseenBadges] = useState<UnseenAchievement[]>([]);
+  const [showBadgeCelebration, setShowBadgeCelebration] = useState(false);
+  useEffect(() => {
+    if (!profile?.id) return;
+    getUnseenRoleAchievements(profile.id).then((unseen) => {
+      if (unseen.length > 0) {
+        setUnseenBadges(unseen);
+        setShowBadgeCelebration(true);
+      }
+    }).catch(() => {});
+  }, [profile?.id]);
 
   // Signal to tab bar that parent scroll is active
   useEffect(() => {
@@ -637,6 +653,34 @@ export default function ParentHomeScroll() {
         totalXp={levelUpXp}
         onDismiss={() => setShowLevelUp(false)}
       />
+
+      {/* ─── ACHIEVEMENT CELEBRATION (parent badges) ─────────────── */}
+      {showBadgeCelebration && unseenBadges.length > 0 && (
+        <AchievementCelebrationModal
+          unseen={unseenBadges}
+          onDismiss={() => {
+            setShowBadgeCelebration(false);
+            setUnseenBadges([]);
+            if (profile?.id) markAchievementsSeen(profile.id).catch(() => {});
+          }}
+          onViewAllTrophies={() => {
+            setShowBadgeCelebration(false);
+            setUnseenBadges([]);
+            if (profile?.id) markAchievementsSeen(profile.id).catch(() => {});
+            router.push('/achievements' as any);
+          }}
+          themeColors={{
+            bg: '#0A0F1A',
+            card: '#111827',
+            cardAlt: '#1A2235',
+            border: 'rgba(255,255,255,0.08)',
+            text: '#FFFFFF',
+            textSecondary: '#CBD5E1',
+            textMuted: '#64748B',
+            gold: '#FFD700',
+          }}
+        />
+      )}
 
       {/* ─── FAMILY PANEL (right-side drawer) ──────────────────── */}
       {(data.isMultiChild || data.isMultiSport) && (

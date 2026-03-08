@@ -3,7 +3,7 @@
  * Smart Queue design: see what's urgent, act on it, watch the counter drop.
  * Light theme, three-tier visual system.
  */
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -45,6 +45,9 @@ import TeamHealthTiles from './admin-scroll/TeamHealthTiles';
 import PaymentSnapshot from './admin-scroll/PaymentSnapshot';
 import QuickActionsGrid from './admin-scroll/QuickActionsGrid';
 import TrophyCaseWidget from './TrophyCaseWidget';
+import AchievementCelebrationModal from './AchievementCelebrationModal';
+import { getUnseenRoleAchievements, markAchievementsSeen } from '@/lib/achievement-engine';
+import type { UnseenAchievement } from '@/lib/achievement-types';
 import CoachSection from './admin-scroll/CoachSection';
 import UpcomingEvents from './admin-scroll/UpcomingEvents';
 import ClosingMotivation from './admin-scroll/ClosingMotivation';
@@ -68,6 +71,19 @@ export default function AdminHomeScroll() {
     }
     return show;
   });
+
+  // Unseen achievement celebration
+  const [unseenBadges, setUnseenBadges] = useState<UnseenAchievement[]>([]);
+  const [showCelebration, setShowCelebration] = useState(false);
+  useEffect(() => {
+    if (!profile?.id) return;
+    getUnseenRoleAchievements(profile.id).then((unseen) => {
+      if (unseen.length > 0) {
+        setUnseenBadges(unseen);
+        setShowCelebration(true);
+      }
+    }).catch(() => {});
+  }, [profile?.id]);
 
   const onRefresh = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -284,6 +300,34 @@ export default function AdminHomeScroll() {
           queueTotal={data.queueItems.length}
         />
       </Animated.ScrollView>
+
+      {/* ─── ACHIEVEMENT CELEBRATION ──────────────────────────── */}
+      {showCelebration && unseenBadges.length > 0 && (
+        <AchievementCelebrationModal
+          unseen={unseenBadges}
+          onDismiss={() => {
+            setShowCelebration(false);
+            setUnseenBadges([]);
+            if (profile?.id) markAchievementsSeen(profile.id).catch(() => {});
+          }}
+          onViewAllTrophies={() => {
+            setShowCelebration(false);
+            setUnseenBadges([]);
+            if (profile?.id) markAchievementsSeen(profile.id).catch(() => {});
+            router.push('/achievements' as any);
+          }}
+          themeColors={{
+            bg: '#0A0F1A',
+            card: '#111827',
+            cardAlt: '#1A2235',
+            border: 'rgba(255,255,255,0.08)',
+            text: '#FFFFFF',
+            textSecondary: '#CBD5E1',
+            textMuted: '#64748B',
+            gold: '#FFD700',
+          }}
+        />
+      )}
     </View>
   );
 }
