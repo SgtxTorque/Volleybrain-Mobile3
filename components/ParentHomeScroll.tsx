@@ -520,9 +520,19 @@ export default function ParentHomeScroll() {
         {/* ─── MY ATHLETES SECTION ────────────────────────────── */}
         {data.allChildren.length > 0 && (
           <View style={styles.athleteSection}>
-            <Text style={styles.sectionHeader}>
-              {data.allChildren.length === 1 ? 'MY ATHLETE' : 'MY ATHLETES'}
-            </Text>
+            <View style={styles.athleteSectionHeader}>
+              <Text style={styles.sectionHeader}>
+                {data.allChildren.length === 1 ? 'MY ATHLETE' : 'MY ATHLETES'}
+              </Text>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => setFamilyPanelOpen(true)}
+                style={styles.familyBtn}
+              >
+                <Ionicons name="people-outline" size={14} color={BRAND.skyBlue} />
+                <Text style={styles.familyBtnText}>Family View</Text>
+              </TouchableOpacity>
+            </View>
             {data.allChildren.map((child) => {
               const nextEvent = data.allUpcomingEvents.find(e => e.childId === child.playerId) || null;
               return (
@@ -685,19 +695,17 @@ export default function ParentHomeScroll() {
         />
       )}
 
-      {/* ─── FAMILY PANEL (right-side drawer) ──────────────────── */}
-      {(data.isMultiChild || data.isMultiSport) && (
-        <FamilyPanel
-          visible={familyPanelOpen}
-          onClose={() => setFamilyPanelOpen(false)}
-          allChildren={data.allChildren}
-          allEvents={data.allUpcomingEvents}
-          payment={data.paymentStatus}
-          onSelectContext={(ctx) => {
-            data.setSelectedContext(ctx);
-          }}
-        />
-      )}
+      {/* ─── FAMILY PANEL (right-side drawer — always available) ── */}
+      <FamilyPanel
+        visible={familyPanelOpen}
+        onClose={() => setFamilyPanelOpen(false)}
+        allChildren={data.allChildren}
+        allEvents={data.allUpcomingEvents}
+        payment={data.paymentStatus}
+        onSelectContext={(ctx) => {
+          data.setSelectedContext(ctx);
+        }}
+      />
     </View>
   );
 }
@@ -853,13 +861,28 @@ const styles = StyleSheet.create({
     marginHorizontal: SPACING.pagePadding,
     marginBottom: 12,
   },
+  athleteSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
   sectionHeader: {
     fontFamily: FONTS.bodyBold,
     fontSize: 11,
     letterSpacing: 1.2,
     color: BRAND.textMuted,
     textTransform: 'uppercase',
-    marginBottom: 10,
+  },
+  familyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  familyBtnText: {
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 12,
+    color: BRAND.skyBlue,
   },
 
   // End of scroll (contextual closing)

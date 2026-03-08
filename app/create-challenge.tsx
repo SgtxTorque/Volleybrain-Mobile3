@@ -115,12 +115,11 @@ export default function CreateChallengeScreen() {
     (async () => {
       setResolving(true);
 
-      // Try team_staff first (primary path)
+      // Try team_staff first (primary path — no is_active filter, matches useCoachHomeData)
       const { data: staffRow } = await supabase
         .from('team_staff')
         .select('team_id, teams(organization_id)')
         .eq('user_id', user.id)
-        .eq('is_active', true)
         .limit(1)
         .maybeSingle();
 

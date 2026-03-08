@@ -1225,7 +1225,7 @@ export type RoleAchievementWithStatus = AchievementFull & {
 
 export async function getRoleAchievements(
   userId: string,
-  userRole: 'coach' | 'parent' | 'admin',
+  userRole: 'coach' | 'parent' | 'admin' | 'player',
 ): Promise<RoleAchievementWithStatus[]> {
   try {
     const [{ data: achievements }, { data: earned }] = await Promise.all([

@@ -491,9 +491,19 @@ export default function CoachHomeScroll() {
         </View>
 
         {/* ─── 4. EVENT HERO CARD (Tier 1 — event days only) ── ↕ 20px ── */}
-        <Animated.View style={[{ marginBottom: 20 }, heroCardAnimStyle]}>
-          <GamePlanCard event={data.heroEvent} rsvpSummary={data.rsvpSummary} />
-        </Animated.View>
+        {data.heroEvent ? (
+          <Animated.View style={[{ marginBottom: 20 }, heroCardAnimStyle]}>
+            <GamePlanCard event={data.heroEvent} rsvpSummary={data.rsvpSummary} />
+          </Animated.View>
+        ) : (
+          <View style={styles.quietDayCard}>
+            <Text style={styles.quietDayIcon}>{'\u{1F3D0}'}</Text>
+            <Text style={styles.quietDayTitle}>No upcoming events</Text>
+            <Text style={styles.quietDaySubtext}>
+              Use the downtime to review stats, prep your roster, or issue a challenge.
+            </Text>
+          </View>
+        )}
 
         {/* ─── Scouting Context ── */}
         <View style={{ marginBottom: 12 }}>
@@ -869,5 +879,35 @@ const styles = StyleSheet.create({
     backgroundColor: `${BRAND.skyBlue}1A`,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+
+  // Quiet day placeholder (when no upcoming events)
+  quietDayCard: {
+    marginHorizontal: 16,
+    marginBottom: 20,
+    paddingVertical: 28,
+    paddingHorizontal: 24,
+    borderRadius: 16,
+    backgroundColor: BRAND.white,
+    borderWidth: 1,
+    borderColor: BRAND.border,
+    alignItems: 'center',
+  },
+  quietDayIcon: {
+    fontSize: 32,
+    marginBottom: 8,
+  },
+  quietDayTitle: {
+    fontFamily: FONTS.bodyBold,
+    fontSize: 16,
+    color: BRAND.textPrimary,
+    marginBottom: 4,
+  },
+  quietDaySubtext: {
+    fontFamily: FONTS.bodyMedium,
+    fontSize: 13,
+    color: BRAND.textMuted,
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });

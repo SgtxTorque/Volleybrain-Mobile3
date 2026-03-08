@@ -88,11 +88,13 @@ export default function QuickActions({ isEventDay, pendingStatsCount = 0, hasRos
 
 const styles = StyleSheet.create({
   panel: {
-    backgroundColor: BRAND.offWhite,
+    backgroundColor: BRAND.white,
     borderRadius: 16,
     marginHorizontal: 20,
     paddingVertical: 6,
     paddingHorizontal: 4,
+    borderWidth: 1,
+    borderColor: BRAND.border,
   },
   row: {
     flexDirection: 'row',

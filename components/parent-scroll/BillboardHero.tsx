@@ -168,7 +168,7 @@ function HeroCard({ event, onRsvp, isMultiChild }: { event: FamilyEvent; onRsvp:
 
 function EmptyHero() {
   return (
-    <View style={[styles.cardOuter]}>
+    <View style={{ marginHorizontal: SPACING.pagePadding }}>
       <View style={[styles.card, styles.emptyCard]}>
         <LinearGradient colors={[BRAND.navyDeep, BRAND.navy]} style={StyleSheet.absoluteFillObject} />
         <Image source={require('@/assets/images/mascot/SleepLynx.png')} style={styles.emptyMascot} resizeMode="contain" />
@@ -254,7 +254,6 @@ export default function BillboardHero({ events, onRsvp, isMultiChild }: Props) {
         data={events.slice(0, 6)}
         keyExtractor={(item) => item.eventId}
         horizontal
-        pagingEnabled
         showsHorizontalScrollIndicator={false}
         snapToInterval={CARD_WIDTH}
         decelerationRate="fast"

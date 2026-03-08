@@ -15,7 +15,7 @@ import { FONTS } from '@/theme/fonts';
 
 type Props = {
   userId: string;
-  userRole: 'coach' | 'parent' | 'admin';
+  userRole: 'coach' | 'parent' | 'admin' | 'player';
 };
 
 export default function TrophyCaseWidget({ userId, userRole }: Props) {

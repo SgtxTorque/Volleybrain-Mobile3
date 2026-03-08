@@ -261,53 +261,61 @@ export function useCoachHomeData() {
       setUpcomingEvents(formatted);
       setHeroEvent(formatted.length > 0 ? formatted[0] : null);
 
-      // Season record
-      const { data: gameResults } = await supabase
-        .from('schedule_events')
-        .select('game_result')
-        .eq('team_id', teamId)
-        .eq('event_type', 'game')
-        .not('game_result', 'is', null);
+      // Season record (isolated try/catch so failures don't cascade)
+      let pendingCount = 0;
+      try {
+        const { data: gameResults } = await supabase
+          .from('schedule_events')
+          .select('game_result')
+          .eq('team_id', teamId)
+          .eq('event_type', 'game')
+          .not('game_result', 'is', null);
 
-      if (gameResults && gameResults.length > 0) {
-        const w = gameResults.filter(g => g.game_result === 'win').length;
-        const l = gameResults.filter(g => g.game_result === 'loss').length;
-        setSeasonRecord({ wins: w, losses: l, games_played: gameResults.length });
-      } else {
-        setSeasonRecord(null);
-      }
+        if (gameResults && gameResults.length > 0) {
+          const w = gameResults.filter(g => g.game_result === 'win').length;
+          const l = gameResults.filter(g => g.game_result === 'loss').length;
+          setSeasonRecord({ wins: w, losses: l, games_played: gameResults.length });
+        } else {
+          setSeasonRecord(null);
+        }
+      } catch { setSeasonRecord(null); }
 
       // Last completed game (for Season Scoreboard context line)
-      const { data: lastGame } = await supabase
-        .from('schedule_events')
-        .select('game_result, opponent_name, our_score, opponent_score')
-        .eq('team_id', teamId)
-        .eq('event_type', 'game')
-        .eq('game_status', 'completed')
-        .not('game_result', 'is', null)
-        .order('event_date', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      try {
+        const { data: lastGame } = await supabase
+          .from('schedule_events')
+          .select('game_result, opponent_name, our_score, opponent_score')
+          .eq('team_id', teamId)
+          .eq('event_type', 'game')
+          .eq('game_status', 'completed')
+          .not('game_result', 'is', null)
+          .order('event_date', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-      if (lastGame && lastGame.opponent_name) {
-        const result = lastGame.game_result === 'win' ? 'Won' : lastGame.game_result === 'loss' ? 'Lost' : 'Tied';
-        const score = lastGame.our_score != null && lastGame.opponent_score != null
-          ? ` ${lastGame.our_score}-${lastGame.opponent_score}`
-          : '';
-        setLastGameLine(`Last game: ${result} vs ${lastGame.opponent_name}${score}`);
-      } else {
-        setLastGameLine(null);
-      }
+        if (lastGame && lastGame.opponent_name) {
+          const result = lastGame.game_result === 'win' ? 'Won' : lastGame.game_result === 'loss' ? 'Lost' : 'Tied';
+          const score = lastGame.our_score != null && lastGame.opponent_score != null
+            ? ` ${lastGame.our_score}-${lastGame.opponent_score}`
+            : '';
+          setLastGameLine(`Last game: ${result} vs ${lastGame.opponent_name}${score}`);
+        } else {
+          setLastGameLine(null);
+        }
+      } catch { setLastGameLine(null); }
 
       // Pending stats count
-      const { count: pendingCount } = await supabase
-        .from('schedule_events')
-        .select('*', { count: 'exact', head: true })
-        .eq('team_id', teamId)
-        .eq('event_type', 'game')
-        .eq('game_status', 'completed')
-        .eq('stats_entered', false);
-      setPendingStatsCount(pendingCount || 0);
+      try {
+        const { count } = await supabase
+          .from('schedule_events')
+          .select('*', { count: 'exact', head: true })
+          .eq('team_id', teamId)
+          .eq('event_type', 'game')
+          .eq('game_status', 'completed')
+          .eq('stats_entered', false);
+        pendingCount = count || 0;
+      } catch { /* keep 0 */ }
+      setPendingStatsCount(pendingCount);
 
       // RSVPs for next event
       if (formatted.length > 0) {
@@ -391,73 +399,76 @@ export function useCoachHomeData() {
       }
 
       // Attendance rate (last 3 events)
-      const { data: recentEvents } = await supabase
-        .from('schedule_events')
-        .select('id')
-        .eq('team_id', teamId)
-        .lt('event_date', today)
-        .order('event_date', { ascending: false })
-        .limit(3);
+      try {
+        const { data: recentEvents } = await supabase
+          .from('schedule_events')
+          .select('id')
+          .eq('team_id', teamId)
+          .lt('event_date', today)
+          .order('event_date', { ascending: false })
+          .limit(3);
 
-      if (recentEvents && recentEvents.length > 0) {
-        const recentIds = recentEvents.map(e => e.id);
-        const { data: rsvpData } = await supabase
-          .from('event_rsvps')
-          .select('event_id, status')
-          .in('event_id', recentIds);
+        if (recentEvents && recentEvents.length > 0) {
+          const recentIds = recentEvents.map(e => e.id);
+          const { data: rsvpData } = await supabase
+            .from('event_rsvps')
+            .select('event_id, status')
+            .in('event_id', recentIds);
 
-        if (rsvpData && rsvpData.length > 0) {
-          const attended = rsvpData.filter(r => r.status === 'yes' || r.status === 'confirmed' || r.status === 'present').length;
-          setAttendanceRate(Math.round((attended / rsvpData.length) * 100));
+          if (rsvpData && rsvpData.length > 0) {
+            const attended = rsvpData.filter(r => r.status === 'yes' || r.status === 'confirmed' || r.status === 'present').length;
+            setAttendanceRate(Math.round((attended / rsvpData.length) * 100));
+          } else {
+            setAttendanceRate(null);
+          }
         } else {
           setAttendanceRate(null);
         }
-      } else {
-        setAttendanceRate(null);
-      }
+      } catch { setAttendanceRate(null); }
 
       // Top performers
-      if (workingSeason?.id) {
-        const { data: rosterForStats } = await supabase
-          .from('team_players')
-          .select('player_id')
-          .eq('team_id', teamId);
+      try {
+        if (workingSeason?.id) {
+          const { data: rosterForStats } = await supabase
+            .from('team_players')
+            .select('player_id')
+            .eq('team_id', teamId);
 
-        const playerIds = (rosterForStats || []).map(r => r.player_id);
+          const playerIds = (rosterForStats || []).map(r => r.player_id);
 
-        if (playerIds.length > 0) {
-          const { data: stats } = await supabase
-            .from('player_season_stats')
-            .select('player_id, total_kills, total_aces, total_digs, total_assists, total_points, games_played')
-            .in('player_id', playerIds)
-            .eq('season_id', workingSeason.id)
-            .order('total_points', { ascending: false })
-            .limit(3);
+          if (playerIds.length > 0) {
+            const { data: stats } = await supabase
+              .from('player_season_stats')
+              .select('player_id, total_kills, total_aces, total_digs, total_assists, total_points, games_played')
+              .in('player_id', playerIds)
+              .eq('season_id', workingSeason.id)
+              .order('total_points', { ascending: false })
+              .limit(3);
 
-          if (stats && stats.length > 0) {
-            // Batch fetch player names
-            const statPlayerIds = stats.map(s => s.player_id);
-            const { data: playerNames } = await supabase
-              .from('players')
-              .select('id, first_name, last_name')
-              .in('id', statPlayerIds);
+            if (stats && stats.length > 0) {
+              const statPlayerIds = stats.map(s => s.player_id);
+              const { data: playerNames } = await supabase
+                .from('players')
+                .select('id, first_name, last_name')
+                .in('id', statPlayerIds);
 
-            const nameMap = new Map((playerNames || []).map(p => [p.id, `${p.first_name} ${p.last_name}`]));
+              const nameMap = new Map((playerNames || []).map(p => [p.id, `${p.first_name} ${p.last_name}`]));
 
-            setTopPerformers(stats.map(s => ({
-              player_id: s.player_id,
-              player_name: nameMap.get(s.player_id) || 'Unknown',
-              total_kills: s.total_kills || 0,
-              total_aces: s.total_aces || 0,
-              total_digs: s.total_digs || 0,
-              total_assists: s.total_assists || 0,
-              total_points: s.total_points || 0,
-            })));
-          } else {
-            setTopPerformers([]);
+              setTopPerformers(stats.map(s => ({
+                player_id: s.player_id,
+                player_name: nameMap.get(s.player_id) || 'Unknown',
+                total_kills: s.total_kills || 0,
+                total_aces: s.total_aces || 0,
+                total_digs: s.total_digs || 0,
+                total_assists: s.total_assists || 0,
+                total_points: s.total_points || 0,
+              })));
+            } else {
+              setTopPerformers([]);
+            }
           }
         }
-      }
+      } catch { setTopPerformers([]); }
 
       // Unread messages
       try {

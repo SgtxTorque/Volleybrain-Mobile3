@@ -338,21 +338,42 @@ export function useParentHomeData() {
       });
 
       const allTeamIds = [...new Set(allTeamIdsRaw)];
+
+      // Deduplicate familyChildren by name (same child may have multiple player records)
+      const nameMap = new Map<string, FamilyChild>();
+      familyChildren.forEach(child => {
+        const key = `${child.firstName.toLowerCase()}_${child.lastName.toLowerCase()}`;
+        const existing = nameMap.get(key);
+        if (existing) {
+          // Merge teams from duplicate player record, keeping unique team IDs
+          const existingTeamIds = new Set(existing.teams.map(t => t.teamId));
+          child.teams.forEach(t => {
+            if (!existingTeamIds.has(t.teamId)) {
+              existing.teams.push(t);
+            }
+          });
+        } else {
+          nameMap.set(key, { ...child, teams: [...child.teams] });
+        }
+      });
+      const mergedFamilyChildren = [...nameMap.values()];
+      // Keep ALL player IDs for queries (covers all duplicate records)
       const uniquePlayerIds = [...new Set(familyChildren.map(c => c.playerId))];
 
-      // Deduplicate legacyChildren by player ID (one entry per child, not per team)
-      const seenPlayerIds = new Set<string>();
+      // Deduplicate legacyChildren by player name (one entry per child, not per team)
+      const seenNames = new Set<string>();
       const dedupedLegacy = legacyChildren.filter(c => {
-        if (seenPlayerIds.has(c.id)) return false;
-        seenPlayerIds.add(c.id);
+        const key = `${c.first_name.toLowerCase()}_${c.last_name.toLowerCase()}`;
+        if (seenNames.has(key)) return false;
+        seenNames.add(key);
         return true;
       });
 
       // Multi-context flags
-      setIsMultiChild(uniquePlayerIds.length > 1);
+      setIsMultiChild(mergedFamilyChildren.length > 1);
       setIsMultiSport(sportNameSet.size > 1);
       setIsMultiOrg(orgIdSet.size > 1);
-      setAllChildren(familyChildren);
+      setAllChildren(mergedFamilyChildren);
       setChildren(dedupedLegacy);
 
       // ── Step 3: Upcoming events across ALL teams ──
@@ -396,9 +417,9 @@ export function useParentHomeData() {
           });
         }
 
-        // Build FamilyEvent list
+        // Build FamilyEvent list (use mergedFamilyChildren for deduped names)
         upcoming.forEach((evt) => {
-          const teamAff = familyChildren
+          const teamAff = mergedFamilyChildren
             .flatMap(c => c.teams.map(t => ({ child: c, team: t })))
             .find(ct => ct.team.teamId === evt.team_id);
 
@@ -522,7 +543,7 @@ export function useParentHomeData() {
             const rsvpSet = new Set((rsvps || []).map((r) => `${r.event_id}-${r.player_id}`));
 
             nextEvents.forEach((evt) => {
-              familyChildren.forEach((fc) => {
+              mergedFamilyChildren.forEach((fc) => {
                 const onTeam = fc.teams.some(t => t.teamId === evt.team_id);
                 if (!onTeam) return;
                 if (rsvpSet.has(`${evt.id}-${fc.playerId}`)) return;
@@ -560,14 +581,14 @@ export function useParentHomeData() {
       if (uniquePlayerIds.length > 0) {
         try {
           const allSeasonIds = [...new Set(
-            familyChildren.flatMap(c => c.teams.map(t => t.seasonId)).filter(Boolean),
+            mergedFamilyChildren.flatMap(c => c.teams.map(t => t.seasonId)).filter(Boolean),
           )];
           const { data: seasonFees } = allSeasonIds.length > 0
             ? await supabase.from('season_fees').select('season_id, amount').in('season_id', allSeasonIds)
             : { data: [] as any[] };
 
           let totalOwed = 0;
-          familyChildren.forEach((child) => {
+          mergedFamilyChildren.forEach((child) => {
             const childSeasonIds = [...new Set(child.teams.map(t => t.seasonId))];
             childSeasonIds.forEach(sid => {
               const fees = (seasonFees || []).filter((f: any) => f.season_id === sid);
@@ -624,7 +645,7 @@ export function useParentHomeData() {
       }
 
       // 4c. Missing player photo
-      familyChildren.forEach((fc) => {
+      mergedFamilyChildren.forEach((fc) => {
         if (!fc.photoUrl && fc.teams.length > 0) {
           attention++;
           famItems.push({
@@ -651,7 +672,7 @@ export function useParentHomeData() {
             .eq('status', 'pending');
 
           (pendingWaivers || []).forEach((w: any) => {
-            const fc = familyChildren.find(c => c.playerId === w.player_id);
+            const fc = mergedFamilyChildren.find(c => c.playerId === w.player_id);
             if (!fc) return;
             attention++;
             famItems.push({
@@ -687,7 +708,7 @@ export function useParentHomeData() {
           (recentEvals || []).forEach((ev: any) => {
             if (seenPlayers.has(ev.player_id)) return;
             seenPlayers.add(ev.player_id);
-            const fc = familyChildren.find(c => c.playerId === ev.player_id);
+            const fc = mergedFamilyChildren.find(c => c.playerId === ev.player_id);
             if (!fc) return;
             attention++;
             famItems.push({
@@ -717,8 +738,8 @@ export function useParentHomeData() {
       setFamilyAttentionItems(famItems);
 
       // ── Step 5: Child stats + XP ──
-      if (familyChildren.length > 0 && workingSeason?.id) {
-        const firstChild = familyChildren[0];
+      if (mergedFamilyChildren.length > 0 && workingSeason?.id) {
+        const firstChild = mergedFamilyChildren[0];
         try {
           const { data: statsData } = await supabase
             .from('player_season_stats')
@@ -743,9 +764,9 @@ export function useParentHomeData() {
         try {
           const { fetchPlayerXP } = await import('@/lib/achievement-engine');
           const xpResults = await Promise.all(
-            familyChildren.map(fc => fetchPlayerXP(fc.playerId).catch(() => ({ totalXp: 0, level: 0, progress: 0 }))),
+            mergedFamilyChildren.map(fc => fetchPlayerXP(fc.playerId).catch(() => ({ totalXp: 0, level: 0, progress: 0 }))),
           );
-          const updatedChildren = familyChildren.map((fc, i) => ({
+          const updatedChildren = mergedFamilyChildren.map((fc, i) => ({
             ...fc,
             level: xpResults[i].level,
             xp: xpResults[i].totalXp,
