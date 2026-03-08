@@ -42,7 +42,6 @@ import { useResponsive } from '@/lib/responsive';
 
 import NoOrgState from './empty-states/NoOrgState';
 import NoTeamState from './empty-states/NoTeamState';
-import EmptySeasonState from './empty-states/EmptySeasonState';
 
 import RoleSelector from './RoleSelector';
 import PrepChecklist from './coach-scroll/PrepChecklist';
@@ -311,21 +310,14 @@ export default function CoachHomeScroll() {
     return { opacity, transform: [{ translateX }] };
   });
 
-  // ─── Loading state ──
-  if (data.loading) {
-    return (
-      <View style={[styles.root, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={BRAND.skyBlue} />
-      </View>
-    );
-  }
+  // ─── Empty state detection (rendered INSIDE scroll, never early return) ──
+  const emptyState: 'loading' | 'no-org' | 'no-teams' | null =
+    data.loading ? 'loading'
+    : !organization ? 'no-org'
+    : (!data.teams || data.teams.length === 0) ? 'no-teams'
+    : null;
 
-  // Smart empty states
-  if (!organization) return <NoOrgState />;
-  if (!data.teams || data.teams.length === 0) return <NoTeamState role="coach" />;
-  if (!data.upcomingEvents || data.upcomingEvents.length === 0) return <EmptySeasonState role="coach" />;
-
-  const selectedTeam = data.teams.find(t => t.id === data.selectedTeamId);
+  const selectedTeam = data.teams?.find(t => t.id === data.selectedTeamId);
   const teamName = selectedTeam?.name ?? '';
 
   return (
@@ -383,7 +375,7 @@ export default function CoachHomeScroll() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.teamPillsScroll}
         >
-          {data.teams.map(team => {
+          {(data.teams || []).map(team => {
             const isActive = team.id === data.selectedTeamId;
             return (
               <TouchableOpacity
@@ -418,6 +410,16 @@ export default function CoachHomeScroll() {
           />
         }
       >
+        {emptyState === 'loading' ? (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 200 }}>
+            <ActivityIndicator size="large" color={BRAND.skyBlue} />
+          </View>
+        ) : emptyState === 'no-org' ? (
+          <View style={{ paddingTop: 120 }}><NoOrgState /></View>
+        ) : emptyState === 'no-teams' ? (
+          <View style={{ paddingTop: 120 }}><NoTeamState role="coach" /></View>
+        ) : (
+        <>
         {/* ─── 1. WELCOME SECTION (Tier 3 ambient) ──────────── */}
         <Animated.View
           style={[styles.welcomeSection, { paddingTop: insets.top + 16 }, welcomeAnimStyle]}
@@ -462,7 +464,7 @@ export default function CoachHomeScroll() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.teamPillsScroll}
           >
-            {data.teams.map(team => {
+            {(data.teams || []).map(team => {
               const isActive = team.id === data.selectedTeamId;
               return (
                 <TouchableOpacity
@@ -611,6 +613,8 @@ export default function CoachHomeScroll() {
             {buildClosingMessage(data.heroEvent, data.seasonRecord)}
           </Text>
         </View>
+        </>
+        )}
       </Animated.ScrollView>
 
       {/* ─── SHOUTOUT MODAL ──────────────────────────────────────── */}
