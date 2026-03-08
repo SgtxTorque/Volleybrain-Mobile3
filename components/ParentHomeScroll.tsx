@@ -317,12 +317,11 @@ export default function ParentHomeScroll() {
 
   const currentMessage = messages[activeMessageIndex];
 
-  // Smart empty states (only check after loading is done)
-  // Note: no upcomingEvents check — BillboardHero handles the 0-events case
-  if (!data.loading) {
-    if (!organization) return <NoOrgState />;
-    if (!data.children || data.children.length === 0) return <NoTeamState role="parent" />;
-  }
+  // Empty state detection (rendered INSIDE scroll, never early return)
+  const emptyState: 'no-org' | 'no-children' | null =
+    !data.loading && !organization ? 'no-org'
+    : !data.loading && (!data.children || data.children.length === 0) ? 'no-children'
+    : null;
 
   return (
     <View style={[styles.root, { backgroundColor: BRAND.offWhite }]}>
@@ -400,6 +399,10 @@ export default function ParentHomeScroll() {
           <View style={{ justifyContent: 'center', alignItems: 'center', height: SCREEN_HEIGHT - 150 }}>
             <ActivityIndicator size="large" color={BRAND.skyBlue} />
           </View>
+        ) : emptyState === 'no-org' ? (
+          <View style={{ paddingTop: 120 }}><NoOrgState /></View>
+        ) : emptyState === 'no-children' ? (
+          <View style={{ paddingTop: 120 }}><NoTeamState role="parent" /></View>
         ) : (
         <>
         {/* ─── WELCOME SECTION ────────────────────────────────── */}

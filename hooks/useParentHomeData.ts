@@ -340,12 +340,20 @@ export function useParentHomeData() {
       const allTeamIds = [...new Set(allTeamIdsRaw)];
       const uniquePlayerIds = [...new Set(familyChildren.map(c => c.playerId))];
 
+      // Deduplicate legacyChildren by player ID (one entry per child, not per team)
+      const seenPlayerIds = new Set<string>();
+      const dedupedLegacy = legacyChildren.filter(c => {
+        if (seenPlayerIds.has(c.id)) return false;
+        seenPlayerIds.add(c.id);
+        return true;
+      });
+
       // Multi-context flags
       setIsMultiChild(uniquePlayerIds.length > 1);
       setIsMultiSport(sportNameSet.size > 1);
       setIsMultiOrg(orgIdSet.size > 1);
       setAllChildren(familyChildren);
-      setChildren(legacyChildren);
+      setChildren(dedupedLegacy);
 
       // ── Step 3: Upcoming events across ALL teams ──
       const familyEvents: FamilyEvent[] = [];

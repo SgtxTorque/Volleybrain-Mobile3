@@ -240,7 +240,11 @@ export default function BillboardHero({ events, onRsvp, isMultiChild }: Props) {
   }
 
   if (events.length === 1) {
-    return <HeroCard event={events[0]} onRsvp={handleRsvp} isMultiChild={isMultiChild} />;
+    return (
+      <View style={{ marginHorizontal: SPACING.pagePadding }}>
+        <HeroCard event={events[0]} onRsvp={handleRsvp} isMultiChild={isMultiChild} />
+      </View>
+    );
   }
 
   return (
@@ -252,15 +256,15 @@ export default function BillboardHero({ events, onRsvp, isMultiChild }: Props) {
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
-        snapToInterval={CARD_WIDTH + SPACING.pagePadding}
+        snapToInterval={CARD_WIDTH}
         decelerationRate="fast"
         contentContainerStyle={{ paddingHorizontal: SPACING.pagePadding }}
         onScrollBeginDrag={handleScrollBeginDrag}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
         getItemLayout={(_, index) => ({
-          length: CARD_WIDTH + SPACING.pagePadding,
-          offset: (CARD_WIDTH + SPACING.pagePadding) * index,
+          length: CARD_WIDTH,
+          offset: CARD_WIDTH * index,
           index,
         })}
         renderItem={({ item }) => (
@@ -282,10 +286,9 @@ export default function BillboardHero({ events, onRsvp, isMultiChild }: Props) {
 const styles = StyleSheet.create({
   cardOuter: {
     width: CARD_WIDTH,
-    paddingRight: SPACING.pagePadding,
   },
   card: {
-    width: CARD_WIDTH - SPACING.pagePadding,
+    width: CARD_WIDTH,
     height: CARD_HEIGHT,
     borderRadius: SPACING.heroCardRadius,
     overflow: 'hidden',
