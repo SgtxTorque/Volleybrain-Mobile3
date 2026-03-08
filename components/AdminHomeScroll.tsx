@@ -35,7 +35,6 @@ import { useResponsive } from '@/lib/responsive';
 
 import NoOrgState from './empty-states/NoOrgState';
 import NoTeamState from './empty-states/NoTeamState';
-import EmptySeasonState from './empty-states/EmptySeasonState';
 
 import RoleSelector from './RoleSelector';
 import SeasonSelector from './SeasonSelector';
@@ -98,23 +97,14 @@ export default function AdminHomeScroll() {
     }],
   }));
 
-  if (data.loading) {
-    return (
-      <View style={[styles.root, { paddingTop: insets.top }]}>
-        <StatusBar barStyle="dark-content" />
-        <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={BRAND.skyBlue} />
-        </View>
-      </View>
-    );
-  }
-
-  // Smart empty states
-  if (!organization) return <NoOrgState />;
-  if (!data.teams || data.teams.length === 0) return <NoTeamState role="admin" />;
-  if (!data.upcomingEvents || data.upcomingEvents.length === 0) return <EmptySeasonState role="admin" />;
-
   const showPaymentCard = data.expected > 0;
+
+  // Determine which empty state to show INSIDE the scroll (never early return)
+  const emptyState: 'loading' | 'no-org' | 'no-teams' | null =
+    data.loading ? 'loading'
+    : !organization ? 'no-org'
+    : (!data.teams || data.teams.length === 0) ? 'no-teams'
+    : null;
 
   return (
     <View style={styles.root}>
@@ -177,6 +167,17 @@ export default function AdminHomeScroll() {
           </View>
         </View>
 
+        {/* ─── EMPTY STATES (inside scroll, never early return) ── */}
+        {emptyState === 'loading' ? (
+          <View style={styles.loadingWrap}>
+            <ActivityIndicator size="large" color={BRAND.skyBlue} />
+          </View>
+        ) : emptyState === 'no-org' ? (
+          <NoOrgState />
+        ) : emptyState === 'no-teams' ? (
+          <NoTeamState role="admin" />
+        ) : (
+        <>
         {/* ─── 1. WELCOME BRIEFING ─────────────────────────── */}
         <WelcomeBriefing
           greeting={data.greeting}
@@ -299,6 +300,8 @@ export default function AdminHomeScroll() {
           playerCount={data.totalPlayers}
           queueTotal={data.queueItems.length}
         />
+        </>
+        )}
       </Animated.ScrollView>
 
       {/* ─── ACHIEVEMENT CELEBRATION ──────────────────────────── */}
