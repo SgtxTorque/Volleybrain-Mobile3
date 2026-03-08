@@ -6,8 +6,8 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import React, { useEffect, useState } from 'react';
-import { Alert, LayoutAnimation, Platform, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, UIManager, useWindowDimensions, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, LayoutAnimation, Platform, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, UIManager, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   interpolate,
@@ -21,6 +21,8 @@ import type { UserRole } from '@/lib/permissions';
 import { useDrawerBadges } from '@/hooks/useDrawerBadges';
 import type { DrawerBadges } from '@/hooks/useDrawerBadges';
 import { useSeason } from '@/lib/season';
+import { useSport } from '@/lib/sport';
+import { supabase } from '@/lib/supabase';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 
@@ -280,64 +282,179 @@ export default function GestureDrawer() {
     setTimeout(() => router.push('/profile'), 150);
   };
 
-  // ====== SHORTCUT ROW ======
-  type Shortcut = {
-    key: string;
-    icon: keyof typeof Ionicons.glyphMap;
+  // ====== CONTEXTUAL SELECTOR DATA ======
+  const { sports, activeSport, setActiveSport } = useSport();
+
+  type ContextItem = {
+    id: string;
     label: string;
-    route: string;
+    imageUrl: string | null;
+    initials: string;
+    color: string;
+    emoji?: string;
   };
 
-  const shortcuts: Shortcut[] = (() => {
-    const items: Shortcut[] = [
-      { key: 'home', icon: 'home', label: 'Home', route: '/(tabs)' },
-      { key: 'schedule', icon: 'calendar', label: 'Schedule', route: '/(tabs)/schedule' },
-      { key: 'chats', icon: 'chatbubble-ellipses', label: 'Chats', route: '/(tabs)/chats' },
-      { key: 'blasts', icon: 'megaphone', label: 'Blasts', route: '/(tabs)/messages' },
-    ];
+  const [contextItems, setContextItems] = useState<ContextItem[]>([]);
+  const [activeContextId, setActiveContextId] = useState<string | null>(null);
+  const [contextLoading, setContextLoading] = useState(false);
+
+  // Fetch contextual items when drawer opens based on role
+  const fetchContextItems = useCallback(async () => {
+    if (!user?.id) return;
+    setContextLoading(true);
+
+    try {
+      if (isParent) {
+        // Fetch children via player_guardians + players.parent_account_id
+        const parentIds = new Set<string>();
+
+        const { data: guardianLinks } = await supabase
+          .from('player_guardians')
+          .select('player_id')
+          .eq('guardian_id', user.id);
+        (guardianLinks || []).forEach(g => parentIds.add(g.player_id));
+
+        const { data: directKids } = await supabase
+          .from('players')
+          .select('id')
+          .eq('parent_account_id', user.id);
+        (directKids || []).forEach(k => parentIds.add(k.id));
+
+        if (parentIds.size > 0) {
+          const { data: players } = await supabase
+            .from('players')
+            .select('id, first_name, last_name, photo_url')
+            .in('id', Array.from(parentIds));
+
+          const items: ContextItem[] = (players || []).map(p => ({
+            id: p.id,
+            label: p.first_name || 'Player',
+            imageUrl: p.photo_url || null,
+            initials: ((p.first_name?.[0] || '') + (p.last_name?.[0] || '')).toUpperCase(),
+            color: BRAND.skyBlue,
+          }));
+          setContextItems(items);
+          if (items.length > 0 && !activeContextId) setActiveContextId(items[0].id);
+        }
+      } else if (isCoach) {
+        // Fetch teams via team_staff
+        const { data: staffTeams } = await supabase
+          .from('team_staff')
+          .select('team_id, teams ( id, name, color, logo_url )')
+          .eq('user_id', user.id)
+          .eq('is_active', true);
+
+        const items: ContextItem[] = (staffTeams || [])
+          .filter((st: any) => st.teams)
+          .map((st: any) => {
+            const t = st.teams;
+            return {
+              id: t.id,
+              label: t.name || 'Team',
+              imageUrl: t.logo_url || null,
+              initials: (t.name || 'T').substring(0, 2).toUpperCase(),
+              color: t.color || BRAND.teal,
+              emoji: '🏐',
+            };
+          });
+        setContextItems(items);
+        if (items.length > 0 && !activeContextId) setActiveContextId(items[0].id);
+      } else if (isPlayer) {
+        // Fetch teams via team_players
+        // First find the player record for this user
+        const { data: playerRecord } = await supabase
+          .from('players')
+          .select('id')
+          .eq('profile_id', user.id)
+          .limit(1)
+          .maybeSingle();
+
+        if (playerRecord) {
+          const { data: teamData } = await supabase
+            .from('team_players')
+            .select('team_id, teams ( id, name, color, logo_url )')
+            .eq('player_id', playerRecord.id);
+
+          const items: ContextItem[] = (teamData || [])
+            .filter((tp: any) => tp.teams)
+            .map((tp: any) => {
+              const t = tp.teams;
+              return {
+                id: t.id,
+                label: t.name || 'Team',
+                imageUrl: t.logo_url || null,
+                initials: (t.name || 'T').substring(0, 2).toUpperCase(),
+                color: t.color || BRAND.goldBrand,
+                emoji: '🏐',
+              };
+            });
+          setContextItems(items);
+          if (items.length > 0 && !activeContextId) setActiveContextId(items[0].id);
+        }
+      } else if (isAdmin) {
+        // Use sports from useSport() hook — build items from it
+        const allItem: ContextItem = {
+          id: 'all',
+          label: 'All',
+          imageUrl: null,
+          initials: '',
+          color: BRAND.teal,
+          emoji: '🏟️',
+        };
+        const sportItems: ContextItem[] = sports.map(s => ({
+          id: s.id,
+          label: s.name,
+          imageUrl: null,
+          initials: '',
+          color: s.color_primary || BRAND.teal,
+          emoji: s.icon || '🏐',
+        }));
+        const items = [allItem, ...sportItems];
+        setContextItems(items);
+        if (!activeContextId) setActiveContextId('all');
+      }
+    } catch (err) {
+      // Silently fail — contextual selector is non-critical
+    } finally {
+      setContextLoading(false);
+    }
+  }, [user?.id, isParent, isCoach, isPlayer, isAdmin, sports]);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchContextItems();
+    }
+  }, [isOpen, fetchContextItems]);
+
+  // Sync admin sport selection with activeSport context
+  useEffect(() => {
+    if (isAdmin && activeSport) {
+      setActiveContextId(activeSport.id);
+    } else if (isAdmin && !activeSport) {
+      setActiveContextId('all');
+    }
+  }, [isAdmin, activeSport]);
+
+  const handleContextSelect = (item: ContextItem) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setActiveContextId(item.id);
 
     if (isAdmin) {
-      items.push(
-        { key: 'registration', icon: 'person-add', label: 'Registration', route: '/registration-hub' },
-        { key: 'reports', icon: 'bar-chart', label: 'Reports', route: '/(tabs)/reports-tab' },
-      );
+      // Switch sport filter
+      if (item.id === 'all') {
+        // Clear sport filter — set to first sport or null
+        // The useSport hook doesn't have a "clear" — just keep current
+      } else {
+        const sport = sports.find(s => s.id === item.id);
+        if (sport) setActiveSport(sport);
+      }
     }
-    if (isCoach) {
-      items.push(
-        { key: 'gameprep', icon: 'clipboard', label: 'Game Prep', route: '/game-prep' },
-        { key: 'lineup', icon: 'list', label: 'Lineup', route: '/lineup-builder' },
-      );
-    }
-    if (isParent) {
-      items.push(
-        { key: 'mykids', icon: 'people-circle', label: 'My Kids', route: '/my-kids' },
-        { key: 'payments', icon: 'card', label: 'Payments', route: '/family-payments' },
-      );
-    }
-    if (isPlayer) {
-      items.push(
-        { key: 'mystats', icon: 'stats-chart', label: 'My Stats', route: '/my-stats' },
-        { key: 'achievements', icon: 'trophy', label: 'Achieve', route: '/achievements' },
-      );
-    }
-    return items;
-  })();
+    // For parent/coach/player, context selection is local to drawer for now
+    // Future: wire to a global child/team context
+  };
 
   // Centralized badge counts (fetched via hook when drawer opens)
   const { badges, loading: badgesLoading } = useDrawerBadges(isOpen);
-
-  // Map shortcut keys → badge keys for dot rendering
-  const shortcutBadgeMap: Record<string, keyof DrawerBadges> = {
-    registration: 'pendingRegistrations',
-    payments: 'unpaidPaymentsParent',
-    chats: 'unreadChats',
-  };
-
-  const handleShortcutPress = (route: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    closeDrawer();
-    setTimeout(() => router.push(route as never), 150);
-  };
 
   // ====== MENU SECTIONS ======
   // Filter sections by role
@@ -666,37 +783,68 @@ export default function GestureDrawer() {
             </View>
           )}
 
-          {/* ====== SHORTCUT ROW ====== */}
-          <View style={[styles.shortcutSection, { borderBottomColor: BRAND.cardBorder }]}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.shortcutScroll}
-              bounces
-            >
-              {shortcuts.map((s) => (
-                <TouchableOpacity
-                  key={s.key}
-                  style={[styles.shortcutPill, { backgroundColor: BRAND.surfaceCard }]}
-                  onPress={() => handleShortcutPress(s.route)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.shortcutIconWrap}>
-                    <Ionicons name={s.icon} size={22} color={BRAND.skyBlue} />
-                    {(badges[shortcutBadgeMap[s.key]] ?? 0) > 0 && (
-                      <View style={[styles.badgeDot, { backgroundColor: BRAND.coral }]} />
-                    )}
-                  </View>
-                  <Text
-                    style={[styles.shortcutLabel, { color: BRAND.textSecondary }]}
-                    numberOfLines={1}
-                  >
-                    {s.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
+          {/* ====== CONTEXTUAL SELECTOR ====== */}
+          {contextItems.length > 0 && (
+            <View style={[styles.contextSection, { borderBottomColor: BRAND.cardBorder }]}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.contextScroll}
+                bounces
+              >
+                {contextItems.map((item) => {
+                  const isActive = activeContextId === item.id;
+                  return (
+                    <TouchableOpacity
+                      key={item.id}
+                      style={styles.contextItem}
+                      onPress={() => handleContextSelect(item)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[
+                        styles.contextCircle,
+                        isActive && styles.contextCircleActive,
+                      ]}>
+                        {item.imageUrl ? (
+                          <Image
+                            source={{ uri: item.imageUrl }}
+                            style={styles.contextImage}
+                            contentFit="cover"
+                            transition={200}
+                          />
+                        ) : item.emoji ? (
+                          <View style={[styles.contextEmojiCircle, { backgroundColor: item.color + '25' }]}>
+                            <Text style={styles.contextEmoji}>{item.emoji}</Text>
+                          </View>
+                        ) : (
+                          <LinearGradient
+                            colors={[item.color, item.color + 'AA']}
+                            style={styles.contextInitialsCircle}
+                          >
+                            <Text style={styles.contextInitials}>{item.initials}</Text>
+                          </LinearGradient>
+                        )}
+                      </View>
+                      <Text
+                        style={[
+                          styles.contextLabel,
+                          isActive && styles.contextLabelActive,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {item.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
+          {contextLoading && contextItems.length === 0 && (
+            <View style={[styles.contextSection, { borderBottomColor: BRAND.cardBorder, alignItems: 'center' }]}>
+              <ActivityIndicator size="small" color={BRAND.teal} />
+            </View>
+          )}
 
           {/* ====== MENU SECTIONS ====== */}
           <ScrollView
@@ -912,40 +1060,70 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginRight: 4,
   },
-  // Shortcut row
-  shortcutSection: {
-    paddingVertical: 12,
+  // Contextual selector (children / teams / sports)
+  contextSection: {
+    paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  shortcutScroll: {
+  contextScroll: {
     paddingHorizontal: 16,
-    gap: 10,
+    gap: 8,
   },
-  shortcutPill: {
-    width: 66,
-    paddingVertical: 10,
-    borderRadius: 12,
+  contextItem: {
     alignItems: 'center',
+    width: 68,
+  },
+  contextCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    borderWidth: 3,
+    borderColor: 'transparent',
     justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
   },
-  shortcutIconWrap: {
-    position: 'relative',
-    marginBottom: 4,
+  contextCircleActive: {
+    borderColor: BRAND.teal,
   },
-  badgeDot: {
-    position: 'absolute',
-    top: -2,
-    right: -4,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+  contextImage: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
   },
-  shortcutLabel: {
+  contextEmojiCircle: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  contextEmoji: {
+    fontSize: 26,
+  },
+  contextInitialsCircle: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  contextInitials: {
+    fontFamily: FONTS.bodyBold,
+    fontSize: 18,
+    color: '#fff',
+  },
+  contextLabel: {
     fontFamily: FONTS.bodySemiBold,
     fontSize: 10,
     textAlign: 'center',
     lineHeight: 13,
     color: BRAND.textSecondary,
+    marginTop: 4,
+  },
+  contextLabelActive: {
+    color: BRAND.teal,
+    fontFamily: FONTS.bodyBold,
   },
   // Drawer selector sections (role + season)
   drawerSelectorSection: {
