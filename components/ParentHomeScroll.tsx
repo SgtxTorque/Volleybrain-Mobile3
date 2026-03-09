@@ -517,43 +517,69 @@ export default function ParentHomeScroll() {
           onPress={() => router.push('/(tabs)/parent-schedule' as any)}
         />
 
-        {/* ─── MY ATHLETES SECTION ────────────────────────────── */}
+        {/* ─── FAMILY SUMMARY CARD ─────────────────────────────── */}
         {data.allChildren.length > 0 && (
           <View style={styles.athleteSection}>
-            <View style={styles.athleteSectionHeader}>
-              <Text style={styles.sectionHeader}>
-                {data.allChildren.length === 1 ? 'MY ATHLETE' : 'MY ATHLETES'}
+            <TouchableOpacity
+              style={styles.familySummaryCard}
+              activeOpacity={0.7}
+              onPress={() => setFamilyPanelOpen(true)}
+            >
+              {/* Avatar row */}
+              <View style={styles.familyAvatarRow}>
+                {data.allChildren.slice(0, 5).map((child) => {
+                  const color = child.teams[0]?.teamColor || child.teams[0]?.sportColor || BRAND.skyBlue;
+                  return child.photoUrl ? (
+                    <Image
+                      key={child.playerId}
+                      source={{ uri: child.photoUrl }}
+                      style={[styles.familyMiniAvatar, { borderColor: color }]}
+                    />
+                  ) : (
+                    <View key={child.playerId} style={[styles.familyMiniAvatarFallback, { backgroundColor: color }]}>
+                      <Text style={styles.familyMiniAvatarText}>{child.firstName[0]}</Text>
+                    </View>
+                  );
+                })}
+                <View style={{ flex: 1 }} />
+                <Ionicons name="chevron-forward" size={20} color={BRAND.textFaint} />
+              </View>
+
+              {/* Title */}
+              <Text style={styles.familySummaryTitle}>
+                {data.allChildren.length === 1
+                  ? `${data.allChildren[0].firstName}'s Overview`
+                  : `Family Overview \u00B7 ${data.allChildren.length} Athletes`}
               </Text>
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={() => setFamilyPanelOpen(true)}
-                style={styles.familyBtn}
-              >
-                <Ionicons name="people-outline" size={14} color={BRAND.skyBlue} />
-                <Text style={styles.familyBtnText}>Family View</Text>
-              </TouchableOpacity>
-            </View>
-            {data.allChildren.map((child) => {
-              const nextEvent = data.allUpcomingEvents.find(e => e.childId === child.playerId) || null;
-              return (
-                <View key={child.playerId} style={{ marginBottom: 8 }}>
-                  <AthleteCardV2
-                    child={child}
-                    selectedTeamId={data.selectedContext?.teamId || null}
-                    onSelectTeam={(childId, teamId) => {
-                      const current = data.selectedContext;
-                      if (current?.childId === childId && current?.teamId === teamId) {
-                        data.setSelectedContext(null);
-                      } else {
-                        data.setSelectedContext({ childId, teamId });
-                      }
-                    }}
-                    nextEvent={nextEvent}
-                    isMultiOrg={data.isMultiOrg}
-                  />
-                </View>
-              );
-            })}
+
+              {/* Per-child one-liners */}
+              {data.allChildren.map((child) => {
+                const teamCount = child.teams.length;
+                const nextEvt = data.allUpcomingEvents.find(e => e.childId === child.playerId);
+                const evtLabel = nextEvt
+                  ? `${(nextEvt.eventType || 'Event').charAt(0).toUpperCase() + (nextEvt.eventType || 'Event').slice(1)} ${(() => {
+                      const today = new Date().toDateString();
+                      const evtDate = new Date(nextEvt.date + 'T00:00:00');
+                      if (evtDate.toDateString() === today) return 'today';
+                      const tmrw = new Date(); tmrw.setDate(tmrw.getDate() + 1);
+                      if (evtDate.toDateString() === tmrw.toDateString()) return 'tomorrow';
+                      try { return evtDate.toLocaleDateString('en-US', { weekday: 'short' }); } catch { return ''; }
+                    })()}`
+                  : 'No upcoming events';
+
+                return (
+                  <View key={child.playerId} style={styles.familyChildRow}>
+                    <Text style={styles.familyChildName}>{child.firstName}</Text>
+                    <Text style={styles.familyChildMeta}>
+                      {teamCount} {teamCount === 1 ? 'team' : 'teams'} · {evtLabel}
+                    </Text>
+                  </View>
+                );
+              })}
+
+              {/* CTA hint */}
+              <Text style={styles.familySummaryCta}>Tap for full family view</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -883,6 +909,76 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bodySemiBold,
     fontSize: 12,
     color: BRAND.skyBlue,
+  },
+
+  // Family Summary Card
+  familySummaryCard: {
+    backgroundColor: BRAND.cardBg || BRAND.white,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: BRAND.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  familyAvatarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  familyMiniAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 2,
+  },
+  familyMiniAvatarFallback: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  familyMiniAvatarText: {
+    fontFamily: FONTS.bodyBold,
+    fontSize: 14,
+    color: BRAND.white,
+  },
+  familySummaryTitle: {
+    fontFamily: FONTS.bodyBold,
+    fontSize: 16,
+    color: BRAND.textPrimary,
+    marginBottom: 10,
+  },
+  familyChildRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+    borderTopWidth: 1,
+    borderTopColor: BRAND.border,
+  },
+  familyChildName: {
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 14,
+    color: BRAND.textPrimary,
+  },
+  familyChildMeta: {
+    fontFamily: FONTS.bodyMedium,
+    fontSize: 12,
+    color: BRAND.textMuted,
+  },
+  familySummaryCta: {
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 11,
+    color: BRAND.skyBlue,
+    textAlign: 'center',
+    marginTop: 10,
+    letterSpacing: 0.3,
   },
 
   // End of scroll (contextual closing)

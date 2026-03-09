@@ -198,7 +198,7 @@ export default function FamilyPanel({ visible, onClose, allChildren, allEvents, 
             <TouchableOpacity
               style={styles.actionBtn}
               activeOpacity={0.7}
-              onPress={() => { router.push('/registration-hub' as any); onClose(); }}
+              onPress={() => { router.push('/parent-registration-hub' as any); onClose(); }}
             >
               <Ionicons name="document-text-outline" size={18} color={BRAND.skyBlue} />
               <Text style={styles.actionText}>View All Registrations</Text>

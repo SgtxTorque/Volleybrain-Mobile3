@@ -37,15 +37,26 @@ export const pickImage = async (): Promise<MediaResult | null> => {
   if (result.canceled || !result.assets[0]) return null;
 
   const asset = result.assets[0];
-  const compressed = await compressImage(asset.uri, asset.width, asset.height);
-  
-  return {
-    uri: compressed.uri,
-    type: 'image',
-    width: compressed.width,
-    height: compressed.height,
-    fileName: `image_${Date.now()}.jpg`,
-  };
+  try {
+    const compressed = await compressImage(asset.uri, asset.width, asset.height);
+    return {
+      uri: compressed.uri,
+      type: 'image',
+      width: compressed.width,
+      height: compressed.height,
+      fileName: `image_${Date.now()}.jpg`,
+    };
+  } catch (err) {
+    console.error('[pickImage] compressImage failed (possibly HEIC):', err);
+    // Fallback: return original asset without compression
+    return {
+      uri: asset.uri,
+      type: 'image',
+      width: asset.width,
+      height: asset.height,
+      fileName: `image_${Date.now()}.jpg`,
+    };
+  }
 };
 
 export const pickVideo = async (): Promise<MediaResult | null> => {
@@ -84,15 +95,25 @@ export const takePhoto = async (): Promise<MediaResult | null> => {
   if (result.canceled || !result.assets[0]) return null;
 
   const asset = result.assets[0];
-  const compressed = await compressImage(asset.uri, asset.width, asset.height);
-  
-  return {
-    uri: compressed.uri,
-    type: 'image',
-    width: compressed.width,
-    height: compressed.height,
-    fileName: `photo_${Date.now()}.jpg`,
-  };
+  try {
+    const compressed = await compressImage(asset.uri, asset.width, asset.height);
+    return {
+      uri: compressed.uri,
+      type: 'image',
+      width: compressed.width,
+      height: compressed.height,
+      fileName: `photo_${Date.now()}.jpg`,
+    };
+  } catch (err) {
+    console.error('[takePhoto] compressImage failed (possibly HEIC):', err);
+    return {
+      uri: asset.uri,
+      type: 'image',
+      width: asset.width,
+      height: asset.height,
+      fileName: `photo_${Date.now()}.jpg`,
+    };
+  }
 };
 
 export const compressImage = async (
@@ -152,15 +173,23 @@ export const uploadMedia = async (
   bucket: string = 'chat-media'
 ): Promise<string | null> => {
   try {
+    console.log('[uploadMedia] Starting:', { uri: media.uri?.substring(0, 50), type: media.type, bucket, folderPath });
+
     const fileExt = media.type === 'image' ? 'jpg' : media.type === 'audio' ? 'm4a' : 'mp4';
     const filePath = `${folderPath}/${Date.now()}.${fileExt}`;
 
     // Fetch the file as a blob
     const response = await fetch(media.uri);
+    if (!response.ok) {
+      console.error('[uploadMedia] fetch failed:', response.status, response.statusText);
+      return null;
+    }
     const blob = await response.blob();
+    console.log('[uploadMedia] blob size:', blob.size);
 
     // Convert blob to ArrayBuffer
     const arrayBuffer = await new Response(blob).arrayBuffer();
+    console.log('[uploadMedia] arrayBuffer size:', arrayBuffer.byteLength);
 
     const { error } = await supabase.storage
       .from(bucket)
@@ -170,14 +199,15 @@ export const uploadMedia = async (
       });
 
     if (error) {
-      if (__DEV__) console.error('Upload error:', error);
+      console.error('[uploadMedia] Supabase upload error:', JSON.stringify(error));
       return null;
     }
 
     const { data } = supabase.storage.from(bucket).getPublicUrl(filePath);
+    console.log('[uploadMedia] Success:', data.publicUrl?.substring(0, 80));
     return data.publicUrl;
   } catch (error) {
-    if (__DEV__) console.error('Upload error:', error);
+    console.error('[uploadMedia] Exception:', error);
     return null;
   }
 };

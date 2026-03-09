@@ -339,13 +339,12 @@ export function useParentHomeData() {
 
       const allTeamIds = [...new Set(allTeamIdsRaw)];
 
-      // Deduplicate familyChildren by name (same child may have multiple player records)
-      const nameMap = new Map<string, FamilyChild>();
+      // Deduplicate familyChildren by player ID (same child may appear via multiple link methods)
+      const idMap = new Map<string, FamilyChild>();
       familyChildren.forEach(child => {
-        const key = `${child.firstName.toLowerCase()}_${child.lastName.toLowerCase()}`;
-        const existing = nameMap.get(key);
+        const existing = idMap.get(child.playerId);
         if (existing) {
-          // Merge teams from duplicate player record, keeping unique team IDs
+          // Merge teams from duplicate entries
           const existingTeamIds = new Set(existing.teams.map(t => t.teamId));
           child.teams.forEach(t => {
             if (!existingTeamIds.has(t.teamId)) {
@@ -353,19 +352,18 @@ export function useParentHomeData() {
             }
           });
         } else {
-          nameMap.set(key, { ...child, teams: [...child.teams] });
+          idMap.set(child.playerId, { ...child, teams: [...child.teams] });
         }
       });
-      const mergedFamilyChildren = [...nameMap.values()];
+      const mergedFamilyChildren = [...idMap.values()];
       // Keep ALL player IDs for queries (covers all duplicate records)
       const uniquePlayerIds = [...new Set(familyChildren.map(c => c.playerId))];
 
-      // Deduplicate legacyChildren by player name (one entry per child, not per team)
-      const seenNames = new Set<string>();
+      // Deduplicate legacyChildren by player ID (one entry per child, not per team)
+      const seenIds = new Set<string>();
       const dedupedLegacy = legacyChildren.filter(c => {
-        const key = `${c.first_name.toLowerCase()}_${c.last_name.toLowerCase()}`;
-        if (seenNames.has(key)) return false;
-        seenNames.add(key);
+        if (seenIds.has(c.id)) return false;
+        seenIds.add(c.id);
         return true;
       });
 
@@ -682,7 +680,7 @@ export function useParentHomeData() {
               description: `Sign waiver for ${fc.firstName}`,
               childName: fc.firstName,
               childId: fc.playerId,
-              route: '/registration-hub',
+              route: '/my-waivers',
               severity: 'urgent',
               icon: '\u{1F4DC}',
             });

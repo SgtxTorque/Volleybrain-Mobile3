@@ -84,13 +84,15 @@ export default function BulkEventCreate() {
   // Step 3: Location
   const [venueName, setVenueName] = useState('');
   const [venueAddress, setVenueAddress] = useState('');
+  const [orgVenues, setOrgVenues] = useState<{ id: string; name: string; address: string }[]>([]);
 
   // Step 4: Preview
   const [generatedEvents, setGeneratedEvents] = useState<GeneratedEvent[]>([]);
 
-  // ─── Load teams ──
+  // ─── Load teams + venues ──
   useEffect(() => {
     loadTeams();
+    loadVenues();
   }, []);
 
   const loadTeams = async () => {
@@ -106,6 +108,27 @@ export default function BulkEventCreate() {
       if (__DEV__) console.error('[BulkEventCreate] loadTeams error:', err);
     } finally {
       setLoadingTeams(false);
+    }
+  };
+
+  const loadVenues = async () => {
+    const orgId = (organization as any)?.id;
+    if (!orgId) return;
+    try {
+      const { data } = await supabase
+        .from('venues')
+        .select('id, name, address, city, state, zip')
+        .eq('organization_id', orgId)
+        .order('name');
+      if (data) {
+        setOrgVenues(data.map(v => ({
+          id: v.id,
+          name: v.name,
+          address: [v.address, v.city, v.state, v.zip].filter(Boolean).join(', '),
+        })));
+      }
+    } catch (err) {
+      if (__DEV__) console.error('[BulkEventCreate] loadVenues error:', err);
     }
   };
 
@@ -426,6 +449,25 @@ export default function BulkEventCreate() {
           <View style={styles.stepContent}>
             <Text style={styles.stepTitle}>Location</Text>
             <Text style={styles.stepSubtext}>Applied to all events.</Text>
+
+            {orgVenues.length > 0 && (
+              <>
+                <Text style={styles.fieldLabel}>Select a Venue</Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                  {orgVenues.map(v => (
+                    <TouchableOpacity
+                      key={v.id}
+                      style={[styles.dayPill, venueName === v.name && styles.dayPillActive]}
+                      activeOpacity={0.7}
+                      onPress={() => { setVenueName(v.name); setVenueAddress(v.address); }}
+                    >
+                      <Text style={[styles.dayPillText, venueName === v.name && styles.dayPillTextActive]}>{v.name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <Text style={[styles.fieldLabel, { marginTop: 4, color: BRAND.textFaint, fontSize: 11 }]}>— or enter manually —</Text>
+              </>
+            )}
 
             <Text style={styles.fieldLabel}>Venue Name</Text>
             <TextInput

@@ -110,45 +110,71 @@ export default function CreateChallengeScreen() {
   const [submitting, setSubmitting] = useState(false);
 
   // ─── Resolve team and org ──────────────────────────────────
+  // Mirrors the 3-tier fallback chain from useCoachHomeData:
+  // 1. team_staff (user_id) — fetch ALL, filter active, prefer current season
+  // 2. coaches.profile_id → team_coaches
+  // 3. Last resort: first team in current season
   useEffect(() => {
     if (!user?.id) return;
     (async () => {
       setResolving(true);
 
-      // Try team_staff first (primary path — no is_active filter, matches useCoachHomeData)
-      const { data: staffRow } = await supabase
+      // Path 1: team_staff (primary — matches useCoachHomeData)
+      const { data: staffRows } = await supabase
         .from('team_staff')
-        .select('team_id, teams(organization_id)')
-        .eq('user_id', user.id)
-        .limit(1)
-        .maybeSingle();
+        .select('team_id, is_active, teams(id, organization_id, season_id)')
+        .eq('user_id', user.id);
 
-      if (staffRow) {
-        setTeamId(staffRow.team_id);
-        setOrgId((staffRow.teams as any)?.organization_id || null);
+      // Filter to active staff, prefer current season
+      const activeStaff = (staffRows || []).filter((r: any) => r.is_active !== false);
+      const currentSeasonStaff = activeStaff.find((r: any) => (r.teams as any)?.season_id === workingSeason?.id);
+      const bestStaff = currentSeasonStaff || activeStaff[0];
+
+      if (bestStaff) {
+        setTeamId(bestStaff.team_id);
+        setOrgId((bestStaff.teams as any)?.organization_id || null);
         setResolving(false);
         return;
       }
 
-      // Fallback: try team_coaches via coaches.profile_id
+      // Path 2: coaches → team_coaches (secondary)
       const { data: coachRecord } = await supabase
         .from('coaches')
-        .select('id, team_coaches ( team_id, teams ( id, organization_id ) )')
+        .select('id, team_coaches ( team_id, teams ( id, organization_id, season_id ) )')
         .eq('profile_id', user.id)
         .maybeSingle();
 
       if (coachRecord) {
         const tcEntries = (coachRecord.team_coaches as any[]) || [];
-        const firstTeam = tcEntries.find((tc: any) => tc.teams);
-        if (firstTeam) {
-          setTeamId(firstTeam.team_id);
-          setOrgId((firstTeam.teams as any)?.organization_id || null);
+        // Prefer current season team
+        const currentSeasonTC = tcEntries.find((tc: any) => (tc.teams as any)?.season_id === workingSeason?.id);
+        const bestTC = currentSeasonTC || tcEntries.find((tc: any) => tc.teams);
+        if (bestTC) {
+          setTeamId(bestTC.team_id);
+          setOrgId((bestTC.teams as any)?.organization_id || null);
+          setResolving(false);
+          return;
+        }
+      }
+
+      // Path 3: Last resort — if user is admin/coach of the org, pick first team in current season
+      if (workingSeason?.id) {
+        const { data: seasonTeams } = await supabase
+          .from('teams')
+          .select('id, organization_id')
+          .eq('season_id', workingSeason.id)
+          .limit(1)
+          .maybeSingle();
+
+        if (seasonTeams) {
+          setTeamId(seasonTeams.id);
+          setOrgId(seasonTeams.organization_id || null);
         }
       }
 
       setResolving(false);
     })();
-  }, [user?.id]);
+  }, [user?.id, workingSeason?.id]);
 
   // ─── Pre-fill from template ────────────────────────────────
   useEffect(() => {

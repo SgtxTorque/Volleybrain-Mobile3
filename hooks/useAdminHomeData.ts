@@ -111,6 +111,7 @@ export function useAdminHomeData() {
 
   // Events
   const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
+  const [eventDates, setEventDates] = useState<Set<string>>(new Set());
 
   // Coaches
   const [coaches, setCoaches] = useState<CoachInfo[]>([]);
@@ -297,6 +298,11 @@ export function useAdminHomeData() {
             location: e.location,
           };
         }));
+
+        // Collect event dates for calendar strip
+        const dates = new Set<string>();
+        (events || []).forEach(e => dates.add(e.event_date));
+        setEventDates(dates);
       }
 
       // 6. Teams missing schedule this week
@@ -491,6 +497,7 @@ export function useAdminHomeData() {
     paymentPct,
     pendingRegs,
     upcomingEvents,
+    eventDates,
     coaches,
     upcomingSeason,
   };

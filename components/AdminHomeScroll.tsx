@@ -50,6 +50,7 @@ import type { UnseenAchievement } from '@/lib/achievement-types';
 import CoachSection from './admin-scroll/CoachSection';
 import UpcomingEvents from './admin-scroll/UpcomingEvents';
 import ClosingMotivation from './admin-scroll/ClosingMotivation';
+import DayStripCalendar from './parent-scroll/DayStripCalendar';
 
 export default function AdminHomeScroll() {
   const insets = useSafeAreaInsets();
@@ -198,6 +199,9 @@ export default function AdminHomeScroll() {
           <Text style={styles.searchIcon}>{'\u{1F50D}'}</Text>
           <Text style={styles.searchPlaceholder}>Search players, families, teams...</Text>
         </TouchableOpacity>
+
+        {/* ─── 2b. DAY STRIP CALENDAR ─────────────────────── */}
+        <DayStripCalendar scrollY={scrollY} eventDates={data.eventDates} />
 
         {/* ─── 3. SMART QUEUE ─────────────────────────────── */}
         {data.queueItems.length > 0 ? (

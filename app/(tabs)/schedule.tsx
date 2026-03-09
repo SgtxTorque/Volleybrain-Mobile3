@@ -53,7 +53,7 @@ type RecurringDay = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 export default function ScheduleScreen() {
   const { colors } = useTheme();
   const { workingSeason } = useSeason();
-  const { user, profile } = useAuth();
+  const { user, profile, organization } = useAuth();
   const router = useRouter();
   const { isTabletAny, contentMaxWidth, contentPadding } = useResponsive();
 
@@ -154,8 +154,25 @@ export default function ScheduleScreen() {
   }, [user?.id, isCoachOrAdmin]);
 
   const fetchVenues = async () => {
-    // TODO: Implement when organization_venues table is created
-    setVenues([]);
+    const orgId = (organization as any)?.id;
+    if (!orgId) { setVenues([]); return; }
+    try {
+      const { data, error } = await supabase
+        .from('venues')
+        .select('id, name, address, city, state, zip, is_home, courts_available')
+        .eq('organization_id', orgId)
+        .order('name');
+      if (!error && data) {
+        setVenues(data.map(v => ({
+          id: v.id,
+          name: v.name,
+          address: [v.address, v.city, v.state, v.zip].filter(Boolean).join(', '),
+          type: (v.is_home ? 'practice' : 'both') as 'game' | 'practice' | 'both',
+        })));
+      }
+    } catch (err) {
+      if (__DEV__) console.error('Fetch venues error:', err);
+    }
   };
 
   const fetchData = async () => {

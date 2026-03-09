@@ -7,6 +7,7 @@ import SectionHeader from '@/components/ui/SectionHeader';
 import StatBox from '@/components/ui/StatBox';
 import { checkRoleAchievements } from '@/lib/achievement-engine';
 import { useAuth } from '@/lib/auth';
+import { usePermissions } from '@/lib/permissions-context';
 import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { queueRegistrationApproval, queueTeamAssignment } from '@/lib/email-queue';
 import { useSeason } from '@/lib/season';
@@ -202,6 +203,8 @@ export default function RegistrationHubScreen() {
   const [pendingTeamAssignIds, setPendingTeamAssignIds] = useState<string[]>([]);
   const [showBulkTeamPicker, setShowBulkTeamPicker] = useState(false);
   const [showSeasonFilter, setShowSeasonFilter] = useState(false);
+
+  const { isAdmin } = usePermissions();
 
   // =====================================================
   // DATA FETCHING - Now queries ALL open seasons
@@ -963,6 +966,18 @@ export default function RegistrationHubScreen() {
     }
     return sorted;
   }, [filteredRegistrations, sortMode]);
+
+  // Role guard — placed AFTER all hooks to avoid conditional hook calls
+  if (!isAdmin) {
+    return (
+      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: BRAND.offWhite }}>
+        <Text style={{ fontFamily: FONTS.bodyBold, fontSize: 16, color: BRAND.textPrimary }}>Access denied</Text>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 16, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: BRAND.skyBlue, borderRadius: 12 }}>
+          <Text style={{ fontFamily: FONTS.bodySemiBold, fontSize: 14, color: BRAND.white }}>Go Back</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
 
   const groupedRegistrations = {
     new: sortedRegistrations.filter(r => r.status === 'new'),
