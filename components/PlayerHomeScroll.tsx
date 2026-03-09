@@ -57,12 +57,14 @@ import ActiveChallengeCard from './player-scroll/ActiveChallengeCard';
 import EvaluationCard from './player-scroll/EvaluationCard';
 import LastGameStats from './player-scroll/LastGameStats';
 import ClosingMascot from './player-scroll/ClosingMascot';
+import ChallengeArrivalModal from './ChallengeArrivalModal';
 import LevelUpCelebrationModal from './LevelUpCelebrationModal';
 import StreakMilestoneCelebrationModal from './StreakMilestoneCelebrationModal';
 import GiveShoutoutModal from './GiveShoutoutModal';
 import TeamPulse from './TeamPulse';
 import TrophyCaseWidget from './TrophyCaseWidget';
 import RoleSelector from './RoleSelector';
+import { fetchActiveChallenges, optInToChallenge, type ChallengeWithParticipants } from '@/lib/challenge-service';
 import { checkMilestoneReached, awardStreakMilestoneXP } from '@/lib/streak-engine';
 import type { StreakTier } from '@/lib/streak-engine';
 
@@ -97,7 +99,7 @@ type Props = {
 export default function PlayerHomeScroll({ playerId, playerName: externalName, onSwitchChild }: Props) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { organization } = useAuth();
+  const { user, organization } = useAuth();
   const { scrollY, scrollHandler } = useScrollAnimations();
   const data = usePlayerHomeData(playerId);
   const { isTabletAny, contentMaxWidth, contentPadding } = useResponsive();
@@ -138,6 +140,43 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
       AsyncStorage.setItem(STREAK_KEY, String(data.attendanceStreak));
     });
   }, [data.loading, data.attendanceStreak, playerId]);
+
+  // ─── Challenge arrival modal ──
+  const [showChallengeArrival, setShowChallengeArrival] = useState(false);
+  const [arrivalChallenge, setArrivalChallenge] = useState<ChallengeWithParticipants | null>(null);
+  useEffect(() => {
+    if (data.loading || !data.primaryTeam?.id || !user?.id) return;
+    (async () => {
+      const all = await fetchActiveChallenges(data.primaryTeam!.id);
+      // Find challenges the player hasn't joined yet
+      for (const ch of all) {
+        if (ch.challenge_type === 'team') continue; // team challenges auto-include everyone
+        const isIn = ch.participants.some(p => p.player_id === user!.id);
+        if (isIn) continue;
+        const seenKey = `lynx_challenge_seen_${ch.id}`;
+        const seen = await AsyncStorage.getItem(seenKey);
+        if (!seen) {
+          setArrivalChallenge(ch);
+          setShowChallengeArrival(true);
+          break;
+        }
+      }
+    })();
+  }, [data.loading, data.primaryTeam?.id, user?.id]);
+
+  const handleAcceptChallenge = async () => {
+    if (!arrivalChallenge || !user?.id) return;
+    await optInToChallenge(arrivalChallenge.id, user.id);
+    await AsyncStorage.setItem(`lynx_challenge_seen_${arrivalChallenge.id}`, 'true');
+    setShowChallengeArrival(false);
+    data.refresh();
+  };
+
+  const handleDismissChallenge = async () => {
+    if (!arrivalChallenge) return;
+    await AsyncStorage.setItem(`lynx_challenge_seen_${arrivalChallenge.id}`, 'true');
+    setShowChallengeArrival(false);
+  };
 
   const displayName = data.playerName || externalName || 'Player';
   const initials = useMemo(() => {
@@ -398,6 +437,24 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
         onClose={() => setShowShoutoutModal(false)}
         onSuccess={() => setShowShoutoutModal(false)}
       />
+
+      {/* ─── CHALLENGE ARRIVAL MODAL ────────────────────────────── */}
+      {arrivalChallenge && (
+        <ChallengeArrivalModal
+          visible={showChallengeArrival}
+          challengeTitle={arrivalChallenge.title}
+          challengeDescription={arrivalChallenge.description}
+          targetValue={arrivalChallenge.target_value}
+          xpReward={arrivalChallenge.xp_reward}
+          daysLeft={
+            Math.max(0, Math.ceil(
+              (new Date(arrivalChallenge.ends_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+            ))
+          }
+          onAccept={handleAcceptChallenge}
+          onDismiss={handleDismissChallenge}
+        />
+      )}
     </View>
   );
 }
@@ -529,11 +586,11 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   myTeamLabel: {
-    fontFamily: FONTS.bodyBold,
-    fontSize: 10,
+    fontFamily: FONTS.display,
+    fontSize: 12,
     color: PLAYER_THEME.accent,
     letterSpacing: 1.5,
-    opacity: 0.6,
+    opacity: 1.0,
   },
   myTeamName: {
     fontFamily: FONTS.bodyExtraBold,

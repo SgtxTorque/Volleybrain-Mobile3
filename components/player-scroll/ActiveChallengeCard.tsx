@@ -6,7 +6,7 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { fetchActiveChallenges, type ChallengeWithParticipants } from '@/lib/challenge-service';
+import { fetchActiveChallenges, optInToChallenge, type ChallengeWithParticipants } from '@/lib/challenge-service';
 import { useAuth } from '@/lib/auth';
 import { FONTS } from '@/theme/fonts';
 
@@ -57,6 +57,7 @@ export default function ActiveChallengeCard({ available, teamId }: Props) {
 
       {challenges.map((challenge) => {
         const isTeam = challenge.challenge_type === 'team';
+        const isOptedIn = challenge.participants.some((p) => p.player_id === user?.id);
         const myProgress = challenge.participants.find((p) => p.player_id === user?.id);
         const progressVal = isTeam
           ? (challenge.totalProgress || 0)
@@ -72,14 +73,14 @@ export default function ActiveChallengeCard({ available, teamId }: Props) {
         return (
           <TouchableOpacity
             key={challenge.id}
-            style={styles.card}
+            style={[styles.card, !isOptedIn && styles.cardGlow]}
             activeOpacity={0.8}
             onPress={() => router.push(`/challenge-cta?challengeId=${challenge.id}` as any)}
           >
             <View style={styles.headerRow}>
               <Text style={styles.icon}>{isComplete ? '\u2705' : '\u26A1'}</Text>
               <Text style={styles.label}>
-                {isComplete ? 'COMPLETE' : 'ACTIVE CHALLENGE'}
+                {isComplete ? 'COMPLETE' : !isOptedIn ? 'NEW CHALLENGE' : 'ACTIVE CHALLENGE'}
               </Text>
               {daysLeft > 0 && !isComplete && (
                 <Text style={styles.timeLeft}>{daysLeft}d left</Text>
@@ -88,23 +89,46 @@ export default function ActiveChallengeCard({ available, teamId }: Props) {
             <Text style={styles.title} numberOfLines={1}>
               {challenge.title}
             </Text>
-            <View style={styles.barTrack}>
-              <View
-                style={[
-                  styles.barFill,
-                  {
-                    width: `${pct}%`,
-                    backgroundColor: isComplete ? PT.success : PT.gold,
-                  },
-                ]}
-              />
-            </View>
-            <View style={styles.footerRow}>
-              <Text style={styles.progressText}>
-                {progressVal}/{target}
-              </Text>
-              <Text style={styles.reward}>+{challenge.xp_reward} XP</Text>
-            </View>
+
+            {/* Progress bar (show for opted-in or team challenges) */}
+            {(isOptedIn || isTeam) && (
+              <>
+                <View style={styles.barTrack}>
+                  <View
+                    style={[
+                      styles.barFill,
+                      {
+                        width: `${pct}%`,
+                        backgroundColor: isComplete ? PT.success : PT.gold,
+                      },
+                    ]}
+                  />
+                </View>
+                <View style={styles.footerRow}>
+                  <Text style={styles.progressText}>
+                    {progressVal}/{target}
+                  </Text>
+                  <Text style={styles.reward}>+{challenge.xp_reward} XP</Text>
+                </View>
+              </>
+            )}
+
+            {/* JOIN NOW button for non-opted-in players */}
+            {!isOptedIn && !isTeam && (
+              <TouchableOpacity
+                style={styles.joinBtn}
+                activeOpacity={0.7}
+                onPress={async (e) => {
+                  e.stopPropagation?.();
+                  if (!user?.id) return;
+                  await optInToChallenge(challenge.id, user.id);
+                  loadChallenges();
+                }}
+              >
+                <Text style={styles.joinBtnText}>JOIN NOW</Text>
+                <Text style={styles.joinXp}>+{challenge.xp_reward} XP</Text>
+              </TouchableOpacity>
+            )}
           </TouchableOpacity>
         );
       })}
@@ -124,8 +148,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   sectionLabel: {
-    fontFamily: FONTS.bodyBold,
-    fontSize: 10,
+    fontFamily: FONTS.display,
+    fontSize: 12,
     color: PT.gold,
     letterSpacing: 1.2,
   },
@@ -165,8 +189,8 @@ const styles = StyleSheet.create({
     color: PT.textMuted,
   },
   title: {
-    fontFamily: FONTS.bodySemiBold,
-    fontSize: 14,
+    fontFamily: FONTS.display,
+    fontSize: 16,
     color: PT.textPrimary,
     marginBottom: 10,
   },
@@ -196,5 +220,35 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bodySemiBold,
     fontSize: 10,
     color: 'rgba(255,215,0,0.40)',
+  },
+  cardGlow: {
+    borderColor: PT.teal,
+    borderWidth: 1.5,
+    shadowColor: PT.teal,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  joinBtn: {
+    backgroundColor: PT.teal,
+    borderRadius: 12,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+  },
+  joinBtnText: {
+    fontFamily: FONTS.bodyExtraBold,
+    fontSize: 13,
+    color: '#0A1528',
+    letterSpacing: 1,
+  },
+  joinXp: {
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 11,
+    color: 'rgba(10,21,40,0.60)',
   },
 });

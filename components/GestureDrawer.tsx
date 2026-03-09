@@ -164,6 +164,7 @@ const MENU_SECTIONS: MenuSection[] = [
       { icon: 'clipboard', label: 'Registration', route: '/parent-registration-hub' },
       { icon: 'wallet', label: 'Payments', route: '/family-payments', badgeKey: 'unpaidPaymentsParent' },
       { icon: 'document-text', label: 'Waivers', route: '/my-waivers', badgeKey: 'unsignedWaivers' },
+      { icon: 'school-outline', label: 'Evaluations', route: '/my-stats' },
       { icon: 'trophy', label: 'Standings', route: '/standings' },
       { icon: 'ribbon', label: 'Achievements', route: '/achievements' },
       { icon: 'share-social', label: 'Invite Friends', route: '/invite-friends' },
@@ -179,6 +180,7 @@ const MENU_SECTIONS: MenuSection[] = [
     items: [
       { icon: 'shirt', label: 'My Teams', route: '/(tabs)/my-teams' },
       { icon: 'stats-chart', label: 'My Stats', route: '/my-stats' },
+      { icon: 'school-outline', label: 'My Evaluations', route: '/my-stats?scrollToEvals=true' },
       { icon: 'id-card-outline', label: 'My Player Card', route: '/player-card' },
       { icon: 'trophy', label: 'Challenges', route: '/challenges' },
       { icon: 'ribbon', label: 'Achievements', route: '/achievements' },

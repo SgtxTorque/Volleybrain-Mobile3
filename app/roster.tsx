@@ -223,7 +223,7 @@ export default function RosterScreen() {
           const gp = ss?.games_played || 1;
 
           const statBars = sportConfig.primaryStats.slice(0, 3).map(sc => ({
-            label: sc.short,
+            label: sc.label,
             value: ss ? Math.min(100, Math.round((ss[sc.seasonColumn] || 0) / gp * 10)) : 0,
             color: sc.color,
           }));

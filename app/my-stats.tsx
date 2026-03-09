@@ -111,7 +111,7 @@ export default function MyStatsScreen() {
   const { user } = useAuth();
   const { allSeasons, workingSeason } = useSeason();
   const router = useRouter();
-  const { highlightStat } = useLocalSearchParams<{ highlightStat?: string }>();
+  const { highlightStat, playerId: paramPlayerId } = useLocalSearchParams<{ highlightStat?: string; playerId?: string }>();
 
   const highlightHandled = useRef(false);
 
@@ -146,6 +146,20 @@ export default function MyStatsScreen() {
   // ===========================================================================
 
   const resolvePlayer = useCallback(async () => {
+    // If playerId was passed as a param, use it directly
+    if (paramPlayerId) {
+      const { data: pData } = await supabase
+        .from('players')
+        .select('id, first_name, last_name')
+        .eq('id', paramPlayerId)
+        .maybeSingle();
+      if (pData) {
+        setPlayerId(pData.id);
+        setPlayerName(`${pData.first_name} ${pData.last_name}`);
+        return;
+      }
+    }
+
     if (!user?.id || !effectiveSeasonId) return;
 
     const playerCols = 'id, first_name, last_name';
@@ -190,7 +204,7 @@ export default function MyStatsScreen() {
 
     setPlayerId(null);
     setPlayerName('');
-  }, [user?.id, effectiveSeasonId]);
+  }, [user?.id, effectiveSeasonId, paramPlayerId]);
 
   // ===========================================================================
   // DATA LOADING

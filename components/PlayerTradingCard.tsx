@@ -187,7 +187,7 @@ function FullCard({ player, onShare, onViewStats }: PlayerTradingCardProps) {
   const statBars = player.stats && player.stats.length > 0
     ? player.stats.slice(0, 6)
     : sportConfig.primaryStats.slice(0, 5).map((sc: StatConfig) => ({
-        label: sc.short,
+        label: sc.label,
         value: 0,
         color: sc.color,
       }));
@@ -414,11 +414,10 @@ const s = StyleSheet.create({
   },
   heroPhoto: {
     position: 'absolute',
-    bottom: 8,
+    top: 0,
     left: 0,
     right: 0,
-    height: 220,
-    resizeMode: 'contain',
+    bottom: -40,
   },
   heroAvatarWrap: {
     position: 'absolute',
@@ -598,10 +597,10 @@ const s = StyleSheet.create({
     gap: 2,
   },
   powerBarLabel: {
-    fontSize: 7,
+    fontSize: 9,
     fontFamily: FONTS.bodyBold,
-    color: 'rgba(255,255,255,0.35)',
-    letterSpacing: 1.2,
+    color: 'rgba(255,255,255,0.50)',
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
   powerBarTrack: {

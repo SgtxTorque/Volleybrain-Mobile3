@@ -16,6 +16,7 @@ import type { LastGameStats as LastGameStatsType } from '@/hooks/usePlayerHomeDa
 const PT = {
   cardBg: '#10284C',
   gold: '#FFD700',
+  accent: '#4BB9EC',
   textPrimary: '#FFFFFF',
   textFaint: 'rgba(255,255,255,0.15)',
   border: 'rgba(255,255,255,0.06)',
@@ -126,9 +127,9 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   header: {
-    fontFamily: FONTS.bodyBold,
-    fontSize: 10,
-    color: PT.textFaint,
+    fontFamily: FONTS.display,
+    fontSize: 12,
+    color: PT.accent,
     letterSpacing: 1.2,
     marginBottom: 14,
   },

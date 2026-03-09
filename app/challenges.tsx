@@ -80,33 +80,72 @@ export default function ChallengesScreen() {
 
   const resolveTeam = async () => {
     if (!user?.id) return;
-    // Try team_staff first (coach/admin)
-    const { data: staffRow } = await supabase
-      .from('team_staff')
-      .select('team_id, teams(organization_id)')
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .limit(1)
-      .single();
 
-    if (staffRow) {
-      setTeamId(staffRow.team_id);
-      setOrgId((staffRow.teams as any)?.organization_id || null);
-      return;
-    }
+    // Path 1: team_staff → teams → seasons (for org_id)
+    try {
+      const { data: staffRows } = await supabase
+        .from('team_staff')
+        .select('team_id, is_active, teams(id, season_id, seasons(organization_id))')
+        .eq('user_id', user.id);
 
-    // Try players table (player role)
-    const { data: playerRow } = await supabase
-      .from('players')
-      .select('team_id, teams(organization_id)')
-      .eq('user_id', user.id)
-      .limit(1)
-      .single();
+      const active = (staffRows || []).filter((r: any) => r.is_active !== false);
+      const best = active[0];
+      if (best?.team_id) {
+        setTeamId(best.team_id);
+        setOrgId((best.teams as any)?.seasons?.organization_id || null);
+        return;
+      }
+    } catch {}
 
-    if (playerRow) {
-      setTeamId(playerRow.team_id);
-      setOrgId((playerRow.teams as any)?.organization_id || null);
-    }
+    // Path 2: coaches → team_coaches → teams
+    try {
+      const { data: coachRecord } = await supabase
+        .from('coaches')
+        .select('id, team_coaches(team_id, teams(id, season_id, seasons(organization_id)))')
+        .eq('profile_id', user.id)
+        .maybeSingle();
+
+      if (coachRecord) {
+        const tcEntries = Array.isArray(coachRecord.team_coaches)
+          ? coachRecord.team_coaches
+          : coachRecord.team_coaches ? [coachRecord.team_coaches] : [];
+        const best = tcEntries.find((tc: any) => tc.teams);
+        if (best?.team_id) {
+          setTeamId(best.team_id);
+          setOrgId((best.teams as any)?.seasons?.organization_id || null);
+          return;
+        }
+      }
+    } catch {}
+
+    // Path 3: team_players (player role) + parent linkage
+    try {
+      const { data: tpRows } = await supabase
+        .from('team_players')
+        .select('team_id, teams(id, season_id, seasons(organization_id))')
+        .eq('player_id', user.id)
+        .limit(1);
+
+      const { data: playerRows } = await supabase
+        .from('players')
+        .select('id, team_players(team_id, teams(id, season_id, seasons(organization_id)))')
+        .eq('parent_account_id', user.id)
+        .limit(1);
+
+      const tp = (tpRows || [])[0];
+      if (tp?.team_id) {
+        setTeamId(tp.team_id);
+        setOrgId((tp.teams as any)?.seasons?.organization_id || null);
+        return;
+      }
+
+      const playerTp = ((playerRows || [])[0]?.team_players as any[])?.[0];
+      if (playerTp?.team_id) {
+        setTeamId(playerTp.team_id);
+        setOrgId((playerTp.teams as any)?.seasons?.organization_id || null);
+        return;
+      }
+    } catch {}
   };
 
   // ─── Fetch challenges ──

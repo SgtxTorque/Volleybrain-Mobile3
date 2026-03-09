@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/lib/auth';
 import { useSeason } from '@/lib/season';
 import { getSportDisplay } from '@/constants/sport-display';
 import PlayerTradingCard, { PlayerTradingCardPlayer } from '@/components/PlayerTradingCard';
@@ -56,23 +57,63 @@ export default function PlayerCardScreen() {
   const { playerId, childId } = useLocalSearchParams<{ playerId?: string; childId?: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
   const { workingSeason } = useSeason();
 
   const { isTabletAny, contentMaxWidth } = useResponsive();
   const resolvedId = playerId || childId || null;
 
+  // Auto-resolve when no playerId param (e.g. "My Player Card" from gesture drawer)
+  const [autoResolvedId, setAutoResolvedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (resolvedId || !user?.id) return;
+    (async () => {
+      // Try team_players first (player's own record)
+      const { data: tpRow } = await supabase
+        .from('team_players')
+        .select('player_id')
+        .eq('player_id', user.id)
+        .limit(1)
+        .maybeSingle();
+      if (tpRow) { setAutoResolvedId(tpRow.player_id); return; }
+
+      // Try players table by parent_account_id
+      const { data: playerRow } = await supabase
+        .from('players')
+        .select('id')
+        .eq('parent_account_id', user.id)
+        .limit(1)
+        .maybeSingle();
+      if (playerRow) { setAutoResolvedId(playerRow.id); return; }
+
+      // Try player_guardians
+      const { data: guardianRow } = await supabase
+        .from('player_guardians')
+        .select('player_id')
+        .eq('guardian_id', user.id)
+        .limit(1)
+        .maybeSingle();
+      if (guardianRow) { setAutoResolvedId(guardianRow.player_id); return; }
+
+      setAutoResolvedId(null);
+    })();
+  }, [resolvedId, user?.id]);
+
+  const effectivePlayerId = resolvedId || autoResolvedId;
+
   const [loading, setLoading] = useState(true);
   const [player, setPlayer] = useState<PlayerTradingCardPlayer | null>(null);
 
   const fetchPlayer = useCallback(async () => {
-    if (!resolvedId) { setLoading(false); return; }
+    if (!effectivePlayerId) { setLoading(false); return; }
 
     try {
       // Player basic info
       const { data: pData } = await supabase
         .from('players')
         .select('id, first_name, last_name, jersey_number, position, photo_url')
-        .eq('id', resolvedId)
+        .eq('id', effectivePlayerId)
         .maybeSingle();
 
       if (!pData) { setLoading(false); return; }
@@ -81,7 +122,7 @@ export default function PlayerCardScreen() {
       const { data: teamData } = await supabase
         .from('team_players')
         .select('team_id, teams(id, name, color)')
-        .eq('player_id', resolvedId)
+        .eq('player_id', effectivePlayerId)
         .limit(1);
 
       const team = (teamData?.[0] as any)?.teams;
@@ -92,7 +133,7 @@ export default function PlayerCardScreen() {
         const { data: stats } = await supabase
           .from('player_season_stats')
           .select('*')
-          .eq('player_id', resolvedId)
+          .eq('player_id', effectivePlayerId)
           .eq('season_id', workingSeason.id)
           .maybeSingle();
         seasonStats = stats;
@@ -104,14 +145,14 @@ export default function PlayerCardScreen() {
         const { count } = await supabase
           .from('player_achievements')
           .select('id', { count: 'exact', head: true })
-          .eq('player_id', resolvedId);
+          .eq('player_id', effectivePlayerId);
         badgeCount = count || 0;
       } catch { /* table may not exist */ }
 
       // Build stat bars from sport config
       const sportConfig = getSportDisplay(null);
       const statBars = sportConfig.primaryStats.map(sc => ({
-        label: sc.short,
+        label: sc.label,
         value: seasonStats ? Math.min(100, Math.round((seasonStats[sc.seasonColumn] || 0) / Math.max(1, seasonStats.games_played || 1) * 10)) : 0,
         color: sc.color,
       }));
@@ -142,7 +183,7 @@ export default function PlayerCardScreen() {
     } finally {
       setLoading(false);
     }
-  }, [resolvedId, workingSeason?.id]);
+  }, [effectivePlayerId, workingSeason?.id]);
 
   useEffect(() => { fetchPlayer(); }, [fetchPlayer]);
 

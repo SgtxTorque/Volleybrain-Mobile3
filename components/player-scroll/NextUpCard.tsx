@@ -169,8 +169,8 @@ const styles = StyleSheet.create({
     backgroundColor: PT.success,
   },
   label: {
-    fontFamily: FONTS.bodyBold,
-    fontSize: 10,
+    fontFamily: FONTS.display,
+    fontSize: 12,
     color: PT.accent,
     letterSpacing: 1.2,
   },
