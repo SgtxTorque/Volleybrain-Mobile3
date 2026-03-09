@@ -110,66 +110,77 @@ export default function CreateChallengeScreen() {
   const [submitting, setSubmitting] = useState(false);
 
   // ─── Resolve team and org ──────────────────────────────────
-  // Mirrors the 3-tier fallback chain from useCoachHomeData:
-  // 1. team_staff (user_id) — fetch ALL, filter active, prefer current season
-  // 2. coaches.profile_id → team_coaches
-  // 3. Last resort: first team in current season
+  // organization_id lives on seasons, not teams: teams → seasons(organization_id)
   useEffect(() => {
     if (!user?.id) return;
     (async () => {
       setResolving(true);
 
-      // Path 1: team_staff (primary — matches useCoachHomeData)
-      const { data: staffRows } = await supabase
-        .from('team_staff')
-        .select('team_id, is_active, teams(id, organization_id, season_id)')
-        .eq('user_id', user.id);
+      // Path 1: team_staff → teams → seasons (for org_id)
+      try {
+        const { data: staffRows } = await supabase
+          .from('team_staff')
+          .select('team_id, is_active, teams(id, season_id, seasons(organization_id))')
+          .eq('user_id', user.id);
 
-      // Filter to active staff, prefer current season
-      const activeStaff = (staffRows || []).filter((r: any) => r.is_active !== false);
-      const currentSeasonStaff = activeStaff.find((r: any) => (r.teams as any)?.season_id === workingSeason?.id);
-      const bestStaff = currentSeasonStaff || activeStaff[0];
+        const active = (staffRows || []).filter((r: any) => r.is_active !== false);
+        const match = workingSeason?.id
+          ? active.find((r: any) => (r.teams as any)?.season_id === workingSeason.id)
+          : null;
+        const best = match || active[0];
 
-      if (bestStaff) {
-        setTeamId(bestStaff.team_id);
-        setOrgId((bestStaff.teams as any)?.organization_id || null);
-        setResolving(false);
-        return;
-      }
-
-      // Path 2: coaches → team_coaches (secondary)
-      const { data: coachRecord } = await supabase
-        .from('coaches')
-        .select('id, team_coaches ( team_id, teams ( id, organization_id, season_id ) )')
-        .eq('profile_id', user.id)
-        .maybeSingle();
-
-      if (coachRecord) {
-        const tcEntries = (coachRecord.team_coaches as any[]) || [];
-        // Prefer current season team
-        const currentSeasonTC = tcEntries.find((tc: any) => (tc.teams as any)?.season_id === workingSeason?.id);
-        const bestTC = currentSeasonTC || tcEntries.find((tc: any) => tc.teams);
-        if (bestTC) {
-          setTeamId(bestTC.team_id);
-          setOrgId((bestTC.teams as any)?.organization_id || null);
+        if (best?.team_id) {
+          const orgId = (best.teams as any)?.seasons?.organization_id || null;
+          setTeamId(best.team_id);
+          setOrgId(orgId);
           setResolving(false);
           return;
         }
-      }
+      } catch {}
 
-      // Path 3: Last resort — if user is admin/coach of the org, pick first team in current season
-      if (workingSeason?.id) {
-        const { data: seasonTeams } = await supabase
-          .from('teams')
-          .select('id, organization_id')
-          .eq('season_id', workingSeason.id)
-          .limit(1)
+      // Path 2: coaches → team_coaches → teams → seasons (for org_id)
+      try {
+        const { data: coachRecord } = await supabase
+          .from('coaches')
+          .select('id, team_coaches(team_id, teams(id, season_id, seasons(organization_id)))')
+          .eq('profile_id', user.id)
           .maybeSingle();
 
-        if (seasonTeams) {
-          setTeamId(seasonTeams.id);
-          setOrgId(seasonTeams.organization_id || null);
+        if (coachRecord) {
+          const tcEntries = Array.isArray(coachRecord.team_coaches)
+            ? coachRecord.team_coaches
+            : coachRecord.team_coaches ? [coachRecord.team_coaches] : [];
+
+          const match = workingSeason?.id
+            ? tcEntries.find((tc: any) => (tc.teams as any)?.season_id === workingSeason.id)
+            : null;
+          const best = match || tcEntries.find((tc: any) => tc.teams);
+
+          if (best?.team_id) {
+            const orgId = (best.teams as any)?.seasons?.organization_id || null;
+            setTeamId(best.team_id);
+            setOrgId(orgId);
+            setResolving(false);
+            return;
+          }
         }
+      } catch {}
+
+      // Path 3: fallback — grab first team in current season
+      if (workingSeason?.id) {
+        try {
+          const { data: seasonTeam } = await supabase
+            .from('teams')
+            .select('id, season_id, seasons(organization_id)')
+            .eq('season_id', workingSeason.id)
+            .limit(1)
+            .maybeSingle();
+
+          if (seasonTeam) {
+            setTeamId(seasonTeam.id);
+            setOrgId((seasonTeam.seasons as any)?.organization_id || null);
+          }
+        } catch {}
       }
 
       setResolving(false);
