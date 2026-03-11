@@ -146,32 +146,68 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session);
       setUser(session.user);
 
-      // Load profile
-      const { data: prof } = await supabase
+      // Load profile — with retry on transient failure
+      let prof: any = null;
+      const { data: profData, error: profError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', session.user.id)
         .maybeSingle();
 
-      // OAuth users may not have a profile row yet — create one
-      if (!prof) {
-        const meta = session.user.user_metadata;
-        const { data: newProf } = await supabase
+      if (!profData && profError) {
+        // Query failed (network timeout, RLS issue, Supabase hiccup) — retry once
+        console.warn('[Auth] Profile query failed, retrying in 1s:', profError.message);
+        await new Promise(r => setTimeout(r, 1000));
+        const { data: retryData, error: retryError } = await supabase
           .from('profiles')
-          .upsert({
+          .select('*')
+          .eq('id', session.user.id)
+          .maybeSingle();
+        if (retryData) {
+          prof = retryData;
+        } else {
+          // Both attempts failed — bail gracefully, do NOT create/upsert anything
+          console.error('[Auth] Profile query failed after retry:', retryError?.message);
+          setLoading(false);
+          return;
+        }
+      } else if (!profData && !profError) {
+        // Profile genuinely doesn't exist — create with .insert() (NEVER upsert)
+        const meta = session.user.user_metadata;
+        const { data: newProf, error: insertError } = await supabase
+          .from('profiles')
+          .insert({
             id: session.user.id,
             email: session.user.email,
             full_name: meta?.full_name || meta?.name || '',
             onboarding_completed: false,
-          }, { onConflict: 'id' })
+          })
           .select()
           .single();
 
-        setProfile(newProf);
-        setIsPlatformAdmin(false);
-        setNeedsOnboarding(true);
-        setLoading(false);
-        return;
+        if (insertError) {
+          // Unique constraint = race condition — another process created it, re-fetch
+          const { data: reFetched } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .maybeSingle();
+          if (reFetched) {
+            prof = reFetched;
+          } else {
+            console.error('[Auth] Profile insert failed and re-fetch failed:', insertError.message);
+            setLoading(false);
+            return;
+          }
+        } else {
+          setProfile(newProf);
+          setIsPlatformAdmin(false);
+          setNeedsOnboarding(true);
+          setLoading(false);
+          return;
+        }
+      } else {
+        prof = profData;
       }
 
       setProfile(prof);

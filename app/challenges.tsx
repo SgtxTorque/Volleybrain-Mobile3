@@ -23,6 +23,7 @@ import CreateChallengeModal from '@/components/CreateChallengeModal';
 import { useAuth } from '@/lib/auth';
 import { fetchActiveChallenges, optInToChallenge, type ChallengeWithParticipants } from '@/lib/challenge-service';
 import type { CoachChallenge } from '@/lib/engagement-types';
+import { useCoachTeam } from '@/hooks/useCoachTeam';
 import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
@@ -72,80 +73,89 @@ export default function ChallengesScreen() {
   const [showCreate, setShowCreate] = useState(false);
   const [detailId, setDetailId] = useState<string | null>(null);
 
-  // ─── Resolve user's team ──
+  // ─── Coach team resolution via shared hook ──
+  const { teamId: coachTeamId, orgId: coachOrgId, loading: coachTeamLoading } = useCoachTeam();
+
+  // ─── Resolve user's team (role-aware) ──
   useEffect(() => {
     if (!user?.id) return;
-    resolveTeam();
-  }, [user?.id]);
 
-  const resolveTeam = async () => {
+    if (isCoach) {
+      // Coach: use the shared hook result
+      if (!coachTeamLoading) {
+        setTeamId(coachTeamId);
+        setOrgId(coachOrgId);
+      }
+    } else {
+      // Player or parent: resolve via player records
+      resolvePlayerTeam();
+    }
+  }, [user?.id, isCoach, coachTeamId, coachOrgId, coachTeamLoading]);
+
+  const resolvePlayerTeam = async () => {
     if (!user?.id) return;
 
-    // Path 1: team_staff → teams → seasons (for org_id)
     try {
-      const { data: staffRows } = await supabase
-        .from('team_staff')
-        .select('team_id, is_active, teams(id, season_id, seasons(organization_id))')
-        .eq('user_id', user.id);
-
-      const active = (staffRows || []).filter((r: any) => r.is_active !== false);
-      const best = active[0];
-      if (best?.team_id) {
-        setTeamId(best.team_id);
-        setOrgId((best.teams as any)?.seasons?.organization_id || null);
-        return;
-      }
-    } catch {}
-
-    // Path 2: coaches → team_coaches → teams
-    try {
-      const { data: coachRecord } = await supabase
-        .from('coaches')
-        .select('id, team_coaches(team_id, teams(id, season_id, seasons(organization_id)))')
+      // Player role: find player record via profile_id, then get team
+      const { data: playerRecord } = await supabase
+        .from('players')
+        .select('id')
         .eq('profile_id', user.id)
+        .limit(1)
         .maybeSingle();
 
-      if (coachRecord) {
-        const tcEntries = Array.isArray(coachRecord.team_coaches)
-          ? coachRecord.team_coaches
-          : coachRecord.team_coaches ? [coachRecord.team_coaches] : [];
-        const best = tcEntries.find((tc: any) => tc.teams);
-        if (best?.team_id) {
-          setTeamId(best.team_id);
-          setOrgId((best.teams as any)?.seasons?.organization_id || null);
+      if (playerRecord) {
+        const { data: tp } = await supabase
+          .from('team_players')
+          .select('team_id, teams(id, season_id, seasons(organization_id))')
+          .eq('player_id', playerRecord.id)
+          .limit(1)
+          .maybeSingle();
+
+        if (tp?.team_id) {
+          setTeamId(tp.team_id);
+          setOrgId((tp.teams as any)?.seasons?.organization_id || null);
           return;
         }
       }
-    } catch {}
 
-    // Path 3: team_players (player role) + parent linkage
-    try {
-      const { data: tpRows } = await supabase
-        .from('team_players')
-        .select('team_id, teams(id, season_id, seasons(organization_id))')
-        .eq('player_id', user.id)
-        .limit(1);
-
-      const { data: playerRows } = await supabase
+      // Parent role: find child player records, then get team
+      const { data: childPlayers } = await supabase
         .from('players')
         .select('id, team_players(team_id, teams(id, season_id, seasons(organization_id)))')
         .eq('parent_account_id', user.id)
         .limit(1);
 
-      const tp = (tpRows || [])[0];
-      if (tp?.team_id) {
-        setTeamId(tp.team_id);
-        setOrgId((tp.teams as any)?.seasons?.organization_id || null);
+      const childTp = ((childPlayers || [])[0]?.team_players as any[])?.[0];
+      if (childTp?.team_id) {
+        setTeamId(childTp.team_id);
+        setOrgId((childTp.teams as any)?.seasons?.organization_id || null);
         return;
       }
 
-      const playerTp = ((playerRows || [])[0]?.team_players as any[])?.[0];
-      if (playerTp?.team_id) {
-        setTeamId(playerTp.team_id);
-        setOrgId((playerTp.teams as any)?.seasons?.organization_id || null);
-        return;
+      // Also check player_guardians linkage
+      const { data: guardianLinks } = await supabase
+        .from('player_guardians')
+        .select('player_id')
+        .eq('guardian_id', user.id)
+        .limit(1);
+
+      if (guardianLinks && guardianLinks.length > 0) {
+        const { data: tp } = await supabase
+          .from('team_players')
+          .select('team_id, teams(id, season_id, seasons(organization_id))')
+          .eq('player_id', guardianLinks[0].player_id)
+          .limit(1)
+          .maybeSingle();
+
+        if (tp?.team_id) {
+          setTeamId(tp.team_id);
+          setOrgId((tp.teams as any)?.seasons?.organization_id || null);
+        }
       }
-    } catch {}
+    } catch (err) {
+      if (__DEV__) console.error('[Challenges] resolvePlayerTeam error:', err);
+    }
   };
 
   // ─── Fetch challenges ──

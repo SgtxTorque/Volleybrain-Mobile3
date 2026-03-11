@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 
 import { useAuth } from '@/lib/auth';
+import { useCoachTeam } from '@/hooks/useCoachTeam';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { EvaluationStatus, getTeamEvaluationStatus } from '@/lib/evaluations';
@@ -48,6 +49,7 @@ export default function EvaluationSessionScreen() {
   const { teamId: paramTeamId } = useLocalSearchParams<{ teamId?: string }>();
 
   const [loading, setLoading] = useState(true);
+  const { teamId: hookTeamId, loading: teamLoading } = useCoachTeam();
   const [teamId, setTeamId] = useState(paramTeamId || '');
   const [players, setPlayers] = useState<EvaluationStatus[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -55,23 +57,16 @@ export default function EvaluationSessionScreen() {
   const [resumeSession, setResumeSession] = useState<SessionData | null>(null);
 
   // ─── Load data + check for existing session ──────────────────────
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    // Use param teamId if provided, otherwise wait for hook resolution
+    const tid = paramTeamId || hookTeamId || '';
+    if (!tid && teamLoading) return; // still resolving
+    setTeamId(tid);
+    loadData(tid);
+  }, [paramTeamId, hookTeamId, teamLoading]);
 
-  const loadData = async () => {
+  const loadData = async (tid: string) => {
     try {
-      let tid = paramTeamId || '';
-      if (!tid && user?.id) {
-        const { data: staff } = await supabase
-          .from('team_staff')
-          .select('team_id')
-          .eq('user_id', user.id)
-          .eq('is_active', true)
-          .limit(1)
-          .single();
-        tid = staff?.team_id || '';
-      }
-      setTeamId(tid);
-
       if (!tid || !workingSeason?.id) { setLoading(false); return; }
 
       // Load evaluation status

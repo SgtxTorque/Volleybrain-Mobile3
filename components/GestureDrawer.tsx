@@ -420,15 +420,21 @@ export default function GestureDrawer() {
   const { badges, loading: badgesLoading } = useDrawerBadges(isOpen);
 
   // ====== MENU SECTIONS ======
-  // Filter sections by role
+  // Filter sections by the role the user is currently "viewing as" (not all roles)
   const visibleSections = MENU_SECTIONS.filter((s) => {
-    if (!s.roleGate) return true;
-    if (s.roleGate === 'admin') return isAdmin;
-    if (s.roleGate === 'coach') return isCoach;
-    if (s.roleGate === 'admin_coach') return isAdmin || isCoach;
-    if (s.roleGate === 'parent') return isParent;
-    if (s.roleGate === 'player') return isPlayer;
-    return true;
+    if (!s.roleGate) return true; // "League & Community", "Settings", etc. — always visible
+
+    const viewingAsAdmin = currentRoleKey === 'league_admin';
+    const viewingAsCoach = currentRoleKey === 'head_coach' || currentRoleKey === 'assistant_coach';
+    const viewingAsParent = currentRoleKey === 'parent';
+    const viewingAsPlayer = currentRoleKey === 'player';
+
+    if (s.roleGate === 'admin') return viewingAsAdmin;
+    if (s.roleGate === 'coach') return viewingAsCoach;
+    if (s.roleGate === 'admin_coach') return viewingAsAdmin || viewingAsCoach;
+    if (s.roleGate === 'parent') return viewingAsParent;
+    if (s.roleGate === 'player') return viewingAsPlayer;
+    return false;
   });
 
   // Track collapsed state per section

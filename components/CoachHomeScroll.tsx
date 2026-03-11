@@ -531,18 +531,6 @@ export default function CoachHomeScroll() {
         {/* ─── 6b. CHALLENGES QUICK CARD ── ↕ 12px ── */}
         <ChallengeQuickCard teamId={data.selectedTeamId} />
 
-        {/* ─── 7. TEAM HEALTH CARD (Tier 1.5 — dots + bars) ── ↕ 20px ── */}
-        <View style={{ marginBottom: 20 }}>
-          <TeamHealthCard
-            teamId={data.selectedTeamId}
-            attendanceRate={data.attendanceRate}
-            rsvpSummary={data.rsvpSummary}
-            rosterSize={selectedTeam?.player_count ?? 0}
-            scrollY={scrollY}
-            cardY={600}
-          />
-        </View>
-
         {/* ─── 7b. ROSTER ACCESS (Tier 2 — one-tap to carousel) ── ↕ 16px ── */}
         <TouchableOpacity
           style={styles.rosterCard}

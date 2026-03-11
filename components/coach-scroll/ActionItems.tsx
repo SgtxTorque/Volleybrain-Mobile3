@@ -19,33 +19,48 @@ export default function ActionItems({ teamId, pendingStatsCount }: Props) {
   const router = useRouter();
   const { workingSeason } = useSeason();
   const [evalCount, setEvalCount] = useState(0);
+  const [firstPendingEventId, setFirstPendingEventId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!teamId || !workingSeason?.id) return;
 
     (async () => {
       try {
+        // Eval count
         const { data: roster } = await supabase
           .from('team_players')
           .select('player_id')
           .eq('team_id', teamId);
 
-        if (!roster || roster.length === 0) return;
+        if (roster && roster.length > 0) {
+          const playerIds = roster.map(r => r.player_id);
+          const thirtyDaysAgo = new Date();
+          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+          const cutoff = thirtyDaysAgo.toISOString().split('T')[0];
 
-        const playerIds = roster.map(r => r.player_id);
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        const cutoff = thirtyDaysAgo.toISOString().split('T')[0];
+          const { data: recentEvals } = await supabase
+            .from('player_evaluations')
+            .select('player_id')
+            .in('player_id', playerIds)
+            .eq('season_id', workingSeason.id)
+            .gte('evaluation_date', cutoff);
 
-        const { data: recentEvals } = await supabase
-          .from('player_evaluations')
-          .select('player_id')
-          .in('player_id', playerIds)
-          .eq('season_id', workingSeason.id)
-          .gte('evaluation_date', cutoff);
+          const evaluatedIds = new Set((recentEvals || []).map(e => e.player_id));
+          setEvalCount(playerIds.filter(id => !evaluatedIds.has(id)).length);
+        }
 
-        const evaluatedIds = new Set((recentEvals || []).map(e => e.player_id));
-        setEvalCount(playerIds.filter(id => !evaluatedIds.has(id)).length);
+        // Fetch first pending-stats event so navigation passes eventId
+        const { data: pendingEvent } = await supabase
+          .from('schedule_events')
+          .select('id')
+          .eq('team_id', teamId)
+          .eq('event_type', 'game')
+          .eq('game_status', 'completed')
+          .eq('stats_entered', false)
+          .order('event_date', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        setFirstPendingEventId(pendingEvent?.id || null);
       } catch (err) {
         if (__DEV__) console.error('[ActionItems] Error:', err);
       }
@@ -77,7 +92,7 @@ export default function ActionItems({ teamId, pendingStatsCount }: Props) {
         <TouchableOpacity
           style={styles.item}
           activeOpacity={0.7}
-          onPress={() => router.push('/game-results' as any)}
+          onPress={() => router.push(firstPendingEventId ? `/game-results?eventId=${firstPendingEventId}` as any : '/game-results' as any)}
         >
           <Text style={styles.itemText}>
             {'\u{1F4CA}'} {pendingStatsCount} game{pendingStatsCount > 1 ? 's' : ''} need stats entered {'\u2192'}

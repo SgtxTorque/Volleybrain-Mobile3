@@ -27,6 +27,7 @@ import {
 import { useAuth } from '@/lib/auth';
 import type { ChallengeWithParticipants } from '@/lib/challenge-service';
 import type { CoachChallenge } from '@/lib/engagement-types';
+import { useCoachTeam } from '@/hooks/useCoachTeam';
 import { supabase } from '@/lib/supabase';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
@@ -58,29 +59,8 @@ export default function CoachChallengeDashboard() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
 
-  // Team resolution
-  const [teamId, setTeamId] = useState<string | null>(null);
-  const [orgId, setOrgId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!user?.id) return;
-    resolveTeam();
-  }, [user?.id]);
-
-  const resolveTeam = async () => {
-    if (!user?.id) return;
-    const { data: staffRow } = await supabase
-      .from('team_staff')
-      .select('team_id, teams(organization_id)')
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .limit(1)
-      .single();
-    if (staffRow) {
-      setTeamId(staffRow.team_id);
-      setOrgId((staffRow.teams as any)?.organization_id || null);
-    }
-  };
+  // Team resolution — shared 3-path fallback hook
+  const { teamId, orgId } = useCoachTeam();
 
   // Data hooks
   const { stats, loading: statsLoading, reload: reloadStats } = useCoachChallengeStats(teamId);

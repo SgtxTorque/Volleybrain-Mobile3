@@ -26,20 +26,28 @@ export default function SeasonSelector() {
 
   type SeasonItem = (typeof allSeasons)[number];
 
+  // Filter to active/upcoming for main selector; archived/completed accessible via Season Management
+  const selectableSeasons = useMemo(() =>
+    allSeasons.filter(s => {
+      const st = s.status || '';
+      return st !== 'archived' && st !== 'completed';
+    }),
+  [allSeasons]);
+
   const groupedSeasons = useMemo(() => {
     const groups: Record<string, SeasonItem[]> = {};
-    for (const season of allSeasons) {
-      const key = season.status || 'archived';
+    for (const season of selectableSeasons) {
+      const key = season.status || 'active';
       if (!groups[key]) groups[key] = [];
       groups[key].push(season);
     }
     return groups;
-  }, [allSeasons]);
+  }, [selectableSeasons]);
 
   const statusOrder = ['active', 'upcoming', 'archived', 'completed'];
 
-  // Don't render if there's only one season
-  if (allSeasons.length <= 1) return null;
+  // Don't render if there's only one selectable season
+  if (selectableSeasons.length <= 1) return null;
 
   const handleSelect = (season: SeasonItem) => {
     setWorkingSeason(season);

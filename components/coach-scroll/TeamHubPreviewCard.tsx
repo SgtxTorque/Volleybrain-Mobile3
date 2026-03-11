@@ -123,7 +123,7 @@ export default function TeamHubPreviewCard({ teamId, scrollY, cardY = 1100 }: Pr
 
   if (!teamId || !loaded) return null;
 
-  const goToHub = () => router.push('/(tabs)/coach-chat' as any);
+  const goToHub = () => router.push('/(tabs)/connect' as any);
 
   const postIcon = (type: string) => {
     if (type === 'shoutout') return '\u{1F3AF}';

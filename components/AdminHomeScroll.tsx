@@ -276,6 +276,7 @@ export default function AdminHomeScroll() {
             overdueCount={data.overdueCount}
             paymentPct={data.paymentPct}
             seasonName={data.seasonName}
+            sportName={data.sportName}
           />
         )}
 

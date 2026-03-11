@@ -791,18 +791,13 @@ export default function EventDetailModal({
             </View>
           )}
 
-          {myPlayers.length === 0 && (
+          {myPlayers.length === 0 && isParent && (
             <View style={s.section}>
               <View style={s.emptyPlayersCard}>
                 <Ionicons name="person-outline" size={40} color={BRAND.textMuted} />
                 <Text style={s.emptyPlayersText}>
                   No players linked to your account on this team
                 </Text>
-                {__DEV__ && (
-                  <Text style={s.debugText}>
-                    (uid: {user?.id}, team: {event?.team_id})
-                  </Text>
-                )}
               </View>
             </View>
           )}

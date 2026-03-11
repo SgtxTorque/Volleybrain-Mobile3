@@ -93,16 +93,22 @@ export default function BulkEventCreate() {
   useEffect(() => {
     loadTeams();
     loadVenues();
-  }, []);
+  }, [organization?.id, workingSeason?.id]);
 
   const loadTeams = async () => {
     if (!organization?.id) { setLoadingTeams(false); return; }
     try {
-      const { data } = await supabase
+      let query = supabase
         .from('teams')
         .select('id, name')
-        .eq('organization_id', organization.id)
-        .order('name');
+        .eq('organization_id', organization.id);
+
+      // Only show teams for current season
+      if (workingSeason?.id) {
+        query = query.eq('season_id', workingSeason.id);
+      }
+
+      const { data } = await query.order('name');
       setTeams(data || []);
     } catch (err) {
       if (__DEV__) console.error('[BulkEventCreate] loadTeams error:', err);

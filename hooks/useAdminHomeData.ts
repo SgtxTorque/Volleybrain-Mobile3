@@ -116,8 +116,9 @@ export function useAdminHomeData() {
   // Coaches
   const [coaches, setCoaches] = useState<CoachInfo[]>([]);
 
-  // Season name
+  // Season name + sport
   const [seasonName, setSeasonName] = useState('');
+  const [sportName, setSportName] = useState('');
 
   // Upcoming season
   const [upcomingSeason, setUpcomingSeason] = useState<{ name: string; start_date: string } | null>(null);
@@ -133,6 +134,7 @@ export function useAdminHomeData() {
       setAdminName(profile?.full_name?.split(' ')[0] || 'Admin');
       setOrgName((organization as any)?.name || '');
       setSeasonName(workingSeason.name || '');
+      setSportName((workingSeason as any).sport || '');
 
       const seasonId = workingSeason.id;
       const orgId = (workingSeason as any).organization_id || (organization as any)?.id;
@@ -485,6 +487,7 @@ export function useAdminHomeData() {
     adminName,
     orgName,
     seasonName,
+    sportName,
     teams,
     totalPlayers,
     queueItems,

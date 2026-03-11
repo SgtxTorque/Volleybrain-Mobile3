@@ -32,6 +32,7 @@ import {
   CHALLENGE_CATEGORIES,
   type ChallengeCategory,
 } from '@/lib/challenge-templates';
+import { useCoachTeam } from '@/hooks/useCoachTeam';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { BRAND } from '@/theme/colors';
@@ -84,10 +85,8 @@ export default function CreateChallengeScreen() {
   const { workingSeason } = useSeason();
   const { templateId } = useLocalSearchParams<{ templateId?: string }>();
 
-  // ─── Team / Org resolution ─────────────────────────────────
-  const [teamId, setTeamId] = useState<string | null>(null);
-  const [orgId, setOrgId] = useState<string | null>(null);
-  const [resolving, setResolving] = useState(true);
+  // ─── Team / Org resolution (shared 3-path fallback hook) ───
+  const { teamId, orgId, loading: resolving } = useCoachTeam();
 
   // ─── Form state ────────────────────────────────────────────
   const [title, setTitle] = useState('');
@@ -108,84 +107,6 @@ export default function CreateChallengeScreen() {
   const [customPrize, setCustomPrize] = useState('');
 
   const [submitting, setSubmitting] = useState(false);
-
-  // ─── Resolve team and org ──────────────────────────────────
-  // organization_id lives on seasons, not teams: teams → seasons(organization_id)
-  useEffect(() => {
-    if (!user?.id) return;
-    (async () => {
-      setResolving(true);
-
-      // Path 1: team_staff → teams → seasons (for org_id)
-      try {
-        const { data: staffRows } = await supabase
-          .from('team_staff')
-          .select('team_id, is_active, teams(id, season_id, seasons(organization_id))')
-          .eq('user_id', user.id);
-
-        const active = (staffRows || []).filter((r: any) => r.is_active !== false);
-        const match = workingSeason?.id
-          ? active.find((r: any) => (r.teams as any)?.season_id === workingSeason.id)
-          : null;
-        const best = match || active[0];
-
-        if (best?.team_id) {
-          const orgId = (best.teams as any)?.seasons?.organization_id || null;
-          setTeamId(best.team_id);
-          setOrgId(orgId);
-          setResolving(false);
-          return;
-        }
-      } catch {}
-
-      // Path 2: coaches → team_coaches → teams → seasons (for org_id)
-      try {
-        const { data: coachRecord } = await supabase
-          .from('coaches')
-          .select('id, team_coaches(team_id, teams(id, season_id, seasons(organization_id)))')
-          .eq('profile_id', user.id)
-          .maybeSingle();
-
-        if (coachRecord) {
-          const tcEntries = Array.isArray(coachRecord.team_coaches)
-            ? coachRecord.team_coaches
-            : coachRecord.team_coaches ? [coachRecord.team_coaches] : [];
-
-          const match = workingSeason?.id
-            ? tcEntries.find((tc: any) => (tc.teams as any)?.season_id === workingSeason.id)
-            : null;
-          const best = match || tcEntries.find((tc: any) => tc.teams);
-
-          if (best?.team_id) {
-            const orgId = (best.teams as any)?.seasons?.organization_id || null;
-            setTeamId(best.team_id);
-            setOrgId(orgId);
-            setResolving(false);
-            return;
-          }
-        }
-      } catch {}
-
-      // Path 3: fallback — grab first team in current season
-      if (workingSeason?.id) {
-        try {
-          const { data: seasonTeam } = await supabase
-            .from('teams')
-            .select('id, season_id, seasons(organization_id)')
-            .eq('season_id', workingSeason.id)
-            .limit(1)
-            .maybeSingle();
-
-          if (seasonTeam) {
-            setTeamId(seasonTeam.id);
-            setOrgId((seasonTeam.seasons as any)?.organization_id || null);
-          }
-        } catch {}
-      }
-
-      setResolving(false);
-    })();
-  }, [user?.id, workingSeason?.id]);
 
   // ─── Pre-fill from template ────────────────────────────────
   useEffect(() => {

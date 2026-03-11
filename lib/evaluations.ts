@@ -106,11 +106,20 @@ export async function getTeamEvaluationStatus(
   teamId: string,
   seasonId: string,
 ): Promise<EvaluationStatus[]> {
-  // 1) Get roster
+  // 1) Get roster via team_players junction table (players has no team_id column)
+  const { data: teamPlayerRows } = await supabase
+    .from('team_players')
+    .select('player_id')
+    .eq('team_id', teamId);
+
+  if (!teamPlayerRows || teamPlayerRows.length === 0) return [];
+
+  const rosterPlayerIds = teamPlayerRows.map(tp => tp.player_id);
+
   const { data: players } = await supabase
     .from('players')
     .select('id, first_name, last_name, jersey_number, position, photo_url')
-    .eq('team_id', teamId)
+    .in('id', rosterPlayerIds)
     .eq('season_id', seasonId)
     .order('last_name');
 

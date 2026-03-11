@@ -16,6 +16,7 @@ type Props = {
   overdueCount: number;
   paymentPct: number;
   seasonName: string;
+  sportName?: string;
 };
 
 export default function PaymentSnapshot({
@@ -25,6 +26,7 @@ export default function PaymentSnapshot({
   overdueCount,
   paymentPct,
   seasonName,
+  sportName,
 }: Props) {
   const router = useRouter();
   const allPaid = paymentPct >= 100;
@@ -33,7 +35,9 @@ export default function PaymentSnapshot({
     <View style={styles.card}>
       <View style={styles.headerRow}>
         <Text style={styles.headerLabel}>PAYMENTS</Text>
-        <Text style={styles.seasonLabel}>{seasonName}</Text>
+        <Text style={styles.seasonLabel}>
+          {seasonName}{sportName ? ` \u00B7 ${sportName}` : ''}
+        </Text>
       </View>
 
       {allPaid ? (

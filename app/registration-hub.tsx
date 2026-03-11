@@ -591,9 +591,9 @@ export default function RegistrationHubScreen() {
         .upsert({
           team_id: teamId,
           player_id: playerId,
-          role: 'player',
+          is_primary_team: true,
           joined_at: new Date().toISOString(),
-        });
+        }, { onConflict: 'team_id,player_id' });
 
       if (teamError) throw teamError;
 
