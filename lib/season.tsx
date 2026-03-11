@@ -52,16 +52,20 @@ export function SeasonProvider({ children }: { children: React.ReactNode }) {
   };
 
   const refreshSeasons = async () => {
+    // No organization = logged out or not yet loaded — reset cleanly, don't query
+    if (!organization?.id) {
+      setAllSeasons([]);
+      setWorkingSeasonInternal(null);
+      setLoading(false);
+      return;
+    }
+
     let query = supabase
       .from('seasons')
       .select('*')
       .order('end_date', { ascending: false, nullsFirst: false })
-      .order('created_at', { ascending: false });
-
-    // Filter by organization (critical data scoping — matches web)
-    if (organization?.id) {
-      query = query.eq('organization_id', organization.id);
-    }
+      .order('created_at', { ascending: false })
+      .eq('organization_id', organization.id);
 
     // Filter by active sport if one is selected
     if (activeSport?.id) {

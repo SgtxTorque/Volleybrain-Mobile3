@@ -41,7 +41,7 @@ async function shouldSendEmail(userId: string | null, prefKey: PrefKey): Promise
   try {
     const { data } = await supabase
       .from('notification_preferences')
-      .select(prefKey)
+      .select('event_updates, game_reminders')
       .eq('user_id', userId)
       .maybeSingle();
     return data?.[prefKey] !== false;

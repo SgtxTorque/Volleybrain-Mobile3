@@ -1,9 +1,19 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Session, User } from '@supabase/supabase-js';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from './supabase';
 import { registerForPushNotificationsAsync, savePushToken } from './notifications';
+
+// Keys that MUST be cleared on logout to prevent cross-user context leakage
+const LOGOUT_CLEAR_KEYS = [
+  'vb_admin_last_season_id',
+  'vb_selected_team_id',
+  'vb_player_last_child_id',
+  'activeSportId',
+  'lynx_daily_achievement_check',
+];
 
 // ============================================
 // TYPES — aligned with web AuthContext.jsx
@@ -351,6 +361,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInWithApple = () => performOAuthSignIn('apple');
 
   const signOut = async () => {
+    // Clear persisted context BEFORE signing out to prevent cross-user leakage
+    await AsyncStorage.multiRemove(LOGOUT_CLEAR_KEYS).catch(() => {});
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
@@ -359,6 +371,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsAdmin(false);
     setIsPlatformAdmin(false);
     setNeedsOnboarding(false);
+    setHasOrphanRecords(false);
+    setOrphanPlayers([]);
   };
 
   return (
