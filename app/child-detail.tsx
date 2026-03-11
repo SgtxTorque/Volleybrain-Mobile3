@@ -1,5 +1,6 @@
 import { getSportDisplay, getPositionInfo } from '@/constants/sport-display';
 import { useAuth } from '@/lib/auth';
+import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { BRAND } from '@/theme/colors';
@@ -88,6 +89,7 @@ const SCROLL_THRESHOLD = PANEL_COLLAPSED_TOP - SCREEN_HEIGHT * 0.30;
 
 export default function ChildDetailScreen() {
   const { user } = useAuth();
+  const { isAdmin, isCoach } = usePermissions();
   const { workingSeason } = useSeason();
   const router = useRouter();
   const { playerId } = useLocalSearchParams<{ playerId: string }>();
@@ -129,7 +131,7 @@ export default function ChildDetailScreen() {
       // 1. Fetch player
       const { data: playerData, error: playerErr } = await supabase
         .from('players')
-        .select('id, first_name, last_name, jersey_number, position, photo_url, sport_id, season_id')
+        .select('id, first_name, last_name, jersey_number, position, photo_url, sport_id, season_id, parent_account_id')
         .eq('id', playerId)
         .single();
 
@@ -138,6 +140,24 @@ export default function ChildDetailScreen() {
         setError('Could not load player data.');
         return;
       }
+
+      // ── Ownership check: verify user has access to this player ──
+      if (!isAdmin && !isCoach) {
+        let hasAccess = playerData.parent_account_id === user?.id;
+        if (!hasAccess) {
+          const { count } = await supabase
+            .from('player_guardians')
+            .select('id', { count: 'exact', head: true })
+            .eq('guardian_id', user!.id)
+            .eq('player_id', playerId);
+          hasAccess = (count ?? 0) > 0;
+        }
+        if (!hasAccess) {
+          setError('You do not have permission to view this player.');
+          return;
+        }
+      }
+
       setPlayer(playerData as PlayerData);
 
       // Fetch sport name

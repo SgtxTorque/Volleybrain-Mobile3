@@ -168,8 +168,25 @@ const statusConfig: Record<RegistrationStatus, { label: string; color: string; i
 export default function RegistrationHubScreen() {
   const { colors } = useTheme();
   const { user, profile } = useAuth();
+  const { isAdmin } = usePermissions();
   const { workingSeason } = useSeason();
   const router = useRouter();
+
+  // ── Admin guard ──
+  if (!isAdmin) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', gap: 12, padding: 20 }}>
+        <Ionicons name="lock-closed-outline" size={48} color={BRAND.textMuted} />
+        <Text style={{ fontFamily: FONTS.bodyBold, fontSize: 18 }}>Access Restricted</Text>
+        <Text style={{ fontFamily: FONTS.bodyMedium, fontSize: 14, color: BRAND.textMuted, textAlign: 'center' }}>
+          Admin permissions required.
+        </Text>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 8 }}>
+          <Text style={{ fontFamily: FONTS.bodySemiBold, color: BRAND.skyBlue, fontSize: 15 }}>Go Back</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -203,8 +220,6 @@ export default function RegistrationHubScreen() {
   const [pendingTeamAssignIds, setPendingTeamAssignIds] = useState<string[]>([]);
   const [showBulkTeamPicker, setShowBulkTeamPicker] = useState(false);
   const [showSeasonFilter, setShowSeasonFilter] = useState(false);
-
-  const { isAdmin } = usePermissions();
 
   // =====================================================
   // DATA FETCHING - Now queries ALL open seasons

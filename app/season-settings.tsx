@@ -3,6 +3,7 @@ import SeasonFeesManager from '@/components/SeasonFeesManager';
 import AppHeaderBar from '@/components/ui/AppHeaderBar';
 import { useAuth } from '@/lib/auth';
 import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
+import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
@@ -77,8 +78,25 @@ type Sport = {
 export default function SeasonSettingsScreen() {
   const { colors } = useTheme();
   const { profile } = useAuth();
+  const { isAdmin } = usePermissions();
   const { workingSeason, refreshSeasons } = useSeason();
   const router = useRouter();
+
+  // ── Admin guard ──
+  if (!isAdmin) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', gap: 12, padding: 20 }}>
+        <Ionicons name="lock-closed-outline" size={48} color="#999" />
+        <Text style={{ fontFamily: FONTS.bodyBold, fontSize: 18 }}>Access Restricted</Text>
+        <Text style={{ fontFamily: FONTS.bodyMedium, fontSize: 14, color: '#666', textAlign: 'center' }}>
+          Admin permissions required.
+        </Text>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 8 }}>
+          <Text style={{ fontFamily: FONTS.bodySemiBold, color: '#0EA5E9', fontSize: 15 }}>Go Back</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

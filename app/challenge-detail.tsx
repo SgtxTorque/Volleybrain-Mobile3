@@ -371,6 +371,29 @@ export default function ChallengeDetailScreen() {
     );
   }
 
+  // ── Access check: verify user can access this challenge's team ──
+  if (!isAdmin && !isCoach) {
+    const hasTeamAccess = participants.some(p => p.player_id === user?.id);
+    if (!hasTeamAccess && !isPlayer) {
+      return (
+        <View style={[s.root, { paddingTop: insets.top }]}>
+          <View style={s.header}>
+            <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+              <Ionicons name="arrow-back" size={22} color={BRAND.textPrimary} />
+            </TouchableOpacity>
+            <Text style={s.headerTitle}>Challenge</Text>
+            <View style={{ width: 40 }} />
+          </View>
+          <View style={s.centered}>
+            <Ionicons name="lock-closed-outline" size={48} color={BRAND.textMuted} />
+            <Text style={s.emptyText}>Access Restricted</Text>
+            <Text style={s.emptySubtext}>You don't have permission to view this challenge.</Text>
+          </View>
+        </View>
+      );
+    }
+  }
+
   // ─── List Header (progress ring, meta, verification queue) ────
 
   const ListHeader = () => (

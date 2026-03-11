@@ -6,6 +6,7 @@ import SectionHeader from '@/components/ui/SectionHeader';
 import StatBox from '@/components/ui/StatBox';
 import { useAuth } from '@/lib/auth';
 import { addAdminToTeamChats, addParentToTeamChats, createTeamChats, getProfileByEmail, syncTeamChats } from '@/lib/chat-utils';
+import { usePermissions } from '@/lib/permissions-context';
 import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
@@ -55,7 +56,24 @@ export default function TeamManagementScreen() {
   const { profile } = useAuth();
   const { workingSeason } = useSeason();
   const { colors } = useTheme();
+  const { isAdmin } = usePermissions();
   const router = useRouter();
+
+  // ── Admin guard ──
+  if (!isAdmin) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', gap: 12, padding: 20 }}>
+        <Ionicons name="lock-closed-outline" size={48} color="#999" />
+        <Text style={{ fontFamily: FONTS.bodyBold, fontSize: 18 }}>Access Restricted</Text>
+        <Text style={{ fontFamily: FONTS.bodyMedium, fontSize: 14, color: '#666', textAlign: 'center' }}>
+          Admin permissions required.
+        </Text>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 8 }}>
+          <Text style={{ fontFamily: FONTS.bodySemiBold, color: '#0EA5E9', fontSize: 15 }}>Go Back</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
 
   // Core data
   const [teams, setTeams] = useState<Team[]>([]);
@@ -82,7 +100,7 @@ export default function TeamManagementScreen() {
 
   // Form state
   const [teamName, setTeamName] = useState('');
-  const [teamType, setTeamType] = useState('development');
+  const [teamType, setTeamType] = useState('recreational');
   const [teamColor, setTeamColor] = useState('#FFD700');
   const [selectedAgeGroup, setSelectedAgeGroup] = useState<string | null>(null);
   const [maxRoster, setMaxRoster] = useState('15');
@@ -222,7 +240,7 @@ export default function TeamManagementScreen() {
   // ================================================================
 
   const resetForm = () => {
-    setTeamName(''); setTeamType('development'); setTeamColor('#FFD700');
+    setTeamName(''); setTeamType('recreational'); setTeamColor('#FFD700');
     setSelectedAgeGroup(null); setMaxRoster('15');
   };
 
@@ -435,11 +453,11 @@ export default function TeamManagementScreen() {
 
         <Text style={s.label}>Team Type</Text>
         <View style={s.typeRow}>
-          <TouchableOpacity style={[s.typeBtn, teamType === 'elite' && s.typeBtnSel]} onPress={() => setTeamType('elite')}>
-            <Text style={[s.typeBtnTxt, teamType === 'elite' && s.typeBtnTxtSel]}>Elite</Text>
+          <TouchableOpacity style={[s.typeBtn, teamType === 'competitive' && s.typeBtnSel]} onPress={() => setTeamType('competitive')}>
+            <Text style={[s.typeBtnTxt, teamType === 'competitive' && s.typeBtnTxtSel]}>Competitive</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[s.typeBtn, teamType === 'development' && s.typeBtnSel]} onPress={() => setTeamType('development')}>
-            <Text style={[s.typeBtnTxt, teamType === 'development' && s.typeBtnTxtSel]}>Development</Text>
+          <TouchableOpacity style={[s.typeBtn, teamType === 'recreational' && s.typeBtnSel]} onPress={() => setTeamType('recreational')}>
+            <Text style={[s.typeBtnTxt, teamType === 'recreational' && s.typeBtnTxtSel]}>Recreational</Text>
           </TouchableOpacity>
         </View>
 

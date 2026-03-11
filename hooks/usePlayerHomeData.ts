@@ -4,6 +4,8 @@
  * Columns verified against SCHEMA_REFERENCE.csv.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useAuth } from '@/lib/auth';
+import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { calculateStreakWithFreeze } from '@/lib/streak-engine';
 import { supabase } from '@/lib/supabase';
@@ -119,10 +121,13 @@ export type RecentShoutout = {
 // ─── Hook ──────────────────────────────────────────────────────
 
 export function usePlayerHomeData(playerId: string | null) {
+  const { user } = useAuth();
+  const { isAdmin, isCoach } = usePermissions();
   const { workingSeason } = useSeason();
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [authorized, setAuthorized] = useState(true);
 
   // Player info
   const [playerName, setPlayerName] = useState('');
@@ -170,18 +175,39 @@ export function usePlayerHomeData(playerId: string | null) {
       // 1. Player info + teams
       const { data: playerData } = await supabase
         .from('players')
-        .select('id, first_name, last_name, jersey_number, position, photo_url')
+        .select('id, first_name, last_name, jersey_number, position, photo_url, parent_account_id')
         .eq('id', playerId)
         .maybeSingle();
 
-      if (playerData) {
-        setFirstName(playerData.first_name || '');
-        setLastName(playerData.last_name || '');
-        setPlayerName(`${playerData.first_name} ${playerData.last_name}`);
-        setJerseyNumber(playerData.jersey_number);
-        setPosition(playerData.position);
-        setPhotoUrl(playerData.photo_url);
+      if (!playerData) {
+        setLoading(false);
+        return;
       }
+
+      // ── Ownership check: verify user has access to this player ──
+      if (!isAdmin && !isCoach) {
+        let hasAccess = playerData.parent_account_id === user?.id;
+        if (!hasAccess) {
+          const { count } = await supabase
+            .from('player_guardians')
+            .select('id', { count: 'exact', head: true })
+            .eq('guardian_id', user!.id)
+            .eq('player_id', playerId);
+          hasAccess = (count ?? 0) > 0;
+        }
+        if (!hasAccess) {
+          setAuthorized(false);
+          setLoading(false);
+          return;
+        }
+      }
+
+      setFirstName(playerData.first_name || '');
+      setLastName(playerData.last_name || '');
+      setPlayerName(`${playerData.first_name} ${playerData.last_name}`);
+      setJerseyNumber(playerData.jersey_number);
+      setPosition(playerData.position);
+      setPhotoUrl(playerData.photo_url);
 
       const { data: teamData } = await supabase
         .from('team_players')
@@ -450,7 +476,7 @@ export function usePlayerHomeData(playerId: string | null) {
     } finally {
       setLoading(false);
     }
-  }, [playerId, workingSeason?.id]);
+  }, [playerId, workingSeason?.id, user?.id, isAdmin, isCoach]);
 
   useEffect(() => {
     fetchAll();
@@ -494,6 +520,7 @@ export function usePlayerHomeData(playerId: string | null) {
     loading,
     refreshing,
     refresh,
+    authorized,
     // Player info
     playerName,
     firstName,
