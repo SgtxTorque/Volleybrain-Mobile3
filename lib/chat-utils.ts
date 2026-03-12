@@ -107,148 +107,171 @@ export const createTeamChats = async (options: CreateChatOptions): Promise<{ tea
 
 // Add parent to team chats
 export const addParentToTeamChats = async (options: AddParentOptions): Promise<boolean> => {
-  const { parentId, parentName, playerFirstName, teamChatId, playerChatId } = options;
+  try {
+    const { parentId, parentName, playerFirstName, teamChatId, playerChatId } = options;
 
-  const { data: existingMemberships } = await supabase
-    .from('channel_members')
-    .select('channel_id, display_name')
-    .eq('user_id', parentId)
-    .in('channel_id', [teamChatId, playerChatId]);
+    const { data: existingMemberships } = await supabase
+      .from('channel_members')
+      .select('channel_id, display_name')
+      .eq('user_id', parentId)
+      .in('channel_id', [teamChatId, playerChatId]);
 
-  const existingTeamMember = existingMemberships?.find(m => m.channel_id === teamChatId);
-  let childNames: string[] = [];
-  
-  if (existingTeamMember) {
-    const match = existingTeamMember.display_name.match(/\(([^)]+)\)/);
-    if (match) {
-      childNames = match[1].split(', ');
+    const existingTeamMember = existingMemberships?.find(m => m.channel_id === teamChatId);
+    let childNames: string[] = [];
+
+    if (existingTeamMember) {
+      const match = existingTeamMember.display_name.match(/\(([^)]+)\)/);
+      if (match) {
+        childNames = match[1].split(', ');
+      }
     }
-  }
-  
-  if (!childNames.includes(playerFirstName)) {
-    childNames.push(playerFirstName);
-  }
 
-  const displayName = formatParentDisplayName(parentName, childNames);
+    if (!childNames.includes(playerFirstName)) {
+      childNames.push(playerFirstName);
+    }
 
-  if (existingTeamMember) {
-    await supabase
-      .from('channel_members')
-      .update({ display_name: displayName })
-      .eq('user_id', parentId)
-      .eq('channel_id', teamChatId);
-  } else {
-    await supabase.from('channel_members').insert({
-      channel_id: teamChatId,
-      user_id: parentId,
-      display_name: displayName,
-      member_role: 'parent',
-      can_post: true,
-      can_moderate: false,
-    });
+    const displayName = formatParentDisplayName(parentName, childNames);
+
+    if (existingTeamMember) {
+      const { error } = await supabase
+        .from('channel_members')
+        .update({ display_name: displayName })
+        .eq('user_id', parentId)
+        .eq('channel_id', teamChatId);
+      if (error && __DEV__) console.error('[chat-utils] update team member failed:', error.message);
+    } else {
+      const { error } = await supabase.from('channel_members').insert({
+        channel_id: teamChatId,
+        user_id: parentId,
+        display_name: displayName,
+        member_role: 'parent',
+        can_post: true,
+        can_moderate: false,
+      });
+      if (error && __DEV__) console.error('[chat-utils] insert team member failed:', error.message);
+    }
+
+    const existingPlayerMember = existingMemberships?.find(m => m.channel_id === playerChatId);
+
+    if (existingPlayerMember) {
+      const { error } = await supabase
+        .from('channel_members')
+        .update({ display_name: displayName })
+        .eq('user_id', parentId)
+        .eq('channel_id', playerChatId);
+      if (error && __DEV__) console.error('[chat-utils] update player member failed:', error.message);
+    } else {
+      const { error } = await supabase.from('channel_members').insert({
+        channel_id: playerChatId,
+        user_id: parentId,
+        display_name: displayName,
+        member_role: 'parent',
+        can_post: false,
+        can_moderate: false,
+      });
+      if (error && __DEV__) console.error('[chat-utils] insert player member failed:', error.message);
+    }
+
+    return true;
+  } catch (err) {
+    if (__DEV__) console.error('[chat-utils] addParentToTeamChats crashed:', err);
+    return false;
   }
-
-  const existingPlayerMember = existingMemberships?.find(m => m.channel_id === playerChatId);
-  
-  if (existingPlayerMember) {
-    await supabase
-      .from('channel_members')
-      .update({ display_name: displayName })
-      .eq('user_id', parentId)
-      .eq('channel_id', playerChatId);
-  } else {
-    await supabase.from('channel_members').insert({
-      channel_id: playerChatId,
-      user_id: parentId,
-      display_name: displayName,
-      member_role: 'parent',
-      can_post: false,
-      can_moderate: false,
-    });
-  }
-
-  return true;
 };
 
 // Add coach to team chats
 export const addCoachToTeamChats = async (options: AddCoachOptions): Promise<boolean> => {
-  const { coachId, coachName, teamChatId, playerChatId, isHead } = options;
+  try {
+    const { coachId, coachName, teamChatId, playerChatId, isHead } = options;
 
-  const nameParts = coachName.trim().split(' ');
-  const displayName = isHead 
-    ? `Coach ${nameParts[nameParts.length - 1]}` 
-    : `Asst. Coach ${nameParts[nameParts.length - 1]}`;
+    const nameParts = coachName.trim().split(' ');
+    const displayName = isHead
+      ? `Coach ${nameParts[nameParts.length - 1]}`
+      : `Asst. Coach ${nameParts[nameParts.length - 1]}`;
 
-  const { data: existing } = await supabase
-    .from('channel_members')
-    .select('channel_id')
-    .eq('user_id', coachId)
-    .in('channel_id', [teamChatId, playerChatId]);
+    const { data: existing } = await supabase
+      .from('channel_members')
+      .select('channel_id')
+      .eq('user_id', coachId)
+      .in('channel_id', [teamChatId, playerChatId]);
 
-  const inTeamChat = existing?.some(e => e.channel_id === teamChatId);
-  const inPlayerChat = existing?.some(e => e.channel_id === playerChatId);
+    const inTeamChat = existing?.some(e => e.channel_id === teamChatId);
+    const inPlayerChat = existing?.some(e => e.channel_id === playerChatId);
 
-  if (!inTeamChat) {
-    await supabase.from('channel_members').insert({
-      channel_id: teamChatId,
-      user_id: coachId,
-      display_name: displayName,
-      member_role: 'coach',
-      can_post: true,
-      can_moderate: true,
-    });
+    if (!inTeamChat) {
+      const { error } = await supabase.from('channel_members').insert({
+        channel_id: teamChatId,
+        user_id: coachId,
+        display_name: displayName,
+        member_role: 'coach',
+        can_post: true,
+        can_moderate: true,
+      });
+      if (error && __DEV__) console.error('[chat-utils] insert coach team member failed:', error.message);
+    }
+
+    if (!inPlayerChat) {
+      const { error } = await supabase.from('channel_members').insert({
+        channel_id: playerChatId,
+        user_id: coachId,
+        display_name: displayName,
+        member_role: 'coach',
+        can_post: true,
+        can_moderate: true,
+      });
+      if (error && __DEV__) console.error('[chat-utils] insert coach player member failed:', error.message);
+    }
+
+    return true;
+  } catch (err) {
+    if (__DEV__) console.error('[chat-utils] addCoachToTeamChats crashed:', err);
+    return false;
   }
-
-  if (!inPlayerChat) {
-    await supabase.from('channel_members').insert({
-      channel_id: playerChatId,
-      user_id: coachId,
-      display_name: displayName,
-      member_role: 'coach',
-      can_post: true,
-      can_moderate: true,
-    });
-  }
-
-  return true;
 };
 
 // Add admin to team chats
 export const addAdminToTeamChats = async (adminId: string, adminName: string, teamChatId: string, playerChatId: string): Promise<boolean> => {
-  const displayName = `${adminName} (Admin)`;
+  try {
+    const displayName = `${adminName} (Admin)`;
 
-  const { data: existing } = await supabase
-    .from('channel_members')
-    .select('channel_id')
-    .eq('user_id', adminId)
-    .in('channel_id', [teamChatId, playerChatId]);
+    const { data: existing } = await supabase
+      .from('channel_members')
+      .select('channel_id')
+      .eq('user_id', adminId)
+      .in('channel_id', [teamChatId, playerChatId]);
 
-  const inTeamChat = existing?.some(e => e.channel_id === teamChatId);
-  const inPlayerChat = existing?.some(e => e.channel_id === playerChatId);
+    const inTeamChat = existing?.some(e => e.channel_id === teamChatId);
+    const inPlayerChat = existing?.some(e => e.channel_id === playerChatId);
 
-  if (!inTeamChat) {
-    await supabase.from('channel_members').insert({
-      channel_id: teamChatId,
-      user_id: adminId,
-      display_name: displayName,
-      member_role: 'admin',
-      can_post: true,
-      can_moderate: true,
-    });
+    if (!inTeamChat) {
+      const { error } = await supabase.from('channel_members').insert({
+        channel_id: teamChatId,
+        user_id: adminId,
+        display_name: displayName,
+        member_role: 'admin',
+        can_post: true,
+        can_moderate: true,
+      });
+      if (error && __DEV__) console.error('[chat-utils] insert admin team member failed:', error.message);
+    }
+
+    if (!inPlayerChat) {
+      const { error } = await supabase.from('channel_members').insert({
+        channel_id: playerChatId,
+        user_id: adminId,
+        display_name: displayName,
+        member_role: 'admin',
+        can_post: true,
+        can_moderate: true,
+      });
+      if (error && __DEV__) console.error('[chat-utils] insert admin player member failed:', error.message);
+    }
+
+    return true;
+  } catch (err) {
+    if (__DEV__) console.error('[chat-utils] addAdminToTeamChats crashed:', err);
+    return false;
   }
-
-  if (!inPlayerChat) {
-    await supabase.from('channel_members').insert({
-      channel_id: playerChatId,
-      user_id: adminId,
-      display_name: displayName,
-      member_role: 'admin',
-      can_post: true,
-      can_moderate: true,
-    });
-  }
-
-  return true;
 };
 
 // Sync all chats for a team - only adds users who have accounts

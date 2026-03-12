@@ -168,65 +168,83 @@ export async function savePlayerEvaluation(
   ratings: Record<string, number>, // DB-scale (1-10)
   notes: string,
   evaluationType: string = 'regular',
-): Promise<void> {
-  const overallRating = Math.round(
-    SKILL_KEYS.reduce((sum, k) => sum + (ratings[k] || 0), 0) / SKILL_KEYS.length
-  );
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const overallRating = Math.round(
+      SKILL_KEYS.reduce((sum, k) => sum + (ratings[k] || 0), 0) / SKILL_KEYS.length
+    );
 
-  // 1) Upsert player_skill_ratings
-  const payload: any = {
-    player_id: playerId,
-    team_id: teamId,
-    season_id: seasonId,
-    rated_by: evaluatorId,
-    rated_at: new Date().toISOString(),
-    coach_notes: notes || null,
-    overall_rating: overallRating,
-  };
-  SKILL_KEYS.forEach(k => {
-    payload[k] = ratings[k] || 0;
-  });
+    // 1) Upsert player_skill_ratings
+    const payload: any = {
+      player_id: playerId,
+      team_id: teamId,
+      season_id: seasonId,
+      rated_by: evaluatorId,
+      rated_at: new Date().toISOString(),
+      coach_notes: notes || null,
+      overall_rating: overallRating,
+    };
+    SKILL_KEYS.forEach(k => {
+      payload[k] = ratings[k] || 0;
+    });
 
-  await supabase.from('player_skill_ratings').upsert(payload, {
-    onConflict: 'player_id,team_id,season_id',
-  });
+    const { error: upsertErr } = await supabase.from('player_skill_ratings').upsert(payload, {
+      onConflict: 'player_id,team_id,season_id',
+    });
+    if (upsertErr) {
+      if (__DEV__) console.error('[evaluations] upsert skill_ratings failed:', upsertErr.message);
+      return { success: false, error: upsertErr.message };
+    }
 
-  // 2) Insert player_evaluations history row
-  await supabase.from('player_evaluations').insert({
-    player_id: playerId,
-    season_id: seasonId,
-    evaluated_by: evaluatorId,
-    evaluation_type: evaluationType,
-    evaluation_date: new Date().toISOString().split('T')[0],
-    overall_score: overallRating,
-    skills: ratings,
-    notes: notes || null,
-    is_initial: false,
-  });
+    // 2) Insert player_evaluations history row
+    const { error: historyErr } = await supabase.from('player_evaluations').insert({
+      player_id: playerId,
+      season_id: seasonId,
+      evaluated_by: evaluatorId,
+      evaluation_type: evaluationType,
+      evaluation_date: new Date().toISOString().split('T')[0],
+      overall_score: overallRating,
+      skills: ratings,
+      notes: notes || null,
+      is_initial: false,
+    });
+    if (historyErr) {
+      if (__DEV__) console.error('[evaluations] insert evaluation history failed:', historyErr.message);
+      return { success: false, error: historyErr.message };
+    }
 
-  // 3) Sync player_skills table (scale 1-10 → 0-100)
-  const skillsPayload: any = {
-    player_id: playerId,
-    season_id: seasonId,
-    sport: 'volleyball',
-    serving: (ratings.serving_rating || 0) * 10,
-    passing: (ratings.passing_rating || 0) * 10,
-    setting: (ratings.setting_rating || 0) * 10,
-    hitting: (ratings.attacking_rating || 0) * 10,
-    blocking: (ratings.blocking_rating || 0) * 10,
-    defense: (ratings.defense_rating || 0) * 10,
-    updated_at: new Date().toISOString(),
-  };
+    // 3) Sync player_skills table (scale 1-10 → 0-100)
+    const skillsPayload: any = {
+      player_id: playerId,
+      season_id: seasonId,
+      sport: 'volleyball',
+      serving: (ratings.serving_rating || 0) * 10,
+      passing: (ratings.passing_rating || 0) * 10,
+      setting: (ratings.setting_rating || 0) * 10,
+      hitting: (ratings.attacking_rating || 0) * 10,
+      blocking: (ratings.blocking_rating || 0) * 10,
+      defense: (ratings.defense_rating || 0) * 10,
+      updated_at: new Date().toISOString(),
+    };
 
-  // Try upsert; if no conflict key, use update then insert
-  const { error: updateErr } = await supabase
-    .from('player_skills')
-    .update(skillsPayload)
-    .eq('player_id', playerId)
-    .eq('season_id', seasonId);
+    // Try upsert; if no conflict key, use update then insert
+    const { error: updateErr } = await supabase
+      .from('player_skills')
+      .update(skillsPayload)
+      .eq('player_id', playerId)
+      .eq('season_id', seasonId);
 
-  if (updateErr) {
-    await supabase.from('player_skills').insert(skillsPayload);
+    if (updateErr) {
+      const { error: insertErr } = await supabase.from('player_skills').insert(skillsPayload);
+      if (insertErr) {
+        if (__DEV__) console.error('[evaluations] sync player_skills failed:', insertErr.message);
+      }
+    }
+
+    return { success: true };
+  } catch (err) {
+    if (__DEV__) console.error('[evaluations] savePlayerEvaluation crashed:', err);
+    return { success: false, error: 'Unexpected error saving evaluation' };
   }
 }
 

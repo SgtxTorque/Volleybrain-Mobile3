@@ -75,7 +75,7 @@ const getEmojiOnlySize = (text: string): number | null => {
 };
 
 export default function ChatScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id } = useLocalSearchParams<{ id?: string }>();
   const { profile } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();

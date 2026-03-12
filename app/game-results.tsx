@@ -64,7 +64,7 @@ type ChildInfo = {
 
 export default function GameResultsScreen() {
   const { user, profile } = useAuth();
-  const { eventId } = useLocalSearchParams();
+  const { eventId } = useLocalSearchParams<{ eventId?: string }>();
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);

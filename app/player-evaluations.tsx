@@ -194,7 +194,7 @@ export default function PlayerEvaluationsScreen() {
     });
 
     try {
-      await savePlayerEvaluation(
+      const result = await savePlayerEvaluation(
         currentPlayer.id,
         teamId,
         workingSeason?.id || '',
@@ -204,12 +204,18 @@ export default function PlayerEvaluationsScreen() {
         evaluationType,
       );
 
-      setPlayerStates(prev => {
-        const next = new Map(prev);
-        const ps = next.get(currentPlayer.id);
-        if (ps) next.set(currentPlayer.id, { ...ps, saved: true });
-        return next;
-      });
+      if (result.success) {
+        setPlayerStates(prev => {
+          const next = new Map(prev);
+          const ps = next.get(currentPlayer.id);
+          if (ps) next.set(currentPlayer.id, { ...ps, saved: true });
+          return next;
+        });
+      } else {
+        if (__DEV__) console.error('[PlayerEvaluations] save failed:', result.error);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        Alert.alert('Save Failed', `Could not save ${currentPlayer.first_name}'s evaluation. It will retry on completion.`);
+      }
     } catch (err) {
       if (__DEV__) console.error('[PlayerEvaluations] save error:', err);
     }
@@ -282,6 +288,7 @@ export default function PlayerEvaluationsScreen() {
   // ─── Completion ──────────────────────────────────────────────────
   const handleComplete = async () => {
     setSaving(true);
+    const failedNames: string[] = [];
     try {
       // Save any unsaved players
       for (const [pid, ps] of playerStates) {
@@ -291,23 +298,35 @@ export default function PlayerEvaluationsScreen() {
           SKILL_KEYS.forEach(k => {
             dbRatings[k] = ps.ratings[k] > 0 ? uiToDb(ps.ratings[k]) : 0;
           });
-          await savePlayerEvaluation(
+          const result = await savePlayerEvaluation(
             pid, teamId, workingSeason?.id || '', user?.id || '',
             dbRatings, ps.notes, evaluationType,
           );
+          if (!result.success) {
+            const player = roster.find(r => r.id === pid);
+            failedNames.push(player?.first_name || pid);
+          }
         }
       }
 
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      const ratedCount = Array.from(playerStates.values()).filter(
-        ps => SKILL_KEYS.some(k => ps.ratings[k] > 0)
-      ).length;
+      if (failedNames.length > 0) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        Alert.alert(
+          'Partially Saved',
+          `${failedNames.length} evaluation${failedNames.length !== 1 ? 's' : ''} failed to save (${failedNames.join(', ')}). Go back and retry.`,
+        );
+      } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        const ratedCount = Array.from(playerStates.values()).filter(
+          ps => SKILL_KEYS.some(k => ps.ratings[k] > 0)
+        ).length;
 
-      Alert.alert(
-        'Evaluations Complete!',
-        `${ratedCount} player${ratedCount !== 1 ? 's' : ''} evaluated. Skill bars updated.`,
-        [{ text: 'Done', onPress: () => router.back() }],
-      );
+        Alert.alert(
+          'Evaluations Complete!',
+          `${ratedCount} player${ratedCount !== 1 ? 's' : ''} evaluated. Skill bars updated.`,
+          [{ text: 'Done', onPress: () => router.back() }],
+        );
+      }
     } catch (err) {
       if (__DEV__) console.error('[PlayerEvaluations] complete error:', err);
       Alert.alert('Error', 'Some evaluations failed to save. Please try again.');

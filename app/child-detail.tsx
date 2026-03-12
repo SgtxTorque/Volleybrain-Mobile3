@@ -92,7 +92,7 @@ export default function ChildDetailScreen() {
   const { isAdmin, isCoach } = usePermissions();
   const { workingSeason } = useSeason();
   const router = useRouter();
-  const { playerId } = useLocalSearchParams<{ playerId: string }>();
+  const { playerId } = useLocalSearchParams<{ playerId?: string }>();
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);

@@ -85,6 +85,8 @@ export default function ChatsScreen() {
   // Typing indicators: channelId -> array of display names
   const [typingMap, setTypingMap] = useState<Record<string, string[]>>({});
 
+  const cancelledRef = useRef(false);
+
   const fetchChannels = async () => {
     if (!profile || !workingSeason) return;
 
@@ -102,6 +104,8 @@ export default function ChatsScreen() {
       .eq('user_id', profile.id)
       .is('left_at', null);
 
+    if (cancelledRef.current) return;
+
     if (!memberChannels) {
       setChannels([]);
       return;
@@ -112,6 +116,7 @@ export default function ChatsScreen() {
     const channelsWithMessages: Channel[] = [];
 
     for (const mc of memberChannels) {
+      if (cancelledRef.current) return;
       const channel = mc.chat_channels as any;
       if (!channel) continue;
 
@@ -147,6 +152,8 @@ export default function ChatsScreen() {
       });
     }
 
+    if (cancelledRef.current) return;
+
     // Sort by last message time
     channelsWithMessages.sort((a, b) => {
       const aTime = a.last_message?.created_at || a.created_at;
@@ -160,6 +167,7 @@ export default function ChatsScreen() {
   const loadPinnedChats = async () => {
     if (!profile) return;
     const stored = await AsyncStorage.getItem(`pinned_chats_${profile.id}`);
+    if (cancelledRef.current) return;
     if (stored) setPinnedIds(new Set(JSON.parse(stored)));
   };
 
@@ -179,8 +187,10 @@ export default function ChatsScreen() {
   };
 
   useEffect(() => {
+    cancelledRef.current = false;
     fetchChannels();
     loadPinnedChats();
+    return () => { cancelledRef.current = true; };
   }, [profile, workingSeason]);
 
   // Real-time subscription for new messages
