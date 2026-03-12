@@ -356,6 +356,13 @@ export default function PlayerEvaluationsScreen() {
   if (loading) {
     return (
       <View style={[s.root, { paddingTop: insets.top }]}>
+        <View style={s.topBar}>
+          <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+            <Ionicons name="arrow-back" size={22} color={BRAND.textPrimary} />
+          </TouchableOpacity>
+          <Text style={s.topTitle}>Evaluations</Text>
+          <View style={{ width: 40 }} />
+        </View>
         <View style={s.loadingWrap}>
           <ActivityIndicator size="large" color={BRAND.skyBlue} />
         </View>

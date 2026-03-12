@@ -16,6 +16,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { BRAND } from '@/theme/colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 type RosterPlayer = {
@@ -38,7 +39,7 @@ export default function TeamRosterScreen() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!teamId) return;
+    if (!teamId) { setLoading(false); return; }
     (async () => {
       try {
         const { data: team } = await supabase
@@ -117,6 +118,27 @@ export default function TeamRosterScreen() {
         <AppHeaderBar title="ROSTER" showAvatar={false} showNotificationBell={false} />
         <View style={s.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!teamId) {
+    return (
+      <SafeAreaView style={[s.container, { backgroundColor: colors.background }]} edges={['top']}>
+        <View style={s.header}>
+          <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={[s.headerTitle, { color: colors.text }]}>Roster</Text>
+          <View style={s.backBtn} />
+        </View>
+        <View style={s.centered}>
+          <Image source={require('@/assets/images/mascot/SleepLynx.png')} style={{ width: 100, height: 100 }} resizeMode="contain" />
+          <Text style={[s.emptyText, { color: colors.textMuted, marginTop: 12 }]}>No team selected</Text>
+          <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 16 }}>
+            <Text style={{ fontFamily: FONTS.bodySemiBold, color: BRAND.skyBlue, fontSize: 15 }}>Go Back</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );

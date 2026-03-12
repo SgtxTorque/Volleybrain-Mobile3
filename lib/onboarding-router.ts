@@ -9,6 +9,7 @@
  *
  * Plus: already_set_up — existing user with linked children
  */
+import { hasLinkedPlayers } from '@/lib/resolve-linked-players';
 import { supabase } from '@/lib/supabase';
 
 export type OnboardingPath =
@@ -32,17 +33,9 @@ export async function determineOnboardingPath(
   profileId: string | null,
   context?: OnboardingContext,
 ): Promise<OnboardingPath> {
-  // 1. Check if user has existing player links (returning user or pre-set-up)
-  if (profileId) {
-    const { data: existingLinks } = await supabase
-      .from('player_parents')
-      .select('player_id')
-      .eq('parent_id', profileId)
-      .limit(1);
-
-    if (existingLinks && existingLinks.length > 0) {
-      return 'already_set_up';
-    }
+  // 1. Check if user has existing player links (canonical resolver)
+  if (await hasLinkedPlayers(userId, userEmail)) {
+    return 'already_set_up';
   }
 
   // 2. Check if user has active roles in any org (coaches, admins)

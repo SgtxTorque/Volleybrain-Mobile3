@@ -66,6 +66,7 @@ export default function StandingsScreen() {
 
   // Standings data
   const [standings, setStandings] = useState<TeamStanding[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   // Player identity for highlights
   const [currentPlayerId, setCurrentPlayerId] = useState<string | null>(null);
@@ -85,6 +86,7 @@ export default function StandingsScreen() {
       return;
     }
 
+    setError(null);
     try {
       const { data: teams, error: teamsError } = await supabase
         .from('teams')
@@ -173,6 +175,7 @@ export default function StandingsScreen() {
       setStandings(standingsData);
     } catch (err) {
       if (__DEV__) console.error('Error loading standings:', err);
+      setError('Failed to load standings. Pull down to retry.');
       setStandings([]);
     } finally {
       setLoading(false);
@@ -295,6 +298,19 @@ export default function StandingsScreen() {
           <Image source={require('@/assets/images/mascot/SleepLynx.png')} style={{ width: 120, height: 120, marginBottom: 16 }} resizeMode="contain" />
           <Text style={s.emptyTitle}>No Active Season</Text>
           <Text style={s.emptySubtitle}>Select a season to view standings.</Text>
+        </View>
+      );
+    }
+
+    if (error) {
+      return (
+        <View style={s.emptyState}>
+          <Image source={require('@/assets/images/mascot/SleepLynx.png')} style={{ width: 120, height: 120, marginBottom: 16 }} resizeMode="contain" />
+          <Text style={s.emptyTitle}>Something Went Wrong</Text>
+          <Text style={s.emptySubtitle}>{error}</Text>
+          <TouchableOpacity onPress={loadStandings} style={{ marginTop: 12 }}>
+            <Text style={{ fontFamily: FONTS.bodySemiBold, color: BRAND.skyBlue, fontSize: 15 }}>Try Again</Text>
+          </TouchableOpacity>
         </View>
       );
     }

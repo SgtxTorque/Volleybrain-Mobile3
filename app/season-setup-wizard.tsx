@@ -199,6 +199,7 @@ export default function SeasonSetupWizard() {
             age_group: t.age_group,
             organization_id: organization.id,
             season_id: season.id,
+            team_type: 'recreational',
           });
         }
       }

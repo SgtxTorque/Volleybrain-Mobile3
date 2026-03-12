@@ -204,6 +204,7 @@ export default function MyStatsScreen() {
 
     setPlayerId(null);
     setPlayerName('');
+    setLoading(false);
   }, [user?.id, effectiveSeasonId, paramPlayerId]);
 
   // ===========================================================================

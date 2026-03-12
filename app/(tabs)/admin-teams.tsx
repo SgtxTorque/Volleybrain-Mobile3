@@ -90,7 +90,7 @@ export default function AdminTeamsScreen() {
 
   // --- Form state ---
   const [teamName, setTeamName] = useState('');
-  const [teamType, setTeamType] = useState('development');
+  const [teamType, setTeamType] = useState('recreational');
   const [teamColor, setTeamColor] = useState('#FFD700');
   const [selectedAgeGroup, setSelectedAgeGroup] = useState<string | null>(null);
   const [maxRoster, setMaxRoster] = useState('15');
@@ -273,7 +273,7 @@ export default function AdminTeamsScreen() {
   // =========================================================================
 
   const resetForm = () => {
-    setTeamName(''); setTeamType('development'); setTeamColor('#FFD700');
+    setTeamName(''); setTeamType('recreational'); setTeamColor('#FFD700');
     setSelectedAgeGroup(null); setMaxRoster('15'); setSelectedCoachId(null);
   };
 
@@ -588,7 +588,7 @@ export default function AdminTeamsScreen() {
 
                 <Text style={[s.formLabel, { color: colors.textSecondary }]}>Team Type</Text>
                 <View style={s.optionRow}>
-                  {['elite', 'development'].map(tt => (
+                  {['competitive', 'recreational'].map(tt => (
                     <TouchableOpacity
                       key={tt}
                       style={[s.optionBtn, { borderColor: colors.glassBorder },

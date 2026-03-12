@@ -35,7 +35,7 @@ export default function TeamsScreen() {
   const [syncing, setSyncing] = useState(false);
 
   const [teamName, setTeamName] = useState('');
-  const [teamType, setTeamType] = useState('development');
+  const [teamType, setTeamType] = useState('recreational');
   const [teamColor, setTeamColor] = useState('#FFD700');
   const [selectedAgeGroup, setSelectedAgeGroup] = useState<string | null>(null);
 
@@ -58,7 +58,7 @@ export default function TeamsScreen() {
   useEffect(() => { fetchData(); }, [workingSeason]);
 
   const resetForm = () => {
-    setTeamName(''); setTeamType('development'); setTeamColor('#FFD700'); setSelectedAgeGroup(null);
+    setTeamName(''); setTeamType('recreational'); setTeamColor('#FFD700'); setSelectedAgeGroup(null);
   };
 
   const createTeam = async () => {
@@ -340,11 +340,11 @@ const assignPlayer = async (player: Player) => {
 
             <Text style={s.label}>Team Type</Text>
             <View style={s.typeRow}>
-              <TouchableOpacity style={[s.typeBtn, teamType === 'elite' && s.typeBtnSel]} onPress={() => setTeamType('elite')}>
-                <Text style={[s.typeBtnTxt, teamType === 'elite' && s.typeBtnTxtSel]}>Elite</Text>
+              <TouchableOpacity style={[s.typeBtn, teamType === 'competitive' && s.typeBtnSel]} onPress={() => setTeamType('competitive')}>
+                <Text style={[s.typeBtnTxt, teamType === 'competitive' && s.typeBtnTxtSel]}>Competitive</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[s.typeBtn, teamType === 'development' && s.typeBtnSel]} onPress={() => setTeamType('development')}>
-                <Text style={[s.typeBtnTxt, teamType === 'development' && s.typeBtnTxtSel]}>Development</Text>
+              <TouchableOpacity style={[s.typeBtn, teamType === 'recreational' && s.typeBtnSel]} onPress={() => setTeamType('recreational')}>
+                <Text style={[s.typeBtnTxt, teamType === 'recreational' && s.typeBtnTxtSel]}>Recreational</Text>
               </TouchableOpacity>
             </View>
 

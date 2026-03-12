@@ -4,7 +4,7 @@
  *
  * Route params: challengeId (string)
  */
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -174,6 +174,10 @@ export default function ChallengeDetailScreen() {
   // Opt-in state
   const [optingIn, setOptingIn] = useState(false);
 
+  // Access verification state
+  const [accessVerified, setAccessVerified] = useState(false);
+  const [accessAllowed, setAccessAllowed] = useState(false);
+
   // Derived data
   const participants = useMemo(
     () => (challenge?.participants || []).sort((a, b) => (b.current_value || 0) - (a.current_value || 0)),
@@ -221,6 +225,84 @@ export default function ChallengeDetailScreen() {
       p => p.current_value > 0 && !p.completed,
     );
   }, [participants, isCoach, isAdmin]);
+
+  // ─── Access verification ─────────────────────────────────────
+  useEffect(() => {
+    if (!challenge || !user?.id) {
+      setAccessVerified(false);
+      setAccessAllowed(false);
+      return;
+    }
+
+    // Admin and Coach always have access
+    if (isAdmin || isCoach) {
+      setAccessAllowed(true);
+      setAccessVerified(true);
+      return;
+    }
+
+    // Direct participant check (synchronous — no query needed)
+    if (participants.some(p => p.player_id === user.id)) {
+      setAccessAllowed(true);
+      setAccessVerified(true);
+      return;
+    }
+
+    // Async: check if user (or their children) are players on this team
+    let cancelled = false;
+    (async () => {
+      try {
+        // Get all player record IDs linked to this user
+        const [{ data: ownPlayers }, { data: guardedPlayers }] = await Promise.all([
+          supabase
+            .from('players')
+            .select('id')
+            .eq('parent_account_id', user.id),
+          supabase
+            .from('player_guardians')
+            .select('player_id')
+            .eq('guardian_id', user.id),
+        ]);
+
+        if (cancelled) return;
+
+        const allPlayerIds = [
+          ...(ownPlayers || []).map(p => p.id),
+          ...(guardedPlayers || []).map(g => g.player_id),
+        ];
+        const uniqueIds = [...new Set(allPlayerIds)];
+
+        if (uniqueIds.length > 0) {
+          // Check if any linked player is on the challenge's team
+          const { count } = await supabase
+            .from('team_players')
+            .select('id', { count: 'exact', head: true })
+            .eq('team_id', challenge.team_id)
+            .in('player_id', uniqueIds);
+
+          if (cancelled) return;
+
+          if ((count ?? 0) > 0) {
+            setAccessAllowed(true);
+            setAccessVerified(true);
+            return;
+          }
+        }
+
+        if (!cancelled) {
+          setAccessAllowed(false);
+          setAccessVerified(true);
+        }
+      } catch {
+        if (!cancelled) {
+          setAccessAllowed(false);
+          setAccessVerified(true);
+        }
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [challenge?.id, user?.id, isAdmin, isCoach, participants]);
 
   // ─── Handlers ─────────────────────────────────────────────────
 
@@ -336,7 +418,7 @@ export default function ChallengeDetailScreen() {
 
   // ─── Loading state ────────────────────────────────────────────
 
-  if (loading) {
+  if (loading || (challenge && !isAdmin && !isCoach && !accessVerified)) {
     return (
       <View style={[s.root, { paddingTop: insets.top }]}>
         <View style={s.header}>
@@ -371,27 +453,24 @@ export default function ChallengeDetailScreen() {
     );
   }
 
-  // ── Access check: verify user can access this challenge's team ──
-  if (!isAdmin && !isCoach) {
-    const hasTeamAccess = participants.some(p => p.player_id === user?.id);
-    if (!hasTeamAccess && !isPlayer) {
-      return (
-        <View style={[s.root, { paddingTop: insets.top }]}>
-          <View style={s.header}>
-            <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
-              <Ionicons name="arrow-back" size={22} color={BRAND.textPrimary} />
-            </TouchableOpacity>
-            <Text style={s.headerTitle}>Challenge</Text>
-            <View style={{ width: 40 }} />
-          </View>
-          <View style={s.centered}>
-            <Ionicons name="lock-closed-outline" size={48} color={BRAND.textMuted} />
-            <Text style={s.emptyText}>Access Restricted</Text>
-            <Text style={s.emptySubtext}>You don't have permission to view this challenge.</Text>
-          </View>
+  // ── Access gate (resolved by useEffect above) ──
+  if (!isAdmin && !isCoach && accessVerified && !accessAllowed) {
+    return (
+      <View style={[s.root, { paddingTop: insets.top }]}>
+        <View style={s.header}>
+          <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+            <Ionicons name="arrow-back" size={22} color={BRAND.textPrimary} />
+          </TouchableOpacity>
+          <Text style={s.headerTitle}>Challenge</Text>
+          <View style={{ width: 40 }} />
         </View>
-      );
-    }
+        <View style={s.centered}>
+          <Ionicons name="lock-closed-outline" size={48} color={BRAND.textMuted} />
+          <Text style={s.emptyText}>Access Restricted</Text>
+          <Text style={s.emptySubtext}>You don't have permission to view this challenge.</Text>
+        </View>
+      </View>
+    );
   }
 
   // ─── List Header (progress ring, meta, verification queue) ────

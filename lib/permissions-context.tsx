@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useAuth } from './auth';
 import { can, getPermissionContext, getPrimaryRole, PermissionContext, UserRole } from './permissions';
+import { hasLinkedPlayers } from './resolve-linked-players';
 import { supabase } from './supabase';
 
 type PermissionsContextType = {
@@ -54,30 +55,8 @@ export const PermissionsProvider = ({ children }: { children: React.ReactNode })
   const checkPlayerConnections = async (): Promise<boolean> => {
     if (!user?.id) return false;
     try {
-      const { data: guardianLinks } = await supabase
-        .from('player_guardians')
-        .select('id')
-        .eq('guardian_id', user.id)
-        .limit(1);
-      if (guardianLinks && guardianLinks.length > 0) return true;
-
-      const { data: directPlayers } = await supabase
-        .from('players')
-        .select('id')
-        .eq('parent_account_id', user.id)
-        .limit(1);
-      if (directPlayers && directPlayers.length > 0) return true;
-
       const parentEmail = profile?.email || user?.email;
-      if (parentEmail) {
-        const { data: emailPlayers } = await supabase
-          .from('players')
-          .select('id')
-          .ilike('parent_email', parentEmail)
-          .limit(1);
-        if (emailPlayers && emailPlayers.length > 0) return true;
-      }
-      return false;
+      return await hasLinkedPlayers(user.id, parentEmail);
     } catch { return false; }
   };
 

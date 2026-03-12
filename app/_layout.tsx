@@ -103,8 +103,11 @@ function RootLayoutNav() {
           router.push('/registration-hub');
           break;
         case 'game':
-          router.push('/game-prep');
+        case 'game_reminder': {
+          const eid = data.eventId || data.event_id;
+          router.push(eid ? (`/game-prep?eventId=${eid}` as any) : '/game-prep');
           break;
+        }
         case 'challenge_new':
         case 'challenge_joined':
         case 'challenge_progress':

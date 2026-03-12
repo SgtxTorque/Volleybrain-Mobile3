@@ -282,6 +282,20 @@ export default function PlayersScreen() {
     );
   }
 
+  if (!workingSeason) {
+    return (
+      <SafeAreaView style={s.container}>
+        <View style={s.loadingContainer}>
+          <Ionicons name="calendar-outline" size={48} color={colors.textMuted} />
+          <Text style={{ fontFamily: FONTS.bodyBold, fontSize: 16, color: colors.text, marginTop: 12 }}>No Active Season</Text>
+          <Text style={{ fontFamily: FONTS.bodyMedium, fontSize: 13, color: colors.textMuted, textAlign: 'center', marginTop: 4 }}>
+            Select a season to view players.
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={s.container}>
       {/* Header */}

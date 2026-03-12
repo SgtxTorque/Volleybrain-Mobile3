@@ -68,7 +68,7 @@ export default function RosterScreen() {
 
   // ─── Fetch all teams the user has access to ────────────────────
   const fetchTeams = useCallback(async () => {
-    if (!user?.id || !workingSeason?.id) return;
+    if (!user?.id || !workingSeason?.id) { setLoading(false); return; }
     try {
       const teamMap = new Map<string, RosterTeam>();
 
@@ -321,6 +321,18 @@ export default function RosterScreen() {
       {loading ? (
         <View style={s.loadingWrap}>
           <ActivityIndicator size="large" color={PLAYER_THEME.accent} />
+        </View>
+      ) : !workingSeason ? (
+        <View style={s.loadingWrap}>
+          <Ionicons name="calendar-outline" size={48} color="rgba(255,255,255,0.4)" />
+          <Text style={[s.emptyText, { marginTop: 12 }]}>No Active Season</Text>
+          <Text style={[s.emptyText, { fontSize: 12, opacity: 0.6 }]}>Select a season to view the roster.</Text>
+        </View>
+      ) : teams.length === 0 && players.length === 0 ? (
+        <View style={s.loadingWrap}>
+          <Ionicons name="people-outline" size={48} color="rgba(255,255,255,0.4)" />
+          <Text style={[s.emptyText, { marginTop: 12 }]}>No teams found</Text>
+          <Text style={[s.emptyText, { fontSize: 12, opacity: 0.6 }]}>You don't have any teams in this season yet.</Text>
         </View>
       ) : players.length === 0 ? (
         <View style={s.loadingWrap}>

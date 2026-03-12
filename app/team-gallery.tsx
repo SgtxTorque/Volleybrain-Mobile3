@@ -91,7 +91,7 @@ export default function TeamGalleryScreen() {
 
   const fetchPosts = useCallback(
     async (offset: number, replace: boolean) => {
-      if (!teamId) return;
+      if (!teamId) { setLoading(false); return; }
       try {
         const { data, error } = await supabase
           .from('team_posts')

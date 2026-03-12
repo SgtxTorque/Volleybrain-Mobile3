@@ -5,6 +5,7 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth';
+import { resolveLinkedPlayerIds } from '@/lib/resolve-linked-players';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 
@@ -195,31 +196,9 @@ export function useParentHomeData() {
     }
 
     try {
-      // ── Step 1: Find parent's children (3 link methods) ──
+      // ── Step 1: Find parent's children (canonical resolver) ──
       const parentEmail = profile?.email || user?.email;
-      let playerIds: string[] = [];
-
-      const { data: guardianLinks } = await supabase
-        .from('player_guardians')
-        .select('player_id')
-        .eq('guardian_id', user.id);
-      if (guardianLinks) playerIds.push(...guardianLinks.map((g) => g.player_id));
-
-      const { data: directPlayers } = await supabase
-        .from('players')
-        .select('id')
-        .eq('parent_account_id', user.id);
-      if (directPlayers) playerIds.push(...directPlayers.map((p) => p.id));
-
-      if (parentEmail) {
-        const { data: emailPlayers } = await supabase
-          .from('players')
-          .select('id')
-          .ilike('parent_email', parentEmail);
-        if (emailPlayers) playerIds.push(...emailPlayers.map((p) => p.id));
-      }
-
-      playerIds = [...new Set(playerIds)];
+      const playerIds = await resolveLinkedPlayerIds(user.id, parentEmail);
 
       if (playerIds.length === 0) {
         setChildren([]);

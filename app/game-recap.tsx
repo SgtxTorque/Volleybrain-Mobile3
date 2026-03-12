@@ -116,7 +116,11 @@ export default function GameRecapScreen() {
   // ── Data Loading ──────────────────────────────────────────
 
   useEffect(() => {
-    if (params.eventId) loadRecap(params.eventId);
+    if (params.eventId) {
+      loadRecap(params.eventId);
+    } else {
+      setLoading(false);
+    }
   }, [params.eventId]);
 
   const loadRecap = async (eventId: string) => {

@@ -1,5 +1,6 @@
 import { useAuth } from '@/lib/auth';
 import { usePermissions } from '@/lib/permissions-context';
+import { resolveLinkedPlayerIds, hasLinkedPlayers } from '@/lib/resolve-linked-players';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
@@ -43,62 +44,35 @@ export default function DashboardRouter() {
   // Load player children when switching to player mode
   const loadPlayerChildren = useCallback(async () => {
     if (!user?.id || !workingSeason?.id) return;
-    const playerIds = new Set<string>();
 
-    // parent_account_id
-    const { data: parentPlayers } = await supabase
+    // Canonical resolution → then fetch season-filtered details
+    const allIds = await resolveLinkedPlayerIds(user.id);
+    if (allIds.length === 0) {
+      setPlayerChildren([]);
+      setPlayerChildrenLoaded(true);
+      return;
+    }
+
+    const { data: players } = await supabase
       .from('players')
       .select('id, first_name, last_name')
-      .eq('parent_account_id', user.id)
+      .in('id', allIds)
       .eq('season_id', workingSeason.id);
-    parentPlayers?.forEach(p => playerIds.add(p.id));
 
-    // player_guardians
-    const { data: guardianLinks } = await supabase
-      .from('player_guardians')
-      .select('player_id')
-      .eq('guardian_id', user.id);
-    if (guardianLinks && guardianLinks.length > 0) {
-      const gIds = guardianLinks.map(g => g.player_id);
-      const { data: gPlayers } = await supabase
-        .from('players')
-        .select('id, first_name, last_name')
-        .in('id', gIds)
-        .eq('season_id', workingSeason.id);
-      gPlayers?.forEach(p => playerIds.add(p.id));
-    }
-
-    // Deduplicate and build list
-    const allPlayers = [...(parentPlayers || [])];
-    if (guardianLinks && guardianLinks.length > 0) {
-      const gIds = guardianLinks.map(g => g.player_id);
-      const { data: gPlayers } = await supabase
-        .from('players')
-        .select('id, first_name, last_name')
-        .in('id', gIds)
-        .eq('season_id', workingSeason.id);
-      gPlayers?.forEach(p => {
-        if (!allPlayers.find(ap => ap.id === p.id)) allPlayers.push(p);
-      });
-    }
-
-    const kids = allPlayers.map(p => ({ id: p.id, name: `${p.first_name} ${p.last_name}` }));
+    const kids = (players || []).map(p => ({ id: p.id, name: `${p.first_name} ${p.last_name}` }));
     setPlayerChildren(kids);
     setPlayerChildrenLoaded(true);
 
     if (kids.length === 1) {
-      // Single child — auto-select
       setSelectedChildId(kids[0].id);
       setSelectedChildName(kids[0].name);
     } else if (kids.length > 1) {
-      // Check if we have a saved last-selected child
       const lastId = await AsyncStorage.getItem(LAST_CHILD_KEY);
       const match = lastId ? kids.find(k => k.id === lastId) : null;
       if (match) {
         setSelectedChildId(match.id);
         setSelectedChildName(match.name);
       } else {
-        // No saved selection — show picker
         setSelectedChildId(null);
         setSelectedChildName(null);
       }
@@ -134,7 +108,7 @@ export default function DashboardRouter() {
         return;
       }
       if (devModeRole === 'head_coach' || devModeRole === 'assistant_coach') {
-        const hasKids = await checkIfParentHasKids();
+        const hasKids = await hasLinkedPlayers(user.id);
         setDashboardType(hasKids ? 'coach_parent' : 'coach');
         return;
       }
@@ -154,14 +128,11 @@ export default function DashboardRouter() {
       return;
     }
 
-    // Check actual coaching status and parent status
+    // Check actual coaching status and parent status (canonical resolver)
     const [hasTeams, hasKids] = await Promise.all([
       checkIfCoachHasTeams(),
-      checkIfParentHasKids(),
+      hasLinkedPlayers(user.id),
     ]);
-
-    // Also check if user is a player directly (via user_account_id or parent_account_id)
-    const isPlayerSelf = await checkIfPlayerSelf();
 
     // Determine dashboard type based on roles
     if (hasTeams && hasKids) {
@@ -170,7 +141,7 @@ export default function DashboardRouter() {
       setDashboardType('coach');
     } else if (hasKids || isParent) {
       setDashboardType('parent');
-    } else if (isPlayer || isPlayerSelf) {
+    } else if (isPlayer) {
       setDashboardType('player');
     } else {
       // Default to parent dashboard for new users
@@ -199,40 +170,6 @@ export default function DashboardRouter() {
       if (coachData && coachData.length > 0) return true;
 
       return false;
-    } catch {
-      return false;
-    }
-  };
-
-  const checkIfPlayerSelf = async (): Promise<boolean> => {
-    if (!user?.id) return false;
-
-    try {
-      // Check parent_account_id (player linked to this user)
-      const { data: selfPlayers } = await supabase
-        .from('players')
-        .select('id')
-        .eq('parent_account_id', user.id)
-        .limit(1);
-      if (selfPlayers && selfPlayers.length > 0) return true;
-
-      return false;
-    } catch {
-      return false;
-    }
-  };
-
-  const checkIfParentHasKids = async (): Promise<boolean> => {
-    if (!user?.id) return false;
-
-    try {
-      const { data } = await supabase
-        .from('player_guardians')
-        .select('player_id')
-        .eq('guardian_id', user.id)
-        .limit(1);
-
-      return Boolean(data && data.length > 0);
     } catch {
       return false;
     }

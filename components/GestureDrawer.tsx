@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { UserRole } from '@/lib/permissions';
 import { useDrawerBadges } from '@/hooks/useDrawerBadges';
 import type { DrawerBadges } from '@/hooks/useDrawerBadges';
+import { resolveLinkedPlayerIds } from '@/lib/resolve-linked-players';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
@@ -311,26 +312,14 @@ export default function GestureDrawer() {
 
     try {
       if (isParent) {
-        // Fetch children via player_guardians + players.parent_account_id
-        const parentIds = new Set<string>();
+        // Canonical resolver for parent's linked players
+        const linkedIds = await resolveLinkedPlayerIds(user.id);
 
-        const { data: guardianLinks } = await supabase
-          .from('player_guardians')
-          .select('player_id')
-          .eq('guardian_id', user.id);
-        (guardianLinks || []).forEach(g => parentIds.add(g.player_id));
-
-        const { data: directKids } = await supabase
-          .from('players')
-          .select('id')
-          .eq('parent_account_id', user.id);
-        (directKids || []).forEach(k => parentIds.add(k.id));
-
-        if (parentIds.size > 0) {
+        if (linkedIds.length > 0) {
           const { data: players } = await supabase
             .from('players')
             .select('id, first_name, last_name, photo_url')
-            .in('id', Array.from(parentIds));
+            .in('id', linkedIds);
 
           const items: ContextItem[] = (players || []).map(p => ({
             id: p.id,
