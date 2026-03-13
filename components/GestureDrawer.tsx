@@ -80,7 +80,6 @@ const MENU_SECTIONS: MenuSection[] = [
       { icon: 'home', label: 'Home', route: '/(tabs)' },
       { icon: 'calendar', label: 'Schedule', route: '/(tabs)/schedule' },
       { icon: 'chatbubble-ellipses', label: 'Chats', route: '/(tabs)/chats', badgeKey: 'unreadChats' },
-      { icon: 'megaphone-outline', label: 'Announcements', route: '/(tabs)/messages' },
       { icon: 'people', label: 'Team Wall', route: '/(tabs)/connect' },
     ],
   },
@@ -125,6 +124,7 @@ const MENU_SECTIONS: MenuSection[] = [
     defaultOpen: false,
     roleGate: 'admin_coach',
     items: [
+      { icon: 'add-circle-outline', label: 'Create Event', route: '/(tabs)/coach-schedule' },
       { icon: 'flash-outline', label: 'Game Day Command', route: '/game-day-command' },
       { icon: 'analytics', label: 'Game Prep', route: '/game-prep' },
       { icon: 'grid', label: 'Lineup Builder', route: '/lineup-builder' },
@@ -166,7 +166,6 @@ const MENU_SECTIONS: MenuSection[] = [
       { icon: 'wallet', label: 'Payments', route: '/family-payments', badgeKey: 'unpaidPaymentsParent' },
       { icon: 'document-text', label: 'Waivers', route: '/my-waivers', badgeKey: 'unsignedWaivers' },
       { icon: 'school-outline', label: 'Evaluations', route: '/my-stats' },
-      { icon: 'trophy', label: 'Standings', route: '/standings' },
       { icon: 'ribbon', label: 'Achievements', route: '/achievements' },
       { icon: 'share-social', label: 'Invite Friends', route: '/invite-friends' },
     ],
@@ -186,22 +185,7 @@ const MENU_SECTIONS: MenuSection[] = [
       { icon: 'trophy', label: 'Challenges', route: '/challenges' },
       { icon: 'ribbon', label: 'Achievements', route: '/achievements' },
       { icon: 'trending-up-outline', label: 'Season Progress', route: '/season-progress' },
-      { icon: 'podium-outline', label: 'Standings', route: '/standings' },
-      { icon: 'calendar', label: 'Schedule', route: '/(tabs)/schedule' },
-    ],
-  },
-  // ── League & Community (all roles) ────────────────────────────
-  {
-    id: 'community',
-    title: 'League & Community',
-    collapsible: true,
-    defaultOpen: false,
-    items: [
-      { icon: 'people', label: 'Team Wall', route: '/(tabs)/connect' },
-      { icon: 'trophy', label: 'Standings', route: '/standings' },
-      { icon: 'ribbon', label: 'Achievements', route: '/achievements' },
-      { icon: 'school', label: 'Coach Directory', route: '/coach-directory' },
-      { icon: 'business', label: 'Find Organizations', route: '/org-directory' },
+      { icon: 'share-social', label: 'Invite Friends', route: '/invite-friends' },
     ],
   },
   // ── Settings & Privacy (all roles) ────────────────────────────
@@ -216,19 +200,10 @@ const MENU_SECTIONS: MenuSection[] = [
       { icon: 'notifications-outline', label: 'Notification Inbox', route: '/notification' },
       { icon: 'options-outline', label: 'Notification Settings', route: '/notification-preferences' },
       { icon: 'archive', label: 'Season History', route: '/season-archives' },
+      { icon: 'business', label: 'Find Organizations', route: '/org-directory' },
       { icon: 'shield-checkmark', label: 'Privacy Policy', route: '/privacy-policy' },
       { icon: 'document', label: 'Terms of Service', route: '/terms-of-service' },
-    ],
-  },
-  // ── Help & Support (all roles) ────────────────────────────────
-  {
-    id: 'help',
-    title: 'Help & Support',
-    collapsible: true,
-    defaultOpen: false,
-    items: [
       { icon: 'help-circle', label: 'Help Center', route: '/help' },
-      { icon: 'globe', label: 'Web Features', route: '/web-features' },
       { icon: 'lock-closed', label: 'Data Rights', route: '/data-rights' },
     ],
   },
@@ -455,7 +430,25 @@ export default function GestureDrawer() {
   const handleMenuItemPress = (item: MenuItem) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     closeDrawer();
-    const finalRoute = resolveRoute(item.route, item.label);
+    let finalRoute = resolveRoute(item.route, item.label);
+
+    // Fix 2: Pass active player context to my-stats routes
+    if (finalRoute.startsWith('/my-stats') && activeContextId && isPlayer) {
+      const separator = finalRoute.includes('?') ? '&' : '?';
+      finalRoute = `${finalRoute}${separator}playerId=${activeContextId}`;
+    }
+    // Also pass context for parent evaluations
+    if (finalRoute === '/my-stats' && activeContextId && isParent) {
+      finalRoute = `/my-stats?playerId=${activeContextId}`;
+    }
+
+    // Fix 3: Pass team context to Game Day routes
+    const gameDayRoutes = ['/game-day-command', '/game-prep', '/lineup-builder', '/attendance', '/game-results', '/game-recap'];
+    if (gameDayRoutes.some(r => finalRoute.startsWith(r)) && activeContextId && (isCoach || isAdmin)) {
+      const separator = finalRoute.includes('?') ? '&' : '?';
+      finalRoute = `${finalRoute}${separator}teamId=${activeContextId}`;
+    }
+
     setTimeout(() => router.push(finalRoute as never), 150);
   };
 
