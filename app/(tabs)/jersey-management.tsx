@@ -1,11 +1,13 @@
 import { useAuth } from '@/lib/auth';
 import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
+import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
@@ -54,6 +56,8 @@ export default function JerseyManagementScreen() {
   const { colors } = useTheme();
   const { workingSeason } = useSeason();
   const { user } = useAuth();
+  const { isAdmin } = usePermissions();
+  const router = useRouter();
   
   const [teams, setTeams] = useState<Team[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
@@ -318,6 +322,17 @@ export default function JerseyManagementScreen() {
       )}
     </View>
   );
+
+  if (!isAdmin) {
+    return (
+      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={{ fontSize: 16, color: '#666' }}>Access restricted to administrators.</Text>
+        <TouchableOpacity onPress={() => router.replace('/(tabs)')}>
+          <Text style={{ fontSize: 14, color: '#4BB9EC', marginTop: 12 }}>Go Home</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
 
   if (loading) {
     return (

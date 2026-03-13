@@ -3,7 +3,7 @@ import GestureDrawer from '@/components/GestureDrawer';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { DrawerProvider } from '@/lib/drawer-context';
 import { ParentScrollProvider } from '@/lib/parent-scroll-context';
-import { PermissionsProvider } from '@/lib/permissions-context';
+import { PermissionsProvider, usePermissions } from '@/lib/permissions-context';
 import { SeasonProvider } from '@/lib/season';
 import { SportProvider } from '@/lib/sport';
 import { ThemeProvider, useTheme } from '@/lib/theme';
@@ -34,6 +34,7 @@ SplashScreen.preventAutoHideAsync();
 function RootLayoutNav() {
   const { session, user, loading, profile, needsOnboarding, hasOrphanRecords } = useAuth();
   const { colors, isDark } = useTheme();
+  const { isAdmin, isCoach, isParent } = usePermissions();
   const segments = useSegments();
   const router = useRouter();
   const hasNavigated = useRef(false);
@@ -91,21 +92,43 @@ function RootLayoutNav() {
           router.push(data.channelId ? `/chat/${data.channelId}` : '/(tabs)/chats');
           break;
         case 'schedule':
-          router.push('/(tabs)/schedule');
+          if (isParent && !isCoach && !isAdmin) {
+            router.push('/(tabs)/parent-schedule');
+          } else if (isCoach || isAdmin) {
+            router.push('/(tabs)/coach-schedule');
+          } else {
+            router.push('/(tabs)/schedule');
+          }
           break;
         case 'payment':
-          router.push('/(tabs)/payments');
+          if (isAdmin) {
+            router.push('/(tabs)/payments');
+          } else if (isParent) {
+            router.push('/family-payments');
+          } else {
+            router.push('/(tabs)');
+          }
           break;
         case 'blast':
-          router.push('/(tabs)/messages');
+          router.push('/(tabs)/chats');
           break;
         case 'registration':
-          router.push('/registration-hub');
+          if (isAdmin) {
+            router.push('/registration-hub');
+          } else if (isParent) {
+            router.push('/parent-registration-hub');
+          } else {
+            router.push('/(tabs)');
+          }
           break;
         case 'game':
         case 'game_reminder': {
-          const eid = data.eventId || data.event_id;
-          router.push(eid ? (`/game-prep?eventId=${eid}` as any) : '/game-prep');
+          if (isCoach || isAdmin) {
+            const eid = data.eventId || data.event_id;
+            router.push(eid ? (`/game-prep?eventId=${eid}` as any) : '/game-prep');
+          } else {
+            router.push('/(tabs)/gameday');
+          }
           break;
         }
         case 'challenge_new':
@@ -114,11 +137,15 @@ function RootLayoutNav() {
         case 'challenge_completed':
         case 'challenge_winner':
         case 'challenge_verify':
-          router.push(
-            data.challengeId
-              ? (`/challenge-cta?challengeId=${data.challengeId}` as any)
-              : ('/challenges' as any),
-          );
+          if (isCoach || isAdmin) {
+            router.push('/coach-challenge-dashboard' as any);
+          } else {
+            router.push(
+              data.challengeId
+                ? (`/challenge-cta?challengeId=${data.challengeId}` as any)
+                : ('/challenges' as any),
+            );
+          }
           break;
         default:
           router.push('/(tabs)');
@@ -128,7 +155,7 @@ function RootLayoutNav() {
     return () => {
       responseSubscription.remove();
     };
-  }, []);
+  }, [isAdmin, isCoach, isParent]);
 
   if (loading) {
     return null;

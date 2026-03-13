@@ -1,5 +1,6 @@
 import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { useAuth } from '@/lib/auth';
+import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
@@ -90,6 +91,7 @@ export default function CoachBackgroundChecksScreen() {
   const { colors } = useTheme();
   const router = useRouter();
   const { organization } = useAuth();
+  const { isAdmin } = usePermissions();
   const { workingSeason } = useSeason();
 
   const [coaches, setCoaches] = useState<Coach[]>([]);
@@ -281,6 +283,17 @@ export default function CoachBackgroundChecksScreen() {
       </TouchableOpacity>
     );
   };
+
+  if (!isAdmin) {
+    return (
+      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={{ fontSize: 16, color: '#666' }}>Access restricted to administrators.</Text>
+        <TouchableOpacity onPress={() => router.replace('/(tabs)')}>
+          <Text style={{ fontSize: 14, color: '#4BB9EC', marginTop: 12 }}>Go Home</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>

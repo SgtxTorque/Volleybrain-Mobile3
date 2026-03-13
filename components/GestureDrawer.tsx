@@ -213,7 +213,8 @@ const MENU_SECTIONS: MenuSection[] = [
     items: [
       { icon: 'person-circle', label: 'My Profile', route: '/profile' },
       { icon: 'settings', label: 'Settings', route: '/(tabs)/settings' },
-      { icon: 'notifications-outline', label: 'Notifications', route: '/notification-preferences' },
+      { icon: 'notifications-outline', label: 'Notification Inbox', route: '/notification' },
+      { icon: 'options-outline', label: 'Notification Settings', route: '/notification-preferences' },
       { icon: 'archive', label: 'Season History', route: '/season-archives' },
       { icon: 'shield-checkmark', label: 'Privacy Policy', route: '/privacy-policy' },
       { icon: 'document', label: 'Terms of Service', route: '/terms-of-service' },
@@ -442,10 +443,20 @@ export default function GestureDrawer() {
     setCollapsedSections((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const handleMenuItemPress = (route: string) => {
+  const resolveRoute = (route: string, label: string): string => {
+    if (label === 'Schedule' && route === '/(tabs)/schedule') {
+      if (isParent && !isCoach && !isAdmin) return '/(tabs)/parent-schedule';
+      if (isCoach || isAdmin) return '/(tabs)/coach-schedule';
+      return '/(tabs)/schedule';
+    }
+    return route;
+  };
+
+  const handleMenuItemPress = (item: MenuItem) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     closeDrawer();
-    setTimeout(() => router.push(route as never), 150);
+    const finalRoute = resolveRoute(item.route, item.label);
+    setTimeout(() => router.push(finalRoute as never), 150);
   };
 
   const handleSignOut = () => {
@@ -878,7 +889,7 @@ export default function GestureDrawer() {
                     <TouchableOpacity
                       key={item.label + item.route}
                       style={styles.menuItem}
-                      onPress={() => handleMenuItemPress(item.route)}
+                      onPress={() => handleMenuItemPress(item)}
                       activeOpacity={0.65}
                     >
                       <View style={[styles.menuItemIcon, { backgroundColor: BRAND.surfaceCard }]}>

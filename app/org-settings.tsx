@@ -1,5 +1,6 @@
 import { useAuth } from '@/lib/auth';
 import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
+import { usePermissions } from '@/lib/permissions-context';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { FONTS } from '@/theme/fonts';
@@ -25,6 +26,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function OrgSettingsScreen() {
   const { colors } = useTheme();
   const { profile } = useAuth();
+  const { isAdmin } = usePermissions();
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
@@ -83,6 +85,17 @@ export default function OrgSettingsScreen() {
     setter(value);
     setHasChanges(true);
   };
+
+  if (!isAdmin) {
+    return (
+      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={{ fontSize: 16, color: '#666' }}>Access restricted to administrators.</Text>
+        <TouchableOpacity onPress={() => router.replace('/(tabs)')}>
+          <Text style={{ fontSize: 14, color: '#4BB9EC', marginTop: 12 }}>Go Home</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
 
   if (loading) {
     return (

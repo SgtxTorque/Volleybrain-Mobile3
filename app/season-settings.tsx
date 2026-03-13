@@ -606,7 +606,7 @@ export default function SeasonSettingsScreen() {
         <View style={s.section}>
           <View style={s.sectionHeader}>
             <Text style={s.sectionTitle}>Teams</Text>
-            <TouchableOpacity style={s.addButton} onPress={() => router.push('/(tabs)/teams')}>
+            <TouchableOpacity style={s.addButton} onPress={() => router.push('/team-management')}>
               <Text style={s.addButtonText}>Manage</Text>
               <Ionicons name="chevron-forward" size={16} color={colors.primary} />
             </TouchableOpacity>
@@ -642,7 +642,7 @@ export default function SeasonSettingsScreen() {
                 );
               })}
               {teams.length > 5 && (
-                <TouchableOpacity style={s.viewAllBtn} onPress={() => router.push('/(tabs)/teams')}>
+                <TouchableOpacity style={s.viewAllBtn} onPress={() => router.push('/team-management')}>
                   <Text style={s.viewAllText}>View all {teams.length} teams</Text>
                 </TouchableOpacity>
               )}

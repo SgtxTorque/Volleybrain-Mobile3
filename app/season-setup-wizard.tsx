@@ -20,10 +20,11 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 
 import { useAuth } from '@/lib/auth';
+import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { useSport } from '@/lib/sport';
 import { supabase } from '@/lib/supabase';
@@ -48,6 +49,7 @@ export default function SeasonSetupWizard() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, organization } = useAuth();
+  const { isAdmin } = usePermissions();
   const { activeSport } = useSport();
   const { refreshSeasons } = useSeason();
 
@@ -254,6 +256,17 @@ export default function SeasonSetupWizard() {
   );
 
   const selectedCount = teams.filter(t => t.selected).length;
+
+  if (!isAdmin) {
+    return (
+      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={{ fontSize: 16, color: '#666' }}>Access restricted to administrators.</Text>
+        <TouchableOpacity onPress={() => router.replace('/(tabs)')}>
+          <Text style={{ fontSize: 14, color: '#4BB9EC', marginTop: 12 }}>Go Home</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>

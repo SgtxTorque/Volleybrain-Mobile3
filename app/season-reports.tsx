@@ -1,6 +1,7 @@
 import AppHeaderBar from '@/components/ui/AppHeaderBar';
 import { useAuth } from '@/lib/auth';
 import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
+import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
@@ -22,6 +23,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function SeasonReportsScreen() {
   const { colors } = useTheme();
   const { profile } = useAuth();
+  const { isAdmin } = usePermissions();
   const { workingSeason } = useSeason();
   const router = useRouter();
   const s = createStyles(colors);
@@ -176,6 +178,17 @@ export default function SeasonReportsScreen() {
   const revenuePercent = totalExpected > 0 ? Math.round((totalCollected / totalExpected) * 100) : 0;
   const winPct = gamesPlayed > 0 ? Math.round((wins / gamesPlayed) * 100) : 0;
   const waiverPct = waiverTotal > 0 ? Math.round((waiverCompliant / waiverTotal) * 100) : 0;
+
+  if (!isAdmin) {
+    return (
+      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={{ fontSize: 16, color: '#666' }}>Access restricted to administrators.</Text>
+        <TouchableOpacity onPress={() => router.replace('/(tabs)')}>
+          <Text style={{ fontSize: 14, color: '#4BB9EC', marginTop: 12 }}>Go Home</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
 
   if (loading) {
     return (

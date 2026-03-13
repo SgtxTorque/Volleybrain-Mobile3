@@ -1,5 +1,6 @@
 import { useAuth } from '@/lib/auth';
 import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
+import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { BRAND } from '@/theme/colors';
@@ -42,6 +43,7 @@ const RECENT_SEARCHES_KEY = 'admin_recent_searches';
 
 export default function AdminSearchScreen() {
   const { user } = useAuth();
+  const { isAdmin } = usePermissions();
   const { workingSeason } = useSeason();
   const router = useRouter();
   const inputRef = useRef<TextInput>(null);
@@ -215,6 +217,17 @@ export default function AdminSearchScreen() {
   };
 
   // ── Render ────────────────────────────────────────────────
+
+  if (!isAdmin) {
+    return (
+      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={{ fontSize: 16, color: '#666' }}>Access restricted to administrators.</Text>
+        <TouchableOpacity onPress={() => router.replace('/(tabs)')}>
+          <Text style={{ fontSize: 14, color: '#4BB9EC', marginTop: 12 }}>Go Home</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={s.container} edges={['top']}>

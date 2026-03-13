@@ -2,6 +2,7 @@ import AppHeaderBar from '@/components/ui/AppHeaderBar';
 import PillTabs from '@/components/ui/PillTabs';
 import { useAuth } from '@/lib/auth';
 import { addAdminToTeamChats, createTeamChats } from '@/lib/chat-utils';
+import { usePermissions } from '@/lib/permissions-context';
 import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
@@ -64,6 +65,7 @@ const eventTypeIcon = (type: string): string => {
 
 export default function AdminTeamsScreen() {
   const { profile } = useAuth();
+  const { isAdmin } = usePermissions();
   const { workingSeason } = useSeason();
   const { colors } = useTheme();
   const router = useRouter();
@@ -340,6 +342,17 @@ export default function AdminTeamsScreen() {
   // =========================================================================
   // Render
   // =========================================================================
+
+  if (!isAdmin) {
+    return (
+      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={{ fontSize: 16, color: '#666' }}>Access restricted to administrators.</Text>
+        <TouchableOpacity onPress={() => router.replace('/(tabs)')}>
+          <Text style={{ fontSize: 14, color: '#4BB9EC', marginTop: 12 }}>Go Home</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[s.container, { backgroundColor: colors.background }]} edges={['top']}>

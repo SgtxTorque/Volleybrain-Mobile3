@@ -357,7 +357,7 @@ export default function MyKidsScreen() {
                   <View style={s.childActions}>
                     <TouchableOpacity
                       style={s.childActionBtn}
-                      onPress={() => router.push('/(tabs)/schedule' as any)}
+                      onPress={() => router.push('/(tabs)/parent-schedule' as any)}
                     >
                       <Ionicons name="calendar-outline" size={18} color={colors.primary} />
                       <Text style={s.childActionText}>Schedule</Text>
