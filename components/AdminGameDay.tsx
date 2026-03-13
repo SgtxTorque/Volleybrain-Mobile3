@@ -348,7 +348,7 @@ export default function AdminGameDay() {
               <Card
                 key={game.id}
                 accentColor={game.team_color || colors.primary}
-                onPress={() => router.push('/game-prep' as any)}
+                onPress={() => router.push('/game-prep-wizard' as any)}
                 style={{ marginHorizontal: 16, marginBottom: 10 }}
               >
                 <View style={s.gameCardRow}>
@@ -441,7 +441,7 @@ export default function AdminGameDay() {
               <Card
                 key={game.id}
                 accentColor={colors.warning}
-                onPress={() => router.push('/game-prep' as any)}
+                onPress={() => router.push('/game-prep-wizard' as any)}
                 style={{ marginHorizontal: 16, marginBottom: 8 }}
               >
                 <View style={s.gameCardRow}>

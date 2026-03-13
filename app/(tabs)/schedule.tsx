@@ -517,7 +517,7 @@ export default function ScheduleScreen() {
   };
 
   const handleEventPress = (event: ScheduleEvent) => { setSelectedEvent(event); setShowEventModal(true); };
-  const handleGamePrep = (event: ScheduleEvent) => { setShowEventModal(false); router.push('/game-prep'); };
+  const handleGamePrep = (event: ScheduleEvent) => { setShowEventModal(false); router.push(`/game-prep-wizard?eventId=${event.id}&teamId=${event.team_id}` as any); };
   const deleteEvent = (event: ScheduleEvent) => {
     Alert.alert('Delete Event', `Delete "${event.title}"?`, [
       { text: 'Cancel', style: 'cancel' },

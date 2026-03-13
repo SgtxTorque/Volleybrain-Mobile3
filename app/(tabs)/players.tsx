@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -39,7 +40,8 @@ export default function PlayersScreen() {
   const { colors } = useTheme();
   const { workingSeason } = useSeason();
   const { isAdmin, isCoach } = usePermissions();
-  
+  const { teamId: paramTeamId } = useLocalSearchParams<{ teamId?: string }>();
+
   const [players, setPlayers] = useState<PlayerCardPlayer[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,6 +59,13 @@ export default function PlayersScreen() {
       fetchData();
     }
   }, [workingSeason?.id]);
+
+  // Auto-select team when paramTeamId is provided (e.g. from team-hub or admin tiles)
+  useEffect(() => {
+    if (paramTeamId && teams.length > 0) {
+      setSelectedTeam(paramTeamId);
+    }
+  }, [paramTeamId, teams]);
 
   const fetchData = async () => {
     if (!workingSeason) {

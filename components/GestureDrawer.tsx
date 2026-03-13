@@ -130,7 +130,7 @@ const MENU_SECTIONS: MenuSection[] = [
       { icon: 'grid', label: 'Lineup Builder', route: '/lineup-builder' },
       { icon: 'checkmark-circle', label: 'Attendance', route: '/attendance' },
       { icon: 'stats-chart', label: 'Game Results', route: '/game-results' },
-      { icon: 'newspaper-outline', label: 'Game Recap', route: '/game-recap' },
+      { icon: 'newspaper-outline', label: 'Game Recap', route: '/game-results?view=recap' },
     ],
   },
   // ── Coaching Tools (admin + coach) ────────────────────────────
@@ -452,7 +452,7 @@ export default function GestureDrawer() {
     }
 
     // Fix 3: Pass team context to Game Day routes
-    const gameDayRoutes = ['/game-day-command', '/game-prep', '/lineup-builder', '/attendance', '/game-results', '/game-recap'];
+    const gameDayRoutes = ['/game-day-command', '/game-prep', '/lineup-builder', '/attendance', '/game-results'];
     if (gameDayRoutes.some(r => finalRoute.startsWith(r)) && activeContextId && (isCoach || isAdmin)) {
       const separator = finalRoute.includes('?') ? '&' : '?';
       finalRoute = `${finalRoute}${separator}teamId=${activeContextId}`;

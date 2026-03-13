@@ -114,7 +114,7 @@ export default function RosterSection({
         <Text style={s.headerLabel}>ROSTER</Text>
         <TouchableOpacity
           onPress={() => router.push({
-            pathname: '/roster' as any,
+            pathname: '/(tabs)/players' as any,
             params: { teamId, teamName },
           })}
           activeOpacity={0.7}

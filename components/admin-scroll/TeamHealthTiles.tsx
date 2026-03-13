@@ -70,7 +70,7 @@ export default function TeamHealthTiles({ teams }: Props) {
       renderItem={({ item }) => (
         <TeamTile
           team={item}
-          onPress={() => router.push(`/team-roster?teamId=${item.id}` as any)}
+          onPress={() => router.push(`/(tabs)/players?teamId=${item.id}` as any)}
         />
       )}
     />

@@ -275,7 +275,7 @@ export default function CoachMyStuffScreen() {
               <TouchableOpacity
                 key={team.teamId}
                 style={[s.teamCard, { borderLeftColor: team.teamColor || colors.primary }]}
-                onPress={() => router.push({ pathname: '/team-roster', params: { teamId: team.teamId } } as any)}
+                onPress={() => router.push(`/(tabs)/players?teamId=${team.teamId}` as any)}
                 activeOpacity={0.7}
               >
                 <View style={s.teamCardContent}>
