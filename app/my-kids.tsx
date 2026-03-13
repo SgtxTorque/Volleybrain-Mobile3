@@ -284,19 +284,25 @@ export default function MyKidsScreen() {
                 <View key={child.id} style={s.childCard}>
                   {/* Child Header */}
                   <View style={s.childHeader}>
-                    <View style={s.childAvatar}>
-                      <Text style={s.childAvatarText}>
-                        {child.first_name.charAt(0)}{child.last_name.charAt(0)}
-                      </Text>
-                    </View>
-                    <View style={s.childHeaderInfo}>
-                      <Text style={s.childName}>
-                        {child.first_name} {child.last_name}
-                      </Text>
-                      {child.jersey_number && (
-                        <Text style={s.childJersey}>#{child.jersey_number}</Text>
-                      )}
-                    </View>
+                    <TouchableOpacity
+                      style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}
+                      activeOpacity={0.7}
+                      onPress={() => router.push(`/child-detail?playerId=${child.id}` as any)}
+                    >
+                      <View style={s.childAvatar}>
+                        <Text style={s.childAvatarText}>
+                          {child.first_name.charAt(0)}{child.last_name.charAt(0)}
+                        </Text>
+                      </View>
+                      <View style={s.childHeaderInfo}>
+                        <Text style={s.childName}>
+                          {child.first_name} {child.last_name}
+                        </Text>
+                        {child.jersey_number && (
+                          <Text style={s.childJersey}>#{child.jersey_number}</Text>
+                        )}
+                      </View>
+                    </TouchableOpacity>
 
                     {/* Payment Badge */}
                     {childOwed > 0 ? (
@@ -355,6 +361,14 @@ export default function MyKidsScreen() {
 
                   {/* Quick Actions */}
                   <View style={s.childActions}>
+                    <TouchableOpacity
+                      style={s.childActionBtn}
+                      onPress={() => router.push(`/child-detail?playerId=${child.id}` as any)}
+                    >
+                      <Ionicons name="person-outline" size={18} color={colors.primary} />
+                      <Text style={s.childActionText}>Profile</Text>
+                    </TouchableOpacity>
+
                     <TouchableOpacity
                       style={s.childActionBtn}
                       onPress={() => router.push('/(tabs)/parent-schedule' as any)}

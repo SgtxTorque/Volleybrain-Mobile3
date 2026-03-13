@@ -111,9 +111,11 @@ export default function MyStatsScreen() {
   const { user } = useAuth();
   const { allSeasons, workingSeason } = useSeason();
   const router = useRouter();
-  const { highlightStat, playerId: paramPlayerId } = useLocalSearchParams<{ highlightStat?: string; playerId?: string }>();
+  const { highlightStat, playerId: paramPlayerId, scrollToEvals } = useLocalSearchParams<{ highlightStat?: string; playerId?: string; scrollToEvals?: string }>();
 
   const highlightHandled = useRef(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const evalSectionY = useRef<number>(0);
 
   // State
   const [loading, setLoading] = useState(true);
@@ -422,6 +424,15 @@ export default function MyStatsScreen() {
       }
     }
   }, [highlightStat, gameHistory.length, detectedSport]);
+
+  // Auto-scroll to evaluations section when scrollToEvals param is present
+  useEffect(() => {
+    if (scrollToEvals === 'true' && !loading && evalSectionY.current > 0) {
+      setTimeout(() => {
+        scrollRef.current?.scrollTo({ y: evalSectionY.current, animated: true });
+      }, 300);
+    }
+  }, [scrollToEvals, loading]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -860,6 +871,7 @@ export default function MyStatsScreen() {
       </View>
 
       <ScrollView
+        ref={scrollRef}
         style={s.scroll}
         contentContainerStyle={s.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -884,7 +896,8 @@ export default function MyStatsScreen() {
         {/* Game-by-Game History */}
         {renderGameHistory()}
 
-        {/* Skill Ratings */}
+        {/* Skill Ratings + Evaluation History (scroll target for scrollToEvals) */}
+        <View onLayout={(e) => { evalSectionY.current = e.nativeEvent.layout.y; }}>
         {renderSkillsSection()}
 
         {/* Evaluation History Timeline */}
@@ -978,6 +991,8 @@ export default function MyStatsScreen() {
             </View>
           </View>
         )}
+
+        </View>
 
         {/* Shoutout Stats */}
         {playerId && (

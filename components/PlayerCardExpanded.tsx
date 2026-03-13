@@ -4,6 +4,7 @@ import { getSportDisplay, getPositionInfo } from '@/constants/sport-display';
 import { useAuth } from '@/lib/auth';
 import { usePermissions } from '@/lib/permissions-context';
 import { supabase } from '@/lib/supabase';
+import { useRouter } from 'expo-router';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 import { useTheme } from '@/lib/theme';
@@ -91,6 +92,7 @@ export default function PlayerCardExpanded({ player, visible, onClose, onUpdate 
   const { colors } = useTheme();
   const { isAdmin, isCoach } = usePermissions();
   const { user } = useAuth();
+  const router = useRouter();
   
   const sportDisplay = useMemo(() => getSportDisplay(player?.sport_name), [player?.sport_name]);
   const posInfo = useMemo(() => getPositionInfo(player?.position, player?.sport_name), [player?.position, player?.sport_name]);
@@ -443,6 +445,32 @@ export default function PlayerCardExpanded({ player, visible, onClose, onUpdate 
                 </View>
               )}
             </View>
+
+            {/* View Full Profile Button */}
+            <TouchableOpacity
+              style={{
+                marginHorizontal: 16,
+                marginTop: 8,
+                marginBottom: 16,
+                paddingVertical: 12,
+                paddingHorizontal: 20,
+                backgroundColor: colors.primary,
+                borderRadius: 12,
+                alignItems: 'center',
+              }}
+              onPress={() => {
+                onClose();
+                if (isAdmin || isCoach) {
+                  router.push(`/child-detail?playerId=${player.id}` as any);
+                } else {
+                  router.push(`/player-card?playerId=${player.id}` as any);
+                }
+              }}
+            >
+              <Text style={{ color: '#fff', fontSize: 14, fontFamily: FONTS.bodySemiBold }}>
+                {isAdmin || isCoach ? 'View Player Detail' : 'View Player Card'}
+              </Text>
+            </TouchableOpacity>
           </ScrollView>
         </View>
 

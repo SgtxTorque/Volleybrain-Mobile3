@@ -4,6 +4,7 @@
  */
 import React, { useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Animated, {
   Extrapolation,
@@ -149,6 +150,16 @@ export default function HeroIdentityCard({
 
           <Text style={styles.xpText}>{xpDisplay}</Text>
         </View>
+
+        {/* View My Card link */}
+        <TouchableOpacity
+          style={styles.viewCardBtn}
+          activeOpacity={0.7}
+          onPress={() => router.push('/player-card' as any)}
+        >
+          <Ionicons name="id-card-outline" size={14} color={PT.gold} />
+          <Text style={styles.viewCardText}>View My Card</Text>
+        </TouchableOpacity>
       </LinearGradient>
     </Animated.View>
   );
@@ -272,5 +283,23 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bodySemiBold,
     fontSize: 10,
     color: PT.textMuted,
+  },
+  viewCardBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    marginTop: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: 'rgba(255,215,0,0.10)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,215,0,0.20)',
+  },
+  viewCardText: {
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 12,
+    color: PT.gold,
   },
 });

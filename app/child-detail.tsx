@@ -731,9 +731,11 @@ export default function ChildDetailScreen() {
         <View style={s.sectionBlock}>
           <Text style={[s.sectionLabel, { color: BRAND.textMuted }]}>RECENT RESULTS</Text>
           {recentGames.map((game) => (
-            <View
+            <TouchableOpacity
               key={game.id}
               style={[s.glassCard, s.recentGameCard, { backgroundColor: BRAND.white, borderColor: BRAND.border }]}
+              activeOpacity={0.7}
+              onPress={() => router.push(`/game-results?eventId=${game.id}` as any)}
             >
               <View style={[
                 s.resultBadge,
@@ -757,7 +759,7 @@ export default function ChildDetailScreen() {
               <Text style={[s.recentGameScore, { color: BRAND.textPrimary }]}>
                 {game.our_score ?? 0}-{game.opponent_score ?? 0}
               </Text>
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
       )}
@@ -807,7 +809,7 @@ export default function ChildDetailScreen() {
         {/* View All Button */}
         <TouchableOpacity
           style={[s.viewAllBtn, { borderColor: BRAND.teal }]}
-          onPress={() => router.push('/achievements' as any)}
+          onPress={() => router.push(`/achievements?playerId=${playerId}` as any)}
           activeOpacity={0.7}
         >
           <Text style={[s.viewAllBtnText, { color: BRAND.teal }]}>View All Achievements</Text>
@@ -926,6 +928,33 @@ export default function ChildDetailScreen() {
             <Text style={s.overlayPillText}>{isActive ? 'Active' : 'Pending'}</Text>
           </View>
         </View>
+        <TouchableOpacity
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+            paddingVertical: 8,
+            paddingHorizontal: 14,
+            backgroundColor: 'rgba(255,255,255,0.2)',
+            borderRadius: 10,
+            borderWidth: 1,
+            borderColor: 'rgba(255,255,255,0.3)',
+            marginTop: 10,
+            alignSelf: 'flex-start',
+          }}
+          activeOpacity={0.7}
+          onPress={() => router.push(`/player-card?playerId=${playerId}` as any)}
+        >
+          <Ionicons name="id-card-outline" size={16} color={BRAND.white} />
+          <Text style={{
+            fontSize: 13,
+            fontFamily: FONTS.bodySemiBold,
+            color: BRAND.white,
+            textShadowColor: 'rgba(0,0,0,0.3)',
+            textShadowOffset: { width: 0, height: 1 },
+            textShadowRadius: 2,
+          }}>View Player Card</Text>
+        </TouchableOpacity>
       </Animated.View>
 
       {/* ================================================================ */}
