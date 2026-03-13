@@ -32,6 +32,8 @@ type CoachRecord = {
   experience_level: string | null;
   status: string | null;
   background_check_status: string | null;
+  coaching_license: string | null;
+  coaching_level: string | null;
   waiver_signed: boolean | null;
   code_of_conduct_signed: boolean | null;
   team_coaches: {
@@ -328,6 +330,30 @@ export default function CoachProfileScreen() {
               {coach.code_of_conduct_signed ? 'Signed' : 'Not Signed'}
             </Text>
           </View>
+          {coach.coaching_license && (
+            <>
+              <View style={s.fieldDivider} />
+              <View style={s.statusRow}>
+                <View style={s.statusInfo}>
+                  <Ionicons name="document-text" size={20} color={colors.info} />
+                  <Text style={s.statusLabel}>Coaching License</Text>
+                </View>
+                <Text style={[s.statusValue, { color: colors.info }]}>{coach.coaching_license}</Text>
+              </View>
+            </>
+          )}
+          {coach.coaching_level && (
+            <>
+              <View style={s.fieldDivider} />
+              <View style={s.statusRow}>
+                <View style={s.statusInfo}>
+                  <Ionicons name="school" size={20} color={colors.primary} />
+                  <Text style={s.statusLabel}>Coaching Level</Text>
+                </View>
+                <Text style={[s.statusValue, { color: colors.primary }]}>{coach.coaching_level}</Text>
+              </View>
+            </>
+          )}
         </View>
 
         {/* Assigned Teams */}

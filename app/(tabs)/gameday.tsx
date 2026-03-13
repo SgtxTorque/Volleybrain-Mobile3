@@ -659,7 +659,7 @@ export default function GameDayScreen() {
             <SectionHeader
               title="Upcoming"
               action="Full Schedule"
-              onAction={() => router.push('/(tabs)/schedule' as any)}
+              onAction={() => router.push('/(tabs)/coach-schedule' as any)}
             />
             {Object.keys(groupedUpcoming)
               .sort()
@@ -702,7 +702,7 @@ export default function GameDayScreen() {
             {allUpcomingEvents.length > 10 && (
               <TouchableOpacity
                 style={s.viewAllBtn}
-                onPress={() => router.push('/(tabs)/schedule' as any)}
+                onPress={() => router.push('/(tabs)/coach-schedule' as any)}
               >
                 <Text style={[s.viewAllBtnText, { color: BRAND.skyBlue }]}>View Full Schedule</Text>
                 <Ionicons name="arrow-forward" size={16} color={BRAND.skyBlue} />
@@ -786,7 +786,7 @@ export default function GameDayScreen() {
               contentContainerStyle={{ paddingHorizontal: 16, gap: 10 }}
             >
               {[
-                { icon: 'add', color: BRAND.teal, label: 'Add Event', route: '/(tabs)/schedule' },
+                { icon: 'add', color: BRAND.teal, label: 'Add Event', route: '/(tabs)/coach-schedule' },
                 { icon: 'checkmark-circle-outline', color: BRAND.teal, label: 'Attendance', route: '/attendance' },
                 { icon: 'grid-outline', color: BRAND.skyBlue, label: 'Lineup', route: '/lineup-builder' },
                 { icon: 'analytics-outline', color: BRAND.coral, label: 'Game Prep', route: '/game-prep-wizard' },

@@ -77,7 +77,7 @@ export default function UpcomingSection({ teamId, seasonId, isCoachOrAdmin }: Up
           <View style={s.headerRow}>
             <Text style={s.headerLabel}>UPCOMING</Text>
             <TouchableOpacity
-              onPress={() => router.push('/(tabs)/schedule' as any)}
+              onPress={() => router.push('/(tabs)/coach-schedule' as any)}
               activeOpacity={0.7}
             >
               <Text style={s.viewAll}>Full Schedule →</Text>
