@@ -248,6 +248,9 @@ export default function GestureDrawer() {
   const handleRoleSwitch = (roleKey: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setDevViewAs(roleKey as any);
+    // Clear stale context from previous role
+    setActiveContextId(null);
+    setContextItems([]);
     closeDrawer();
     setTimeout(() => router.push('/(tabs)' as never), 150);
   };
@@ -305,7 +308,7 @@ export default function GestureDrawer() {
             color: BRAND.skyBlue,
           }));
           setContextItems(items);
-          if (items.length > 0 && !activeContextId) setActiveContextId(items[0].id);
+          if (items.length > 0) setActiveContextId(items[0].id);
         }
       } else if (isCoach) {
         // Fetch teams via team_staff
@@ -329,7 +332,7 @@ export default function GestureDrawer() {
             };
           });
         setContextItems(items);
-        if (items.length > 0 && !activeContextId) setActiveContextId(items[0].id);
+        if (items.length > 0) setActiveContextId(items[0].id);
       } else if (isPlayer) {
         // Fetch teams via team_players
         // First find the player record for this user
@@ -360,7 +363,7 @@ export default function GestureDrawer() {
               };
             });
           setContextItems(items);
-          if (items.length > 0 && !activeContextId) setActiveContextId(items[0].id);
+          if (items.length > 0) setActiveContextId(items[0].id);
         }
       }
     } catch (err) {
@@ -375,6 +378,12 @@ export default function GestureDrawer() {
       fetchContextItems();
     }
   }, [isOpen, fetchContextItems]);
+
+  // Clear stale context when role changes from ANY source (drawer pills, home RoleSelector, etc.)
+  useEffect(() => {
+    setActiveContextId(null);
+    setContextItems([]);
+  }, [currentRoleKey]);
 
   const handleContextSelect = (item: ContextItem) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

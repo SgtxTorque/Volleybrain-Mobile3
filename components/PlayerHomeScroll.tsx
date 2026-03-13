@@ -36,6 +36,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import { Ionicons } from '@expo/vector-icons';
 
 import { useAuth } from '@/lib/auth';
 import { useScrollAnimations } from '@/hooks/useScrollAnimations';
@@ -308,7 +309,40 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           xpCurrent={data.xp}
           xpMax={(data.level) * 1000}
           scrollY={scrollY}
+          playerId={playerId}
         />
+
+        {/* ─── CHILD SWITCHER (multi-child parents only) ─── */}
+        {onSwitchChild && (
+          <TouchableOpacity
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              alignSelf: 'center',
+              gap: 6,
+              paddingVertical: 8,
+              paddingHorizontal: 16,
+              backgroundColor: 'rgba(75,185,236,0.12)',
+              borderRadius: 20,
+              borderWidth: 1,
+              borderColor: 'rgba(75,185,236,0.25)',
+              marginBottom: 12,
+            }}
+            activeOpacity={0.7}
+            onPress={onSwitchChild}
+          >
+            <Ionicons name="swap-horizontal-outline" size={14} color={PLAYER_THEME.accent} />
+            <Text style={{
+              fontSize: 13,
+              fontWeight: '600',
+              color: PLAYER_THEME.accent,
+              fontFamily: FONTS?.bodySemiBold || undefined,
+            }}>
+              {displayName}
+            </Text>
+            <Ionicons name="chevron-down" size={12} color={PLAYER_THEME.accent} />
+          </TouchableOpacity>
+        )}
 
         {/* ─── 1b. MY TEAM (one-tap to roster) ─────────────────── */}
         {data.primaryTeam && (

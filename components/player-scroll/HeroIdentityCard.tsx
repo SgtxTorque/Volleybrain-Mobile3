@@ -41,6 +41,7 @@ type Props = {
   xpCurrent: number;
   xpMax: number;
   scrollY: SharedValue<number>;
+  playerId?: string | null;
 };
 
 export default function HeroIdentityCard({
@@ -55,6 +56,7 @@ export default function HeroIdentityCard({
   xpCurrent,
   xpMax,
   scrollY,
+  playerId,
 }: Props) {
   const router = useRouter();
   // OVR badge glow animation
@@ -112,11 +114,15 @@ export default function HeroIdentityCard({
       >
         {/* Player label + OVR */}
         <View style={styles.topRow}>
-          <View style={styles.nameBlock}>
+          <TouchableOpacity
+            style={styles.nameBlock}
+            activeOpacity={0.8}
+            onPress={() => router.push(playerId ? `/my-stats?playerId=${playerId}` as any : '/my-stats' as any)}
+          >
             <Text style={styles.playerLabel}>PLAYER</Text>
             <Text style={styles.nameFirst}>{firstName.toUpperCase()}</Text>
             <Text style={styles.nameLast}>{lastName.toUpperCase()}</Text>
-          </View>
+          </TouchableOpacity>
 
           {/* OVR Badge */}
           <TouchableOpacity
