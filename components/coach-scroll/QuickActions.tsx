@@ -18,7 +18,7 @@ type ActionItem = {
 };
 
 const ALL_ACTIONS: ActionItem[] = [
-  { icon: '\u{1F4E3}', label: 'Send a Blast', route: '/(tabs)/coach-chat' },
+  { icon: '\u{1F4E3}', label: 'Send a Blast', route: '/(tabs)/chats' },
   { icon: '\u{1F4DD}', label: 'Build a Lineup', route: '/lineup-builder', offDayOnly: true },
   { icon: '\u{1F31F}', label: 'Give a Shoutout', route: null },
   { icon: '\u{1F4CA}', label: 'Review Stats', route: '/game-results', badgeKey: 'stats' },

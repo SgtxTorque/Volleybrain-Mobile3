@@ -140,7 +140,7 @@ function buildDynamicMessages(
       type: 'chat',
       textColor: BRAND.navy,
       hint: 'Tap to read \u{2192}',
-      route: '/(tabs)/parent-chat',
+      route: '/(tabs)/chats',
     });
   }
 

@@ -121,7 +121,7 @@ export default function MetricGrid({ record, payment, xp, chat, childPlayerId, s
         <TouchableOpacity
           style={styles.card}
           activeOpacity={0.7}
-          onPress={() => router.push('/(tabs)/parent-chat' as any)}
+          onPress={() => router.push('/(tabs)/chats' as any)}
         >
           <Text style={styles.emoji}>{'\u{1F4AC}'}</Text>
           <Text style={styles.chatTitle}>Team Chat</Text>

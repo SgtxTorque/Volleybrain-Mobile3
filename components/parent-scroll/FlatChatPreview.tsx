@@ -20,7 +20,7 @@ export default function FlatChatPreview({ chat }: Props) {
     <TouchableOpacity
       style={styles.container}
       activeOpacity={0.7}
-      onPress={() => router.push('/(tabs)/parent-chat' as any)}
+      onPress={() => router.push('/(tabs)/chats' as any)}
     >
       <View style={styles.headerRow}>
         <Text style={styles.sectionHeader}>TEAM CHAT</Text>

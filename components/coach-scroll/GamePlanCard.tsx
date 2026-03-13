@@ -116,7 +116,7 @@ export default function GamePlanCard({ event, rsvpSummary }: Props) {
               activeOpacity={0.7}
               onPress={() => {
                 // TODO: Navigate to chat/DM with missing player's parent when built
-                router.push('/(tabs)/coach-chat' as any);
+                router.push('/(tabs)/chats' as any);
               }}
             >
               <Text style={styles.missingText}> · {missingLine}</Text>
