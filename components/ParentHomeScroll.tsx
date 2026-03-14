@@ -44,6 +44,7 @@ import NoTeamState from './empty-states/NoTeamState';
 import { BRAND } from '@/theme/colors';
 import { SPACING } from '@/theme/spacing';
 import { FONTS } from '@/theme/fonts';
+import { D_COLORS } from '@/theme/d-system';
 
 import RoleSelector from './RoleSelector';
 import DayStripCalendar from './parent-scroll/DayStripCalendar';
@@ -72,6 +73,8 @@ import ParentXPBar from './parent-scroll/ParentXPBar';
 import ParentEventHero from './parent-scroll/ParentEventHero';
 import ParentMomentumRow from './parent-scroll/ParentMomentumRow';
 import FamilyPulseFeed from './parent-scroll/FamilyPulseFeed';
+import ParentTrophyBar from './parent-scroll/ParentTrophyBar';
+import ParentAmbientCloser from './parent-scroll/ParentAmbientCloser';
 import TrophyCaseWidget from './TrophyCaseWidget';
 import AchievementCelebrationModal from './AchievementCelebrationModal';
 import { getUnseenRoleAchievements, markAchievementsSeen } from '@/lib/achievement-engine';
@@ -337,7 +340,7 @@ export default function ParentHomeScroll() {
     : null;
 
   return (
-    <View style={[styles.root, { backgroundColor: BRAND.offWhite }]}>
+    <View style={[styles.root, { backgroundColor: D_COLORS.pageBg }]}>
       {/* ─── COMPACT HEADER ──────────────────────────────────── */}
       <Animated.View
         pointerEvents={headerInteractive ? 'auto' : 'none'}
@@ -375,18 +378,6 @@ export default function ParentHomeScroll() {
             </View>
           </View>
         </View>
-      </Animated.View>
-
-      {/* ─── DAY-STRIP CALENDAR (sticky below header) ────────── */}
-      <Animated.View
-        pointerEvents={headerInteractive ? 'auto' : 'none'}
-        style={[
-          styles.calendarSticky,
-          { top: 56 + insets.top },
-          calendarStickyAnimStyle,
-        ]}
-      >
-        <DayStripCalendar scrollY={scrollY} eventDates={data.eventDates} />
       </Animated.View>
 
       {/* ─── SCROLLABLE CONTENT ──────────────────────────────── */}
@@ -429,22 +420,6 @@ export default function ParentHomeScroll() {
 
         {/* ─── PAYMENT NUDGE ────────────────────────────────────── */}
         <ParentPaymentNudge balance={data.paymentStatus.balance} />
-
-        {/* ─── REGISTRATION STATUS + OPEN REGISTRATION ─────── */}
-        <View style={{ paddingHorizontal: SPACING.pagePadding }}>
-          <RegistrationStatusCard />
-          <RegistrationCard childName={data.children.length > 0 ? data.children[0].first_name : null} />
-          <IncompleteProfileCard />
-        </View>
-
-        {/* ─── CONTEXT BAR (only when context selected) ────────── */}
-        <ContextBar
-          context={data.selectedContext}
-          allChildren={data.allChildren}
-          isMulti={data.isMultiChild || data.isMultiSport}
-          onSwitch={() => setFamilyPanelOpen(true)}
-          onClear={() => data.setSelectedContext(null)}
-        />
 
         {/* ─── ATTENTION STRIP (expandable) ─────────────────────── */}
         <ParentAttentionStrip
@@ -497,45 +472,24 @@ export default function ParentHomeScroll() {
           childName={childName}
         />
 
-        {/* ─── UPCOMING SEASON REGISTRATION (below current content) ─── */}
+        {/* ─── PARENT TROPHY BAR ─────────────────────────────── */}
+        {profile?.id && (
+          <ParentTrophyBar userId={profile.id} />
+        )}
+
+        {/* ─── UPCOMING SEASON REGISTRATION (bottom variant) ── */}
         <RegistrationCard
           childName={data.children.length > 0 ? data.children[0].first_name : null}
           variant="bottom"
         />
 
-        {/* ─── END OF SCROLL (contextual closing) ────────────── */}
-        <View style={styles.endSection}>
-          <Image source={require('@/assets/images/mascot/SleepLynx.png')} style={styles.endMascot} resizeMode="contain" />
-          <Text style={styles.endText}>
-            {(() => {
-              const he = data.heroEvent;
-              if (he) {
-                const isToday = (() => {
-                  const today = new Date().toDateString();
-                  const evtDate = new Date(he.event_date + 'T00:00:00').toDateString();
-                  return today === evtDate;
-                })();
-                if (isToday) {
-                  const timeStr = he.event_time
-                    ? (() => { const [h,m] = he.event_time.split(':'); const hr = parseInt(h); return `${hr % 12 || 12}:${m} ${hr >= 12 ? 'PM' : 'AM'}`; })()
-                    : '';
-                  return `See you at ${(he.event_type || 'the event').toLowerCase()}${timeStr ? ` at ${timeStr}` : ''}. \u{1F3D0}`;
-                }
-                const isTomorrow = (() => {
-                  const tmrw = new Date();
-                  tmrw.setDate(tmrw.getDate() + 1);
-                  return tmrw.toDateString() === new Date(he.event_date + 'T00:00:00').toDateString();
-                })();
-                if (isTomorrow) {
-                  return `${(he.event_type || 'Event')} tomorrow. Get some rest.`;
-                }
-                const dayName = new Date(he.event_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' });
-                return `Next up: ${dayName}'s ${(he.event_type || 'event').toLowerCase()}. ${childName} is ready.`;
-              }
-              return 'That\'s everything for now. Go be great.';
-            })()}
-          </Text>
-        </View>
+        {/* ─── AMBIENT CLOSER ────────────────────────────────── */}
+        <ParentAmbientCloser
+          children={data.allChildren}
+          heroEvent={data.allUpcomingEvents[0] || null}
+          seasonRecord={data.seasonRecord}
+          lastName={lastName}
+        />
         </>
         )}
       </Animated.ScrollView>
