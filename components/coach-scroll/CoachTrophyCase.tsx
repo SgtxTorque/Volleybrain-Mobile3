@@ -5,6 +5,16 @@
  */
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Animated, {
+  Easing,
+  cancelAnimation,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { fetchUserXP, getRoleAchievements, type RoleAchievementWithStatus } from '@/lib/achievement-engine';
@@ -23,6 +33,38 @@ const RARITY_DOT: Record<string, string> = {
   common: '#22C55E',
   legendary: '#FFD700',
 };
+
+/** Animated badge cell — earned badges get a subtle scale pulse loop */
+function AnimatedBadge({ badge, index, dotColor }: { badge: RoleAchievementWithStatus; index: number; dotColor: string }) {
+  const scale = useSharedValue(1.0);
+  useEffect(() => {
+    if (!badge.earned) return;
+    scale.value = withRepeat(
+      withSequence(
+        withDelay(index * 500, withTiming(1.0, { duration: 3000 })),
+        withTiming(1.05, { duration: 400, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1.0, { duration: 400, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      false
+    );
+    return () => cancelAnimation(scale);
+  }, [badge.earned]);
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+  return (
+    <Animated.View style={[styles.badgeCell, badge.earned ? styles.badgeEarned : styles.badgeLocked, animStyle]}>
+      <View style={[styles.rarityDot, { backgroundColor: dotColor }]} />
+      <Text style={[styles.badgeEmoji, !badge.earned && styles.badgeEmojiLocked]}>
+        {badge.icon || '\u{1F3C6}'}
+      </Text>
+      <Text style={[styles.badgeName, !badge.earned && styles.badgeNameLocked]} numberOfLines={1}>
+        {badge.name || 'Badge'}
+      </Text>
+    </Animated.View>
+  );
+}
 
 function CoachTrophyCase({ userId }: Props) {
   const router = useRouter();
@@ -70,6 +112,16 @@ function CoachTrophyCase({ userId }: Props) {
   const levelInfo = getLevelFromXP(xp.totalXp);
   const tier = getLevelTier(levelInfo.level);
 
+  // Animation 9A: XP bar fill from 0 to actual
+  const xpWidth = useSharedValue(0);
+  useEffect(() => {
+    if (loading) return;
+    xpWidth.value = withDelay(200, withTiming(levelInfo.progress, { duration: 800, easing: Easing.out(Easing.ease) }));
+  }, [loading, levelInfo.progress]);
+  const xpFillStyle = useAnimatedStyle(() => ({
+    width: `${xpWidth.value}%` as any,
+  }));
+
   return (
     <TouchableOpacity
       activeOpacity={0.85}
@@ -92,16 +144,7 @@ function CoachTrophyCase({ userId }: Props) {
           {allBadges.map((badge, i) => {
             const dotColor = RARITY_DOT[badge.rarity?.toLowerCase() || 'common'] || RARITY_DOT.common;
             return (
-              <View key={badge.id || i} style={[styles.badgeCell, badge.earned ? styles.badgeEarned : styles.badgeLocked]}>
-                {/* Rarity dot */}
-                <View style={[styles.rarityDot, { backgroundColor: dotColor }]} />
-                <Text style={[styles.badgeEmoji, !badge.earned && styles.badgeEmojiLocked]}>
-                  {badge.icon || '\u{1F3C6}'}
-                </Text>
-                <Text style={[styles.badgeName, !badge.earned && styles.badgeNameLocked]} numberOfLines={1}>
-                  {badge.name || 'Badge'}
-                </Text>
-              </View>
+              <AnimatedBadge key={badge.id || i} badge={badge} index={i} dotColor={dotColor} />
             );
           })}
         </View>
@@ -119,12 +162,14 @@ function CoachTrophyCase({ userId }: Props) {
               Level {levelInfo.level} {'\u00B7'} <Text style={styles.tierHighlight}>{tier.name}</Text>
             </Text>
             <View style={styles.xpBarBg}>
-              <LinearGradient
-                colors={['#FFD700', '#FFA500']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={[styles.xpBarFill, { width: `${levelInfo.progress}%` as any }]}
-              />
+              <Animated.View style={[styles.xpBarFill, xpFillStyle, { overflow: 'hidden' }]}>
+                <LinearGradient
+                  colors={['#FFD700', '#FFA500']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={{ height: '100%', width: 300 }}
+                />
+              </Animated.View>
             </View>
             <Text style={styles.xpLabel}>
               {xp.totalXp.toLocaleString()} / {levelInfo.nextLevelXp.toLocaleString()} XP

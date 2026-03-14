@@ -3,8 +3,9 @@
  * Shows a colored left-border bar with an emoji icon and message text.
  * Tappable — navigates to the relevant screen.
  */
-import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect } from 'react';
+import { StyleSheet, Text, TouchableOpacity } from 'react-native';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
@@ -33,6 +34,18 @@ function DynamicMessageBar({ message, icon, variant, route, eventId }: Props) {
   const router = useRouter();
   const colors = VARIANT_COLORS[variant];
 
+  // Animation 2: Slide in from left on mount
+  const slideX = useSharedValue(-20);
+  const fadeIn = useSharedValue(0);
+  useEffect(() => {
+    slideX.value = withTiming(0, { duration: 300, easing: Easing.out(Easing.ease) });
+    fadeIn.value = withTiming(1, { duration: 300 });
+  }, []);
+  const slideAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: slideX.value }],
+    opacity: fadeIn.value,
+  }));
+
   if (!message) return null;
 
   const handlePress = () => {
@@ -43,16 +56,18 @@ function DynamicMessageBar({ message, icon, variant, route, eventId }: Props) {
   };
 
   return (
-    <TouchableOpacity
-      style={[styles.bar, { backgroundColor: colors.bg, borderLeftColor: colors.border }]}
-      activeOpacity={route ? 0.7 : 1}
-      onPress={handlePress}
-      disabled={!route}
-    >
-      <Text style={styles.icon}>{icon}</Text>
-      <Text style={styles.text} numberOfLines={2}>{message}</Text>
-      {route && <Text style={styles.arrow}>{'\u203A'}</Text>}
-    </TouchableOpacity>
+    <Animated.View style={slideAnimStyle}>
+      <TouchableOpacity
+        style={[styles.bar, { backgroundColor: colors.bg, borderLeftColor: colors.border }]}
+        activeOpacity={route ? 0.7 : 1}
+        onPress={handlePress}
+        disabled={!route}
+      >
+        <Text style={styles.icon}>{icon}</Text>
+        <Text style={styles.text} numberOfLines={2}>{message}</Text>
+        {route && <Text style={styles.arrow}>{'\u203A'}</Text>}
+      </TouchableOpacity>
+    </Animated.View>
   );
 }
 

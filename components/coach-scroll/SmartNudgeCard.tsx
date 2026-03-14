@@ -2,8 +2,9 @@
  * SmartNudgeCard — warm-toned contextual suggestion card.
  * Priority: standout player → game day scouting → challenge progress → generic.
  */
-import React from 'react';
+import React, { useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withDelay, withSequence, withTiming } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
@@ -18,6 +19,24 @@ interface Props {
 }
 
 function SmartNudgeCard({ suggestedPlayer, previousMatchup, isGameDay, attendanceRate, onGiveShoutout }: Props) {
+  // Animation 6: Attention shake — fires once on mount
+  const shakeX = useSharedValue(0);
+  useEffect(() => {
+    shakeX.value = withDelay(
+      500,
+      withSequence(
+        withTiming(3, { duration: 60 }),
+        withTiming(-3, { duration: 60 }),
+        withTiming(3, { duration: 60 }),
+        withTiming(-3, { duration: 60 }),
+        withTiming(0, { duration: 60 })
+      )
+    );
+  }, []);
+  const shakeStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: shakeX.value }],
+  }));
+
   let emoji = '\u{1F4A1}';
   let message = 'Trust the preparation. Your team is ready.';
   let highlight = '';
@@ -48,27 +67,29 @@ function SmartNudgeCard({ suggestedPlayer, previousMatchup, isGameDay, attendanc
   }
 
   return (
-    <TouchableOpacity
-      activeOpacity={action ? 0.7 : 1}
-      onPress={action}
-      disabled={!action}
-    >
-      <LinearGradient
-        colors={[D_COLORS.nudgeBgStart, D_COLORS.nudgeBgEnd]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.card}
+    <Animated.View style={shakeStyle}>
+      <TouchableOpacity
+        activeOpacity={action ? 0.7 : 1}
+        onPress={action}
+        disabled={!action}
       >
-        <Text style={styles.emoji}>{emoji}</Text>
-        <View style={styles.textWrap}>
-          <Text style={styles.message}>
-            {highlight ? <Text style={styles.highlight}>{highlight}</Text> : null}
-            {message}
-          </Text>
-        </View>
-        {action && <Text style={styles.arrow}>{'\u203A'}</Text>}
-      </LinearGradient>
-    </TouchableOpacity>
+        <LinearGradient
+          colors={[D_COLORS.nudgeBgStart, D_COLORS.nudgeBgEnd]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.card}
+        >
+          <Text style={styles.emoji}>{emoji}</Text>
+          <View style={styles.textWrap}>
+            <Text style={styles.message}>
+              {highlight ? <Text style={styles.highlight}>{highlight}</Text> : null}
+              {message}
+            </Text>
+          </View>
+          {action && <Text style={styles.arrow}>{'\u203A'}</Text>}
+        </LinearGradient>
+      </TouchableOpacity>
+    </Animated.View>
   );
 }
 

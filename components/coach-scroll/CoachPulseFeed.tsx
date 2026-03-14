@@ -5,6 +5,7 @@
  */
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { BRAND } from '@/theme/colors';
@@ -36,6 +37,22 @@ function timeAgo(dateStr: string): string {
   const days = Math.floor(hours / 24);
   if (days < 7) return `${days}d ago`;
   return `${Math.floor(days / 7)}w ago`;
+}
+
+/** Animated wrapper for feed items — slide in from right, staggered */
+function SlideItem({ index, children }: { index: number; children: React.ReactNode }) {
+  const translateX = useSharedValue(index < 5 ? 20 : 0);
+  const opacity = useSharedValue(index < 5 ? 0 : 1);
+  useEffect(() => {
+    if (index >= 5) return;
+    translateX.value = withDelay(index * 80, withTiming(0, { duration: 250, easing: Easing.out(Easing.ease) }));
+    opacity.value = withDelay(index * 80, withTiming(1, { duration: 250 }));
+  }, []);
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+    opacity: opacity.value,
+  }));
+  return <Animated.View style={animStyle}>{children}</Animated.View>;
 }
 
 function CoachPulseFeed({ teamId, limit = 5 }: Props) {
@@ -153,20 +170,22 @@ function CoachPulseFeed({ teamId, limit = 5 }: Props) {
         </TouchableOpacity>
       </View>
 
-      {/* Feed items */}
+      {/* Feed items — staggered slide-in */}
       {items.map((item, i) => (
-        <View key={item.id} style={[styles.item, i < items.length - 1 && styles.itemBorder]}>
-          <View style={[styles.iconCircle, { backgroundColor: item.color + '18' }]}>
-            <Text style={styles.iconEmoji}>{item.icon}</Text>
+        <SlideItem key={item.id} index={i}>
+          <View style={[styles.item, i < items.length - 1 && styles.itemBorder]}>
+            <View style={[styles.iconCircle, { backgroundColor: item.color + '18' }]}>
+              <Text style={styles.iconEmoji}>{item.icon}</Text>
+            </View>
+            <View style={styles.itemBody}>
+              <Text style={styles.itemText} numberOfLines={2}>{item.text}</Text>
+              {item.detail && (
+                <Text style={styles.itemDetail} numberOfLines={1}>{item.detail}</Text>
+              )}
+            </View>
+            <Text style={styles.timestamp}>{timeAgo(item.timestamp)}</Text>
           </View>
-          <View style={styles.itemBody}>
-            <Text style={styles.itemText} numberOfLines={2}>{item.text}</Text>
-            {item.detail && (
-              <Text style={styles.itemDetail} numberOfLines={1}>{item.detail}</Text>
-            )}
-          </View>
-          <Text style={styles.timestamp}>{timeAgo(item.timestamp)}</Text>
-        </View>
+        </SlideItem>
       ))}
     </View>
   );

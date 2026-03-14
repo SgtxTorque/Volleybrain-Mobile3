@@ -5,6 +5,7 @@
  */
 import React, { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withDelay, withSpring, withTiming } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { BRAND } from '@/theme/colors';
@@ -26,6 +27,31 @@ interface Props {
   teamName: string;
   playerCount: number;
   topPerformers: TopPerformer[];
+}
+
+/** Animated face circle with stagger pop-in */
+function PopFace({ face, index, children }: { face: PlayerFace; index: number; children: React.ReactNode }) {
+  const scale = useSharedValue(0.8);
+  const opacity = useSharedValue(0);
+  useEffect(() => {
+    scale.value = withDelay(index * 50, withSpring(1.0, { damping: 8, stiffness: 150 }));
+    opacity.value = withDelay(index * 50, withTiming(1, { duration: 200 }));
+  }, []);
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    opacity: opacity.value,
+  }));
+  return (
+    <Animated.View
+      style={[
+        styles.avatar,
+        { backgroundColor: face.color, marginLeft: index === 0 ? 0 : -6 },
+        animStyle,
+      ]}
+    >
+      {children}
+    </Animated.View>
+  );
 }
 
 function SquadFacesRow({ teamId, teamName, playerCount, topPerformers }: Props) {
@@ -109,19 +135,13 @@ function SquadFacesRow({ teamId, teamName, playerCount, topPerformers }: Props) 
         onPress={() => router.push(`/roster?teamId=${teamId}` as any)}
       >
         {faces.map((face, i) => (
-          <View
-            key={i}
-            style={[
-              styles.avatar,
-              { backgroundColor: face.color, marginLeft: i === 0 ? 0 : -6 },
-            ]}
-          >
+          <PopFace key={i} face={face} index={i}>
             {face.photoUrl ? (
               <Image source={{ uri: face.photoUrl }} style={styles.avatarPhoto} />
             ) : (
               <Text style={styles.avatarText}>{face.initial}</Text>
             )}
-          </View>
+          </PopFace>
         ))}
         {overflow > 0 && (
           <View style={[styles.avatar, styles.overflowAvatar, { marginLeft: -6 }]}>

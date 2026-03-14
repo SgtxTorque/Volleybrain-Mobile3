@@ -2,8 +2,9 @@
  * TeamStatsChart — horizontal bar chart showing aggregated team stats.
  * Kills, Assists, Aces, Blocks, Digs as proportional bars with brand colors.
  */
-import React from 'react';
+import React, { useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
@@ -21,6 +22,19 @@ const STAT_CONFIG = [
   { key: 'digs' as const, label: 'Digs', color: '#F59E0B' },
   { key: 'points' as const, label: 'Points', color: '#8B5CF6' },
 ];
+
+/** Animated bar that fills from 0 to target width, staggered */
+function AnimatedBar({ pct, color, index }: { pct: number; color: string; index: number }) {
+  const barWidth = useSharedValue(0);
+  useEffect(() => {
+    barWidth.value = withDelay(index * 100, withTiming(pct, { duration: 600, easing: Easing.out(Easing.ease) }));
+  }, []);
+  const animStyle = useAnimatedStyle(() => ({
+    width: `${barWidth.value}%` as any,
+    backgroundColor: color,
+  }));
+  return <Animated.View style={[styles.barFill, animStyle]} />;
+}
 
 function TeamStatsChart({ topPerformers }: Props) {
   const router = useRouter();
@@ -63,20 +77,24 @@ function TeamStatsChart({ topPerformers }: Props) {
         activeOpacity={0.85}
         onPress={() => router.push('/game-results' as any)}
       >
-        {STAT_CONFIG.map(({ key, label, color }) => {
-          const value = totals[key];
-          if (value === 0) return null;
-          const pct = (value / maxValue) * 100;
-          return (
-            <View key={key} style={styles.row}>
-              <Text style={styles.label}>{label}</Text>
-              <View style={styles.barTrack}>
-                <View style={[styles.barFill, { width: `${pct}%`, backgroundColor: color }]} />
+        {(() => {
+          let barIndex = 0;
+          return STAT_CONFIG.map(({ key, label, color }) => {
+            const value = totals[key];
+            if (value === 0) return null;
+            const pct = (value / maxValue) * 100;
+            const idx = barIndex++;
+            return (
+              <View key={key} style={styles.row}>
+                <Text style={styles.label}>{label}</Text>
+                <View style={styles.barTrack}>
+                  <AnimatedBar pct={pct} color={color} index={idx} />
+                </View>
+                <Text style={styles.value}>{value}</Text>
               </View>
-              <Text style={styles.value}>{value}</Text>
-            </View>
-          );
-        })}
+            );
+          });
+        })()}
       </TouchableOpacity>
     </View>
   );

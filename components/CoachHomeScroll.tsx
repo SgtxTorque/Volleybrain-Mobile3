@@ -14,12 +14,17 @@ import {
   View,
 } from 'react-native';
 import Animated, {
+  Easing,
   Extrapolation,
+  cancelAnimation,
   interpolate,
   runOnJS,
   useAnimatedStyle,
   useDerivedValue,
   useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -265,6 +270,23 @@ export default function CoachHomeScroll() {
 
   // ─── Animated styles ──
 
+  // Animation 1: Mascot breathing — gentle scale loop
+  const mascotScale = useSharedValue(1);
+  useEffect(() => {
+    mascotScale.value = withRepeat(
+      withSequence(
+        withTiming(1.03, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1.0, { duration: 2000, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      false
+    );
+    return () => cancelAnimation(mascotScale);
+  }, []);
+  const mascotBreathStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: mascotScale.value }],
+  }));
+
   // 5A: Welcome parallax — mascot translates up at 0.3x, text fades
   const welcomeAnimStyle = useAnimatedStyle(() => ({
     opacity: interpolate(scrollY.value, [0, 100], [1, 0], Extrapolation.CLAMP),
@@ -416,9 +438,9 @@ export default function CoachHomeScroll() {
         >
           <View style={styles.greetingRow}>
             {/* Mascot avatar */}
-            <View style={styles.mascotAvatar}>
+            <Animated.View style={[styles.mascotAvatar, mascotBreathStyle]}>
               <Image source={require('../assets/images/mascot/HiLynx.png')} style={styles.mascotAvatarImg} resizeMode="contain" />
-            </View>
+            </Animated.View>
 
             {/* Greeting text */}
             <View style={styles.greetingText}>

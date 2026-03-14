@@ -4,8 +4,18 @@
  * action buttons, and a bottom strip with RSVP + START GAME DAY.
  * Handles both game day and non-game-day states.
  */
-import React from 'react';
+import React, { useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Animated, {
+  Easing,
+  cancelAnimation,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
@@ -30,6 +40,30 @@ function formatTime(timeStr: string | null): string {
   }
 }
 
+/** Pip that pulses opacity when incomplete, stays solid when done */
+function PulsingPip({ done, index }: { done: boolean; index: number }) {
+  const pipOpacity = useSharedValue(done ? 1 : 0.5);
+  useEffect(() => {
+    if (done) return;
+    pipOpacity.value = withDelay(
+      index * 300,
+      withRepeat(
+        withSequence(
+          withTiming(1.0, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
+          withTiming(0.5, { duration: 1000, easing: Easing.inOut(Easing.ease) })
+        ),
+        -1,
+        false
+      )
+    );
+    return () => cancelAnimation(pipOpacity);
+  }, [done]);
+  const animStyle = useAnimatedStyle(() => ({ opacity: pipOpacity.value }));
+  return (
+    <Animated.View style={[styles.readinessPip, done ? styles.pipDone : styles.pipPending, animStyle]} />
+  );
+}
+
 function GameDayHeroCard({ event, rsvpSummary, prepChecklist }: Props) {
   const router = useRouter();
 
@@ -50,6 +84,20 @@ function GameDayHeroCard({ event, rsvpSummary, prepChecklist }: Props) {
       </View>
     );
   }
+
+  // Animation 3B: Volleyball slow rotation
+  const vballRotation = useSharedValue(0);
+  useEffect(() => {
+    vballRotation.value = withRepeat(
+      withTiming(360, { duration: 20000, easing: Easing.linear }),
+      -1,
+      false
+    );
+    return () => cancelAnimation(vballRotation);
+  }, []);
+  const vballStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${vballRotation.value}deg` }],
+  }));
 
   const isGame = event.event_type === 'game';
   const time = formatTime(event.event_time || event.start_time);
@@ -80,8 +128,10 @@ function GameDayHeroCard({ event, rsvpSummary, prepChecklist }: Props) {
 
   return (
     <View style={styles.card}>
-      {/* Volleyball emoji — absolute top right */}
-      <Text style={styles.bgEmoji}>{'\u{1F3D0}'}</Text>
+      {/* Volleyball emoji — absolute top right, slow rotation */}
+      <Animated.View style={[styles.bgEmojiWrap, vballStyle]}>
+        <Text style={styles.bgEmoji}>{'\u{1F3D0}'}</Text>
+      </Animated.View>
 
       {/* Badge row */}
       <View style={styles.badgeRow}>
@@ -106,11 +156,11 @@ function GameDayHeroCard({ event, rsvpSummary, prepChecklist }: Props) {
         <Text style={styles.locationLine}>{'\u{1F4CD}'} {location}</Text>
       )}
 
-      {/* Readiness pips (games only) */}
+      {/* Readiness pips (games only) — incomplete pips pulse */}
       {isGame && prepChecklist && (
         <View style={styles.readinessRow}>
           {readinessItems.map((done, i) => (
-            <View key={i} style={[styles.readinessPip, done ? styles.pipDone : styles.pipPending]} />
+            <PulsingPip key={i} done={done} index={i} />
           ))}
           <Text style={styles.readinessLabel}>{readyCount} of 3 ready</Text>
         </View>
@@ -162,10 +212,12 @@ const styles = StyleSheet.create({
   },
 
   // Background volleyball
-  bgEmoji: {
+  bgEmojiWrap: {
     position: 'absolute',
     top: 12,
     right: 14,
+  },
+  bgEmoji: {
     fontSize: 42,
     opacity: 0.15,
   },
