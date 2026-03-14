@@ -67,6 +67,7 @@ import IncompleteProfileCard from './parent-scroll/IncompleteProfileCard';
 import FamilyHeroCard from './parent-scroll/FamilyHeroCard';
 import ParentPaymentNudge from './parent-scroll/ParentPaymentNudge';
 import ParentAttentionStrip from './parent-scroll/ParentAttentionStrip';
+import FamilyKidCard from './parent-scroll/FamilyKidCard';
 import TrophyCaseWidget from './TrophyCaseWidget';
 import AchievementCelebrationModal from './AchievementCelebrationModal';
 import { getUnseenRoleAchievements, markAchievementsSeen } from '@/lib/achievement-engine';
@@ -460,63 +461,14 @@ export default function ParentHomeScroll() {
           items={data.familyAttentionItems}
         />
 
-        {/* ─── FAMILY ENTRY POINT ─────────────────────────────── */}
-        {data.allChildren.length === 1 ? (
-          // Single child: compact player card
-          <TouchableOpacity
-            style={styles.singleChildCard}
-            activeOpacity={0.7}
-            onPress={() => router.push('/family-gallery' as any)}
-          >
-            {/* Photo or initial */}
-            {data.allChildren[0].photoUrl ? (
-              <Image source={{ uri: data.allChildren[0].photoUrl }} style={styles.singleChildPhoto} />
-            ) : (
-              <View style={[styles.singleChildInitial, { backgroundColor: data.allChildren[0].teams[0]?.sportColor || BRAND.skyBlue }]}>
-                <Text style={styles.singleChildInitialText}>{data.allChildren[0].firstName[0]}</Text>
-              </View>
-            )}
-            {/* Info */}
-            <View style={styles.singleChildInfo}>
-              <Text style={styles.singleChildName}>{data.allChildren[0].firstName} {data.allChildren[0].lastName}</Text>
-              <Text style={styles.singleChildMeta}>
-                {[
-                  data.allChildren[0].teams[0]?.jerseyNumber ? `#${data.allChildren[0].teams[0].jerseyNumber}` : null,
-                  data.allChildren[0].teams[0]?.teamName,
-                ].filter(Boolean).join(' \u00B7 ')}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={BRAND.textFaint} />
-          </TouchableOpacity>
-        ) : data.allChildren.length > 1 ? (
-          // Multiple children: avatar row
-          <TouchableOpacity
-            style={styles.multiChildRow}
-            activeOpacity={0.7}
-            onPress={() => router.push('/family-gallery' as any)}
-          >
-            <View style={styles.avatarRow}>
-              {data.allChildren.slice(0, 6).map((child) => (
-                child.photoUrl ? (
-                  <Image key={child.playerId} source={{ uri: child.photoUrl }} style={styles.avatarCircle} />
-                ) : (
-                  <View key={child.playerId} style={[styles.avatarCircleFallback, { backgroundColor: child.teams[0]?.sportColor || BRAND.skyBlue }]}>
-                    <Text style={styles.avatarCircleText}>{child.firstName[0]}</Text>
-                  </View>
-                )
-              ))}
-              {data.allChildren.length > 6 && (
-                <View style={styles.avatarOverflow}>
-                  <Text style={styles.avatarOverflowText}>+{data.allChildren.length - 6}</Text>
-                </View>
-              )}
-            </View>
-            <View style={styles.multiChildLabel}>
-              <Text style={styles.multiChildText}>{data.allChildren.length} Athletes</Text>
-              <Ionicons name="chevron-forward" size={16} color={BRAND.textFaint} />
-            </View>
-          </TouchableOpacity>
-        ) : null}
+        {/* ─── FAMILY KID CARDS ──────────────────────────────── */}
+        {data.allChildren.map((child) => (
+          <FamilyKidCard
+            key={child.playerId}
+            child={child}
+            nextEvent={data.allUpcomingEvents.find(e => e.childId === child.playerId) || null}
+          />
+        ))}
 
         {/* ─── AMBIENT CELEBRATION (Tier 3) ─────────────────────── */}
         {data.children.length > 0 && (
