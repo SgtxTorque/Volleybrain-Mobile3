@@ -67,6 +67,7 @@ function GameDayHeroCard({ event, rsvpSummary, prepChecklist }: Props) {
         { label: 'Roster', route: '/(tabs)/coach-roster' },
         { label: 'Lineup', route: `/lineup-builder?eventId=${event.id}` },
         { label: 'Stats', route: `/game-results?eventId=${event.id}` },
+        { label: 'Attend.', route: `/attendance?eventId=${event.id}` },
       ]
     : [
         { label: 'Roster', route: '/(tabs)/coach-roster' },
@@ -166,7 +167,7 @@ const styles = StyleSheet.create({
     top: 12,
     right: 14,
     fontSize: 42,
-    opacity: 0.2,
+    opacity: 0.15,
   },
 
   // Badge row
@@ -277,10 +278,11 @@ const styles = StyleSheet.create({
     borderTopColor: 'rgba(0,0,0,0.15)',
     backgroundColor: 'rgba(0,0,0,0.05)',
     marginHorizontal: -20,
-    paddingHorizontal: 20,
-    paddingBottom: 0,
+    paddingHorizontal: 22,
+    paddingBottom: 16,
     marginBottom: -20,
-    // extend past card padding bottom
+    borderBottomLeftRadius: D_RADII.hero,
+    borderBottomRightRadius: D_RADII.hero,
   },
   rsvpText: {
     fontFamily: FONTS.bodyMedium,
