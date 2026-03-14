@@ -63,6 +63,8 @@ import DynamicMessageBar from './coach-scroll/DynamicMessageBar';
 import GameDayHeroCard from './coach-scroll/GameDayHeroCard';
 import MomentumCardsRow from './coach-scroll/MomentumCardsRow';
 import SquadFacesRow from './coach-scroll/SquadFacesRow';
+import SmartNudgeCard from './coach-scroll/SmartNudgeCard';
+import ActionGrid2x2 from './coach-scroll/ActionGrid2x2';
 import { getUnseenRoleAchievements, markAchievementsSeen } from '@/lib/achievement-engine';
 import type { UnseenAchievement } from '@/lib/achievement-types';
 
@@ -580,31 +582,23 @@ export default function CoachHomeScroll() {
           />
         </View>
 
-        {/* ─── Scouting Context ── */}
-        <View style={{ marginBottom: 12 }}>
-          <ScoutingContext previousMatchup={data.previousMatchup} />
-        </View>
-
-        {/* ─── QUICK ACTIONS (subtle container) ── ↕ 12px ── */}
-        <Animated.View style={[{ marginBottom: 12 }, quickActionsAnimStyle]}>
-          <QuickActions
-            isEventDay={data.heroEvent !== null}
-            pendingStatsCount={data.pendingStatsCount}
-            hasRosterIssues={hasRosterIssues}
-            onGiveShoutout={() => setShowShoutoutModal(true)}
-          />
-        </Animated.View>
-
-        {/* ─── ENGAGEMENT NUDGE (Tier 3 — 1 line max) ── ↕ 24px ── */}
-        <View style={{ marginBottom: 24 }}>
-          <EngagementSection
-            onGiveShoutout={() => setShowShoutoutModal(true)}
+        {/* ─── 6. SMART NUDGE (D System — contextual suggestion) ── ↕ 14px ── */}
+        <View style={{ marginBottom: 14 }}>
+          <SmartNudgeCard
             suggestedPlayer={suggestedPlayer}
+            previousMatchup={data.previousMatchup}
+            isGameDay={data.heroEvent?.event_type === 'game'}
+            attendanceRate={data.attendanceRate}
+            onGiveShoutout={() => setShowShoutoutModal(true)}
           />
         </View>
 
-        {/* ─── CHALLENGES QUICK CARD ── ↕ 12px ── */}
-        <ChallengeQuickCard teamId={data.selectedTeamId} />
+        {/* ─── 7. ACTION GRID 2x2 (D System — pastel cells) ── ↕ 16px ── */}
+        <View style={{ marginBottom: 16 }}>
+          <ActionGrid2x2
+            onGiveShoutout={() => setShowShoutoutModal(true)}
+          />
+        </View>
 
         {/* ─── 9. ACTION ITEMS (Tier 2 — compact lines) ── ↕ 16px ── */}
         <View style={{ marginBottom: 16 }}>
