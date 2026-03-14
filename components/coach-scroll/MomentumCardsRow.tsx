@@ -4,8 +4,10 @@
  * Skips cards where the stat is unavailable or zero.
  */
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { FONTS } from '@/theme/fonts';
 import { D_COLORS, D_RADII } from '@/theme/d-system';
 import type { SeasonRecord, TopPerformer } from '@/hooks/useCoachHomeData';
@@ -22,9 +24,11 @@ interface MomentumCard {
   label: string;
   gradientStart: string;
   gradientEnd: string;
+  route: string;
 }
 
 function MomentumCardsRow({ seasonRecord, attendanceRate, topPerformers }: Props) {
+  const router = useRouter();
   const cards: MomentumCard[] = [];
 
   // Win streak — consecutive wins from the record
@@ -35,6 +39,7 @@ function MomentumCardsRow({ seasonRecord, attendanceRate, topPerformers }: Props
       label: 'WIN STREAK',
       gradientStart: D_COLORS.streakStart,
       gradientEnd: D_COLORS.streakEnd,
+      route: '/standings',
     });
   }
 
@@ -46,6 +51,7 @@ function MomentumCardsRow({ seasonRecord, attendanceRate, topPerformers }: Props
       label: 'RECORD',
       gradientStart: D_COLORS.recordStart,
       gradientEnd: D_COLORS.recordEnd,
+      route: '/standings',
     });
   }
 
@@ -57,6 +63,7 @@ function MomentumCardsRow({ seasonRecord, attendanceRate, topPerformers }: Props
       label: 'ATTENDANCE',
       gradientStart: D_COLORS.attendStart,
       gradientEnd: D_COLORS.attendEnd,
+      route: '/attendance',
     });
   }
 
@@ -71,6 +78,7 @@ function MomentumCardsRow({ seasonRecord, attendanceRate, topPerformers }: Props
       label: 'TOP KILLS',
       gradientStart: D_COLORS.killsStart,
       gradientEnd: D_COLORS.killsEnd,
+      route: '/game-results',
     });
   }
 
@@ -83,17 +91,25 @@ function MomentumCardsRow({ seasonRecord, attendanceRate, topPerformers }: Props
       contentContainerStyle={styles.row}
     >
       {cards.map((card, i) => (
-        <LinearGradient
+        <TouchableOpacity
           key={i}
-          colors={[card.gradientStart, card.gradientEnd]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.card}
+          activeOpacity={0.8}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            router.push(card.route as any);
+          }}
         >
-          <Text style={styles.emoji}>{card.emoji}</Text>
-          <Text style={styles.value}>{card.value}</Text>
-          <Text style={styles.label}>{card.label}</Text>
-        </LinearGradient>
+          <LinearGradient
+            colors={[card.gradientStart, card.gradientEnd]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.card}
+          >
+            <Text style={styles.emoji}>{card.emoji}</Text>
+            <Text style={styles.value}>{card.value}</Text>
+            <Text style={styles.label}>{card.label}</Text>
+          </LinearGradient>
+        </TouchableOpacity>
       ))}
     </ScrollView>
   );
