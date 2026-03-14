@@ -32,6 +32,7 @@ import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useAuth } from '@/lib/auth';
+import { useSeason } from '@/lib/season';
 import { useParentScroll } from '@/lib/parent-scroll-context';
 import { useScrollAnimations, SCROLL_THRESHOLDS } from '@/hooks/useScrollAnimations';
 import { useParentHomeData } from '@/hooks/useParentHomeData';
@@ -63,6 +64,8 @@ import FamilyPanel from './FamilyPanel';
 import RegistrationCard from './parent-scroll/RegistrationCard';
 import RegistrationStatusCard from './parent-scroll/RegistrationStatusCard';
 import IncompleteProfileCard from './parent-scroll/IncompleteProfileCard';
+import FamilyHeroCard from './parent-scroll/FamilyHeroCard';
+import ParentPaymentNudge from './parent-scroll/ParentPaymentNudge';
 import TrophyCaseWidget from './TrophyCaseWidget';
 import AchievementCelebrationModal from './AchievementCelebrationModal';
 import { getUnseenRoleAchievements, markAchievementsSeen } from '@/lib/achievement-engine';
@@ -170,6 +173,7 @@ export default function ParentHomeScroll() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { profile, organization } = useAuth();
+  const { workingSeason } = useSeason();
   const parentScroll = useParentScroll();
   const { scrollY, isSlowScroll, scrollHandler } = useScrollAnimations({
     onScrollJS: parentScroll.notifyScroll,
@@ -235,6 +239,10 @@ export default function ParentHomeScroll() {
   const mascotFloat = useSharedValue(0);
 
   const firstName = profile?.full_name?.split(' ')[0] || 'Parent';
+  const lastName = (() => {
+    const parts = (profile?.full_name || '').split(' ').filter(Boolean);
+    return parts.length >= 2 ? parts[parts.length - 1] : '';
+  })();
   const userInitials = (() => {
     const name = profile?.full_name || '';
     const parts = name.split(' ').filter(Boolean);
@@ -404,79 +412,17 @@ export default function ParentHomeScroll() {
           <View style={{ paddingTop: 120 }}><NoTeamState role="parent" /></View>
         ) : (
         <>
-        {/* ─── WELCOME SECTION ────────────────────────────────── */}
-        <Animated.View
-          style={[styles.welcomeSection, { paddingTop: insets.top + 16 }, welcomeAnimStyle]}
-        >
-          <View style={styles.welcomeTopRow}>
-            <View style={{ flex: 1 }} />
-            <View style={styles.roleSelectorWrap}>
-              <RoleSelector />
-            </View>
-            <TouchableOpacity
-              style={styles.bellBtn}
-              activeOpacity={0.7}
-              onPress={() => router.push('/notification' as any)}
-            >
-              <Ionicons name="notifications-outline" size={22} color={BRAND.navy} />
-              {data.attentionCount > 0 && (
-                <View style={styles.bellBadge}>
-                  <Text style={styles.bellBadgeText}>
-                    {data.attentionCount > 9 ? '9+' : data.attentionCount}
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          </View>
+        {/* ─── FAMILY HERO CARD ───────────────────────────────── */}
+        <View style={{ paddingTop: insets.top + 16 }}>
+          <FamilyHeroCard
+            lastName={lastName}
+            children={data.allChildren}
+            seasonName={workingSeason?.name || ''}
+          />
+        </View>
 
-          <View style={styles.welcomeContent}>
-            <Animated.View style={[styles.mascotImageWrap, mascotAnimStyle]}><Image source={require('@/assets/images/mascot/HiLynx.png')} style={[styles.mascotImage, isTabletAny && { width: 80, height: 80 }]} resizeMode="contain" /></Animated.View>
-            <Text style={styles.welcomeGreeting}>Welcome back, {firstName}</Text>
-          </View>
-
-          {currentMessage?.route ? (
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => router.push(currentMessage.route as any)}
-            >
-              <Animated.Text
-                style={[
-                  styles.flatMessageText,
-                  { color: currentMessage.textColor },
-                  messageAnimStyle,
-                ]}
-              >
-                {currentMessage.text}
-              </Animated.Text>
-              {currentMessage.hint ? (
-                <Text style={styles.flatMessageHint}>{currentMessage.hint}</Text>
-              ) : null}
-            </TouchableOpacity>
-          ) : (
-            <View>
-              <Animated.Text
-                style={[
-                  styles.flatMessageText,
-                  { color: currentMessage?.textColor ?? BRAND.textPrimary },
-                  messageAnimStyle,
-                ]}
-              >
-                {currentMessage?.text}
-              </Animated.Text>
-            </View>
-          )}
-
-          {messages.length > 1 && (
-            <View style={styles.dotRow}>
-              {messages.map((_, i) => (
-                <View
-                  key={i}
-                  style={[styles.dot, i === activeMessageIndex && styles.dotActive]}
-                />
-              ))}
-            </View>
-          )}
-        </Animated.View>
+        {/* ─── PAYMENT NUDGE ────────────────────────────────────── */}
+        <ParentPaymentNudge balance={data.paymentStatus.balance} />
 
         {/* ─── REGISTRATION STATUS + OPEN REGISTRATION ─────── */}
         <View style={{ paddingHorizontal: SPACING.pagePadding }}>

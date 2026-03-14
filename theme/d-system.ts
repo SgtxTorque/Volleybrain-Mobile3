@@ -46,6 +46,25 @@ export const D_COLORS = {
   barInfo: '#4BB9EC',
   barUrgent: '#E76F51',
   barPayment: '#F59E0B',
+
+  // Parent D+ specific tokens
+  familyHeroBgStart: '#0B1628',
+  familyHeroBgEnd: '#162d50',
+  paymentNudgeBg: 'rgba(245,158,11,0.06)',
+  paymentNudgeBorder: '#F59E0B',
+  attentionBg: '#FFF5F5',
+  attentionBorder: '#FF6B6B',
+  kidCardBorder: 'rgba(75,185,236,0.25)',
+  kidCardActiveBg: 'rgba(75,185,236,0.05)',
+  xpBarBg: 'rgba(245,158,11,0.12)',
+  xpBarFill: '#F59E0B',
+  eventHeroBgStart: '#0B1628',
+  eventHeroBgEnd: '#162d50',
+  rsvpButtonBg: '#4BB9EC',
+  balanceStart: '#FF6B6B',
+  balanceEnd: '#e55039',
+  levelStart: '#8B5CF6',
+  levelEnd: '#6c2bd9',
 } as const;
 
 export const D_RADII = {
