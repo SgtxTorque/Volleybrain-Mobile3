@@ -81,8 +81,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   cell: {
-    flex: 1,
-    minWidth: '45%',
+    width: '47%',
+    flexGrow: 1,
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: D_RADII.actionCell,
