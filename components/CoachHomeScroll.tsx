@@ -1,8 +1,6 @@
 /**
- * CoachHomeScroll — scroll-driven coach home dashboard.
- * Phase 10.5: Scroll animations — parallax, card breathing, bar cascade, stagger.
- * Phase 10.6: Final layout, removed old sections, streamlined.
- * Three-tier visual system mirroring the Parent Home Scroll.
+ * CoachHomeScroll — D System redesign.
+ * Compact greeting → dynamic message bar → hero card → momentum → squad → nudge → actions → pulse → trophies → closer.
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -37,6 +35,7 @@ import { useCoachHomeData } from '@/hooks/useCoachHomeData';
 import { BRAND } from '@/theme/colors';
 import { SPACING } from '@/theme/spacing';
 import { FONTS } from '@/theme/fonts';
+import { D_COLORS } from '@/theme/d-system';
 
 import { useResponsive } from '@/lib/responsive';
 
@@ -60,6 +59,7 @@ import TeamPulse from './TeamPulse';
 import ChallengeQuickCard from './coach-scroll/ChallengeQuickCard';
 import TrophyCaseWidget from './TrophyCaseWidget';
 import AchievementCelebrationModal from './AchievementCelebrationModal';
+import DynamicMessageBar from './coach-scroll/DynamicMessageBar';
 import { getUnseenRoleAchievements, markAchievementsSeen } from '@/lib/achievement-engine';
 import type { UnseenAchievement } from '@/lib/achievement-types';
 
@@ -221,6 +221,63 @@ export default function CoachHomeScroll() {
   const briefingMessage = useMemo(() => {
     return buildBriefingMessage(data.teams, data.upcomingEvents);
   }, [data.teams, data.upcomingEvents]);
+
+  // Dynamic message bar — contextual message + variant + route
+  const messageBarInfo = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const todayEvents = data.upcomingEvents.filter(e => e.event_date === today);
+    const todayGame = todayEvents.find(e => e.event_type === 'game');
+
+    if (todayGame) {
+      const time = formatTime(todayGame.event_time || todayGame.start_time);
+      return {
+        message: `Game day — ${todayGame.team_name} vs ${todayGame.opponent_name || 'TBD'}${time ? ` at ${time}` : ''}`,
+        icon: '\u{1F525}',
+        variant: 'urgent' as const,
+        route: `/game-day-command`,
+        eventId: todayGame.id,
+      };
+    }
+
+    const todayPractice = todayEvents.find(e => e.event_type === 'practice');
+    if (todayPractice) {
+      const time = formatTime(todayPractice.event_time || todayPractice.start_time);
+      return {
+        message: `Practice today${time ? ` at ${time}` : ''} for ${todayPractice.team_name}`,
+        icon: '\u{1F3D0}',
+        variant: 'info' as const,
+        route: '/(tabs)/coach-schedule',
+      };
+    }
+
+    if (data.pendingStatsCount > 0) {
+      return {
+        message: `${data.pendingStatsCount} game${data.pendingStatsCount > 1 ? 's' : ''} need stats entered`,
+        icon: '\u{1F4CB}',
+        variant: 'payment' as const,
+        route: '/game-results',
+      };
+    }
+
+    // Show next upcoming event if exists
+    const nextEvent = data.upcomingEvents.find(e => e.event_date > today);
+    if (nextEvent) {
+      const dayName = (() => {
+        try {
+          return new Date(nextEvent.event_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' });
+        } catch { return 'upcoming'; }
+      })();
+      const type = nextEvent.event_type === 'game' ? 'game' : nextEvent.event_type === 'practice' ? 'practice' : 'event';
+      return {
+        message: `Next up: ${dayName}'s ${type} — ${nextEvent.team_name}`,
+        icon: '\u{1F4C5}',
+        variant: 'info' as const,
+        route: '/(tabs)/coach-schedule',
+      };
+    }
+
+    return null;
+  }, [data.upcomingEvents, data.pendingStatsCount]);
 
   // Check if roster has issues (for QuickActions badge)
   const hasRosterIssues = useMemo(() => {
@@ -420,42 +477,52 @@ export default function CoachHomeScroll() {
           <View style={{ paddingTop: 120 }}><NoTeamState role="coach" /></View>
         ) : (
         <>
-        {/* ─── 1. WELCOME SECTION (Tier 3 ambient) ──────────── */}
+        {/* ─── 1. COMPACT MASCOT GREETING (D System) ──────── */}
         <Animated.View
-          style={[styles.welcomeSection, { paddingTop: insets.top + 16 }, welcomeAnimStyle]}
+          style={[styles.compactGreeting, { paddingTop: insets.top + 16 }, welcomeAnimStyle]}
         >
-          <View style={styles.welcomeTopRow}>
-            <View style={{ flex: 1 }} />
-            <View style={styles.roleSelectorWrap}>
-              <RoleSelector />
+          <View style={styles.greetingRow}>
+            {/* Mascot avatar */}
+            <View style={styles.mascotAvatar}>
+              <Image source={require('../assets/images/mascot/HiLynx.png')} style={styles.mascotAvatarImg} resizeMode="contain" />
             </View>
-            <TouchableOpacity
-              style={styles.bellBtn}
-              activeOpacity={0.7}
-              onPress={() => router.push('/notification' as any)}
-            >
-              <Ionicons name="notifications-outline" size={22} color={BRAND.navy} />
-              {data.unreadMessages > 0 && (
-                <View style={styles.bellBadge}>
-                  <Text style={styles.bellBadgeText}>
-                    {data.unreadMessages > 9 ? '9+' : data.unreadMessages}
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          </View>
 
-          <View style={styles.welcomeContent}>
-            <Animated.View style={mascotParallaxStyle}>
-              <Image source={require('../assets/images/mascot/HiLynx.png')} style={styles.mascotImg} resizeMode="contain" />
-            </Animated.View>
-            <Text style={styles.welcomeGreeting}>
-              {getTimeGreeting()}, Coach
-            </Text>
-          </View>
+            {/* Greeting text */}
+            <View style={styles.greetingText}>
+              <Text style={styles.greetingLine1}>Hey Coach! {'\u{1F525}'}</Text>
+              <Text style={styles.greetingLine2} numberOfLines={1}>{briefingMessage}</Text>
+            </View>
 
-          <Text style={styles.briefingText}>{briefingMessage}</Text>
+            {/* Team selector pill (compact) */}
+            {data.teams && data.teams.length > 1 && selectedTeam && (
+              <TouchableOpacity
+                style={styles.dTeamPill}
+                activeOpacity={0.7}
+                onPress={() => {
+                  // Cycle to next team
+                  const idx = data.teams.findIndex(t => t.id === data.selectedTeamId);
+                  const next = data.teams[(idx + 1) % data.teams.length];
+                  if (next) data.selectTeam(next.id);
+                }}
+              >
+                <Text style={styles.dTeamPillText} numberOfLines={1}>{selectedTeam.name}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </Animated.View>
+
+        {/* ─── 1b. DYNAMIC MESSAGE BAR ─────────────────────── */}
+        {messageBarInfo && (
+          <View style={{ marginBottom: 14 }}>
+            <DynamicMessageBar
+              message={messageBarInfo.message}
+              icon={messageBarInfo.icon}
+              variant={messageBarInfo.variant}
+              route={messageBarInfo.route}
+              eventId={messageBarInfo.eventId}
+            />
+          </View>
+        )}
 
         {/* ─── 2. TEAM SELECTOR PILLS (in-scroll) ── ↕ 4px ──── */}
         <View style={{ marginBottom: 12 }}>
@@ -756,16 +823,56 @@ const styles = StyleSheet.create({
     color: BRAND.white,
   },
 
-  // Welcome section
-  welcomeSection: {
-    paddingHorizontal: SPACING.pagePadding,
-    paddingBottom: 4,
+  // D System compact greeting
+  compactGreeting: {
+    paddingHorizontal: 16,
+    paddingBottom: 10,
   },
-  welcomeTopRow: {
+  greetingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    gap: 10,
   },
+  mascotAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mascotAvatarImg: {
+    width: 40,
+    height: 40,
+  },
+  greetingText: {
+    flex: 1,
+    gap: 1,
+  },
+  greetingLine1: {
+    fontFamily: FONTS.bodyExtraBold,
+    fontSize: 17,
+    color: BRAND.textPrimary,
+  },
+  greetingLine2: {
+    fontFamily: FONTS.bodyMedium,
+    fontSize: 12,
+    color: BRAND.textMuted,
+  },
+  dTeamPill: {
+    backgroundColor: BRAND.navyDeep,
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    maxWidth: 100,
+  },
+  dTeamPillText: {
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 10,
+    color: BRAND.white,
+  },
+
+  // Bell (shared)
   bellBtn: {
     position: 'relative',
     padding: 4,
@@ -786,26 +893,6 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bodyBold,
     fontSize: 9,
     color: BRAND.white,
-  },
-  welcomeContent: {
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  mascotImg: { width: 48, height: 48, marginBottom: 6 },
-  welcomeGreeting: {
-    fontFamily: FONTS.bodyBold,
-    fontSize: 22,
-    color: BRAND.navy,
-    textAlign: 'center',
-  },
-  briefingText: {
-    fontFamily: FONTS.bodySemiBold,
-    fontSize: 17,
-    color: BRAND.textPrimary,
-    textAlign: 'center',
-    lineHeight: 26,
-    paddingHorizontal: 32,
-    marginTop: 8,
   },
 
   // End of scroll
