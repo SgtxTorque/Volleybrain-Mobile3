@@ -66,6 +66,7 @@ import RegistrationStatusCard from './parent-scroll/RegistrationStatusCard';
 import IncompleteProfileCard from './parent-scroll/IncompleteProfileCard';
 import FamilyHeroCard from './parent-scroll/FamilyHeroCard';
 import ParentPaymentNudge from './parent-scroll/ParentPaymentNudge';
+import ParentAttentionStrip from './parent-scroll/ParentAttentionStrip';
 import TrophyCaseWidget from './TrophyCaseWidget';
 import AchievementCelebrationModal from './AchievementCelebrationModal';
 import { getUnseenRoleAchievements, markAchievementsSeen } from '@/lib/achievement-engine';
@@ -453,13 +454,10 @@ export default function ParentHomeScroll() {
         {/* ─── ALSO TODAY / THIS WEEK STRIP ───────────────────── */}
         <AlsoStrip events={data.allUpcomingEvents} isMultiChild={data.isMultiChild} />
 
-        {/* ─── ATTENTION NUDGE ──────────────────────────────────── */}
-        <AttentionBanner
-          familyItems={data.familyAttentionItems}
+        {/* ─── ATTENTION STRIP (expandable) ─────────────────────── */}
+        <ParentAttentionStrip
           count={data.attentionCount}
-          items={data.attentionItems}
-          isMultiChild={data.isMultiChild}
-          onPress={() => router.push('/(tabs)/parent-schedule' as any)}
+          items={data.familyAttentionItems}
         />
 
         {/* ─── FAMILY ENTRY POINT ─────────────────────────────── */}
