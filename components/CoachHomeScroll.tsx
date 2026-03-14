@@ -20,9 +20,6 @@ import Animated, {
   useAnimatedStyle,
   useDerivedValue,
   useSharedValue,
-  withRepeat,
-  withSequence,
-  withTiming,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -43,22 +40,10 @@ import NoOrgState from './empty-states/NoOrgState';
 import NoTeamState from './empty-states/NoTeamState';
 
 import RoleSelector from './RoleSelector';
-import PrepChecklist from './coach-scroll/PrepChecklist';
-import GamePlanCard from './coach-scroll/GamePlanCard';
-import ScoutingContext from './coach-scroll/ScoutingContext';
-import QuickActions from './coach-scroll/QuickActions';
-import EngagementSection from './coach-scroll/EngagementSection';
-import TeamHealthCard from './coach-scroll/TeamHealthCard';
-import SeasonLeaderboardCard from './coach-scroll/SeasonLeaderboardCard';
-import ActionItems from './coach-scroll/ActionItems';
-import TeamHubPreviewCard from './coach-scroll/TeamHubPreviewCard';
-import ActivityFeed from './coach-scroll/ActivityFeed';
-import SeasonSetupCard from './coach-scroll/SeasonSetupCard';
 import GiveShoutoutModal from './GiveShoutoutModal';
-import TeamPulse from './TeamPulse';
-import ChallengeQuickCard from './coach-scroll/ChallengeQuickCard';
-import TrophyCaseWidget from './TrophyCaseWidget';
 import AchievementCelebrationModal from './AchievementCelebrationModal';
+
+// D System components (Phases 1-6)
 import DynamicMessageBar from './coach-scroll/DynamicMessageBar';
 import GameDayHeroCard from './coach-scroll/GameDayHeroCard';
 import MomentumCardsRow from './coach-scroll/MomentumCardsRow';
@@ -67,6 +52,8 @@ import SmartNudgeCard from './coach-scroll/SmartNudgeCard';
 import ActionGrid2x2 from './coach-scroll/ActionGrid2x2';
 import CoachPulseFeed from './coach-scroll/CoachPulseFeed';
 import CoachTrophyCase from './coach-scroll/CoachTrophyCase';
+import AmbientCloser from './coach-scroll/AmbientCloser';
+
 import { getUnseenRoleAchievements, markAchievementsSeen } from '@/lib/achievement-engine';
 import type { UnseenAchievement } from '@/lib/achievement-types';
 
@@ -129,28 +116,6 @@ function buildBriefingMessage(
   return 'Welcome to your coaching hub.';
 }
 
-/** Build contextual closing message based on team situation. */
-function buildClosingMessage(
-  heroEvent: { event_type: string; event_date: string } | null,
-  seasonRecord: { wins: number; losses: number } | null,
-): string {
-  const today = new Date().toISOString().split('T')[0];
-
-  if (heroEvent?.event_date === today && heroEvent.event_type === 'game') {
-    return 'Trust the preparation. Your team is ready.';
-  }
-  if (heroEvent?.event_date === today && heroEvent.event_type === 'practice') {
-    return 'Good practice makes good habits. Set the tone today.';
-  }
-  if (seasonRecord && seasonRecord.wins > seasonRecord.losses) {
-    return 'Momentum is on your side. Keep building.';
-  }
-  if (!heroEvent || heroEvent.event_date !== today) {
-    return 'Recovery matters too. Let them rest.';
-  }
-  return 'Go make them better today.';
-}
-
 function formatTime(timeStr: string | null): string {
   if (!timeStr) return '';
   try {
@@ -173,7 +138,6 @@ export default function CoachHomeScroll() {
   const data = useCoachHomeData();
   const { isTabletAny, contentMaxWidth, contentPadding } = useResponsive();
 
-  const firstName = profile?.full_name?.split(' ')[0] || 'Coach';
   const userInitials = useMemo(() => {
     const name = profile?.full_name || '';
     const parts = name.split(' ').filter(Boolean);
@@ -198,19 +162,6 @@ export default function CoachHomeScroll() {
       }
     }).catch(() => {});
   }, [profile?.id]);
-
-  // Mascot float animation
-  const mascotFloat = useSharedValue(0);
-  useEffect(() => {
-    mascotFloat.value = withRepeat(
-      withSequence(
-        withTiming(-4, { duration: 1500 }),
-        withTiming(4, { duration: 1500 }),
-      ),
-      -1,
-      true,
-    );
-  }, []);
 
   // Header interactivity — pointerEvents must be a View prop, not animated style
   const [headerInteractive, setHeaderInteractive] = useState(false);
@@ -286,12 +237,6 @@ export default function CoachHomeScroll() {
     return null;
   }, [data.upcomingEvents, data.pendingStatsCount]);
 
-  // Check if roster has issues (for QuickActions badge)
-  const hasRosterIssues = useMemo(() => {
-    const missing = data.rsvpSummary?.missing ?? [];
-    return missing.length > 0;
-  }, [data.rsvpSummary]);
-
   // Suggested player for shoutout nudge
   const suggestedPlayer = useMemo(() => {
     if (!data.topPerformers || data.topPerformers.length === 0) return null;
@@ -327,12 +272,6 @@ export default function CoachHomeScroll() {
     ],
   }));
 
-  const mascotParallaxStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateY: mascotFloat.value + interpolate(scrollY.value, [0, 200], [0, -60], Extrapolation.CLAMP) },
-    ],
-  }));
-
   const compactHeaderAnimStyle = useAnimatedStyle(() => ({
     opacity: interpolate(scrollY.value, [60, 140], [0, 1], Extrapolation.CLAMP),
   }));
@@ -356,24 +295,6 @@ export default function CoachHomeScroll() {
     return { transform: [{ scale }] };
   });
 
-  // 5G: Quick actions stagger — handled per-row is complex, use simple fade-slide
-  const quickActionsAnimStyle = useAnimatedStyle(() => {
-    const cardCenter = 450;
-    const opacity = interpolate(
-      scrollY.value,
-      [cardCenter - 350, cardCenter - 150],
-      [0, 1],
-      Extrapolation.CLAMP,
-    );
-    const translateX = interpolate(
-      scrollY.value,
-      [cardCenter - 350, cardCenter - 150],
-      [-20, 0],
-      Extrapolation.CLAMP,
-    );
-    return { opacity, transform: [{ translateX }] };
-  });
-
   // ─── Empty state detection (rendered INSIDE scroll, never early return) ──
   const emptyState: 'loading' | 'no-org' | 'no-teams' | null =
     data.loading ? 'loading'
@@ -385,7 +306,7 @@ export default function CoachHomeScroll() {
   const teamName = selectedTeam?.name ?? '';
 
   return (
-    <View style={[styles.root, { backgroundColor: BRAND.offWhite }]}>
+    <View style={[styles.root, { backgroundColor: D_COLORS.pageBg }]}>
       {/* ─── COMPACT HEADER ──────────────────────────────────── */}
       <Animated.View
         pointerEvents={headerInteractive ? 'auto' : 'none'}
@@ -531,31 +452,6 @@ export default function CoachHomeScroll() {
           </View>
         )}
 
-        {/* ─── 2. TEAM SELECTOR PILLS (in-scroll) ── ↕ 4px ──── */}
-        <View style={{ marginBottom: 12 }}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.teamPillsScroll}
-          >
-            {(data.teams || []).map(team => {
-              const isActive = team.id === data.selectedTeamId;
-              return (
-                <TouchableOpacity
-                  key={team.id}
-                  style={[styles.teamPill, isActive && styles.teamPillActive]}
-                  activeOpacity={0.7}
-                  onPress={() => data.selectTeam(team.id)}
-                >
-                  <Text style={[styles.teamPillText, isActive && styles.teamPillTextActive]}>
-                    {team.name}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
-
         {/* ─── 3. GAME DAY HERO (D System — integrated readiness) ── ↕ 18px ── */}
         <Animated.View style={[{ marginBottom: 18 }, heroCardAnimStyle]}>
           <GameDayHeroCard
@@ -614,22 +510,12 @@ export default function CoachHomeScroll() {
           </View>
         )}
 
-        {/* ─── 10. SEASON SETUP (conditional — early season only) ── ↕ 24px ── */}
-        <View style={{ marginBottom: 24 }}>
-          <SeasonSetupCard
-            teamId={data.selectedTeamId}
-            scrollY={scrollY}
-            cardY={1300}
-          />
-        </View>
-
-        {/* ─── 11. CLOSING (Tier 3) ── ↕ 140px bottom ──────── */}
-        <View style={styles.endSection}>
-          <Image source={require('../assets/images/mascot/HiLynx.png')} style={styles.endMascotImg} resizeMode="contain" />
-          <Text style={styles.endText}>
-            {buildClosingMessage(data.heroEvent, data.seasonRecord)}
-          </Text>
-        </View>
+        {/* ─── 10. AMBIENT CLOSER (D System — quiet contextual message) ── */}
+        <AmbientCloser
+          seasonRecord={data.seasonRecord}
+          heroEvent={data.heroEvent}
+          teamName={teamName}
+        />
         </>
         )}
       </Animated.ScrollView>
@@ -846,25 +732,5 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: BRAND.white,
   },
-
-  // End of scroll
-  endSection: {
-    alignItems: 'center',
-    paddingTop: 24,
-  },
-  endMascotImg: {
-    width: 40,
-    height: 40,
-    opacity: 0.3,
-    marginBottom: 8,
-  },
-  endText: {
-    fontFamily: FONTS.bodyMedium,
-    fontSize: 14,
-    color: BRAND.textFaint,
-    textAlign: 'center',
-    paddingHorizontal: 40,
-  },
-  // (roster card styles removed — replaced by SquadFacesRow)
 
 });
