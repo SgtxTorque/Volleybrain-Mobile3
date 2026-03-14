@@ -16,7 +16,7 @@ import {
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { FONTS } from '@/theme/fonts';
-import { PLAYER_THEME } from './PlayerHomeScroll';
+import { PLAYER_THEME } from '@/theme/player-theme';
 
 // ─── Types ──────────────────────────────────────────────────────
 type ActivityItem = {
