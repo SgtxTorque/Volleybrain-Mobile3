@@ -60,6 +60,7 @@ import ChallengeQuickCard from './coach-scroll/ChallengeQuickCard';
 import TrophyCaseWidget from './TrophyCaseWidget';
 import AchievementCelebrationModal from './AchievementCelebrationModal';
 import DynamicMessageBar from './coach-scroll/DynamicMessageBar';
+import GameDayHeroCard from './coach-scroll/GameDayHeroCard';
 import { getUnseenRoleAchievements, markAchievementsSeen } from '@/lib/achievement-engine';
 import type { UnseenAchievement } from '@/lib/achievement-types';
 
@@ -549,28 +550,14 @@ export default function CoachHomeScroll() {
           </ScrollView>
         </View>
 
-        {/* ─── 3. PREP CHECKLIST (Tier 2 flat — event days only) ── ↕ 8px ── */}
-        <View style={{ marginBottom: 8 }}>
-          <PrepChecklist
-            checklist={data.prepChecklist}
-            eventDate={data.heroEvent?.event_date ?? null}
+        {/* ─── 3. GAME DAY HERO (D System — integrated readiness) ── ↕ 18px ── */}
+        <Animated.View style={[{ marginBottom: 18 }, heroCardAnimStyle]}>
+          <GameDayHeroCard
+            event={data.heroEvent}
+            rsvpSummary={data.rsvpSummary}
+            prepChecklist={data.prepChecklist}
           />
-        </View>
-
-        {/* ─── 4. EVENT HERO CARD (Tier 1 — event days only) ── ↕ 20px ── */}
-        {data.heroEvent ? (
-          <Animated.View style={[{ marginBottom: 20 }, heroCardAnimStyle]}>
-            <GamePlanCard event={data.heroEvent} rsvpSummary={data.rsvpSummary} />
-          </Animated.View>
-        ) : (
-          <View style={styles.quietDayCard}>
-            <Text style={styles.quietDayIcon}>{'\u{1F3D0}'}</Text>
-            <Text style={styles.quietDayTitle}>No upcoming events</Text>
-            <Text style={styles.quietDaySubtext}>
-              Use the downtime to review stats, prep your roster, or issue a challenge.
-            </Text>
-          </View>
-        )}
+        </Animated.View>
 
         {/* ─── Scouting Context ── */}
         <View style={{ marginBottom: 12 }}>
@@ -956,33 +943,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  // Quiet day placeholder (when no upcoming events)
-  quietDayCard: {
-    marginHorizontal: 16,
-    marginBottom: 20,
-    paddingVertical: 28,
-    paddingHorizontal: 24,
-    borderRadius: 16,
-    backgroundColor: BRAND.white,
-    borderWidth: 1,
-    borderColor: BRAND.border,
-    alignItems: 'center',
-  },
-  quietDayIcon: {
-    fontSize: 32,
-    marginBottom: 8,
-  },
-  quietDayTitle: {
-    fontFamily: FONTS.bodyBold,
-    fontSize: 16,
-    color: BRAND.textPrimary,
-    marginBottom: 4,
-  },
-  quietDaySubtext: {
-    fontFamily: FONTS.bodyMedium,
-    fontSize: 13,
-    color: BRAND.textMuted,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
 });
