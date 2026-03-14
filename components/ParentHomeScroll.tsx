@@ -70,6 +70,8 @@ import ParentAttentionStrip from './parent-scroll/ParentAttentionStrip';
 import FamilyKidCard from './parent-scroll/FamilyKidCard';
 import ParentXPBar from './parent-scroll/ParentXPBar';
 import ParentEventHero from './parent-scroll/ParentEventHero';
+import ParentMomentumRow from './parent-scroll/ParentMomentumRow';
+import FamilyPulseFeed from './parent-scroll/FamilyPulseFeed';
 import TrophyCaseWidget from './TrophyCaseWidget';
 import AchievementCelebrationModal from './AchievementCelebrationModal';
 import { getUnseenRoleAchievements, markAchievementsSeen } from '@/lib/achievement-engine';
@@ -480,64 +482,20 @@ export default function ParentHomeScroll() {
           isMultiChild={data.isMultiChild}
         />
 
-        {/* ─── AMBIENT CELEBRATION (Tier 3) ─────────────────────── */}
-        {data.children.length > 0 && (
-          <AmbientCelebration
-            playerIds={data.children.map((c) => c.id)}
-            childNames={Object.fromEntries(data.children.map((c) => [c.id, c.first_name]))}
-          />
-        )}
-
-        {/* ─── CHALLENGES ─────────────────────────────────────── */}
-        {data.children.length > 0 && (
-          <ChallengeVerifyCard
-            children={data.children.map((c) => ({
-              id: c.id,
-              first_name: c.first_name,
-              teamId: c.team_id,
-            }))}
-          />
-        )}
-
-        {/* ─── EVALUATIONS ─────────────────────────────────────── */}
-        {data.children.length > 0 && (
-          <ParentEvaluationCard
-            children={data.children.map((c) => ({
-              id: c.id,
-              first_name: c.first_name,
-            }))}
-          />
-        )}
-
-        {/* ─── METRIC GRID ─────────────────────────────────────── */}
-        <MetricGrid
-          record={data.seasonRecord}
-          payment={data.paymentStatus}
-          xp={data.childXp}
-          chat={data.lastChat}
-          childPlayerId={data.children[0]?.id}
-          selectedContext={data.selectedContext}
-          allChildren={data.allChildren}
+        {/* ─── MOMENTUM CARDS ────────────────────────────────── */}
+        <ParentMomentumRow
+          seasonRecord={data.seasonRecord}
+          paymentStatus={data.paymentStatus}
+          childXp={data.childXp}
         />
 
-        {/* ─── TEAM HUB PREVIEW (flat) ──────────────────────── */}
-        <TeamHubPreview post={data.latestPost} />
-
-        {/* ─── CHAT PREVIEW (flat) ─────────────────────────── */}
-        <FlatChatPreview chat={data.lastChat} />
-
-        {/* ─── SEASON SCOREBOARD (flat) ────────────────────── */}
-        <SeasonSnapshot record={data.seasonRecord} />
-
-        {/* ─── RECENT BADGES (child's badges) ──────────────── */}
-        <RecentBadges playerIds={data.children.map((c) => c.id)} childPlayerId={data.children[0]?.id} />
-
-        {/* ─── YOUR ACHIEVEMENTS (parent's own badges) ─────── */}
-        {profile?.id && (
-          <View style={{ marginHorizontal: 16, marginBottom: 16 }}>
-            <TrophyCaseWidget userId={profile.id} userRole="parent" />
-          </View>
-        )}
+        {/* ─── FAMILY PULSE FEED ─────────────────────────────── */}
+        <FamilyPulseFeed
+          latestPost={data.latestPost}
+          lastChat={data.lastChat}
+          seasonRecord={data.seasonRecord}
+          childName={childName}
+        />
 
         {/* ─── UPCOMING SEASON REGISTRATION (below current content) ─── */}
         <RegistrationCard
