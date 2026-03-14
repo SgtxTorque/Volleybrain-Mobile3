@@ -52,6 +52,7 @@ import SmartNudgeCard from './coach-scroll/SmartNudgeCard';
 import ActionGrid2x2 from './coach-scroll/ActionGrid2x2';
 import CoachPulseFeed from './coach-scroll/CoachPulseFeed';
 import CoachTrophyCase from './coach-scroll/CoachTrophyCase';
+import TeamStatsChart from './coach-scroll/TeamStatsChart';
 import AmbientCloser from './coach-scroll/AmbientCloser';
 
 import { getUnseenRoleAchievements, markAchievementsSeen } from '@/lib/achievement-engine';
@@ -514,7 +515,12 @@ export default function CoachHomeScroll() {
           </View>
         )}
 
-        {/* ─── 10. AMBIENT CLOSER (D System — quiet contextual message) ── */}
+        {/* ─── 10. TEAM STATS BAR CHART ── ↕ 18px ── */}
+        <View style={{ marginBottom: 18 }}>
+          <TeamStatsChart topPerformers={data.topPerformers} />
+        </View>
+
+        {/* ─── 11. AMBIENT CLOSER (D System — quiet contextual message) ── */}
         <AmbientCloser
           seasonRecord={data.seasonRecord}
           heroEvent={data.heroEvent}
