@@ -61,6 +61,8 @@ import TrophyCaseWidget from './TrophyCaseWidget';
 import AchievementCelebrationModal from './AchievementCelebrationModal';
 import DynamicMessageBar from './coach-scroll/DynamicMessageBar';
 import GameDayHeroCard from './coach-scroll/GameDayHeroCard';
+import MomentumCardsRow from './coach-scroll/MomentumCardsRow';
+import SquadFacesRow from './coach-scroll/SquadFacesRow';
 import { getUnseenRoleAchievements, markAchievementsSeen } from '@/lib/achievement-engine';
 import type { UnseenAchievement } from '@/lib/achievement-types';
 
@@ -559,12 +561,31 @@ export default function CoachHomeScroll() {
           />
         </Animated.View>
 
+        {/* ─── 4. MOMENTUM CARDS (D System — horizontal gradient scroll) ── ↕ 16px ── */}
+        <View style={{ marginBottom: 16 }}>
+          <MomentumCardsRow
+            seasonRecord={data.seasonRecord}
+            attendanceRate={data.attendanceRate}
+            topPerformers={data.topPerformers}
+          />
+        </View>
+
+        {/* ─── 5. SQUAD FACES (D System — overlapping avatars) ── ↕ 16px ── */}
+        <View style={{ marginBottom: 16 }}>
+          <SquadFacesRow
+            teamId={data.selectedTeamId}
+            teamName={teamName}
+            playerCount={selectedTeam?.player_count ?? 0}
+            topPerformers={data.topPerformers}
+          />
+        </View>
+
         {/* ─── Scouting Context ── */}
         <View style={{ marginBottom: 12 }}>
           <ScoutingContext previousMatchup={data.previousMatchup} />
         </View>
 
-        {/* ─── 5. QUICK ACTIONS (subtle container) ── ↕ 12px ── */}
+        {/* ─── QUICK ACTIONS (subtle container) ── ↕ 12px ── */}
         <Animated.View style={[{ marginBottom: 12 }, quickActionsAnimStyle]}>
           <QuickActions
             isEventDay={data.heroEvent !== null}
@@ -574,7 +595,7 @@ export default function CoachHomeScroll() {
           />
         </Animated.View>
 
-        {/* ─── 6. ENGAGEMENT NUDGE (Tier 3 — 1 line max) ── ↕ 24px ── */}
+        {/* ─── ENGAGEMENT NUDGE (Tier 3 — 1 line max) ── ↕ 24px ── */}
         <View style={{ marginBottom: 24 }}>
           <EngagementSection
             onGiveShoutout={() => setShowShoutoutModal(true)}
@@ -582,38 +603,8 @@ export default function CoachHomeScroll() {
           />
         </View>
 
-        {/* ─── 6b. CHALLENGES QUICK CARD ── ↕ 12px ── */}
+        {/* ─── CHALLENGES QUICK CARD ── ↕ 12px ── */}
         <ChallengeQuickCard teamId={data.selectedTeamId} />
-
-        {/* ─── 7b. ROSTER ACCESS (Tier 2 — one-tap to carousel) ── ↕ 16px ── */}
-        <TouchableOpacity
-          style={styles.rosterCard}
-          activeOpacity={0.85}
-          onPress={() => router.push(`/roster?teamId=${data.selectedTeamId}` as any)}
-        >
-          <View style={styles.rosterLeft}>
-            <Text style={styles.rosterLabel}>ROSTER</Text>
-            <Text style={styles.rosterTeam} numberOfLines={1}>{teamName}</Text>
-            <Text style={styles.rosterCount}>
-              {selectedTeam?.player_count ?? 0} player{(selectedTeam?.player_count ?? 0) !== 1 ? 's' : ''} {'\u00B7'} View Roster {'\u2192'}
-            </Text>
-          </View>
-          <View style={styles.rosterIcon}>
-            <Ionicons name="people" size={24} color={BRAND.skyBlue} />
-          </View>
-        </TouchableOpacity>
-
-        {/* ─── 8. SEASON & LEADERBOARD CARD (Tier 1.5 — bars + charts) ── ↕ 20px ── */}
-        <View style={{ marginBottom: 20 }}>
-          <SeasonLeaderboardCard
-            record={data.seasonRecord}
-            performers={data.topPerformers}
-            teamName={teamName}
-            lastGameLine={data.lastGameLine}
-            scrollY={scrollY}
-            cardY={900}
-          />
-        </View>
 
         {/* ─── 9. ACTION ITEMS (Tier 2 — compact lines) ── ↕ 16px ── */}
         <View style={{ marginBottom: 16 }}>
@@ -900,47 +891,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 40,
   },
-  // Roster card
-  rosterCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: 16,
-    marginBottom: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 16,
-    backgroundColor: BRAND.white,
-    borderWidth: 1,
-    borderColor: BRAND.border,
-  },
-  rosterLeft: {
-    flex: 1,
-    gap: 2,
-  },
-  rosterLabel: {
-    fontSize: 10,
-    fontFamily: FONTS.bodyBold,
-    color: BRAND.skyBlue,
-    letterSpacing: 1.5,
-  },
-  rosterTeam: {
-    fontSize: 16,
-    fontFamily: FONTS.bodyBold,
-    color: BRAND.textPrimary,
-  },
-  rosterCount: {
-    fontSize: 12,
-    fontFamily: FONTS.bodyMedium,
-    color: BRAND.textMuted,
-    marginTop: 2,
-  },
-  rosterIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: `${BRAND.skyBlue}1A`,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  // (roster card styles removed — replaced by SquadFacesRow)
 
 });
