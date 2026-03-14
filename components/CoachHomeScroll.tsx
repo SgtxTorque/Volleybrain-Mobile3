@@ -65,6 +65,8 @@ import MomentumCardsRow from './coach-scroll/MomentumCardsRow';
 import SquadFacesRow from './coach-scroll/SquadFacesRow';
 import SmartNudgeCard from './coach-scroll/SmartNudgeCard';
 import ActionGrid2x2 from './coach-scroll/ActionGrid2x2';
+import CoachPulseFeed from './coach-scroll/CoachPulseFeed';
+import CoachTrophyCase from './coach-scroll/CoachTrophyCase';
 import { getUnseenRoleAchievements, markAchievementsSeen } from '@/lib/achievement-engine';
 import type { UnseenAchievement } from '@/lib/achievement-types';
 
@@ -600,41 +602,19 @@ export default function CoachHomeScroll() {
           />
         </View>
 
-        {/* ─── 9. ACTION ITEMS (Tier 2 — compact lines) ── ↕ 16px ── */}
-        <View style={{ marginBottom: 16 }}>
-          <ActionItems
-            teamId={data.selectedTeamId}
-            pendingStatsCount={data.pendingStatsCount}
-          />
+        {/* ─── 8. TEAM PULSE FEED (D System — flat activity feed) ── ↕ 18px ── */}
+        <View style={{ marginBottom: 18 }}>
+          <CoachPulseFeed teamId={data.selectedTeamId} limit={4} />
         </View>
 
-        {/* ─── 10. TEAM HUB PREVIEW (Tier 1.5 — social feed) ── ↕ 16px ── */}
-        <View style={{ marginBottom: 16 }}>
-          <TeamHubPreviewCard
-            teamId={data.selectedTeamId}
-            scrollY={scrollY}
-            cardY={1100}
-          />
-        </View>
-
-        {/* ─── 11. RECENT ACTIVITY (Tier 2 — 2 items max) ── ↕ 20px ── */}
-        <View style={{ marginBottom: 20 }}>
-          <ActivityFeed teamId={data.selectedTeamId} />
-        </View>
-
-        {/* ─── 11b. TEAM PULSE (Tier 2 — light variant) ── ↕ 20px ── */}
-        <View style={{ marginBottom: 20 }}>
-          <TeamPulse teamId={data.selectedTeamId} variant="light" limit={4} />
-        </View>
-
-        {/* ─── 11c. TROPHY CASE (Tier 2 — badges + XP) ── ↕ 20px ── */}
+        {/* ─── 9. FORTNITE TROPHY CASE (D System — dark navy badge grid) ── ↕ 18px ── */}
         {profile?.id && (
-          <View style={{ marginBottom: 20 }}>
-            <TrophyCaseWidget userId={profile.id} userRole="coach" />
+          <View style={{ marginBottom: 18 }}>
+            <CoachTrophyCase userId={profile.id} />
           </View>
         )}
 
-        {/* ─── 12. SEASON SETUP (conditional — early season only) ── ↕ 24px ── */}
+        {/* ─── 10. SEASON SETUP (conditional — early season only) ── ↕ 24px ── */}
         <View style={{ marginBottom: 24 }}>
           <SeasonSetupCard
             teamId={data.selectedTeamId}
@@ -643,7 +623,7 @@ export default function CoachHomeScroll() {
           />
         </View>
 
-        {/* ─── 13. CLOSING (Tier 3) ── ↕ 140px bottom ──────── */}
+        {/* ─── 11. CLOSING (Tier 3) ── ↕ 140px bottom ──────── */}
         <View style={styles.endSection}>
           <Image source={require('../assets/images/mascot/HiLynx.png')} style={styles.endMascotImg} resizeMode="contain" />
           <Text style={styles.endText}>
