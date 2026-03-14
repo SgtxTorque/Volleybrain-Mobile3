@@ -68,6 +68,8 @@ import FamilyHeroCard from './parent-scroll/FamilyHeroCard';
 import ParentPaymentNudge from './parent-scroll/ParentPaymentNudge';
 import ParentAttentionStrip from './parent-scroll/ParentAttentionStrip';
 import FamilyKidCard from './parent-scroll/FamilyKidCard';
+import ParentXPBar from './parent-scroll/ParentXPBar';
+import ParentEventHero from './parent-scroll/ParentEventHero';
 import TrophyCaseWidget from './TrophyCaseWidget';
 import AchievementCelebrationModal from './AchievementCelebrationModal';
 import { getUnseenRoleAchievements, markAchievementsSeen } from '@/lib/achievement-engine';
@@ -442,19 +444,6 @@ export default function ParentHomeScroll() {
           onClear={() => data.setSelectedContext(null)}
         />
 
-        {/* ─── BILLBOARD HERO (auto-cycling events) ───────────── */}
-        <BillboardHero
-          events={data.allUpcomingEvents}
-          onRsvp={(eventId, childId, status) => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            data.rsvpEvent(eventId, childId, status);
-          }}
-          isMultiChild={data.isMultiChild}
-        />
-
-        {/* ─── ALSO TODAY / THIS WEEK STRIP ───────────────────── */}
-        <AlsoStrip events={data.allUpcomingEvents} isMultiChild={data.isMultiChild} />
-
         {/* ─── ATTENTION STRIP (expandable) ─────────────────────── */}
         <ParentAttentionStrip
           count={data.attentionCount}
@@ -469,6 +458,27 @@ export default function ParentHomeScroll() {
             nextEvent={data.allUpcomingEvents.find(e => e.childId === child.playerId) || null}
           />
         ))}
+
+        {/* ─── PARENT XP BAR ────────────────────────────────── */}
+        {data.childXp && (
+          <ParentXPBar
+            totalXp={data.childXp.totalXp}
+            level={data.childXp.level}
+            progress={data.childXp.progress}
+            nextLevelXp={0}
+          />
+        )}
+
+        {/* ─── EVENT HERO (dark navy, +XP on RSVP) ──────────── */}
+        <ParentEventHero
+          event={data.allUpcomingEvents[0] || null}
+          child={data.allChildren.find(c => c.playerId === data.allUpcomingEvents[0]?.childId) || data.allChildren[0] || null}
+          onRsvp={(eventId, childId, status) => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            data.rsvpEvent(eventId, childId, status);
+          }}
+          isMultiChild={data.isMultiChild}
+        />
 
         {/* ─── AMBIENT CELEBRATION (Tier 3) ─────────────────────── */}
         {data.children.length > 0 && (
