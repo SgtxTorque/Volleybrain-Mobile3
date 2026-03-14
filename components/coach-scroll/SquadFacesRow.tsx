@@ -1,10 +1,12 @@
 /**
  * SquadFacesRow — overlapping circular avatars showing team players.
  * Max 8 visible + "+N" overflow circle. Tapping navigates to roster.
+ * Shows player photos when available, initials as fallback.
  */
-import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { supabase } from '@/lib/supabase';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 import type { TopPerformer } from '@/hooks/useCoachHomeData';
@@ -13,30 +15,79 @@ const AVATAR_COLORS = [
   '#E76F51', '#4BB9EC', '#22C55E', '#8B5CF6', '#F59E0B', '#2A9D8F',
 ];
 
+type PlayerFace = {
+  initial: string;
+  color: string;
+  photoUrl: string | null;
+};
+
 interface Props {
   teamId: string | null;
   teamName: string;
   playerCount: number;
-  /** We use topPerformers names to show real initials; fallback to generic circles */
   topPerformers: TopPerformer[];
 }
 
 function SquadFacesRow({ teamId, teamName, playerCount, topPerformers }: Props) {
   const router = useRouter();
+  const [rosterFaces, setRosterFaces] = useState<PlayerFace[] | null>(null);
+
+  // Fetch roster photos for this team
+  useEffect(() => {
+    if (!teamId) return;
+    let mounted = true;
+
+    (async () => {
+      try {
+        const { data: roster } = await supabase
+          .from('team_players')
+          .select('player_id, players!inner(first_name, last_name, photo_url)')
+          .eq('team_id', teamId)
+          .limit(8);
+
+        if (!mounted || !roster) return;
+
+        const faces: PlayerFace[] = roster.map((r: any, i: number) => {
+          const p = r.players;
+          const firstName = p?.first_name || '';
+          const lastName = p?.last_name || '';
+          const initial = firstName
+            ? firstName.charAt(0).toUpperCase()
+            : lastName
+              ? lastName.charAt(0).toUpperCase()
+              : '\u{1F464}';
+          return {
+            initial,
+            color: AVATAR_COLORS[i % AVATAR_COLORS.length],
+            photoUrl: p?.photo_url || null,
+          };
+        });
+        setRosterFaces(faces);
+      } catch {
+        // Fall through to topPerformers fallback
+      }
+    })();
+
+    return () => { mounted = false; };
+  }, [teamId]);
 
   if (playerCount === 0) return null;
 
-  // Build name list from top performers (limited data source without new query)
-  const names = topPerformers.map(p => p.player_name).filter(Boolean);
-  // Pad up to 8 with generic initials
-  const maxVisible = Math.min(8, playerCount);
-  const faces: { initial: string; color: string }[] = [];
-  for (let i = 0; i < maxVisible; i++) {
-    const name = names[i] || '';
-    const initial = name ? name.charAt(0).toUpperCase() : '?';
-    faces.push({ initial, color: AVATAR_COLORS[i % AVATAR_COLORS.length] });
+  // Use roster data if available, otherwise fall back to topPerformers
+  let faces: PlayerFace[];
+  if (rosterFaces && rosterFaces.length > 0) {
+    faces = rosterFaces;
+  } else {
+    const maxVisible = Math.min(8, playerCount);
+    faces = [];
+    for (let i = 0; i < maxVisible; i++) {
+      const performer = topPerformers[i];
+      const name = performer?.player_name || '';
+      const initial = name ? name.charAt(0).toUpperCase() : '\u{1F464}';
+      faces.push({ initial, color: AVATAR_COLORS[i % AVATAR_COLORS.length], photoUrl: null });
+    }
   }
-  const overflow = playerCount - maxVisible;
+  const overflow = playerCount - faces.length;
 
   return (
     <View style={styles.container}>
@@ -65,7 +116,11 @@ function SquadFacesRow({ teamId, teamName, playerCount, topPerformers }: Props) 
               { backgroundColor: face.color, marginLeft: i === 0 ? 0 : -6 },
             ]}
           >
-            <Text style={styles.avatarText}>{face.initial}</Text>
+            {face.photoUrl ? (
+              <Image source={{ uri: face.photoUrl }} style={styles.avatarPhoto} />
+            ) : (
+              <Text style={styles.avatarText}>{face.initial}</Text>
+            )}
           </View>
         ))}
         {overflow > 0 && (
@@ -119,6 +174,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2.5,
     borderColor: '#FAFBFE',
+  },
+  avatarPhoto: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
   avatarText: {
     fontFamily: FONTS.bodyBold,
