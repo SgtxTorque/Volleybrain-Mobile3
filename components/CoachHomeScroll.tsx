@@ -305,6 +305,10 @@ export default function CoachHomeScroll() {
   const selectedTeam = data.teams?.find(t => t.id === data.selectedTeamId);
   const teamName = selectedTeam?.name ?? '';
 
+  // Hide message bar when hero card is already showing game-day info (avoids redundancy)
+  const today = new Date().toISOString().split('T')[0];
+  const isGameDayHeroVisible = data.heroEvent?.event_type === 'game' && data.heroEvent?.event_date === today;
+
   return (
     <View style={[styles.root, { backgroundColor: D_COLORS.pageBg }]}>
       {/* ─── COMPACT HEADER ──────────────────────────────────── */}
@@ -439,8 +443,8 @@ export default function CoachHomeScroll() {
           </View>
         </Animated.View>
 
-        {/* ─── 1b. DYNAMIC MESSAGE BAR ─────────────────────── */}
-        {messageBarInfo && (
+        {/* ─── 1b. DYNAMIC MESSAGE BAR (hidden on game day — hero card covers it) ── */}
+        {messageBarInfo && !isGameDayHeroVisible && (
           <View style={{ marginBottom: 14 }}>
             <DynamicMessageBar
               message={messageBarInfo.message}
