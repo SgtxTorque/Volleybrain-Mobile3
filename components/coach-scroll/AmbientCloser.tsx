@@ -3,7 +3,7 @@
  * Mascot emoji + italic text based on team context.
  */
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { FONTS } from '@/theme/fonts';
 import { D_COLORS } from '@/theme/d-system';
 import type { SeasonRecord, CoachEvent } from '@/hooks/useCoachHomeData';
@@ -39,7 +39,7 @@ function AmbientCloser({ seasonRecord, heroEvent, teamName }: Props) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.mascotEmoji}>{'\u{1F43E}'}</Text>
+      <Image source={require('../../assets/images/mascot/SleepLynx.png')} style={styles.mascotImg} resizeMode="contain" />
       <Text style={styles.message}>{message}</Text>
     </View>
   );
@@ -54,9 +54,11 @@ const styles = StyleSheet.create({
     paddingTop: 40,
     paddingBottom: 120,
   },
-  mascotEmoji: {
-    fontSize: 32,
+  mascotImg: {
+    width: 44,
+    height: 44,
     marginBottom: 10,
+    opacity: 0.5,
   },
   message: {
     fontFamily: FONTS.bodyMedium,
