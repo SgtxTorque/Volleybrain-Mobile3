@@ -105,8 +105,6 @@ function CoachTrophyCase({ userId }: Props) {
     return () => { mounted = false; };
   }, [userId]);
 
-  if (loading) return null;
-
   const earnedCount = allBadges.filter(b => b.earned).length;
   const totalCount = allBadges.length;
   const levelInfo = getLevelFromXP(xp.totalXp);
@@ -121,6 +119,8 @@ function CoachTrophyCase({ userId }: Props) {
   const xpFillStyle = useAnimatedStyle(() => ({
     width: `${xpWidth.value}%` as any,
   }));
+
+  if (loading) return null;
 
   return (
     <TouchableOpacity
