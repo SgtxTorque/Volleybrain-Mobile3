@@ -1,15 +1,26 @@
 /**
  * ParentAttentionStrip — Expandable attention strip with urgency dots.
  * Collapsed: count + summary. Expanded: list of items with navigation.
+ * Animated expand/collapse with stagger-fade items.
  */
-import React, { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { LayoutAnimation, Platform, StyleSheet, Text, TouchableOpacity, UIManager, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withTiming,
+} from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { FONTS } from '@/theme/fonts';
 import { BRAND } from '@/theme/colors';
-import { D_COLORS, D_RADII } from '@/theme/d-system';
 import type { FamilyAttentionItem } from '@/hooks/useParentHomeData';
+
+// Enable LayoutAnimation on Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 interface Props {
   count: number;
@@ -24,8 +35,50 @@ const URGENCY_DOT: Record<string, string> = {
   evaluation: '#4BB9EC',
 };
 
-function ParentAttentionStrip({ count, items }: Props) {
+/** Individual attention item with stagger-fade animation */
+function StaggerItem({
+  item,
+  index,
+  expanded,
+}: {
+  item: FamilyAttentionItem;
+  index: number;
+  expanded: boolean;
+}) {
   const router = useRouter();
+  const itemOpacity = useSharedValue(0);
+
+  useEffect(() => {
+    if (expanded) {
+      itemOpacity.value = withDelay(index * 60, withTiming(1, { duration: 200 }));
+    } else {
+      itemOpacity.value = 0;
+    }
+  }, [expanded]);
+
+  const fadeStyle = useAnimatedStyle(() => ({
+    opacity: itemOpacity.value,
+  }));
+
+  return (
+    <Animated.View style={fadeStyle}>
+      <TouchableOpacity
+        style={styles.itemRow}
+        activeOpacity={0.7}
+        onPress={() => router.push(item.route as any)}
+      >
+        <View style={[styles.urgencyDot, { backgroundColor: URGENCY_DOT[item.type] || '#F59E0B' }]} />
+        <View style={styles.itemTextCol}>
+          <Text style={styles.itemTitle}>{item.title}</Text>
+          <Text style={styles.itemDesc} numberOfLines={1}>{item.description}</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={14} color={BRAND.textFaint} />
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
+
+function ParentAttentionStrip({ count, items }: Props) {
   const [expanded, setExpanded] = useState(false);
 
   if (count <= 0 || items.length === 0) return null;
@@ -34,12 +87,17 @@ function ParentAttentionStrip({ count, items }: Props) {
     ? items[0].description
     : `${items[0].description} and ${items.length - 1} more`;
 
+  const handleToggle = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpanded(prev => !prev);
+  };
+
   return (
     <View style={styles.container}>
       <TouchableOpacity
         style={styles.collapsedRow}
         activeOpacity={0.7}
-        onPress={() => setExpanded(prev => !prev)}
+        onPress={handleToggle}
       >
         <View style={styles.leftSection}>
           <Text style={styles.countNum}>{count}</Text>
@@ -61,20 +119,13 @@ function ParentAttentionStrip({ count, items }: Props) {
 
       {expanded && (
         <View style={styles.expandedList}>
-          {items.map((item) => (
-            <TouchableOpacity
+          {items.map((item, index) => (
+            <StaggerItem
               key={item.id}
-              style={styles.itemRow}
-              activeOpacity={0.7}
-              onPress={() => router.push(item.route as any)}
-            >
-              <View style={[styles.urgencyDot, { backgroundColor: URGENCY_DOT[item.type] || '#F59E0B' }]} />
-              <View style={styles.itemTextCol}>
-                <Text style={styles.itemTitle}>{item.title}</Text>
-                <Text style={styles.itemDesc} numberOfLines={1}>{item.description}</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={14} color={BRAND.textFaint} />
-            </TouchableOpacity>
+              item={item}
+              index={index}
+              expanded={expanded}
+            />
           ))}
         </View>
       )}

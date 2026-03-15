@@ -1,9 +1,16 @@
 /**
  * FamilyPulseFeed — Activity feed combining team hub, chat, and child activity.
  * Flat on page background, section header + items with timestamps and XP badges.
+ * Staggered fade-in animation (first 5 items, 60ms apart).
  */
-import React from 'react';
+import React, { useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withTiming,
+} from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { FONTS } from '@/theme/fonts';
 import { BRAND } from '@/theme/colors';
@@ -37,6 +44,51 @@ function timeAgo(dateStr: string): string {
   if (diffHours < 24) return `${diffHours}h ago`;
   if (diffDays < 7) return `${diffDays}d ago`;
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+/** Sub-component for stagger-fade animation per item */
+function PulseItem({
+  item,
+  index,
+  isLast,
+}: {
+  item: FeedItem;
+  index: number;
+  isLast: boolean;
+}) {
+  const router = useRouter();
+  const itemOpacity = useSharedValue(0);
+
+  useEffect(() => {
+    // Only animate first 5 items
+    const delay = index < 5 ? index * 60 : 0;
+    itemOpacity.value = withDelay(delay, withTiming(1, { duration: 250 }));
+  }, []);
+
+  const fadeStyle = useAnimatedStyle(() => ({
+    opacity: itemOpacity.value,
+  }));
+
+  return (
+    <Animated.View style={fadeStyle}>
+      <TouchableOpacity
+        style={[styles.itemRow, !isLast && styles.itemBorder]}
+        activeOpacity={0.7}
+        onPress={() => router.push(item.route as any)}
+      >
+        <View style={[styles.iconCircle, { backgroundColor: item.iconBg }]}>
+          <Text style={styles.iconEmoji}>{item.icon}</Text>
+        </View>
+        <View style={styles.itemBody}>
+          <Text style={styles.itemText} numberOfLines={2}>{item.text}</Text>
+          {item.timestamp ? <Text style={styles.itemTimestamp}>{item.timestamp}</Text> : null}
+        </View>
+        {item.xpBadge && (
+          <Text style={styles.xpBadge}>{item.xpBadge}</Text>
+        )}
+      </TouchableOpacity>
+    </Animated.View>
+  );
 }
 
 function FamilyPulseFeed({ latestPost, lastChat, seasonRecord, childName }: Props) {
@@ -95,23 +147,12 @@ function FamilyPulseFeed({ latestPost, lastChat, seasonRecord, childName }: Prop
       </View>
 
       {items.map((item, i) => (
-        <TouchableOpacity
+        <PulseItem
           key={item.id}
-          style={[styles.itemRow, i < items.length - 1 && styles.itemBorder]}
-          activeOpacity={0.7}
-          onPress={() => router.push(item.route as any)}
-        >
-          <View style={[styles.iconCircle, { backgroundColor: item.iconBg }]}>
-            <Text style={styles.iconEmoji}>{item.icon}</Text>
-          </View>
-          <View style={styles.itemBody}>
-            <Text style={styles.itemText} numberOfLines={2}>{item.text}</Text>
-            {item.timestamp ? <Text style={styles.itemTimestamp}>{item.timestamp}</Text> : null}
-          </View>
-          {item.xpBadge && (
-            <Text style={styles.xpBadge}>{item.xpBadge}</Text>
-          )}
-        </TouchableOpacity>
+          item={item}
+          index={i}
+          isLast={i === items.length - 1}
+        />
       ))}
     </View>
   );

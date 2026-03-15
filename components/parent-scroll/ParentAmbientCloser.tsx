@@ -1,9 +1,19 @@
 /**
  * ParentAmbientCloser — Contextual closing message with mascot.
  * References children and real event data.
+ * Mascot gentle sway: -2deg to 2deg, 4-second loop.
  */
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  cancelAnimation,
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 import { FONTS } from '@/theme/fonts';
 import { D_COLORS } from '@/theme/d-system';
 import type { FamilyChild, FamilyEvent, SeasonRecord } from '@/hooks/useParentHomeData';
@@ -16,6 +26,25 @@ interface Props {
 }
 
 function ParentAmbientCloser({ children, heroEvent, seasonRecord, lastName }: Props) {
+  // ALL hooks above early return
+  const swayRotation = useSharedValue(0);
+
+  useEffect(() => {
+    swayRotation.value = withRepeat(
+      withSequence(
+        withTiming(-2, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(2, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
+      ),
+      -1,
+      true,
+    );
+    return () => cancelAnimation(swayRotation);
+  }, []);
+
+  const swayStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${swayRotation.value}deg` }],
+  }));
+
   const today = new Date().toISOString().split('T')[0];
 
   let message = "That's everything for now. Go be great.";
@@ -53,11 +82,13 @@ function ParentAmbientCloser({ children, heroEvent, seasonRecord, lastName }: Pr
 
   return (
     <View style={styles.container}>
-      <Image
-        source={require('@/assets/images/mascot/SleepLynx.png')}
-        style={styles.mascotImg}
-        resizeMode="contain"
-      />
+      <Animated.View style={swayStyle}>
+        <Image
+          source={require('@/assets/images/mascot/SleepLynx.png')}
+          style={styles.mascotImg}
+          resizeMode="contain"
+        />
+      </Animated.View>
       <Text style={styles.message}>{message}</Text>
     </View>
   );

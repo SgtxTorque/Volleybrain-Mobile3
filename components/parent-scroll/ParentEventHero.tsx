@@ -2,8 +2,18 @@
  * ParentEventHero — Dark navy event hero card with +XP on RSVP button.
  * Replaces BillboardHero with a single-event focused card.
  */
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Image, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Animated, {
+  cancelAnimation,
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { FONTS } from '@/theme/fonts';
@@ -56,6 +66,38 @@ function openDirections(event: FamilyEvent) {
 }
 
 function ParentEventHero({ event, child, onRsvp, isMultiChild }: Props) {
+  // ALL hooks ABOVE early return
+  const cardTranslateY = useSharedValue(15);
+  const cardOpacity = useSharedValue(0);
+  const xpChipScale = useSharedValue(1.0);
+
+  useEffect(() => {
+    // Card entrance: fade in + slide up 15px
+    cardTranslateY.value = withSpring(0, { damping: 12, stiffness: 100 });
+    cardOpacity.value = withTiming(1, { duration: 400 });
+    // XP chip pulse: scale 1.0 → 1.1 → 1.0, 3-second loop
+    xpChipScale.value = withRepeat(
+      withSequence(
+        withTiming(1.1, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1.0, { duration: 1500, easing: Easing.inOut(Easing.ease) }),
+      ),
+      -1,
+      false,
+    );
+    return () => {
+      cancelAnimation(xpChipScale);
+    };
+  }, []);
+
+  const cardEntranceStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: cardTranslateY.value }],
+    opacity: cardOpacity.value,
+  }));
+
+  const xpPulseStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: xpChipScale.value }],
+  }));
+
   if (!event) {
     return (
       <View style={styles.emptyContainer}>
@@ -93,7 +135,7 @@ function ParentEventHero({ event, child, onRsvp, isMultiChild }: Props) {
   const childInitial = child?.firstName?.[0]?.toUpperCase() || event.childName?.[0]?.toUpperCase() || '?';
 
   return (
-    <View style={styles.outerContainer}>
+    <Animated.View style={[styles.outerContainer, cardEntranceStyle]}>
       <LinearGradient
         colors={[D_COLORS.eventHeroBgStart, D_COLORS.eventHeroBgEnd]}
         start={{ x: 0, y: 0 }}
@@ -139,9 +181,9 @@ function ParentEventHero({ event, child, onRsvp, isMultiChild }: Props) {
           >
             <Text style={styles.rsvpBtnText}>{rsvpLabel}</Text>
             {!event.rsvpStatus && (
-              <View style={styles.xpChip}>
+              <Animated.View style={[styles.xpChip, xpPulseStyle]}>
                 <Text style={styles.xpChipText}>+20 XP</Text>
-              </View>
+              </Animated.View>
             )}
           </TouchableOpacity>
           {hasLocation && (
@@ -159,7 +201,7 @@ function ParentEventHero({ event, child, onRsvp, isMultiChild }: Props) {
         {/* Subtle radial glow */}
         <View style={styles.glowCorner} />
       </LinearGradient>
-    </View>
+    </Animated.View>
   );
 }
 

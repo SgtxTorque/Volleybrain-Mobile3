@@ -52,6 +52,7 @@ function FamilyHeroCard({
   // ALL hooks ABOVE any early return
   const mascotScale = useSharedValue(1.0);
   const xpWidth = useSharedValue(0);
+  const greetingOpacity = useSharedValue(0);
 
   // Mascot breathing animation
   useEffect(() => {
@@ -63,6 +64,8 @@ function FamilyHeroCard({
       -1,
       false,
     );
+    // Greeting text fade-in
+    greetingOpacity.value = withTiming(1, { duration: 300 });
     return () => cancelAnimation(mascotScale);
   }, []);
 
@@ -82,6 +85,10 @@ function FamilyHeroCard({
 
   const xpFillStyle = useAnimatedStyle(() => ({
     width: `${xpWidth.value}%` as any,
+  }));
+
+  const greetingFadeStyle = useAnimatedStyle(() => ({
+    opacity: greetingOpacity.value,
   }));
 
   const hour = new Date().getHours();
@@ -119,7 +126,7 @@ function FamilyHeroCard({
     >
       {/* Left: greeting + XP bar (~65%) */}
       <View style={styles.leftCol}>
-        <Text style={styles.greeting}>{greeting}</Text>
+        <Animated.Text style={[styles.greeting, greetingFadeStyle]}>{greeting}</Animated.Text>
 
         {/* Level + XP bar inside hero */}
         {levelInfo && tier && (
