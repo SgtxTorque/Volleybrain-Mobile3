@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { recordQualifyingAction } from '@/lib/streak-engine';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -421,6 +422,9 @@ export async function completeQuest(questId: string, profileId: string): Promise
   newTotalXp: number;
   newLevel: number;
   newTier: string;
+  newStreak: number;
+  streakMilestone: number | null;
+  streakFreezeAwarded: boolean;
 }> {
   // Step 1: Mark quest as completed
   const { data: quest, error: updateError } = await supabase
@@ -437,11 +441,14 @@ export async function completeQuest(questId: string, profileId: string): Promise
 
   if (updateError || !quest) {
     console.error('[quest-engine] Error completing quest:', updateError);
-    return { success: false, xpAwarded: 0, allComplete: false, bonusAwarded: false, newTotalXp: 0, newLevel: 1, newTier: 'Rookie' };
+    return { success: false, xpAwarded: 0, allComplete: false, bonusAwarded: false, newTotalXp: 0, newLevel: 1, newTier: 'Rookie', newStreak: 0, streakMilestone: null, streakFreezeAwarded: false };
   }
 
   // Step 2: Award XP
   const xpResult = await awardXp(profileId, quest.xp_reward, 'quest_daily', questId, quest.team_id);
+
+  // Step 2.5: Record qualifying action for streak
+  const streakResult = await recordQualifyingAction(profileId);
 
   // Step 3: Check if all 3 daily quests are now complete
   const today = localToday();
@@ -487,6 +494,9 @@ export async function completeQuest(questId: string, profileId: string): Promise
     newTotalXp: xpResult.newTotalXp,
     newLevel: xpResult.newLevel,
     newTier: xpResult.newTier,
+    newStreak: streakResult.newStreak,
+    streakMilestone: streakResult.milestoneReached,
+    streakFreezeAwarded: streakResult.freezeAwarded,
   };
 }
 
