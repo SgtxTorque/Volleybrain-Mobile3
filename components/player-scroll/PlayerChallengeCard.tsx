@@ -1,6 +1,7 @@
 /**
  * PlayerChallengeCard — Active challenge progress card with D+ styling.
- * Scroll-triggered: fades in with subtle scale when scrolled into view.
+ * Scroll-triggered: fades in with subtle scale, animated progress bar fill,
+ * gold pulse on "+XP" when bar finishes.
  */
 import React, { useCallback, useEffect, useState } from 'react';
 import { Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -9,6 +10,8 @@ import Animated, {
   useAnimatedStyle,
   useDerivedValue,
   useSharedValue,
+  withDelay,
+  withSequence,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
@@ -38,6 +41,9 @@ export default function PlayerChallengeCard({ available, teamId, scrollY }: Prop
   const entered = useSharedValue(0);
   const entranceOpacity = useSharedValue(0);
   const entranceScale = useSharedValue(0.95);
+  const barFillWidth = useSharedValue(0);
+  const computedPct = useSharedValue(0);
+  const xpPulseScale = useSharedValue(1);
 
   const onLayoutCapture = useCallback((e: any) => {
     componentY.value = e.nativeEvent.layout.y;
@@ -49,12 +55,34 @@ export default function PlayerChallengeCard({ available, teamId, scrollY }: Prop
     }
   });
 
+  // On scroll entrance: fade in, scale, fill bar, pulse XP
   useAnimatedReaction(
     () => entered.value,
     (val, prev) => {
       if (val === 1 && (prev === null || prev === 0)) {
         entranceOpacity.value = withTiming(1, { duration: 400 });
         entranceScale.value = withSpring(1, { damping: 12, stiffness: 100 });
+        if (computedPct.value > 0) {
+          barFillWidth.value = withTiming(computedPct.value, { duration: 800 });
+          xpPulseScale.value = withDelay(800, withSequence(
+            withTiming(1.15, { duration: 100 }),
+            withSpring(1, { damping: 12, stiffness: 200 }),
+          ));
+        }
+      }
+    },
+  );
+
+  // If data arrives after scroll entrance
+  useAnimatedReaction(
+    () => computedPct.value,
+    (val, prev) => {
+      if (val > 0 && (prev === null || prev === 0) && entered.value === 1) {
+        barFillWidth.value = withTiming(val, { duration: 800 });
+        xpPulseScale.value = withDelay(800, withSequence(
+          withTiming(1.15, { duration: 100 }),
+          withSpring(1, { damping: 12, stiffness: 200 }),
+        ));
       }
     },
   );
@@ -62,6 +90,14 @@ export default function PlayerChallengeCard({ available, teamId, scrollY }: Prop
   const entranceStyle = useAnimatedStyle(() => ({
     opacity: entranceOpacity.value,
     transform: [{ scale: entranceScale.value }],
+  }));
+
+  const barFillStyle = useAnimatedStyle(() => ({
+    width: `${barFillWidth.value}%` as any,
+  }));
+
+  const xpPulseStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: xpPulseScale.value }],
   }));
 
   useEffect(() => {
@@ -76,6 +112,19 @@ export default function PlayerChallengeCard({ available, teamId, scrollY }: Prop
     return () => { mounted = false; };
   }, [available, teamId]);
 
+  // Update bar target when challenge data arrives
+  useEffect(() => {
+    if (challenge && user?.id) {
+      const isTeam = challenge.challenge_type === 'team';
+      const myProg = challenge.participants.find((p) => p.player_id === user.id);
+      const progressVal = isTeam
+        ? (challenge.totalProgress || 0)
+        : (myProg?.current_value || 0);
+      const target = challenge.target_value || 1;
+      computedPct.value = Math.min((progressVal / target) * 100, 100);
+    }
+  }, [challenge, user?.id]);
+
   if (!available || !challenge) return null;
 
   const isTeam = challenge.challenge_type === 'team';
@@ -84,7 +133,6 @@ export default function PlayerChallengeCard({ available, teamId, scrollY }: Prop
     ? (challenge.totalProgress || 0)
     : (myProgress?.current_value || 0);
   const target = challenge.target_value || 1;
-  const pct = Math.min((progressVal / target) * 100, 100);
 
   const diff = new Date(challenge.ends_at).getTime() - Date.now();
   const daysLeft = diff > 0 ? Math.ceil(diff / (1000 * 60 * 60 * 24)) : 0;
@@ -106,11 +154,13 @@ export default function PlayerChallengeCard({ available, teamId, scrollY }: Prop
           {challenge.title?.toUpperCase() || 'CHALLENGE'}
         </Text>
         <View style={styles.barTrack}>
-          <View style={[styles.barFill, { width: `${pct}%` }]} />
+          <Animated.View style={[styles.barFill, barFillStyle]} />
         </View>
         <View style={styles.footerRow}>
           <Text style={styles.progressText}>{progressVal}/{target}</Text>
-          <Text style={styles.reward}>+{challenge.xp_reward} XP</Text>
+          <Animated.View style={xpPulseStyle}>
+            <Text style={styles.reward}>+{challenge.xp_reward} XP</Text>
+          </Animated.View>
         </View>
       </TouchableOpacity>
     </Animated.View>

@@ -1,6 +1,6 @@
 /**
  * PlayerTrophyCase — Fortnite-style dark badge grid with rarity dots.
- * Scroll-triggered: badges pop-in with spring when scrolled into view.
+ * Scroll-triggered: badges pop-in with spring + gold flash for earned badges.
  */
 import React, { useCallback } from 'react';
 import { Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -10,6 +10,7 @@ import Animated, {
   useDerivedValue,
   useSharedValue,
   withDelay,
+  withSequence,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
@@ -49,14 +50,9 @@ const LOCKED_PLACEHOLDERS = [
   { icon: '\u{1F451}', name: 'MVP', rarity: 'legendary' },
 ];
 
-/** Animated badge cell — scroll-triggered pop-in spring */
+/** Animated badge cell — scroll-triggered pop-in with gold flash for earned */
 function PopBadge({
-  icon,
-  name,
-  earned,
-  rarity,
-  index,
-  entered,
+  icon, name, earned, rarity, index, entered,
 }: {
   icon: string;
   name: string;
@@ -67,13 +63,22 @@ function PopBadge({
 }) {
   const scale = useSharedValue(0.8);
   const opacity = useSharedValue(0);
+  const flashOpacity = useSharedValue(0);
 
   useAnimatedReaction(
     () => entered.value,
     (val, prev) => {
       if (val === 1 && (prev === null || prev === 0)) {
-        scale.value = withDelay(index * 50, withSpring(1, { damping: 12, stiffness: 120 }));
-        opacity.value = withDelay(index * 50, withTiming(1, { duration: 300 }));
+        // Spring overshoot: scales to ~1.05 then settles at 1.0
+        scale.value = withDelay(index * 80, withSpring(1, { damping: 10, stiffness: 120 }));
+        opacity.value = withDelay(index * 80, withTiming(1, { duration: 300 }));
+        // Gold flash for earned badges
+        if (earned) {
+          flashOpacity.value = withDelay(index * 80 + 200, withSequence(
+            withTiming(0.4, { duration: 100 }),
+            withTiming(0, { duration: 200 }),
+          ));
+        }
       }
     },
   );
@@ -81,6 +86,10 @@ function PopBadge({
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
     opacity: opacity.value,
+  }));
+
+  const flashStyle = useAnimatedStyle(() => ({
+    opacity: flashOpacity.value,
   }));
 
   const dotColor = RARITY_DOT[rarity.toLowerCase()] || RARITY_DOT.common;
@@ -94,6 +103,10 @@ function PopBadge({
       <Text style={[styles.badgeName, !earned && styles.badgeNameLocked]} numberOfLines={1}>
         {name}
       </Text>
+      {/* Gold flash overlay */}
+      {earned && (
+        <Animated.View style={[styles.goldFlash, flashStyle]} />
+      )}
     </Animated.View>
   );
 }
@@ -139,10 +152,7 @@ export default function PlayerTrophyCase({ badges, level, xpProgress, xpCurrent,
 
   const needed = Math.max(0, 8 - earnedBadges.length);
   const lockedBadges = LOCKED_PLACEHOLDERS.slice(0, needed).map((p) => ({
-    icon: p.icon,
-    name: p.name,
-    rarity: p.rarity,
-    earned: false,
+    icon: p.icon, name: p.name, rarity: p.rarity, earned: false,
   }));
 
   const allBadges = [...earnedBadges.slice(0, 8), ...lockedBadges];
@@ -256,6 +266,7 @@ const styles = StyleSheet.create({
     borderRadius: D_RADII.badge,
     borderWidth: 1,
     position: 'relative',
+    overflow: 'hidden',
   },
   badgeEarned: {
     backgroundColor: 'rgba(255,215,0,0.10)',
@@ -289,6 +300,15 @@ const styles = StyleSheet.create({
   },
   badgeNameLocked: {
     color: PLAYER_THEME.textFaint,
+  },
+  goldFlash: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: PLAYER_THEME.xpGold,
+    borderRadius: D_RADII.badge,
   },
   levelRow: {
     flexDirection: 'row',

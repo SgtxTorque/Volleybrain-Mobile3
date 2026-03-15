@@ -1,6 +1,7 @@
 /**
  * PlayerLeaderboardPreview — Team rankings preview showing top 3 or
  * the player's rank with neighbors. Tappable to full leaderboard.
+ * Rows slide in from right with stagger, "You" row gets highlight glow.
  */
 import React, { useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -8,6 +9,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withDelay,
+  withSequence,
   withTiming,
 } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
@@ -37,14 +39,9 @@ function getRankEmoji(rank: number): string {
   return `#${rank}`;
 }
 
-/** Animated row with stagger slide-in */
+/** Animated row — slide from right with stagger + "You" highlight glow */
 function LeaderboardRow({
-  rank,
-  name,
-  value,
-  label,
-  isYou,
-  index,
+  rank, name, value, label, isYou, index,
 }: {
   rank: number;
   name: string;
@@ -53,12 +50,20 @@ function LeaderboardRow({
   isYou: boolean;
   index: number;
 }) {
-  const translateX = useSharedValue(-20);
+  const translateX = useSharedValue(30);
   const opacity = useSharedValue(0);
+  const glowOpacity = useSharedValue(0);
 
   useEffect(() => {
-    translateX.value = withDelay(index * 50, withTiming(0, { duration: 300 }));
-    opacity.value = withDelay(index * 50, withTiming(1, { duration: 300 }));
+    translateX.value = withDelay(index * 80, withTiming(0, { duration: 300 }));
+    opacity.value = withDelay(index * 80, withTiming(1, { duration: 300 }));
+    // "You" row highlight glow: fade in then out over 1s
+    if (isYou) {
+      glowOpacity.value = withDelay(index * 80 + 200, withSequence(
+        withTiming(1, { duration: 300 }),
+        withTiming(0, { duration: 1000 }),
+      ));
+    }
   }, []);
 
   const animStyle = useAnimatedStyle(() => ({
@@ -66,10 +71,18 @@ function LeaderboardRow({
     opacity: opacity.value,
   }));
 
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: glowOpacity.value,
+  }));
+
   const rankColor = getRankColor(rank);
 
   return (
     <Animated.View style={[styles.row, isYou && styles.rowHighlight, animStyle]}>
+      {/* Glow overlay for "You" row */}
+      {isYou && (
+        <Animated.View style={[styles.rowGlow, glowStyle]} />
+      )}
       <Text style={[styles.rankText, { color: rankColor }]}>
         {getRankEmoji(rank)}
       </Text>
@@ -96,7 +109,6 @@ export default function PlayerLeaderboardPreview({ bestRank, xp, level, playerNa
       activeOpacity={0.85}
       onPress={() => router.push('/standings' as any)}
     >
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>{'\u{1F3C6}'} TEAM RANKINGS</Text>
         <Text style={styles.headerCta}>See Full {'\u2192'}</Text>
@@ -118,12 +130,8 @@ export default function PlayerLeaderboardPreview({ bestRank, xp, level, playerNa
         </>
       ) : (
         <View style={styles.emptyWrap}>
-          <Text style={styles.emptyText}>
-            Play games to get ranked!
-          </Text>
-          <Text style={styles.emptyCta}>
-            View leaderboard {'\u2192'}
-          </Text>
+          <Text style={styles.emptyText}>Play games to get ranked!</Text>
+          <Text style={styles.emptyCta}>View leaderboard {'\u2192'}</Text>
         </View>
       )}
     </TouchableOpacity>
@@ -157,7 +165,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: PLAYER_THEME.textMuted,
   },
-  // Row
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -165,9 +172,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderRadius: 10,
     gap: 10,
+    position: 'relative',
+    overflow: 'hidden',
   },
   rowHighlight: {
     backgroundColor: 'rgba(75,185,236,0.06)',
+  },
+  rowGlow: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(75,185,236,0.15)',
+    borderRadius: 10,
   },
   rankText: {
     fontFamily: FONTS.bodyExtraBold,
@@ -226,7 +244,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 6,
   },
-  // Empty
   emptyWrap: {
     alignItems: 'center',
     paddingVertical: 12,

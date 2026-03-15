@@ -3,41 +3,52 @@
  * Journey Path / Skill Library. Shows "coming soon" and doesn't
  * navigate to a real training module yet.
  *
- * TEASER: This card exists in the scroll so when the engagement system
- * is built, we just wire it to the real destination.
+ * Bold animations: shimmer sweep, press scale spring, arrow nudge loop.
  */
 import React, { useEffect } from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   cancelAnimation,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
   withSequence,
+  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
 import { FONTS } from '@/theme/fonts';
 import { D_COLORS, D_RADII } from '@/theme/d-system';
 
 export default function PlayerContinueTraining() {
-  // Shimmer sweep animation — every 5 seconds
+  // Shimmer sweep — every 5 seconds
   const shimmerX = useSharedValue(-200);
+  // Press scale
+  const pressScale = useSharedValue(1);
+  // Arrow nudge loop
+  const arrowNudge = useSharedValue(0);
 
   useEffect(() => {
     shimmerX.value = withRepeat(
       withSequence(
         withTiming(400, { duration: 1200 }),
         withTiming(-200, { duration: 0 }),
-        // Pause ~3.8s between sweeps
         withTiming(-200, { duration: 3800 }),
       ),
-      -1,
-      false,
+      -1, false,
     );
+
+    arrowNudge.value = withRepeat(
+      withSequence(
+        withTiming(4, { duration: 1000 }),
+        withTiming(0, { duration: 1000 }),
+      ),
+      -1, false,
+    );
+
     return () => {
       cancelAnimation(shimmerX);
+      cancelAnimation(arrowNudge);
     };
   }, []);
 
@@ -45,38 +56,56 @@ export default function PlayerContinueTraining() {
     transform: [{ translateX: shimmerX.value }],
   }));
 
+  const scaleStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pressScale.value }],
+  }));
+
+  const arrowStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: arrowNudge.value }],
+  }));
+
   const handlePress = () => {
     Alert.alert('Coming Soon!', 'Training modules are on their way. Stay tuned!');
   };
 
   return (
-    <TouchableOpacity activeOpacity={0.85} onPress={handlePress} style={styles.outerWrap}>
-      <LinearGradient
-        colors={[D_COLORS.trainingCardStart, D_COLORS.trainingCardEnd]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.card}
-      >
-        {/* Icon */}
-        <View style={styles.iconCircle}>
-          <Text style={styles.iconEmoji}>{'\u{1F5FA}\u{FE0F}'}</Text>
-        </View>
+    <Pressable
+      onPressIn={() => {
+        pressScale.value = withSpring(0.97, { damping: 12, stiffness: 200 });
+      }}
+      onPressOut={() => {
+        pressScale.value = withSpring(1, { damping: 12, stiffness: 200 });
+      }}
+      onPress={handlePress}
+    >
+      <Animated.View style={[styles.outerWrap, scaleStyle]}>
+        <LinearGradient
+          colors={[D_COLORS.trainingCardStart, D_COLORS.trainingCardEnd]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.card}
+        >
+          <View style={styles.iconCircle}>
+            <Text style={styles.iconEmoji}>{'\u{1F5FA}\u{FE0F}'}</Text>
+          </View>
 
-        {/* Text content */}
-        <View style={styles.textWrap}>
-          <Text style={styles.title}>Continue Training</Text>
-          <Text style={styles.subtitle}>
-            Skill drills, tips & challenges — coming soon
-          </Text>
-        </View>
+          <View style={styles.textWrap}>
+            <Text style={styles.title}>Continue Training</Text>
+            <Text style={styles.subtitle}>
+              Skill drills, tips & challenges — coming soon
+            </Text>
+          </View>
 
-        {/* Arrow */}
-        <Ionicons name="chevron-forward" size={18} color="rgba(255,255,255,0.5)" />
+          {/* Animated arrow with nudge */}
+          <Animated.View style={arrowStyle}>
+            <Text style={styles.arrowText}>{'\u203A'}</Text>
+          </Animated.View>
 
-        {/* Shimmer overlay */}
-        <Animated.View style={[styles.shimmer, shimmerStyle]} />
-      </LinearGradient>
-    </TouchableOpacity>
+          {/* Shimmer overlay */}
+          <Animated.View style={[styles.shimmer, shimmerStyle]} />
+        </LinearGradient>
+      </Animated.View>
+    </Pressable>
   );
 }
 
@@ -118,6 +147,11 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bodyMedium,
     fontSize: 12,
     color: 'rgba(255,255,255,0.50)',
+  },
+  arrowText: {
+    fontSize: 22,
+    color: 'rgba(255,255,255,0.5)',
+    fontWeight: '600',
   },
   shimmer: {
     position: 'absolute',

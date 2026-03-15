@@ -1,7 +1,7 @@
 /**
  * PlayerMomentumRow — Horizontal scroll gradient stat cards.
  * Streak (coral), Kills (sky), Level (purple), Games (green).
- * Scroll-triggered: cards stagger in when scrolled into view.
+ * Scroll-triggered stagger entrance + count-up with bounce.
  */
 import React, { useCallback, useState } from 'react';
 import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
@@ -13,6 +13,7 @@ import Animated, {
   useDerivedValue,
   useSharedValue,
   withDelay,
+  withSequence,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
@@ -48,7 +49,6 @@ function buildCards(
 ): MomentumCard[] {
   const cards: MomentumCard[] = [];
 
-  // Streak FIRST — most motivating
   if (attendanceStreak > 0) {
     cards.push({
       emoji: '\u{1F525}',
@@ -98,12 +98,13 @@ function buildCards(
   return cards;
 }
 
-/** Animated wrapper per card — scroll-triggered stagger entrance + count-up */
+/** Animated wrapper per card — scroll-triggered stagger + count-up with bounce */
 function AnimatedCard({ card, index, entered }: { card: MomentumCard; index: number; entered: SharedValue<number> }) {
   const router = useRouter();
   const translateY = useSharedValue(20);
   const opacity = useSharedValue(0);
   const countVal = useSharedValue(0);
+  const numberScale = useSharedValue(1);
   const [displayNum, setDisplayNum] = useState(0);
 
   useAnimatedReaction(
@@ -113,6 +114,11 @@ function AnimatedCard({ card, index, entered }: { card: MomentumCard; index: num
         translateY.value = withDelay(index * 100, withSpring(0, { damping: 12, stiffness: 100 }));
         opacity.value = withDelay(index * 100, withTiming(1, { duration: 300 }));
         countVal.value = withDelay(index * 100, withTiming(card.value, { duration: 600, easing: Easing.out(Easing.ease) }));
+        // Bounce after count-up finishes
+        numberScale.value = withDelay(index * 100 + 600, withSequence(
+          withTiming(1.05, { duration: 100 }),
+          withSpring(1, { damping: 12, stiffness: 200 }),
+        ));
       }
     },
   );
@@ -125,6 +131,10 @@ function AnimatedCard({ card, index, entered }: { card: MomentumCard; index: num
   const entranceStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],
     opacity: opacity.value,
+  }));
+
+  const bounceStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: numberScale.value }],
   }));
 
   return (
@@ -143,7 +153,9 @@ function AnimatedCard({ card, index, entered }: { card: MomentumCard; index: num
           style={styles.card}
         >
           <Text style={styles.emoji}>{card.emoji}</Text>
-          <Text style={styles.value}>{displayNum}</Text>
+          <Animated.View style={bounceStyle}>
+            <Text style={styles.value}>{displayNum}</Text>
+          </Animated.View>
           <Text style={styles.label}>{card.label}</Text>
         </LinearGradient>
       </TouchableOpacity>
@@ -152,7 +164,6 @@ function AnimatedCard({ card, index, entered }: { card: MomentumCard; index: num
 }
 
 export default function PlayerMomentumRow({ seasonStats, attendanceStreak, level, scrollY }: Props) {
-  // Scroll entrance (hooks above early return)
   const componentY = useSharedValue(0);
   const entered = useSharedValue(0);
 
