@@ -2,18 +2,22 @@
  * PlayerHomeScroll — D+ redesigned scroll-driven player home.
  * Dark mode (#0D1B3E) — game-menu feel, action center not dashboard.
  *
- * Final scroll order:
- *   1. PlayerIdentityHero (greeting, identity, streak, level/XP)
- *   2. PlayerDailyQuests (3 quests with XP rewards)
- *   3. PlayerLeaderboardPreview (team ranking, competition)
- *   4. PlayerPropsSection — Props from the Team (social proof)
- *   5. PlayerContinueTraining (Journey Path teaser)
- *   6. NextUpCard (next event with +XP on RSVP)
- *   7. PlayerMomentumRow (horizontal gradient cards)
- *   8. LastGameStats (restyled with stat colors)
- *   9. PlayerTrophyCase (Fortnite-style badge grid)
- *  10. PlayerTeamActivity (team feed)
- *  11. PlayerAmbientCloser (mascot + data message)
+ * Final scroll order (15 sections, engagement-optimized):
+ *   1. PlayerIdentityHero (greeting, identity, streak pill, level/XP, mascot)
+ *   2. CompetitiveNudge ("3 more aces to take #7" — dynamic action bar)
+ *   3. PlayerQuickLinks (My Card, Teammates, My Stats pills)
+ *   4. PlayerDailyQuests (3 quests with XP rewards)
+ *   5. PlayerChallengeCard (active challenge with progress — conditional)
+ *   6. PlayerLeaderboardPreview (team rankings)
+ *   7. PlayerPropsSection — Shoutouts / Props from the Team
+ *   8. PlayerTeamHubCard (team hub entry with notification pill)
+ *   9. PlayerContinueTraining (Journey Path teaser)
+ *  10. NextUpCard (next event with +XP on RSVP)
+ *  11. PlayerMomentumRow (streak, kills, level, games — gradient cards)
+ *  12. LastGameStats (restyled with stat colors + count-up)
+ *  13. PlayerTrophyCase (Fortnite-style badge grid)
+ *  14. PlayerTeamActivity (team feed)
+ *  15. PlayerAmbientCloser (mascot + data message)
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -360,7 +364,7 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           </TouchableOpacity>
         )}
 
-        {/* ─── 2. COMPETITIVE NUDGE ──────────────────────────────── */}
+        {/* ─── 2. COMPETITIVE NUDGE ─────────────────────────────── */}
         <CompetitiveNudge
           bestRank={data.bestRank}
           personalBest={data.personalBest}
@@ -370,13 +374,13 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           scrollY={scrollY}
         />
 
-        {/* ─── QUICK LINKS (My Card, Teammates, My Stats) ──────── */}
+        {/* ─── 3. QUICK LINKS (My Card, Teammates, My Stats) ───── */}
         <PlayerQuickLinks
           playerId={playerId}
           teamId={data.primaryTeam?.id}
         />
 
-        {/* ─── 3. DAILY QUESTS ─────────────────────────────────── */}
+        {/* ─── 4. DAILY QUESTS ─────────────────────────────────── */}
         <PlayerDailyQuests
           nextEvent={data.nextEvent}
           rsvpStatus={data.rsvpStatus}
@@ -386,14 +390,14 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           onOpenShoutout={() => setShowShoutoutModal(true)}
         />
 
-        {/* ─── ACTIVE CHALLENGE (conditional) ──────────────────── */}
+        {/* ─── 5. ACTIVE CHALLENGE (conditional) ────────────────── */}
         <PlayerChallengeCard
           available={data.challengesAvailable}
           teamId={data.primaryTeam?.id}
           scrollY={scrollY}
         />
 
-        {/* ─── 3. LEADERBOARD PREVIEW ─────────────────────────── */}
+        {/* ─── 6. LEADERBOARD PREVIEW ─────────────────────────── */}
         <PlayerLeaderboardPreview
           bestRank={data.bestRank}
           xp={data.xp}
@@ -401,23 +405,23 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           playerName={data.playerName}
         />
 
-        {/* ─── 4. PROPS FROM THE TEAM (shoutouts) ────────────── */}
+        {/* ─── 7. PROPS FROM THE TEAM (shoutouts) ────────────── */}
         <PlayerPropsSection
           shoutouts={data.recentShoutouts}
           onGiveShoutout={() => setShowShoutoutModal(true)}
         />
 
-        {/* ─── TEAM HUB ENTRY ────────────────────────────────── */}
+        {/* ─── 8. TEAM HUB ENTRY ──────────────────────────────── */}
         <PlayerTeamHubCard
           teamName={data.primaryTeam?.name || ''}
           teamColor={data.primaryTeam?.color || null}
           teamId={data.primaryTeam?.id}
         />
 
-        {/* ─── 5. CONTINUE TRAINING (teaser) ───────────────────── */}
+        {/* ─── 9. CONTINUE TRAINING (teaser) ───────────────────── */}
         <PlayerContinueTraining />
 
-        {/* ─── 6. NEXT UP — event + RSVP ──────────────────────── */}
+        {/* ─── 10. NEXT UP — event + RSVP ─────────────────────── */}
         <NextUpCard
           event={data.nextEvent}
           rsvpStatus={data.rsvpStatus}
@@ -425,7 +429,7 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           onRsvp={data.sendRsvp}
         />
 
-        {/* ─── 7. MOMENTUM CARDS ────────────────────────────── */}
+        {/* ─── 11. MOMENTUM CARDS ───────────────────────────── */}
         <PlayerMomentumRow
           seasonStats={data.seasonStats}
           attendanceStreak={data.attendanceStreak}
@@ -433,7 +437,7 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           scrollY={scrollY}
         />
 
-        {/* ─── 8. LAST GAME STATS ─────────────────────────────── */}
+        {/* ─── 12. LAST GAME STATS ────────────────────────────── */}
         <LastGameStats
           lastGame={data.lastGame}
           position={data.position}
@@ -441,7 +445,7 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           scrollY={scrollY}
         />
 
-        {/* ─── 9. TROPHY CASE ──────────────────────────────── */}
+        {/* ─── 13. TROPHY CASE ─────────────────────────────── */}
         <PlayerTrophyCase
           badges={data.badges}
           level={data.level}
@@ -450,7 +454,7 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           scrollY={scrollY}
         />
 
-        {/* ─── 10. TEAM ACTIVITY ────────────────────────────── */}
+        {/* ─── 14. TEAM ACTIVITY ───────────────────────────── */}
         <PlayerTeamActivity
           recentShoutouts={data.recentShoutouts}
           badges={data.badges}
@@ -459,7 +463,7 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           scrollY={scrollY}
         />
 
-        {/* ─── 11. AMBIENT CLOSER ─────────────────────────────── */}
+        {/* ─── 15. AMBIENT CLOSER ────────────────────────────── */}
         <PlayerAmbientCloser
           xpToNext={data.xpToNext}
           level={data.level}
