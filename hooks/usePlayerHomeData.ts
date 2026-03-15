@@ -7,7 +7,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
-import { calculateStreakWithFreeze } from '@/lib/streak-engine';
+import { calculateStreakWithFreeze, checkStreakState, StreakState } from '@/lib/streak-engine';
+import { calculateLevel } from '@/lib/quest-engine';
 import { supabase } from '@/lib/supabase';
 
 /** Local date string (YYYY-MM-DD) to avoid UTC timezone shift issues */
@@ -163,6 +164,13 @@ export function usePlayerHomeData(playerId: string | null) {
 
   // Feature flags
   const [challengesAvailable, setChallengesAvailable] = useState(false);
+
+  // Engagement system
+  const [dbXp, setDbXp] = useState(0);
+  const [dbLevel, setDbLevel] = useState(1);
+  const [dbTier, setDbTier] = useState('Rookie');
+  const [dbXpToNext, setDbXpToNext] = useState(100);
+  const [engagementStreak, setEngagementStreak] = useState<StreakState | null>(null);
 
   // ─── Fetch all data ──
   const fetchAll = useCallback(async () => {
@@ -471,6 +479,34 @@ export function usePlayerHomeData(playerId: string | null) {
           setChallengesAvailable(false);
         }
       }
+
+      // 14. Engagement system — DB XP + streak
+      const engProfileId = playerData.parent_account_id;
+      if (engProfileId) {
+        try {
+          const { data: engData } = await supabase
+            .from('profiles')
+            .select('total_xp, player_level, tier, xp_to_next_level')
+            .eq('id', engProfileId)
+            .single();
+
+          if (engData) {
+            setDbXp(engData.total_xp ?? 0);
+            setDbLevel(engData.player_level ?? 1);
+            setDbTier(engData.tier ?? 'Rookie');
+            setDbXpToNext(engData.xp_to_next_level ?? 100);
+          }
+        } catch {
+          // DB engagement columns may not exist yet — fall back silently
+        }
+
+        try {
+          const streakState = await checkStreakState(engProfileId);
+          setEngagementStreak(streakState);
+        } catch {
+          // streak_data table may not exist yet — fall back silently
+        }
+      }
     } catch (err) {
       if (__DEV__) console.error('[usePlayerHomeData] Error:', err);
     } finally {
@@ -507,11 +543,13 @@ export function usePlayerHomeData(playerId: string | null) {
     }
   }, [playerId, nextEvent]);
 
-  // Computed values
-  const xp = useMemo(() => computeXP(seasonStats, badges.length), [seasonStats, badges.length]);
-  const level = Math.floor(xp / 1000) + 1;
+  // Computed values — use DB XP if available, else fall back to formula
+  const computedXp = useMemo(() => computeXP(seasonStats, badges.length), [seasonStats, badges.length]);
+  const xp = dbXp > 0 ? dbXp : computedXp;
+  const level = dbXp > 0 ? dbLevel : Math.floor(computedXp / 1000) + 1;
+  const tier = dbTier;
   const xpProgress = xp > 0 ? ((xp % 1000) / 1000) * 100 : 0;
-  const xpToNext = 1000 - (xp % 1000);
+  const xpToNext = dbXp > 0 ? dbXpToNext : 1000 - (computedXp % 1000);
   const ovr = useMemo(() => computeOVR(seasonStats), [seasonStats]);
 
   const primaryTeam = teams[0] || null;
@@ -538,6 +576,7 @@ export function usePlayerHomeData(playerId: string | null) {
     // Computed
     xp,
     level,
+    tier,
     xpProgress,
     xpToNext,
     ovr,
@@ -548,6 +587,8 @@ export function usePlayerHomeData(playerId: string | null) {
     sendRsvp,
     attendanceStreak,
     streakFreezeUsed,
+    // Engagement
+    engagementStreak,
     // Social
     recentPhotos,
     recentShoutouts,
