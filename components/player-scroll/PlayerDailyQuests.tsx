@@ -1,12 +1,10 @@
 /**
  * PlayerDailyQuests — "TODAY'S QUESTS" section with 3 quest cards.
- * Quests are generated from EXISTING data — no new backend needed.
- * DISPLAY ONLY for now — they show quest cards with XP rewards but
- * don't actually award XP. The future engagement system will wire
- * real quest completion + XP awards.
+ * Wired to the engagement system: reads from daily_quests table via
+ * useQuestEngine. Tapping a quest marks it complete and awards XP.
  */
-import React, { useEffect, useMemo } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect } from 'react';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -17,116 +15,31 @@ import Animated, {
 import { FONTS } from '@/theme/fonts';
 import { PLAYER_THEME } from '@/theme/player-theme';
 import { D_COLORS, D_RADII } from '@/theme/d-system';
+import { useQuestEngine } from '@/hooks/useQuestEngine';
+import type { DailyQuest } from '@/lib/quest-engine';
 import type { NextEvent, RsvpStatus, RecentShoutout, PlayerBadge } from '@/hooks/usePlayerHomeData';
 
 type Props = {
-  nextEvent: NextEvent | null;
-  rsvpStatus: RsvpStatus;
-  challengesAvailable: boolean;
-  recentShoutouts: RecentShoutout[];
-  badges: PlayerBadge[];
+  nextEvent?: NextEvent | null;
+  rsvpStatus?: RsvpStatus;
+  challengesAvailable?: boolean;
+  recentShoutouts?: RecentShoutout[];
+  badges?: PlayerBadge[];
   onOpenShoutout?: () => void;
 };
 
-type Quest = {
-  id: string;
-  text: string;
-  xp: number;
-  completed: boolean;
-};
-
-/** Check if event_date is today */
-function isToday(dateStr: string): boolean {
-  const d = new Date();
-  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  return dateStr === today;
-}
-
-function buildQuests(
-  nextEvent: NextEvent | null,
-  rsvpStatus: RsvpStatus,
-  challengesAvailable: boolean,
-  recentShoutouts: RecentShoutout[],
-  badges: PlayerBadge[],
-): Quest[] {
-  const quests: Quest[] = [];
-
-  // Quest 1: Always present — "Open Lynx today" auto-completed
-  quests.push({
-    id: 'open-lynx',
-    text: 'Open Lynx today',
-    xp: 5,
-    completed: true,
-  });
-
-  // Quest 2: pick first that applies
-  if (nextEvent && isToday(nextEvent.event_date)) {
-    const eventType = nextEvent.event_type === 'game' ? 'game' : 'practice';
-    const isConfirmed = rsvpStatus === 'confirmed' || rsvpStatus === 'yes';
-    quests.push({
-      id: 'show-up',
-      text: `Show up to ${eventType} today`,
-      xp: 20,
-      completed: isConfirmed,
-    });
-  } else if (challengesAvailable) {
-    quests.push({
-      id: 'challenge',
-      text: 'Work on your active challenge',
-      xp: 15,
-      completed: false,
-    });
-  } else {
-    quests.push({
-      id: 'check-stats',
-      text: 'Check your stats',
-      xp: 10,
-      completed: false,
-    });
-  }
-
-  // Quest 3: pick first that applies
-  if (recentShoutouts.length === 0) {
-    quests.push({
-      id: 'give-props',
-      text: 'Give a teammate props',
-      xp: 10,
-      completed: false,
-    });
-  } else if (badges.length > 0) {
-    const recentBadge = badges[0];
-    const earnedDate = new Date(recentBadge.earned_at);
-    const threeDaysAgo = new Date();
-    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-    if (earnedDate > threeDaysAgo) {
-      quests.push({
-        id: 'view-badge',
-        text: 'View your new badge',
-        xp: 5,
-        completed: false,
-      });
-    } else {
-      quests.push({
-        id: 'check-leaderboard',
-        text: 'Check the leaderboard',
-        xp: 10,
-        completed: false,
-      });
-    }
-  } else {
-    quests.push({
-      id: 'check-leaderboard',
-      text: 'Check the leaderboard',
-      xp: 10,
-      completed: false,
-    });
-  }
-
-  return quests;
-}
-
 /** Animated quest card with spring pop on checkmark */
-function QuestCard({ quest, index }: { quest: Quest; index: number }) {
+function QuestCard({
+  quest,
+  index,
+  completing,
+  onComplete,
+}: {
+  quest: DailyQuest;
+  index: number;
+  completing: string | null;
+  onComplete: (id: string) => void;
+}) {
   const scale = useSharedValue(0.9);
   const opacity = useSharedValue(0);
 
@@ -140,44 +53,48 @@ function QuestCard({ quest, index }: { quest: Quest; index: number }) {
     opacity: opacity.value,
   }));
 
-  const bgColor = quest.completed ? D_COLORS.questBgDone : D_COLORS.questBgActive;
-  const borderColor = quest.completed ? D_COLORS.questBorderDone : D_COLORS.questBorderActive;
+  const bgColor = quest.is_completed ? D_COLORS.questBgDone : D_COLORS.questBgActive;
+  const borderColor = quest.is_completed ? D_COLORS.questBorderDone : D_COLORS.questBorderActive;
+  const isCompleting = completing === quest.id;
 
   return (
-    <Animated.View style={[styles.questCard, { backgroundColor: bgColor, borderColor }, animStyle]}>
-      {/* Checkbox */}
-      <View style={[styles.checkbox, quest.completed && styles.checkboxDone]}>
-        {quest.completed && <Text style={styles.checkmark}>{'\u2713'}</Text>}
-      </View>
+    <TouchableOpacity
+      activeOpacity={quest.is_completed ? 1 : 0.7}
+      onPress={() => {
+        if (!quest.is_completed && !isCompleting) {
+          onComplete(quest.id);
+        }
+      }}
+    >
+      <Animated.View style={[styles.questCard, { backgroundColor: bgColor, borderColor }, animStyle]}>
+        {/* Checkbox */}
+        <View style={[styles.checkbox, quest.is_completed && styles.checkboxDone]}>
+          {isCompleting ? (
+            <ActivityIndicator size={10} color={PLAYER_THEME.accent} />
+          ) : quest.is_completed ? (
+            <Text style={styles.checkmark}>{'\u2713'}</Text>
+          ) : null}
+        </View>
 
-      {/* Quest text */}
-      <Text
-        style={[styles.questText, quest.completed && styles.questTextDone]}
-        numberOfLines={1}
-      >
-        {quest.text}
-      </Text>
+        {/* Quest text */}
+        <Text
+          style={[styles.questText, quest.is_completed && styles.questTextDone]}
+          numberOfLines={1}
+        >
+          {quest.title}
+        </Text>
 
-      {/* XP reward */}
-      <Text style={styles.xpReward}>+{quest.xp} XP</Text>
-    </Animated.View>
+        {/* XP reward */}
+        <Text style={styles.xpReward}>+{quest.xp_reward} XP</Text>
+      </Animated.View>
+    </TouchableOpacity>
   );
 }
 
-export default function PlayerDailyQuests({
-  nextEvent,
-  rsvpStatus,
-  challengesAvailable,
-  recentShoutouts,
-  badges,
-}: Props) {
-  const quests = useMemo(
-    () => buildQuests(nextEvent, rsvpStatus, challengesAvailable, recentShoutouts, badges),
-    [nextEvent, rsvpStatus, challengesAvailable, recentShoutouts, badges],
-  );
+export default function PlayerDailyQuests(_props: Props) {
+  const { quests, loading, completing, allComplete, bonusEarned, completeQuest } = useQuestEngine();
 
-  const doneCount = quests.filter(q => q.completed).length;
-  const allDone = doneCount === quests.length;
+  const doneCount = quests.filter(q => q.is_completed).length;
   const bonusXp = 25;
 
   return (
@@ -186,21 +103,40 @@ export default function PlayerDailyQuests({
       <View style={styles.header}>
         <Text style={styles.headerTitle}>TODAY'S QUESTS</Text>
         <Text style={styles.headerCount}>
-          {doneCount}/{quests.length} done
+          {loading ? '' : `${doneCount}/${quests.length} done`}
         </Text>
       </View>
 
       {/* Quest cards */}
-      {quests.map((quest, index) => (
-        <QuestCard key={quest.id} quest={quest} index={index} />
-      ))}
+      {loading ? (
+        // Show placeholder cards with same dimensions to prevent layout shift
+        <>
+          {[0, 1, 2].map(i => (
+            <View key={i} style={[styles.questCard, { backgroundColor: D_COLORS.questBgActive, borderColor: D_COLORS.questBorderActive, opacity: 0.4 }]}>
+              <View style={styles.checkbox} />
+              <Text style={[styles.questText, { opacity: 0.3 }]}>Loading...</Text>
+              <Text style={[styles.xpReward, { opacity: 0.3 }]}>+0 XP</Text>
+            </View>
+          ))}
+        </>
+      ) : (
+        quests.map((quest, index) => (
+          <QuestCard
+            key={quest.id}
+            quest={quest}
+            index={index}
+            completing={completing}
+            onComplete={completeQuest}
+          />
+        ))
+      )}
 
       {/* Daily bonus bar */}
-      <View style={[styles.bonusBar, allDone && styles.bonusBarDone]}>
-        <Text style={[styles.bonusText, allDone && styles.bonusTextDone]}>
-          {allDone
+      <View style={[styles.bonusBar, (allComplete || bonusEarned) && styles.bonusBarDone]}>
+        <Text style={[styles.bonusText, (allComplete || bonusEarned) && styles.bonusTextDone]}>
+          {bonusEarned
             ? `All done! +${bonusXp} XP bonus earned`
-            : `Complete all ${quests.length} for +${bonusXp} XP bonus`}
+            : `Complete all 3 for +${bonusXp} XP bonus`}
         </Text>
       </View>
     </View>
