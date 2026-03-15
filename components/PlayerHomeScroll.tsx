@@ -52,6 +52,7 @@ import PlayerIdentityHero from './player-scroll/PlayerIdentityHero';
 import PlayerDailyQuests from './player-scroll/PlayerDailyQuests';
 import PlayerLeaderboardPreview from './player-scroll/PlayerLeaderboardPreview';
 import PlayerPropsSection from './player-scroll/PlayerPropsSection';
+import PlayerContinueTraining from './player-scroll/PlayerContinueTraining';
 import HeroIdentityCard from './player-scroll/HeroIdentityCard';
 import StreakBanner from './player-scroll/StreakBanner';
 import TheDrop from './player-scroll/TheDrop';
@@ -373,6 +374,9 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           shoutouts={data.recentShoutouts}
           onGiveShoutout={() => setShowShoutoutModal(true)}
         />
+
+        {/* ─── 5. CONTINUE TRAINING (teaser) ───────────────────── */}
+        <PlayerContinueTraining />
 
         {/* ─── 1b. MY TEAM (one-tap to roster) ─────────────────── */}
         {data.primaryTeam && (
