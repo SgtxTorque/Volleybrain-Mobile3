@@ -246,7 +246,7 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
-          { flexGrow: 1, paddingBottom: 140 },
+          { flexGrow: 1, paddingBottom: 140, minHeight: '110%' },
           isTabletAny && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%', paddingHorizontal: contentPadding },
         ]}
         refreshControl={
