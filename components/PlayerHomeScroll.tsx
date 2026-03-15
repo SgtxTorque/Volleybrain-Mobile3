@@ -52,6 +52,7 @@ import NoTeamState from './empty-states/NoTeamState';
 import PlayerIdentityHero from './player-scroll/PlayerIdentityHero';
 import CompetitiveNudge from './player-scroll/CompetitiveNudge';
 import PlayerDailyQuests from './player-scroll/PlayerDailyQuests';
+import PlayerChallengeCard from './player-scroll/PlayerChallengeCard';
 import PlayerLeaderboardPreview from './player-scroll/PlayerLeaderboardPreview';
 import PlayerPropsSection from './player-scroll/PlayerPropsSection';
 import PlayerContinueTraining from './player-scroll/PlayerContinueTraining';
@@ -374,6 +375,12 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           recentShoutouts={data.recentShoutouts}
           badges={data.badges}
           onOpenShoutout={() => setShowShoutoutModal(true)}
+        />
+
+        {/* ─── ACTIVE CHALLENGE (conditional) ──────────────────── */}
+        <PlayerChallengeCard
+          available={data.challengesAvailable}
+          teamId={data.primaryTeam?.id}
         />
 
         {/* ─── 3. LEADERBOARD PREVIEW ─────────────────────────── */}
