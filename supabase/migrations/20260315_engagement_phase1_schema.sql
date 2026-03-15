@@ -21,3 +21,68 @@ ALTER TABLE xp_ledger ADD COLUMN IF NOT EXISTS multiplier NUMERIC(3,2) DEFAULT 1
 -- ---------------------------------------------------------------------------
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS tier TEXT DEFAULT 'Rookie';
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS xp_to_next_level INTEGER DEFAULT 100;
+
+-- ---------------------------------------------------------------------------
+-- daily_quests: 3 generated quests per player per day
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS daily_quests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  player_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  team_id UUID REFERENCES teams(id) ON DELETE SET NULL,
+  quest_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  quest_type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  xp_reward INTEGER NOT NULL,
+  verification_type TEXT NOT NULL DEFAULT 'automatic',
+  target_value INTEGER DEFAULT 1,
+  current_value INTEGER DEFAULT 0,
+  is_completed BOOLEAN DEFAULT FALSE,
+  completed_at TIMESTAMPTZ,
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(player_id, quest_date, sort_order)
+);
+
+CREATE INDEX idx_daily_quests_player_date ON daily_quests(player_id, quest_date);
+CREATE INDEX idx_daily_quests_date ON daily_quests(quest_date);
+
+-- ---------------------------------------------------------------------------
+-- weekly_quests: 3-5 generated quests per player per week (reset Monday)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS weekly_quests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  player_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  team_id UUID REFERENCES teams(id) ON DELETE SET NULL,
+  week_start DATE NOT NULL,
+  quest_type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  xp_reward INTEGER NOT NULL,
+  verification_type TEXT NOT NULL DEFAULT 'automatic',
+  target_value INTEGER DEFAULT 1,
+  current_value INTEGER DEFAULT 0,
+  is_completed BOOLEAN DEFAULT FALSE,
+  completed_at TIMESTAMPTZ,
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(player_id, week_start, sort_order)
+);
+
+CREATE INDEX idx_weekly_quests_player_week ON weekly_quests(player_id, week_start);
+CREATE INDEX idx_weekly_quests_week ON weekly_quests(week_start);
+
+-- ---------------------------------------------------------------------------
+-- quest_bonus_tracking: Tracks daily all-3 bonus and weekly all-complete bonus
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS quest_bonus_tracking (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  player_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  bonus_type TEXT NOT NULL,
+  period_date DATE NOT NULL,
+  xp_awarded INTEGER NOT NULL,
+  completed_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(player_id, bonus_type, period_date)
+);
+
+CREATE INDEX idx_quest_bonus_player ON quest_bonus_tracking(player_id, bonus_type, period_date);
