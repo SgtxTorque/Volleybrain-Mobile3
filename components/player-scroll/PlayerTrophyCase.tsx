@@ -1,18 +1,19 @@
 /**
  * PlayerTrophyCase — Fortnite-style dark badge grid with rarity dots.
- * Uses badge data from usePlayerHomeData (already fetched).
- * Does NOT modify the shared TrophyCaseWidget.tsx.
+ * Scroll-triggered: badges pop-in with spring when scrolled into view.
  */
-import React, { useEffect } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback } from 'react';
+import { Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
-  cancelAnimation,
+  useAnimatedReaction,
   useAnimatedStyle,
+  useDerivedValue,
   useSharedValue,
   withDelay,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import type { SharedValue } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FONTS } from '@/theme/fonts';
@@ -20,11 +21,14 @@ import { PLAYER_THEME } from '@/theme/player-theme';
 import { D_RADII } from '@/theme/d-system';
 import type { PlayerBadge } from '@/hooks/usePlayerHomeData';
 
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+
 type Props = {
   badges: PlayerBadge[];
   level: number;
   xpProgress: number;
   xpCurrent: number;
+  scrollY: SharedValue<number>;
 };
 
 const RARITY_DOT: Record<string, string> = {
@@ -34,7 +38,6 @@ const RARITY_DOT: Record<string, string> = {
   legendary: '#FFD700',
 };
 
-// Placeholder locked badges so the grid always has content (aspiration)
 const LOCKED_PLACEHOLDERS = [
   { icon: '\u{1F3C6}', name: 'Champion', rarity: 'epic' },
   { icon: '\u{1F4AA}', name: 'Power Hitter', rarity: 'rare' },
@@ -46,30 +49,34 @@ const LOCKED_PLACEHOLDERS = [
   { icon: '\u{1F451}', name: 'MVP', rarity: 'legendary' },
 ];
 
-/** Animated badge cell with pop-in spring */
+/** Animated badge cell — scroll-triggered pop-in spring */
 function PopBadge({
   icon,
   name,
   earned,
   rarity,
   index,
+  entered,
 }: {
   icon: string;
   name: string;
   earned: boolean;
   rarity: string;
   index: number;
+  entered: SharedValue<number>;
 }) {
   const scale = useSharedValue(0.8);
   const opacity = useSharedValue(0);
 
-  useEffect(() => {
-    scale.value = withDelay(index * 50, withSpring(1, { damping: 12, stiffness: 120 }));
-    opacity.value = withDelay(index * 50, withTiming(1, { duration: 300 }));
-    return () => {
-      cancelAnimation(scale);
-    };
-  }, []);
+  useAnimatedReaction(
+    () => entered.value,
+    (val, prev) => {
+      if (val === 1 && (prev === null || prev === 0)) {
+        scale.value = withDelay(index * 50, withSpring(1, { damping: 12, stiffness: 120 }));
+        opacity.value = withDelay(index * 50, withTiming(1, { duration: 300 }));
+      }
+    },
+  );
 
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -91,19 +98,38 @@ function PopBadge({
   );
 }
 
-export default function PlayerTrophyCase({ badges, level, xpProgress, xpCurrent }: Props) {
+export default function PlayerTrophyCase({ badges, level, xpProgress, xpCurrent, scrollY }: Props) {
   const router = useRouter();
 
-  // XP bar fill animation
+  // Scroll entrance
+  const componentY = useSharedValue(0);
+  const entered = useSharedValue(0);
+
+  const onLayoutCapture = useCallback((e: any) => {
+    componentY.value = e.nativeEvent.layout.y;
+  }, []);
+
+  useDerivedValue(() => {
+    if (entered.value === 0 && componentY.value > 0 && scrollY.value + SCREEN_HEIGHT > componentY.value - 50) {
+      entered.value = 1;
+    }
+  });
+
+  // XP bar fill — triggered on scroll entrance
   const xpBarWidth = useSharedValue(0);
-  useEffect(() => {
-    xpBarWidth.value = withDelay(200, withTiming(Math.min(xpProgress, 100), { duration: 800 }));
-  }, [xpProgress]);
+  useAnimatedReaction(
+    () => entered.value,
+    (val, prev) => {
+      if (val === 1 && (prev === null || prev === 0)) {
+        xpBarWidth.value = withDelay(200, withTiming(Math.min(xpProgress, 100), { duration: 800 }));
+      }
+    },
+  );
   const xpFillStyle = useAnimatedStyle(() => ({
     width: `${xpBarWidth.value}%` as any,
   }));
 
-  // Build display list: earned badges first, then fill with locked placeholders to 8
+  // Build display list
   const earnedBadges = badges.map((b) => ({
     icon: b.achievement?.icon || '\u{1F3C6}',
     name: b.achievement?.name || 'Badge',
@@ -127,6 +153,7 @@ export default function PlayerTrophyCase({ badges, level, xpProgress, xpCurrent 
       activeOpacity={0.85}
       onPress={() => router.push('/achievements' as any)}
       style={styles.container}
+      onLayout={onLayoutCapture}
     >
       <LinearGradient
         colors={[PLAYER_THEME.cardBg, '#162848']}
@@ -134,13 +161,11 @@ export default function PlayerTrophyCase({ badges, level, xpProgress, xpCurrent 
         end={{ x: 1, y: 1 }}
         style={styles.card}
       >
-        {/* Header */}
         <View style={styles.headerRow}>
           <Text style={styles.headerTitle}>{'\u{1F3C6}'} TROPHY CASE</Text>
           <Text style={styles.headerCount}>{earnedCount} / {allBadges.length} Unlocked</Text>
         </View>
 
-        {/* Badge grid — 4 columns, 2 rows */}
         <View style={styles.badgeGrid}>
           {allBadges.map((badge, i) => (
             <PopBadge
@@ -150,11 +175,11 @@ export default function PlayerTrophyCase({ badges, level, xpProgress, xpCurrent 
               earned={badge.earned}
               rarity={badge.rarity}
               index={i}
+              entered={entered}
             />
           ))}
         </View>
 
-        {/* Level row */}
         <View style={styles.levelRow}>
           <LinearGradient
             colors={[PLAYER_THEME.xpGold, '#FFA500']}
@@ -163,9 +188,7 @@ export default function PlayerTrophyCase({ badges, level, xpProgress, xpCurrent 
             <Text style={styles.levelNum}>{level}</Text>
           </LinearGradient>
           <View style={styles.levelInfo}>
-            <Text style={styles.levelText}>
-              Level {level}
-            </Text>
+            <Text style={styles.levelText}>Level {level}</Text>
             <View style={styles.xpBarBg}>
               <Animated.View style={[styles.xpBarFill, xpFillStyle]}>
                 <LinearGradient
@@ -203,7 +226,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: PLAYER_THEME.borderGold,
   },
-  // Header
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -221,7 +243,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: PLAYER_THEME.textMuted,
   },
-  // Badge grid
   badgeGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -269,7 +290,6 @@ const styles = StyleSheet.create({
   badgeNameLocked: {
     color: PLAYER_THEME.textFaint,
   },
-  // Level row
   levelRow: {
     flexDirection: 'row',
     alignItems: 'center',

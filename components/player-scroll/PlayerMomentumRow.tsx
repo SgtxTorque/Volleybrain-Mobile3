@@ -1,30 +1,35 @@
 /**
  * PlayerMomentumRow — Horizontal scroll gradient stat cards.
- * Kills (coral), Streak (amber), Level (purple), Games (green).
- * Only shows cards that have data > 0.
+ * Streak (coral), Kills (sky), Level (purple), Games (green).
+ * Scroll-triggered: cards stagger in when scrolled into view.
  */
-import React, { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { Dimensions, ScrollView, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import Animated, {
   Easing,
   runOnJS,
   useAnimatedReaction,
   useAnimatedStyle,
+  useDerivedValue,
   useSharedValue,
   withDelay,
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import type { SharedValue } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { FONTS } from '@/theme/fonts';
 import { D_COLORS, D_RADII } from '@/theme/d-system';
 
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+
 type Props = {
   seasonStats: Record<string, number> | null;
   attendanceStreak: number;
   level: number;
+  scrollY: SharedValue<number>;
 };
 
 type MomentumCard = {
@@ -93,19 +98,24 @@ function buildCards(
   return cards;
 }
 
-/** Animated wrapper per card — stagger entrance + count-up */
-function AnimatedCard({ card, index }: { card: MomentumCard; index: number }) {
+/** Animated wrapper per card — scroll-triggered stagger entrance + count-up */
+function AnimatedCard({ card, index, entered }: { card: MomentumCard; index: number; entered: SharedValue<number> }) {
   const router = useRouter();
   const translateY = useSharedValue(20);
   const opacity = useSharedValue(0);
   const countVal = useSharedValue(0);
   const [displayNum, setDisplayNum] = useState(0);
 
-  useEffect(() => {
-    translateY.value = withDelay(index * 100, withSpring(0, { damping: 12, stiffness: 100 }));
-    opacity.value = withDelay(index * 100, withTiming(1, { duration: 300 }));
-    countVal.value = withDelay(index * 100, withTiming(card.value, { duration: 600, easing: Easing.out(Easing.ease) }));
-  }, []);
+  useAnimatedReaction(
+    () => entered.value,
+    (val, prev) => {
+      if (val === 1 && (prev === null || prev === 0)) {
+        translateY.value = withDelay(index * 100, withSpring(0, { damping: 12, stiffness: 100 }));
+        opacity.value = withDelay(index * 100, withTiming(1, { duration: 300 }));
+        countVal.value = withDelay(index * 100, withTiming(card.value, { duration: 600, easing: Easing.out(Easing.ease) }));
+      }
+    },
+  );
 
   useAnimatedReaction(
     () => countVal.value,
@@ -141,7 +151,21 @@ function AnimatedCard({ card, index }: { card: MomentumCard; index: number }) {
   );
 }
 
-export default function PlayerMomentumRow({ seasonStats, attendanceStreak, level }: Props) {
+export default function PlayerMomentumRow({ seasonStats, attendanceStreak, level, scrollY }: Props) {
+  // Scroll entrance (hooks above early return)
+  const componentY = useSharedValue(0);
+  const entered = useSharedValue(0);
+
+  const onLayoutCapture = useCallback((e: any) => {
+    componentY.value = e.nativeEvent.layout.y;
+  }, []);
+
+  useDerivedValue(() => {
+    if (entered.value === 0 && componentY.value > 0 && scrollY.value + SCREEN_HEIGHT > componentY.value - 50) {
+      entered.value = 1;
+    }
+  });
+
   const cards = buildCards(seasonStats, attendanceStreak, level);
   if (cards.length === 0) return null;
 
@@ -151,9 +175,10 @@ export default function PlayerMomentumRow({ seasonStats, attendanceStreak, level
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.scrollContent}
       style={styles.scrollWrap}
+      onLayout={onLayoutCapture}
     >
       {cards.map((card, index) => (
-        <AnimatedCard key={card.label} card={card} index={index} />
+        <AnimatedCard key={card.label} card={card} index={index} entered={entered} />
       ))}
     </ScrollView>
   );

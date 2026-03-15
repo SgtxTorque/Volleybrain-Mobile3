@@ -367,6 +367,7 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           xpToNext={data.xpToNext}
           level={data.level}
           challengesAvailable={data.challengesAvailable}
+          scrollY={scrollY}
         />
 
         {/* ─── QUICK LINKS (My Card, Teammates, My Stats) ──────── */}
@@ -389,6 +390,7 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
         <PlayerChallengeCard
           available={data.challengesAvailable}
           teamId={data.primaryTeam?.id}
+          scrollY={scrollY}
         />
 
         {/* ─── 3. LEADERBOARD PREVIEW ─────────────────────────── */}
@@ -428,6 +430,7 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           seasonStats={data.seasonStats}
           attendanceStreak={data.attendanceStreak}
           level={data.level}
+          scrollY={scrollY}
         />
 
         {/* ─── 8. LAST GAME STATS ─────────────────────────────── */}
@@ -435,6 +438,7 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           lastGame={data.lastGame}
           position={data.position}
           personalBest={data.personalBest}
+          scrollY={scrollY}
         />
 
         {/* ─── 9. TROPHY CASE ──────────────────────────────── */}
@@ -443,6 +447,7 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           level={data.level}
           xpProgress={data.xpProgress}
           xpCurrent={data.xp}
+          scrollY={scrollY}
         />
 
         {/* ─── 10. TEAM ACTIVITY ────────────────────────────── */}
@@ -451,6 +456,7 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           badges={data.badges}
           lastGame={data.lastGame}
           teamId={data.primaryTeam?.id}
+          scrollY={scrollY}
         />
 
         {/* ─── 11. AMBIENT CLOSER ─────────────────────────────── */}

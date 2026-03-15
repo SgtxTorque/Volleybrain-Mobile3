@@ -1,26 +1,33 @@
 /**
  * PlayerTeamActivity — "TEAM ACTIVITY" feed showing recent shoutouts,
  * badge earns, game results from available data.
+ * Scroll-triggered: items slide in from right when scrolled into view.
  */
-import React, { useEffect, useMemo } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useMemo } from 'react';
+import { Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
+  useAnimatedReaction,
   useAnimatedStyle,
+  useDerivedValue,
   useSharedValue,
   withDelay,
   withTiming,
 } from 'react-native-reanimated';
+import type { SharedValue } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { FONTS } from '@/theme/fonts';
 import { PLAYER_THEME } from '@/theme/player-theme';
 import { D_RADII } from '@/theme/d-system';
 import type { RecentShoutout, PlayerBadge, LastGameStats } from '@/hooks/usePlayerHomeData';
 
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+
 type Props = {
   recentShoutouts: RecentShoutout[];
   badges: PlayerBadge[];
   lastGame: LastGameStats | null;
   teamId: string | undefined;
+  scrollY: SharedValue<number>;
 };
 
 type FeedItem = {
@@ -49,7 +56,6 @@ function buildFeed(
 ): FeedItem[] {
   const items: FeedItem[] = [];
 
-  // Shoutouts
   for (const s of shoutouts.slice(0, 2)) {
     items.push({
       id: `shout-${s.id}`,
@@ -59,7 +65,6 @@ function buildFeed(
     });
   }
 
-  // Recent badges
   for (const b of badges.slice(0, 2)) {
     if (b.achievement?.name) {
       items.push({
@@ -71,7 +76,6 @@ function buildFeed(
     }
   }
 
-  // Last game result
   if (lastGame && lastGame.our_score != null && lastGame.opponent_score != null) {
     const won = lastGame.our_score > lastGame.opponent_score;
     const emoji = won ? '\u{1F3C6}' : '\u{1F4AA}';
@@ -88,15 +92,20 @@ function buildFeed(
   return items.slice(0, 3);
 }
 
-/** Animated feed item with stagger */
-function FeedRow({ item, index }: { item: FeedItem; index: number }) {
+/** Animated feed item — scroll-triggered slide from right with stagger */
+function FeedRow({ item, index, entered }: { item: FeedItem; index: number; entered: SharedValue<number> }) {
   const opacity = useSharedValue(0);
-  const translateX = useSharedValue(-15);
+  const translateX = useSharedValue(30);
 
-  useEffect(() => {
-    opacity.value = withDelay(index * 60, withTiming(1, { duration: 300 }));
-    translateX.value = withDelay(index * 60, withTiming(0, { duration: 300 }));
-  }, []);
+  useAnimatedReaction(
+    () => entered.value,
+    (val, prev) => {
+      if (val === 1 && (prev === null || prev === 0)) {
+        opacity.value = withDelay(index * 60, withTiming(1, { duration: 300 }));
+        translateX.value = withDelay(index * 60, withTiming(0, { duration: 300 }));
+      }
+    },
+  );
 
   const animStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,
@@ -114,8 +123,23 @@ function FeedRow({ item, index }: { item: FeedItem; index: number }) {
   );
 }
 
-export default function PlayerTeamActivity({ recentShoutouts, badges, lastGame, teamId }: Props) {
+export default function PlayerTeamActivity({ recentShoutouts, badges, lastGame, teamId, scrollY }: Props) {
   const router = useRouter();
+
+  // Scroll entrance hooks (above early return)
+  const componentY = useSharedValue(0);
+  const entered = useSharedValue(0);
+
+  const onLayoutCapture = useCallback((e: any) => {
+    componentY.value = e.nativeEvent.layout.y;
+  }, []);
+
+  useDerivedValue(() => {
+    if (entered.value === 0 && componentY.value > 0 && scrollY.value + SCREEN_HEIGHT > componentY.value - 50) {
+      entered.value = 1;
+    }
+  });
+
   const feed = useMemo(
     () => buildFeed(recentShoutouts, badges, lastGame),
     [recentShoutouts, badges, lastGame],
@@ -124,7 +148,7 @@ export default function PlayerTeamActivity({ recentShoutouts, badges, lastGame, 
   if (feed.length === 0) return null;
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} onLayout={onLayoutCapture}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>TEAM ACTIVITY</Text>
         <TouchableOpacity onPress={() => router.push('/(tabs)/connect' as any)} activeOpacity={0.7}>
@@ -132,7 +156,7 @@ export default function PlayerTeamActivity({ recentShoutouts, badges, lastGame, 
         </TouchableOpacity>
       </View>
       {feed.map((item, index) => (
-        <FeedRow key={item.id} item={item} index={index} />
+        <FeedRow key={item.id} item={item} index={index} entered={entered} />
       ))}
     </View>
   );

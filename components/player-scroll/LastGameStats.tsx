@@ -1,34 +1,41 @@
 /**
  * LastGameStats — Compact 4-column grid of last game stats.
- * Phase 6A: Shows top 4 stats with personal best callout.
- * Hides if no game stats exist.
+ * Scroll-triggered: numbers count up when scrolled into view.
  */
-import React, { useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import Animated, {
+  Easing,
+  runOnJS,
+  useAnimatedReaction,
   useAnimatedStyle,
+  useDerivedValue,
   useSharedValue,
+  withDelay,
   withTiming,
 } from 'react-native-reanimated';
+import type { SharedValue } from 'react-native-reanimated';
 import { FONTS } from '@/theme/fonts';
 import type { LastGameStats as LastGameStatsType } from '@/hooks/usePlayerHomeData';
-
 import { PLAYER_THEME } from '@/theme/player-theme';
 import { D_RADII } from '@/theme/d-system';
 
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+
 const STAT_COLORS: Record<string, string> = {
-  kills: '#FF6B6B',    // coral
-  aces: '#22C55E',     // green
-  digs: '#F59E0B',     // amber
-  blocks: '#8B5CF6',   // purple
-  assists: '#4BB9EC',  // sky
-  points: '#FFD700',   // gold
+  kills: '#FF6B6B',
+  aces: '#22C55E',
+  digs: '#F59E0B',
+  blocks: '#8B5CF6',
+  assists: '#4BB9EC',
+  points: '#FFD700',
 };
 
 type Props = {
   lastGame: LastGameStatsType | null;
   position: string | null;
   personalBest: string | null;
+  scrollY: SharedValue<number>;
 };
 
 type StatItem = {
@@ -50,7 +57,6 @@ function getTopStats(
     { label: 'Points', value: game.points, key: 'points' },
   ];
 
-  // Position-based ordering: setter → assists first, hitter → kills first
   const pos = (position || '').toLowerCase();
   if (pos.includes('set')) {
     all.sort((a, b) => {
@@ -59,7 +65,6 @@ function getTopStats(
       return b.value - a.value;
     });
   } else {
-    // Default: sort by value descending, kills first tiebreak
     all.sort((a, b) => {
       if (b.value !== a.value) return b.value - a.value;
       if (a.key === 'kills') return -1;
@@ -71,31 +76,60 @@ function getTopStats(
   return all.slice(0, 4);
 }
 
-function StatBox({ item }: { item: StatItem }) {
-  const animOpacity = useSharedValue(0);
+function StatBox({ item, index, entered }: { item: StatItem; index: number; entered: SharedValue<number> }) {
+  const countVal = useSharedValue(0);
+  const labelOpacity = useSharedValue(0);
+  const [displayNum, setDisplayNum] = useState(0);
 
-  useEffect(() => {
-    animOpacity.value = withTiming(1, { duration: 400 });
-  }, []);
+  useAnimatedReaction(
+    () => entered.value,
+    (val, prev) => {
+      if (val === 1 && (prev === null || prev === 0)) {
+        countVal.value = withDelay(
+          index * 100,
+          withTiming(item.value, { duration: 600, easing: Easing.out(Easing.ease) }),
+        );
+        labelOpacity.value = withDelay(index * 100 + 600, withTiming(1, { duration: 300 }));
+      }
+    },
+  );
 
-  const fadeStyle = useAnimatedStyle(() => ({
-    opacity: animOpacity.value,
+  useAnimatedReaction(
+    () => countVal.value,
+    (val) => { runOnJS(setDisplayNum)(Math.round(val)); },
+  );
+
+  const labelStyle = useAnimatedStyle(() => ({
+    opacity: labelOpacity.value,
   }));
 
   const statColor = STAT_COLORS[item.key] || PLAYER_THEME.textPrimary;
 
   return (
-    <Animated.View style={[styles.statBox, fadeStyle]}>
-      <Text style={[styles.statValue, { color: statColor }]}>{item.value}</Text>
-      <Text style={styles.statLabel}>{item.label.toUpperCase()}</Text>
-    </Animated.View>
+    <View style={styles.statBox}>
+      <Text style={[styles.statValue, { color: statColor }]}>{displayNum}</Text>
+      <Animated.Text style={[styles.statLabel, labelStyle]}>{item.label.toUpperCase()}</Animated.Text>
+    </View>
   );
 }
 
-export default function LastGameStats({ lastGame, position, personalBest }: Props) {
+export default function LastGameStats({ lastGame, position, personalBest, scrollY }: Props) {
+  // Scroll entrance hooks (MUST be above early returns)
+  const componentY = useSharedValue(0);
+  const entered = useSharedValue(0);
+
+  const onLayoutCapture = useCallback((e: any) => {
+    componentY.value = e.nativeEvent.layout.y;
+  }, []);
+
+  useDerivedValue(() => {
+    if (entered.value === 0 && componentY.value > 0 && scrollY.value + SCREEN_HEIGHT > componentY.value - 50) {
+      entered.value = 1;
+    }
+  });
+
   if (!lastGame) return null;
 
-  // Check if there's any meaningful data
   const hasData = lastGame.kills > 0 || lastGame.aces > 0 || lastGame.digs > 0 ||
     lastGame.blocks > 0 || lastGame.assists > 0 || lastGame.points > 0;
   if (!hasData) return null;
@@ -103,12 +137,12 @@ export default function LastGameStats({ lastGame, position, personalBest }: Prop
   const topStats = getTopStats(lastGame, position);
 
   return (
-    <View style={styles.card}>
+    <View style={styles.card} onLayout={onLayoutCapture}>
       <Text style={styles.header}>LAST GAME HIGHLIGHTS</Text>
 
       <View style={styles.grid}>
-        {topStats.map((item) => (
-          <StatBox key={item.key} item={item} />
+        {topStats.map((item, index) => (
+          <StatBox key={item.key} item={item} index={index} entered={entered} />
         ))}
       </View>
 
