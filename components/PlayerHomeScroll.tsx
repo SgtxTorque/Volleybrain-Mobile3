@@ -57,6 +57,7 @@ import PlayerQuickLinks from './player-scroll/PlayerQuickLinks';
 import PlayerLeaderboardPreview from './player-scroll/PlayerLeaderboardPreview';
 import PlayerPropsSection from './player-scroll/PlayerPropsSection';
 import PlayerContinueTraining from './player-scroll/PlayerContinueTraining';
+import PlayerTeamHubCard from './player-scroll/PlayerTeamHubCard';
 import PlayerMomentumRow from './player-scroll/PlayerMomentumRow';
 import PlayerTrophyCase from './player-scroll/PlayerTrophyCase';
 import PlayerTeamActivity from './player-scroll/PlayerTeamActivity';
@@ -402,6 +403,13 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
         <PlayerPropsSection
           shoutouts={data.recentShoutouts}
           onGiveShoutout={() => setShowShoutoutModal(true)}
+        />
+
+        {/* ─── TEAM HUB ENTRY ────────────────────────────────── */}
+        <PlayerTeamHubCard
+          teamName={data.primaryTeam?.name || ''}
+          teamColor={data.primaryTeam?.color || null}
+          teamId={data.primaryTeam?.id}
         />
 
         {/* ─── 5. CONTINUE TRAINING (teaser) ───────────────────── */}
