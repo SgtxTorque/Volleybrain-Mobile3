@@ -71,19 +71,19 @@ const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
     paddingHorizontal: 30,
-    paddingTop: 40,
+    paddingTop: 12,
     paddingBottom: 16,
   },
   mascotImg: {
     width: 44,
     height: 44,
     marginBottom: 10,
-    opacity: 0.5,
+    opacity: 0.8,
   },
   message: {
     fontFamily: FONTS.bodyMedium,
     fontSize: 13,
-    color: D_COLORS.textAmbient,
+    color: 'rgba(11,22,40,0.35)',
     fontStyle: 'italic',
     textAlign: 'center',
     lineHeight: 20,
