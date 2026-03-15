@@ -46,6 +46,7 @@ import AdminTeamHealthCards from './admin-scroll/AdminTeamHealthCards';
 import AdminFinancialChart from './admin-scroll/AdminFinancialChart';
 import AdminActionPills from './admin-scroll/AdminActionPills';
 import OrgPulseFeed from './admin-scroll/OrgPulseFeed';
+import OrgHealthChart from './admin-scroll/OrgHealthChart';
 import AdminTrophyBar from './admin-scroll/AdminTrophyBar';
 import AdminAmbientCloser from './admin-scroll/AdminAmbientCloser';
 // TrophyCaseWidget removed from render (shared, file preserved)
@@ -229,10 +230,20 @@ export default function AdminHomeScroll() {
         {/* ─── 5. TEAM HEALTH CARDS ─────────────────────────── */}
         <AdminTeamHealthCards teams={data.teams} />
 
-        {/* ─── 6. ACTION PILLS ──────────────────────────────── */}
+        {/* ─── 6. ORG HEALTH CHART ─────────────────────────── */}
+        <OrgHealthChart
+          teams={data.teams}
+          totalPlayers={data.totalPlayers}
+          collected={data.collected}
+          expected={data.expected}
+          overdueCount={data.overdueCount}
+          pendingRegs={data.pendingRegs}
+        />
+
+        {/* ─── 7. ACTION PILLS ──────────────────────────────── */}
         <AdminActionPills />
 
-        {/* ─── 7. ORG PULSE FEED ──────────────────────────── */}
+        {/* ─── 8. ORG PULSE FEED ──────────────────────────── */}
         <OrgPulseFeed
           collected={data.collected}
           pendingRegs={data.pendingRegs}
@@ -240,10 +251,10 @@ export default function AdminHomeScroll() {
           upcomingEvents={data.upcomingEvents}
         />
 
-        {/* ─── 8. ADMIN TROPHY BAR ─────────────────────────── */}
+        {/* ─── 9. ADMIN TROPHY BAR ─────────────────────────── */}
         {profile?.id && <AdminTrophyBar userId={profile.id} />}
 
-        {/* ─── 9. AMBIENT CLOSER ──────────────────────────── */}
+        {/* ─── 10. AMBIENT CLOSER ─────────────────────────── */}
         <AdminAmbientCloser
           adminName={data.adminName}
           teamCount={data.teams.length}
