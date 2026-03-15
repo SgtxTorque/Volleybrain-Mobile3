@@ -1,15 +1,19 @@
 /**
- * AdminTeamHealthCards — Vertical stack of editorial team health cards.
- * Alternating dark navy and white. Tappable → team players screen.
+ * AdminTeamHealthCards — Adaptive team health cards.
+ * 1-3 teams: full editorial vertical stack (alternating dark/light).
+ * 4-6 teams: compact horizontal scroll.
+ * 7+ teams: compact horizontal scroll + "See All Teams" link.
+ * ALL hooks above early returns.
  */
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { FONTS } from '@/theme/fonts';
 import { BRAND } from '@/theme/colors';
 import { D_COLORS, D_RADII } from '@/theme/d-system';
 import type { TeamHealth } from '@/hooks/useAdminHomeData';
+import CompactTeamCard from './CompactTeamCard';
 
 interface Props {
   teams: TeamHealth[];
@@ -78,22 +82,53 @@ function TeamCard({ team, isDark }: { team: TeamHealth; isDark: boolean }) {
 }
 
 function AdminTeamHealthCards({ teams }: Props) {
-  if (teams.length === 0) return null;
+  const router = useRouter();
+  const teamCount = teams.length;
+
+  if (teamCount === 0) return null;
 
   return (
     <View style={styles.wrapper}>
       {/* Section header */}
       <View style={styles.headerRow}>
         <Text style={styles.headerTitle}>YOUR TEAMS</Text>
-        <Text style={styles.headerCount}>{teams.length}</Text>
+        <Text style={styles.headerCount}>{teamCount}</Text>
       </View>
 
-      {/* Team cards */}
-      <View style={styles.cardsContainer}>
-        {teams.map((team, index) => (
-          <TeamCard key={team.id} team={team} isDark={index % 2 === 0} />
-        ))}
-      </View>
+      {teamCount <= 3 ? (
+        /* 1-3 teams: full editorial cards */
+        <View style={styles.cardsContainer}>
+          {teams.map((team, index) => (
+            <TeamCard key={team.id} team={team} isDark={index % 2 === 0} />
+          ))}
+        </View>
+      ) : (
+        /* 4+ teams: compact horizontal scroll */
+        <>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            snapToInterval={212}
+            decelerationRate="fast"
+            contentContainerStyle={styles.compactScrollContent}
+          >
+            {teams.map((team, index) => (
+              <CompactTeamCard key={team.id} team={team} isDark={index % 2 === 0} />
+            ))}
+          </ScrollView>
+
+          {/* 7+ teams: See All link */}
+          {teamCount >= 7 && (
+            <TouchableOpacity
+              style={styles.seeAllRow}
+              activeOpacity={0.7}
+              onPress={() => router.push('/(tabs)/players' as any)}
+            >
+              <Text style={styles.seeAllText}>See All Teams {'\u2192'}</Text>
+            </TouchableOpacity>
+          )}
+        </>
+      )}
     </View>
   );
 }
@@ -124,6 +159,21 @@ const styles = StyleSheet.create({
   },
   cardsContainer: {
     gap: 10,
+  },
+  compactScrollContent: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    gap: 12,
+  },
+  seeAllRow: {
+    alignItems: 'center',
+    paddingTop: 10,
+    paddingBottom: 2,
+  },
+  seeAllText: {
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 13,
+    color: BRAND.skyBlue,
   },
   card: {
     borderRadius: D_RADII.card,
