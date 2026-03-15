@@ -50,6 +50,7 @@ import { FONTS } from '@/theme/fonts';
 import NoOrgState from './empty-states/NoOrgState';
 import NoTeamState from './empty-states/NoTeamState';
 import PlayerIdentityHero from './player-scroll/PlayerIdentityHero';
+import CompetitiveNudge from './player-scroll/CompetitiveNudge';
 import PlayerDailyQuests from './player-scroll/PlayerDailyQuests';
 import PlayerLeaderboardPreview from './player-scroll/PlayerLeaderboardPreview';
 import PlayerPropsSection from './player-scroll/PlayerPropsSection';
@@ -356,7 +357,16 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           </TouchableOpacity>
         )}
 
-        {/* ─── 2. DAILY QUESTS ─────────────────────────────────── */}
+        {/* ─── 2. COMPETITIVE NUDGE ──────────────────────────────── */}
+        <CompetitiveNudge
+          bestRank={data.bestRank}
+          personalBest={data.personalBest}
+          xpToNext={data.xpToNext}
+          level={data.level}
+          challengesAvailable={data.challengesAvailable}
+        />
+
+        {/* ─── 3. DAILY QUESTS ─────────────────────────────────── */}
         <PlayerDailyQuests
           nextEvent={data.nextEvent}
           rsvpStatus={data.rsvpStatus}
