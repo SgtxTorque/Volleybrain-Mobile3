@@ -274,3 +274,41 @@ CREATE TABLE IF NOT EXISTS journey_progress (
 CREATE INDEX idx_journey_progress_player ON journey_progress(player_id);
 CREATE INDEX idx_journey_progress_node ON journey_progress(node_id);
 CREATE INDEX idx_journey_progress_status ON journey_progress(player_id, status);
+
+-- ---------------------------------------------------------------------------
+-- league_standings: Weekly leaderboard league positions per player per team
+-- Separate from team_standings which tracks team win/loss records.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS league_standings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  player_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+  league_tier TEXT NOT NULL DEFAULT 'Bronze',
+  week_start DATE NOT NULL,
+  weekly_xp INTEGER NOT NULL DEFAULT 0,
+  rank_in_team INTEGER,
+  promotion_status TEXT DEFAULT 'none',
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(player_id, team_id, week_start)
+);
+
+CREATE INDEX idx_league_standings_team_week ON league_standings(team_id, week_start);
+CREATE INDEX idx_league_standings_player ON league_standings(player_id);
+
+-- ---------------------------------------------------------------------------
+-- xp_boost_events: Active XP multiplier events (Game Day 2x, Weekend Warrior, etc.)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS xp_boost_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  team_id UUID REFERENCES teams(id) ON DELETE CASCADE,
+  boost_type TEXT NOT NULL,
+  multiplier NUMERIC(3,2) NOT NULL DEFAULT 1.50,
+  starts_at TIMESTAMPTZ NOT NULL,
+  ends_at TIMESTAMPTZ NOT NULL,
+  applicable_sources TEXT[],
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_xp_boost_events_team ON xp_boost_events(team_id);
+CREATE INDEX idx_xp_boost_events_active ON xp_boost_events(starts_at, ends_at);
