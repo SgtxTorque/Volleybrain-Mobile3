@@ -312,3 +312,241 @@ CREATE TABLE IF NOT EXISTS xp_boost_events (
 
 CREATE INDEX idx_xp_boost_events_team ON xp_boost_events(team_id);
 CREATE INDEX idx_xp_boost_events_active ON xp_boost_events(starts_at, ends_at);
+
+-- ---------------------------------------------------------------------------
+-- ENABLE RLS ON ALL NEW TABLES
+-- ---------------------------------------------------------------------------
+ALTER TABLE daily_quests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE weekly_quests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE quest_bonus_tracking ENABLE ROW LEVEL SECURITY;
+ALTER TABLE streak_data ENABLE ROW LEVEL SECURITY;
+ALTER TABLE streak_milestones ENABLE ROW LEVEL SECURITY;
+ALTER TABLE skill_categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE skill_content ENABLE ROW LEVEL SECURITY;
+ALTER TABLE skill_quizzes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE skill_progress ENABLE ROW LEVEL SECURITY;
+ALTER TABLE journey_chapters ENABLE ROW LEVEL SECURITY;
+ALTER TABLE journey_nodes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE journey_progress ENABLE ROW LEVEL SECURITY;
+ALTER TABLE league_standings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE xp_boost_events ENABLE ROW LEVEL SECURITY;
+
+-- ---------------------------------------------------------------------------
+-- PLAYER SELF-ACCESS POLICIES
+-- Pattern: player_id = auth.uid() for personal data
+-- ---------------------------------------------------------------------------
+
+-- Daily quests: players read/update their own
+CREATE POLICY "daily_quests_player_select" ON daily_quests
+  FOR SELECT TO authenticated
+  USING (player_id = auth.uid());
+
+CREATE POLICY "daily_quests_player_update" ON daily_quests
+  FOR UPDATE TO authenticated
+  USING (player_id = auth.uid())
+  WITH CHECK (player_id = auth.uid());
+
+-- Weekly quests: players read/update their own
+CREATE POLICY "weekly_quests_player_select" ON weekly_quests
+  FOR SELECT TO authenticated
+  USING (player_id = auth.uid());
+
+CREATE POLICY "weekly_quests_player_update" ON weekly_quests
+  FOR UPDATE TO authenticated
+  USING (player_id = auth.uid())
+  WITH CHECK (player_id = auth.uid());
+
+-- Quest bonus tracking: players read their own
+CREATE POLICY "quest_bonus_player_select" ON quest_bonus_tracking
+  FOR SELECT TO authenticated
+  USING (player_id = auth.uid());
+
+-- Streak data: players read/update their own
+CREATE POLICY "streak_data_player_select" ON streak_data
+  FOR SELECT TO authenticated
+  USING (player_id = auth.uid());
+
+CREATE POLICY "streak_data_player_update" ON streak_data
+  FOR UPDATE TO authenticated
+  USING (player_id = auth.uid())
+  WITH CHECK (player_id = auth.uid());
+
+-- Streak milestones: players read their own
+CREATE POLICY "streak_milestones_player_select" ON streak_milestones
+  FOR SELECT TO authenticated
+  USING (player_id = auth.uid());
+
+-- Skill progress: players read/insert/update their own
+CREATE POLICY "skill_progress_player_select" ON skill_progress
+  FOR SELECT TO authenticated
+  USING (player_id = auth.uid());
+
+CREATE POLICY "skill_progress_player_insert" ON skill_progress
+  FOR INSERT TO authenticated
+  WITH CHECK (player_id = auth.uid());
+
+CREATE POLICY "skill_progress_player_update" ON skill_progress
+  FOR UPDATE TO authenticated
+  USING (player_id = auth.uid())
+  WITH CHECK (player_id = auth.uid());
+
+-- Journey progress: players read/insert/update their own
+CREATE POLICY "journey_progress_player_select" ON journey_progress
+  FOR SELECT TO authenticated
+  USING (player_id = auth.uid());
+
+CREATE POLICY "journey_progress_player_insert" ON journey_progress
+  FOR INSERT TO authenticated
+  WITH CHECK (player_id = auth.uid());
+
+CREATE POLICY "journey_progress_player_update" ON journey_progress
+  FOR UPDATE TO authenticated
+  USING (player_id = auth.uid())
+  WITH CHECK (player_id = auth.uid());
+
+-- League standings: players read their own team's standings
+CREATE POLICY "league_standings_player_select" ON league_standings
+  FOR SELECT TO authenticated
+  USING (
+    team_id IN (
+      SELECT team_id FROM user_roles WHERE user_id = auth.uid() AND is_active = true
+    )
+  );
+
+-- ---------------------------------------------------------------------------
+-- PUBLIC READ POLICIES
+-- Pattern: All authenticated users can read content/config tables
+-- ---------------------------------------------------------------------------
+
+-- Skill categories: all authenticated users can read
+CREATE POLICY "skill_categories_read" ON skill_categories
+  FOR SELECT TO authenticated
+  USING (true);
+
+-- Skill content: all authenticated users can read published content
+CREATE POLICY "skill_content_read" ON skill_content
+  FOR SELECT TO authenticated
+  USING (is_published = true);
+
+-- Skill quizzes: all authenticated users can read
+CREATE POLICY "skill_quizzes_read" ON skill_quizzes
+  FOR SELECT TO authenticated
+  USING (true);
+
+-- Journey chapters: all authenticated users can read published chapters
+CREATE POLICY "journey_chapters_read" ON journey_chapters
+  FOR SELECT TO authenticated
+  USING (is_published = true);
+
+-- Journey nodes: all authenticated users can read
+CREATE POLICY "journey_nodes_read" ON journey_nodes
+  FOR SELECT TO authenticated
+  USING (true);
+
+-- XP boost events: all authenticated users can read
+CREATE POLICY "xp_boost_events_read" ON xp_boost_events
+  FOR SELECT TO authenticated
+  USING (true);
+
+-- ---------------------------------------------------------------------------
+-- COACH/ADMIN ACCESS POLICIES
+-- Pattern: coaches and admins can read player data for their teams
+-- Matches existing pattern from coach_challenges RLS
+-- ---------------------------------------------------------------------------
+
+-- Daily quests: coaches can see their team's player quests
+CREATE POLICY "daily_quests_coach_select" ON daily_quests
+  FOR SELECT TO authenticated
+  USING (
+    team_id IN (
+      SELECT team_id FROM user_roles
+      WHERE user_id = auth.uid()
+        AND role IN ('head_coach', 'assistant_coach', 'league_admin')
+        AND is_active = true
+    )
+  );
+
+-- Weekly quests: coaches can see their team's player quests
+CREATE POLICY "weekly_quests_coach_select" ON weekly_quests
+  FOR SELECT TO authenticated
+  USING (
+    team_id IN (
+      SELECT team_id FROM user_roles
+      WHERE user_id = auth.uid()
+        AND role IN ('head_coach', 'assistant_coach', 'league_admin')
+        AND is_active = true
+    )
+  );
+
+-- Streak data: coaches can see their players' streaks via org
+CREATE POLICY "streak_data_coach_select" ON streak_data
+  FOR SELECT TO authenticated
+  USING (
+    player_id IN (
+      SELECT ur2.user_id FROM user_roles ur1
+      JOIN user_roles ur2 ON ur1.organization_id = ur2.organization_id
+      WHERE ur1.user_id = auth.uid()
+        AND ur1.role IN ('head_coach', 'assistant_coach', 'league_admin')
+        AND ur1.is_active = true
+        AND ur2.is_active = true
+    )
+  );
+
+-- League standings: coaches can see their team's standings
+CREATE POLICY "league_standings_coach_select" ON league_standings
+  FOR SELECT TO authenticated
+  USING (
+    team_id IN (
+      SELECT team_id FROM user_roles
+      WHERE user_id = auth.uid()
+        AND role IN ('head_coach', 'assistant_coach', 'league_admin')
+        AND is_active = true
+    )
+  );
+
+-- ---------------------------------------------------------------------------
+-- SERVICE ROLE INSERT POLICIES
+-- Pattern: Quest generation and XP awards happen via Edge Functions (service role)
+-- These WITH CHECK (true) policies allow service role inserts
+-- Matches existing pattern from xp_ledger
+-- ---------------------------------------------------------------------------
+
+CREATE POLICY "daily_quests_service_insert" ON daily_quests
+  FOR INSERT TO authenticated
+  WITH CHECK (true);
+
+CREATE POLICY "weekly_quests_service_insert" ON weekly_quests
+  FOR INSERT TO authenticated
+  WITH CHECK (true);
+
+CREATE POLICY "quest_bonus_service_insert" ON quest_bonus_tracking
+  FOR INSERT TO authenticated
+  WITH CHECK (true);
+
+CREATE POLICY "streak_data_service_insert" ON streak_data
+  FOR INSERT TO authenticated
+  WITH CHECK (true);
+
+CREATE POLICY "streak_milestones_service_insert" ON streak_milestones
+  FOR INSERT TO authenticated
+  WITH CHECK (true);
+
+CREATE POLICY "league_standings_service_insert" ON league_standings
+  FOR INSERT TO authenticated
+  WITH CHECK (true);
+
+CREATE POLICY "league_standings_service_update" ON league_standings
+  FOR UPDATE TO authenticated
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "xp_boost_events_admin_insert" ON xp_boost_events
+  FOR INSERT TO authenticated
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM user_roles
+      WHERE user_id = auth.uid()
+        AND role IN ('head_coach', 'league_admin')
+        AND is_active = true
+    )
+  );
