@@ -49,6 +49,7 @@ import { FONTS } from '@/theme/fonts';
 import NoOrgState from './empty-states/NoOrgState';
 import NoTeamState from './empty-states/NoTeamState';
 import PlayerIdentityHero from './player-scroll/PlayerIdentityHero';
+import PlayerDailyQuests from './player-scroll/PlayerDailyQuests';
 import HeroIdentityCard from './player-scroll/HeroIdentityCard';
 import StreakBanner from './player-scroll/StreakBanner';
 import TheDrop from './player-scroll/TheDrop';
@@ -346,6 +347,16 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
             <Ionicons name="chevron-down" size={12} color={PLAYER_THEME.accent} />
           </TouchableOpacity>
         )}
+
+        {/* ─── 2. DAILY QUESTS ─────────────────────────────────── */}
+        <PlayerDailyQuests
+          nextEvent={data.nextEvent}
+          rsvpStatus={data.rsvpStatus}
+          challengesAvailable={data.challengesAvailable}
+          recentShoutouts={data.recentShoutouts}
+          badges={data.badges}
+          onOpenShoutout={() => setShowShoutoutModal(true)}
+        />
 
         {/* ─── 1b. MY TEAM (one-tap to roster) ─────────────────── */}
         {data.primaryTeam && (
