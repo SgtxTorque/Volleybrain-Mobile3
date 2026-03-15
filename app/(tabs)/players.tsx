@@ -167,7 +167,7 @@ export default function PlayersScreen() {
     return matchesSearch && matchesTeam;
   });
 
-  const renderGridItem = ({ item }: { item: PlayerCardPlayer }) => (
+  const renderGridItem = ({ item, index }: { item: PlayerCardPlayer; index: number }) => (
     <PlayerCard
       player={{
         id: item.id,
@@ -182,6 +182,7 @@ export default function PlayersScreen() {
       }}
       onPress={() => setSelectedPlayer(item)}
       size="medium"
+      staggerIndex={index}
     />
   );
 

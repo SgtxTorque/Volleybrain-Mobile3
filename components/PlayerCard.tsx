@@ -1,24 +1,30 @@
 import { getPlayerPlaceholder } from '@/lib/default-images';
-import { usePermissions } from '@/lib/permissions-context';
-import { useTheme } from '@/lib/theme';
-import { getSportDisplay, getPositionInfo } from '@/constants/sport-display';
-import { Ionicons } from '@expo/vector-icons';
+import { getPositionInfo } from '@/constants/sport-display';
+import { BRAND } from '@/theme/colors';
+import { D_COLORS } from '@/theme/d-system';
+import { FONTS } from '@/theme/fonts';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
 import {
   Dimensions,
   Image,
+  Platform,
+  Pressable,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
-import EmergencyContactModal from './EmergencyContactModal';
-import { BRAND } from '@/theme/colors';
-import { FONTS } from '@/theme/fonts';
-import { radii } from '@/lib/design-tokens';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withDelay,
+  withTiming,
+} from 'react-native-reanimated';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 type PlayerCardProps = {
   player: {
@@ -32,378 +38,208 @@ type PlayerCardProps = {
     grade?: number | null;
     team_name?: string | null;
     team_color?: string | null;
-    medical_conditions?: string | null;
-    allergies?: string | null;
-    medications?: string | null;
-    emergency_contact_name?: string | null;
-    emergency_contact_phone?: string | null;
-    emergency_contact_relation?: string | null;
-    kills?: number | null;
-    digs?: number | null;
-    aces?: number | null;
-    blocks?: number | null;
-    assists?: number | null;
-    points?: number | null;
-    rebounds?: number | null;
     [key: string]: any;
   };
   onPress: () => void;
   size?: 'small' | 'medium' | 'large';
   teamLogoUrl?: string | null;
-  /** Overall rating (0-99) — shows mini OVR badge when provided */
   overallRating?: number | null;
-  /** Registration status badge: pending (gold clock), payment_due (coral $), complete (teal check) */
   registrationStatus?: 'pending' | 'payment_due' | 'complete' | null;
+  /** Stagger index for entrance animation (50ms per card) */
+  staggerIndex?: number;
 };
 
-export default function PlayerCard({ player, onPress, size = 'medium', teamLogoUrl, overallRating, registrationStatus }: PlayerCardProps) {
-  const { colors } = useTheme();
-  const { isCoach, isAdmin } = usePermissions();
-  // Derive dark mode from background color
-  const isDark = colors.background === '#000' || colors.background === '#000000' || colors.background?.startsWith('#0') || colors.background?.startsWith('#1');
-  const s = createStyles(colors, isDark, size);
+export default function PlayerCard({
+  player,
+  onPress,
+  size = 'medium',
+  staggerIndex = 0,
+}: PlayerCardProps) {
+  const pressScale = useSharedValue(1);
+  const entryOpacity = useSharedValue(0);
+  const entryScale = useSharedValue(0.95);
 
-  const [showEmergencyModal, setShowEmergencyModal] = useState(false);
+  useEffect(() => {
+    const delay = staggerIndex * 50;
+    entryOpacity.value = withDelay(delay, withTiming(1, { duration: 300 }));
+    entryScale.value = withDelay(delay, withSpring(1, { damping: 18, stiffness: 200 }));
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pressScale.value * entryScale.value }],
+    opacity: entryOpacity.value,
+  }));
 
   const posInfo = getPositionInfo(player.position, player.sport_name);
-  const positionColor = posInfo?.color || BRAND.skyBlue;
-  const teamColor = player.team_color || BRAND.navy;
-  const ovrTierColor = !overallRating ? '#64748B'
-    : overallRating >= 80 ? '#FFD700'
-    : overallRating >= 60 ? BRAND.teal
-    : overallRating >= 40 ? BRAND.skyBlue
-    : '#64748B';
-  const jerseyNumber = player.jersey_number;
+  const teamColor = player.team_color || D_COLORS.skyBlue;
   const hasPhoto = player.photo_url && player.photo_url.length > 0;
-  const hasMedicalAlert = !!(player.medical_conditions || player.allergies);
-
-  // Format name as "First L."
+  const jerseyNumber = player.jersey_number;
   const displayName = `${player.first_name} ${player.last_name.charAt(0)}.`;
+  const initial = player.first_name.charAt(0).toUpperCase();
+
+  const dimensions = {
+    small: { width: 105, height: 145 },
+    medium: { width: (SCREEN_WIDTH - 48) / 3, height: 170 },
+    large: { width: 180, height: 230 },
+  }[size];
 
   return (
-    <TouchableOpacity style={s.card} onPress={onPress} activeOpacity={0.9}>
-      {/* Background Gradient */}
+    <AnimatedPressable
+      onPress={onPress}
+      onPressIn={() => { pressScale.value = withSpring(0.97, { damping: 15, stiffness: 300 }); }}
+      onPressOut={() => { pressScale.value = withSpring(1, { damping: 15, stiffness: 300 }); }}
+      style={[
+        styles.card,
+        {
+          width: dimensions.width,
+          height: dimensions.height,
+          borderColor: teamColor + '33',
+        },
+        animatedStyle,
+      ]}
+    >
+      {/* Card background: photo or team-color gradient */}
+      {hasPhoto ? (
+        <Image
+          source={{ uri: player.photo_url! }}
+          style={styles.bgPhoto}
+          resizeMode="cover"
+        />
+      ) : (
+        <LinearGradient
+          colors={[teamColor, BRAND.navyDeep]}
+          style={styles.bgGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <Text style={styles.initialLetter}>{initial}</Text>
+        </LinearGradient>
+      )}
+
+      {/* Position pill — top-left (ONE indicator only) */}
+      {player.position && (
+        <View style={[styles.positionPill, { backgroundColor: teamColor }]}>
+          <Text style={styles.positionText}>{player.position}</Text>
+        </View>
+      )}
+
+      {/* Jersey number — top-right */}
+      {jerseyNumber != null && (
+        <Text style={styles.jerseyNumber}>{jerseyNumber}</Text>
+      )}
+
+      {/* Dark gradient overlay at bottom */}
       <LinearGradient
-        colors={[teamColor, BRAND.surfaceDark]}
-        style={s.gradient}
+        colors={['transparent', 'rgba(0,0,0,0.7)']}
+        style={styles.bottomGradient}
         start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+        end={{ x: 0, y: 1 }}
       />
 
-      {/* Team Logo Watermark (if provided) */}
-      {teamLogoUrl && (
-        <View style={s.logoWatermark}>
-          <Image 
-            source={{ uri: teamLogoUrl }} 
-            style={s.logoImage}
-            resizeMode="contain"
-          />
-        </View>
-      )}
-      
-      {/* Position Badge - Top Left */}
-      {player.position && (
-        <View style={[s.positionBadge, { backgroundColor: positionColor }]}>
-          <Text style={s.positionText}>{player.position}</Text>
-        </View>
-      )}
-      
-      {/* Jersey Number - Top Right */}
-      {jerseyNumber && (
-        <View style={s.numberContainer}>
-          <Text style={[s.numberText, { color: teamColor === BRAND.navy ? BRAND.skyBlue : teamColor }]}>
-            {jerseyNumber}
-          </Text>
-        </View>
-      )}
-      
-      {/* Player Photo or Silhouette */}
-      <View style={s.photoContainer}>
-        {hasPhoto ? (
-          <View style={s.photoWrapper}>
-            <Image source={{ uri: player.photo_url! }} style={s.photo} />
-            {/* Photo border glow */}
-            <View style={[s.photoBorderGlow, { borderColor: positionColor + '60' }]} />
-            {/* Position pip on photo */}
-            {player.position && (
-              <View style={[s.photoPosOverlay, { backgroundColor: positionColor }]}>
-                <Text style={s.photoPosText}>{player.position}</Text>
-              </View>
-            )}
-            {/* OVR badge on photo */}
-            {overallRating != null && (
-              <View style={[s.ovrBadge, { backgroundColor: ovrTierColor + '30', borderColor: ovrTierColor }]}>
-                <Text style={[s.ovrText, { color: ovrTierColor }]}>{overallRating}</Text>
-              </View>
-            )}
-          </View>
-        ) : (
-          <View style={s.silhouette}>
-            <Image source={getPlayerPlaceholder()} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' }} resizeMode="cover" />
-            {/* Jersey number badge on silhouette if no position shown */}
-            {!player.position && jerseyNumber && (
-              <View style={[s.silhouetteNumber, { backgroundColor: BRAND.skyBlue }]}>
-                <Text style={s.silhouetteNumberText}>{jerseyNumber}</Text>
-              </View>
-            )}
-          </View>
-        )}
-      </View>
-      
-      {/* Name Bar - Bottom */}
-      <View style={s.nameBar}>
-        <Text style={s.playerName} numberOfLines={1}>
+      {/* Name bar on gradient */}
+      <View style={styles.nameBar}>
+        <Text style={styles.playerName} numberOfLines={1}>
           {displayName}
         </Text>
-        {player.grade && (
-          <Text style={s.gradeText}>Gr {player.grade}</Text>
+        {player.grade != null && (
+          <Text style={styles.gradeText}>Gr {player.grade}</Text>
         )}
       </View>
-      
-      {/* Medical Alert Indicator */}
-      {hasMedicalAlert && (
-        <View style={s.medicalAlert}>
-          <Ionicons name="alert-circle" size={size === 'small' ? 14 : 16} color={BRAND.coral} />
-        </View>
-      )}
-
-      {/* Emergency Contact Button (coaches/admins only) */}
-      {(isCoach || isAdmin) && (
-        <TouchableOpacity
-          style={s.emergencyBtn}
-          onPress={(e) => {
-            e.stopPropagation?.();
-            setShowEmergencyModal(true);
-          }}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Ionicons name="call" size={size === 'small' ? 12 : 14} color="#fff" />
-        </TouchableOpacity>
-      )}
-
-      {/* Registration status badge */}
-      {registrationStatus && registrationStatus !== 'complete' && (
-        <View style={[
-          s.regBadge,
-          { backgroundColor: registrationStatus === 'pending' ? '#E5A100' : BRAND.coral },
-        ]}>
-          <Ionicons
-            name={registrationStatus === 'pending' ? 'time' : 'cash-outline'}
-            size={size === 'small' ? 10 : 12}
-            color="#fff"
-          />
-        </View>
-      )}
-
-      {/* Team color accent line at bottom */}
-      <View style={[s.accentLine, { backgroundColor: positionColor }]} />
-
-      {/* Emergency Contact Modal */}
-      <EmergencyContactModal
-        visible={showEmergencyModal}
-        onClose={() => setShowEmergencyModal(false)}
-        player={player}
-      />
-    </TouchableOpacity>
+    </AnimatedPressable>
   );
 }
 
-const createStyles = (colors: any, isDark: boolean, size: 'small' | 'medium' | 'large') => {
-  const dimensions = {
-    small: { width: 105, height: 145, photoSize: 60 },
-    medium: { width: (SCREEN_WIDTH - 48) / 3, height: 170, photoSize: 72 },
-    large: { width: 180, height: 230, photoSize: 100 },
-  }[size];
-
-  return StyleSheet.create({
-    card: {
-      width: dimensions.width,
-      height: dimensions.height,
-      borderRadius: radii.card,
-      overflow: 'hidden',
-      position: 'relative',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: isDark ? 0.4 : 0.15,
-      shadowRadius: 8,
-      elevation: 5,
-    },
-    gradient: {
-      ...StyleSheet.absoluteFillObject,
-    },
-    logoWatermark: {
-      position: 'absolute',
-      top: 8,
-      right: 8,
-      width: 24,
-      height: 24,
-      opacity: 0.2,
-      zIndex: 1,
-    },
-    logoImage: {
-      width: '100%',
-      height: '100%',
-    },
-    positionBadge: {
-      position: 'absolute',
-      top: size === 'small' ? 6 : 8,
-      left: size === 'small' ? 6 : 8,
-      paddingHorizontal: size === 'small' ? 5 : 7,
-      paddingVertical: size === 'small' ? 2 : 3,
-      borderRadius: 4,
-      zIndex: 10,
-    },
-    positionText: {
-      fontFamily: FONTS.bodyExtraBold,
-      fontSize: size === 'small' ? 9 : 10,
-      color: '#000',
-      letterSpacing: 0.5,
-    },
-    numberContainer: {
-      position: 'absolute',
-      top: size === 'small' ? 4 : 6,
-      right: size === 'small' ? 6 : 8,
-      zIndex: 10,
-    },
-    numberText: {
-      fontSize: size === 'small' ? 22 : size === 'medium' ? 28 : 34,
-      fontWeight: '900',
-      textShadowColor: 'rgba(0,0,0,0.5)',
-      textShadowOffset: { width: 1, height: 1 },
-      textShadowRadius: 4,
-    },
-    photoContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-      paddingTop: size === 'small' ? 28 : 32,
-    },
-    photoWrapper: {
-      position: 'relative',
-    },
-    photo: {
-      width: dimensions.photoSize,
-      height: dimensions.photoSize,
-      borderRadius: dimensions.photoSize / 2,
-      borderWidth: 3,
-      borderColor: 'rgba(255,255,255,0.3)',
-    },
-    photoBorderGlow: {
-      position: 'absolute',
-      top: -3,
-      left: -3,
-      right: -3,
-      bottom: -3,
-      borderRadius: (dimensions.photoSize + 6) / 2,
-      borderWidth: 2,
-    },
-    silhouette: {
-      width: dimensions.photoSize,
-      height: dimensions.photoSize,
-      borderRadius: dimensions.photoSize / 2,
-      backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.2)',
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderWidth: 2,
-      borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.2)',
-      overflow: 'hidden' as const,
-    },
-    silhouetteNumber: {
-      position: 'absolute',
-      bottom: -4,
-      paddingHorizontal: 6,
-      paddingVertical: 2,
-      borderRadius: 8,
-    },
-    silhouetteNumberText: {
-      fontSize: 10,
-      fontWeight: 'bold',
-      color: '#000',
-    },
-    nameBar: {
-      backgroundColor: 'rgba(0,0,0,0.75)',
-      paddingVertical: size === 'small' ? 6 : 8,
-      paddingHorizontal: size === 'small' ? 6 : 10,
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-    },
-    playerName: {
-      fontFamily: FONTS.bodyBold,
-      fontSize: size === 'small' ? 11 : 13,
-      color: '#fff',
-      flex: 1,
-    },
-    gradeText: {
-      fontSize: size === 'small' ? 9 : 10,
-      color: 'rgba(255,255,255,0.6)',
-      marginLeft: 4,
-    },
-    accentLine: {
-      height: 3,
-      width: '100%',
-    },
-    medicalAlert: {
-      position: 'absolute',
-      bottom: size === 'small' ? 36 : 42,
-      left: size === 'small' ? 6 : 8,
-      backgroundColor: 'rgba(0,0,0,0.6)',
-      borderRadius: 10,
-      padding: 2,
-      zIndex: 10,
-    },
-    emergencyBtn: {
-      position: 'absolute',
-      bottom: size === 'small' ? 36 : 42,
-      right: size === 'small' ? 6 : 8,
-      backgroundColor: 'rgba(16, 185, 129, 0.8)',
-      borderRadius: 10,
-      padding: size === 'small' ? 3 : 4,
-      zIndex: 10,
-    },
-    ovrBadge: {
-      position: 'absolute',
-      bottom: -2,
-      right: -2,
-      width: size === 'small' ? 22 : 26,
-      height: size === 'small' ? 22 : 26,
-      borderRadius: size === 'small' ? 11 : 13,
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderWidth: 1.5,
-      zIndex: 9,
-    },
-    ovrText: {
-      fontSize: size === 'small' ? 10 : 12,
-      fontFamily: FONTS.bodyExtraBold,
-    },
-    photoPosOverlay: {
-      position: 'absolute',
-      bottom: -2,
-      left: -2,
-      width: size === 'small' ? 18 : 22,
-      height: size === 'small' ? 18 : 22,
-      borderRadius: size === 'small' ? 9 : 11,
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderWidth: 2,
-      borderColor: 'rgba(0,0,0,0.6)',
-    },
-    photoPosText: {
-      fontSize: size === 'small' ? 8 : 9,
-      fontFamily: FONTS.bodyExtraBold,
-      color: '#000',
-    },
-    regBadge: {
-      position: 'absolute',
-      top: size === 'small' ? 6 : 8,
-      right: size === 'small' ? 6 : 8,
-      width: size === 'small' ? 18 : 22,
-      height: size === 'small' ? 18 : 22,
-      borderRadius: size === 'small' ? 9 : 11,
-      justifyContent: 'center',
-      alignItems: 'center',
-      zIndex: 20,
-    },
-  });
-};
+const styles = StyleSheet.create({
+  card: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: BRAND.white,
+    borderWidth: 1.5,
+    ...Platform.select({
+      ios: {
+        shadowColor: BRAND.navyDeep,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 3,
+      },
+    }),
+  },
+  bgPhoto: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+  },
+  bgGradient: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  initialLetter: {
+    fontFamily: FONTS.display,
+    fontSize: 48,
+    color: 'rgba(255,255,255,0.25)',
+    marginTop: -12,
+  },
+  positionPill: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+    zIndex: 10,
+  },
+  positionText: {
+    fontFamily: FONTS.bodyExtraBold,
+    fontSize: 8,
+    color: BRAND.white,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  jerseyNumber: {
+    position: 'absolute',
+    top: 6,
+    right: 8,
+    fontSize: 20,
+    fontFamily: FONTS.display,
+    color: BRAND.white,
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 4,
+    zIndex: 10,
+  },
+  bottomGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '40%',
+  },
+  nameBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  playerName: {
+    fontFamily: FONTS.bodyBold,
+    fontSize: 13,
+    color: BRAND.white,
+    flex: 1,
+  },
+  gradeText: {
+    fontSize: 10,
+    fontFamily: FONTS.bodyMedium,
+    color: 'rgba(255,255,255,0.6)',
+    marginLeft: 4,
+  },
+});
