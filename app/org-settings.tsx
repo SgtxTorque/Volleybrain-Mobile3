@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
@@ -25,7 +26,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function OrgSettingsScreen() {
   const { colors } = useTheme();
-  const { profile } = useAuth();
+  const { profile, organization } = useAuth();
   const { isAdmin } = usePermissions();
   const router = useRouter();
 
@@ -36,6 +37,7 @@ export default function OrgSettingsScreen() {
   const [contactPhone, setContactPhone] = useState('');
   const [description, setDescription] = useState('');
   const [hasChanges, setHasChanges] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
 
   const s = createStyles(colors);
 
@@ -84,6 +86,51 @@ export default function OrgSettingsScreen() {
   const updateField = (setter: (v: string) => void) => (value: string) => {
     setter(value);
     setHasChanges(true);
+  };
+
+  const handlePickBanner = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Needed', 'Please grant photo library access to upload a banner.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.7,
+    });
+    if (result.canceled || !result.assets[0]) return;
+    setUploadingBanner(true);
+    try {
+      const asset = result.assets[0];
+      const ext = asset.uri.split('.').pop()?.toLowerCase() || 'jpg';
+      const validExt = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext) ? ext : 'jpg';
+      const contentType = `image/${validExt === 'jpg' ? 'jpeg' : validExt}`;
+      const orgId = organization?.id || profile?.current_organization_id || 'unknown';
+      const filePath = `org-banners/${orgId}_${Date.now()}.${validExt}`;
+      const response = await fetch(asset.uri);
+      if (!response.ok) throw new Error('Could not read the selected image.');
+      const arrayBuffer = await response.arrayBuffer();
+      const { error: uploadError } = await supabase.storage
+        .from('media')
+        .upload(filePath, arrayBuffer, { contentType, upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from('media').getPublicUrl(filePath);
+      const publicUrl = urlData.publicUrl;
+      const existingSettings = (organization as any)?.settings || {};
+      const { error: updateError } = await supabase
+        .from('organizations')
+        .update({ settings: { ...existingSettings, banner_url: publicUrl } })
+        .eq('id', orgId);
+      if (updateError) throw updateError;
+      Alert.alert('Success', 'Banner photo updated! Refresh the home screen to see it.');
+    } catch (error: any) {
+      if (__DEV__) console.error('Banner upload error:', error);
+      Alert.alert('Upload Failed', error.message || 'Failed to upload banner.');
+    } finally {
+      setUploadingBanner(false);
+    }
   };
 
   if (!isAdmin) {
@@ -137,6 +184,18 @@ export default function OrgSettingsScreen() {
             disabled={!hasChanges || saving}
           >
             <Text style={s.saveBtnText}>{saving ? 'Saving...' : 'Save Changes'}</Text>
+          </TouchableOpacity>
+
+          {/* Banner Upload */}
+          <TouchableOpacity
+            style={[s.saveBtn, { backgroundColor: colors.glassCard, borderWidth: 1, borderColor: colors.glassBorder, marginTop: 16 }]}
+            onPress={handlePickBanner}
+            disabled={uploadingBanner}
+          >
+            {uploadingBanner
+              ? <ActivityIndicator size="small" color={colors.primary} />
+              : <Text style={[s.saveBtnText, { color: colors.primary }]}>Upload Org Banner</Text>
+            }
           </TouchableOpacity>
 
           {/* Web redirect */}

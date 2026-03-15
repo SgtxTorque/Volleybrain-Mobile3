@@ -1,8 +1,6 @@
 /**
- * CoachHomeScroll — scroll-driven coach home dashboard.
- * Phase 10.5: Scroll animations — parallax, card breathing, bar cascade, stagger.
- * Phase 10.6: Final layout, removed old sections, streamlined.
- * Three-tier visual system mirroring the Parent Home Scroll.
+ * CoachHomeScroll — D System redesign.
+ * Compact greeting → dynamic message bar → hero card → momentum → squad → nudge → actions → pulse → trophies → closer.
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -16,7 +14,9 @@ import {
   View,
 } from 'react-native';
 import Animated, {
+  Easing,
   Extrapolation,
+  cancelAnimation,
   interpolate,
   runOnJS,
   useAnimatedStyle,
@@ -37,6 +37,7 @@ import { useCoachHomeData } from '@/hooks/useCoachHomeData';
 import { BRAND } from '@/theme/colors';
 import { SPACING } from '@/theme/spacing';
 import { FONTS } from '@/theme/fonts';
+import { D_COLORS } from '@/theme/d-system';
 
 import { useResponsive } from '@/lib/responsive';
 
@@ -44,22 +45,21 @@ import NoOrgState from './empty-states/NoOrgState';
 import NoTeamState from './empty-states/NoTeamState';
 
 import RoleSelector from './RoleSelector';
-import PrepChecklist from './coach-scroll/PrepChecklist';
-import GamePlanCard from './coach-scroll/GamePlanCard';
-import ScoutingContext from './coach-scroll/ScoutingContext';
-import QuickActions from './coach-scroll/QuickActions';
-import EngagementSection from './coach-scroll/EngagementSection';
-import TeamHealthCard from './coach-scroll/TeamHealthCard';
-import SeasonLeaderboardCard from './coach-scroll/SeasonLeaderboardCard';
-import ActionItems from './coach-scroll/ActionItems';
-import TeamHubPreviewCard from './coach-scroll/TeamHubPreviewCard';
-import ActivityFeed from './coach-scroll/ActivityFeed';
-import SeasonSetupCard from './coach-scroll/SeasonSetupCard';
 import GiveShoutoutModal from './GiveShoutoutModal';
-import TeamPulse from './TeamPulse';
-import ChallengeQuickCard from './coach-scroll/ChallengeQuickCard';
-import TrophyCaseWidget from './TrophyCaseWidget';
 import AchievementCelebrationModal from './AchievementCelebrationModal';
+
+// D System components (Phases 1-6)
+import DynamicMessageBar from './coach-scroll/DynamicMessageBar';
+import GameDayHeroCard from './coach-scroll/GameDayHeroCard';
+import MomentumCardsRow from './coach-scroll/MomentumCardsRow';
+import SquadFacesRow from './coach-scroll/SquadFacesRow';
+import SmartNudgeCard from './coach-scroll/SmartNudgeCard';
+import ActionGrid2x2 from './coach-scroll/ActionGrid2x2';
+import CoachPulseFeed from './coach-scroll/CoachPulseFeed';
+import CoachTrophyCase from './coach-scroll/CoachTrophyCase';
+import TeamStatsChart from './coach-scroll/TeamStatsChart';
+import AmbientCloser from './coach-scroll/AmbientCloser';
+
 import { getUnseenRoleAchievements, markAchievementsSeen } from '@/lib/achievement-engine';
 import type { UnseenAchievement } from '@/lib/achievement-types';
 
@@ -122,28 +122,6 @@ function buildBriefingMessage(
   return 'Welcome to your coaching hub.';
 }
 
-/** Build contextual closing message based on team situation. */
-function buildClosingMessage(
-  heroEvent: { event_type: string; event_date: string } | null,
-  seasonRecord: { wins: number; losses: number } | null,
-): string {
-  const today = new Date().toISOString().split('T')[0];
-
-  if (heroEvent?.event_date === today && heroEvent.event_type === 'game') {
-    return 'Trust the preparation. Your team is ready.';
-  }
-  if (heroEvent?.event_date === today && heroEvent.event_type === 'practice') {
-    return 'Good practice makes good habits. Set the tone today.';
-  }
-  if (seasonRecord && seasonRecord.wins > seasonRecord.losses) {
-    return 'Momentum is on your side. Keep building.';
-  }
-  if (!heroEvent || heroEvent.event_date !== today) {
-    return 'Recovery matters too. Let them rest.';
-  }
-  return 'Go make them better today.';
-}
-
 function formatTime(timeStr: string | null): string {
   if (!timeStr) return '';
   try {
@@ -166,7 +144,6 @@ export default function CoachHomeScroll() {
   const data = useCoachHomeData();
   const { isTabletAny, contentMaxWidth, contentPadding } = useResponsive();
 
-  const firstName = profile?.full_name?.split(' ')[0] || 'Coach';
   const userInitials = useMemo(() => {
     const name = profile?.full_name || '';
     const parts = name.split(' ').filter(Boolean);
@@ -192,19 +169,6 @@ export default function CoachHomeScroll() {
     }).catch(() => {});
   }, [profile?.id]);
 
-  // Mascot float animation
-  const mascotFloat = useSharedValue(0);
-  useEffect(() => {
-    mascotFloat.value = withRepeat(
-      withSequence(
-        withTiming(-4, { duration: 1500 }),
-        withTiming(4, { duration: 1500 }),
-      ),
-      -1,
-      true,
-    );
-  }, []);
-
   // Header interactivity — pointerEvents must be a View prop, not animated style
   const [headerInteractive, setHeaderInteractive] = useState(false);
   const prevHeaderState = useSharedValue(false);
@@ -222,11 +186,62 @@ export default function CoachHomeScroll() {
     return buildBriefingMessage(data.teams, data.upcomingEvents);
   }, [data.teams, data.upcomingEvents]);
 
-  // Check if roster has issues (for QuickActions badge)
-  const hasRosterIssues = useMemo(() => {
-    const missing = data.rsvpSummary?.missing ?? [];
-    return missing.length > 0;
-  }, [data.rsvpSummary]);
+  // Dynamic message bar — contextual message + variant + route
+  const messageBarInfo = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const todayEvents = data.upcomingEvents.filter(e => e.event_date === today);
+    const todayGame = todayEvents.find(e => e.event_type === 'game');
+
+    if (todayGame) {
+      const time = formatTime(todayGame.event_time || todayGame.start_time);
+      return {
+        message: `Game day — ${todayGame.team_name} vs ${todayGame.opponent_name || 'TBD'}${time ? ` at ${time}` : ''}`,
+        icon: '\u{1F525}',
+        variant: 'urgent' as const,
+        route: `/game-day-command`,
+        eventId: todayGame.id,
+      };
+    }
+
+    const todayPractice = todayEvents.find(e => e.event_type === 'practice');
+    if (todayPractice) {
+      const time = formatTime(todayPractice.event_time || todayPractice.start_time);
+      return {
+        message: `Practice today${time ? ` at ${time}` : ''} for ${todayPractice.team_name}`,
+        icon: '\u{1F3D0}',
+        variant: 'info' as const,
+        route: '/(tabs)/coach-schedule',
+      };
+    }
+
+    if (data.pendingStatsCount > 0) {
+      return {
+        message: `${data.pendingStatsCount} game${data.pendingStatsCount > 1 ? 's' : ''} need stats entered`,
+        icon: '\u{1F4CB}',
+        variant: 'payment' as const,
+        route: '/game-results',
+      };
+    }
+
+    // Show next upcoming event if exists
+    const nextEvent = data.upcomingEvents.find(e => e.event_date > today);
+    if (nextEvent) {
+      const dayName = (() => {
+        try {
+          return new Date(nextEvent.event_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' });
+        } catch { return 'upcoming'; }
+      })();
+      const type = nextEvent.event_type === 'game' ? 'game' : nextEvent.event_type === 'practice' ? 'practice' : 'event';
+      return {
+        message: `Next up: ${dayName}'s ${type} — ${nextEvent.team_name}`,
+        icon: '\u{1F4C5}',
+        variant: 'info' as const,
+        route: '/(tabs)/coach-schedule',
+      };
+    }
+
+    return null;
+  }, [data.upcomingEvents, data.pendingStatsCount]);
 
   // Suggested player for shoutout nudge
   const suggestedPlayer = useMemo(() => {
@@ -255,17 +270,28 @@ export default function CoachHomeScroll() {
 
   // ─── Animated styles ──
 
+  // Animation 1: Mascot breathing — gentle scale loop
+  const mascotScale = useSharedValue(1);
+  useEffect(() => {
+    mascotScale.value = withRepeat(
+      withSequence(
+        withTiming(1.03, { duration: 2000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1.0, { duration: 2000, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      false
+    );
+    return () => cancelAnimation(mascotScale);
+  }, []);
+  const mascotBreathStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: mascotScale.value }],
+  }));
+
   // 5A: Welcome parallax — mascot translates up at 0.3x, text fades
   const welcomeAnimStyle = useAnimatedStyle(() => ({
     opacity: interpolate(scrollY.value, [0, 100], [1, 0], Extrapolation.CLAMP),
     transform: [
       { translateY: interpolate(scrollY.value, [0, 140], [0, -30], Extrapolation.CLAMP) },
-    ],
-  }));
-
-  const mascotParallaxStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateY: mascotFloat.value + interpolate(scrollY.value, [0, 200], [0, -60], Extrapolation.CLAMP) },
     ],
   }));
 
@@ -292,24 +318,6 @@ export default function CoachHomeScroll() {
     return { transform: [{ scale }] };
   });
 
-  // 5G: Quick actions stagger — handled per-row is complex, use simple fade-slide
-  const quickActionsAnimStyle = useAnimatedStyle(() => {
-    const cardCenter = 450;
-    const opacity = interpolate(
-      scrollY.value,
-      [cardCenter - 350, cardCenter - 150],
-      [0, 1],
-      Extrapolation.CLAMP,
-    );
-    const translateX = interpolate(
-      scrollY.value,
-      [cardCenter - 350, cardCenter - 150],
-      [-20, 0],
-      Extrapolation.CLAMP,
-    );
-    return { opacity, transform: [{ translateX }] };
-  });
-
   // ─── Empty state detection (rendered INSIDE scroll, never early return) ──
   const emptyState: 'loading' | 'no-org' | 'no-teams' | null =
     data.loading ? 'loading'
@@ -320,8 +328,12 @@ export default function CoachHomeScroll() {
   const selectedTeam = data.teams?.find(t => t.id === data.selectedTeamId);
   const teamName = selectedTeam?.name ?? '';
 
+  // Hide message bar when hero card is already showing game-day info (avoids redundancy)
+  const today = new Date().toISOString().split('T')[0];
+  const isGameDayHeroVisible = data.heroEvent?.event_type === 'game' && data.heroEvent?.event_date === today;
+
   return (
-    <View style={[styles.root, { backgroundColor: BRAND.offWhite }]}>
+    <View style={[styles.root, { backgroundColor: D_COLORS.pageBg }]}>
       {/* ─── COMPACT HEADER ──────────────────────────────────── */}
       <Animated.View
         pointerEvents={headerInteractive ? 'auto' : 'none'}
@@ -420,197 +432,122 @@ export default function CoachHomeScroll() {
           <View style={{ paddingTop: 120 }}><NoTeamState role="coach" /></View>
         ) : (
         <>
-        {/* ─── 1. WELCOME SECTION (Tier 3 ambient) ──────────── */}
+        {/* ─── 1. COMPACT MASCOT GREETING (D System) ──────── */}
         <Animated.View
-          style={[styles.welcomeSection, { paddingTop: insets.top + 16 }, welcomeAnimStyle]}
+          style={[styles.compactGreeting, { paddingTop: insets.top + 16 }, welcomeAnimStyle]}
         >
-          <View style={styles.welcomeTopRow}>
-            <View style={{ flex: 1 }} />
-            <View style={styles.roleSelectorWrap}>
-              <RoleSelector />
-            </View>
-            <TouchableOpacity
-              style={styles.bellBtn}
-              activeOpacity={0.7}
-              onPress={() => router.push('/notification' as any)}
-            >
-              <Ionicons name="notifications-outline" size={22} color={BRAND.navy} />
-              {data.unreadMessages > 0 && (
-                <View style={styles.bellBadge}>
-                  <Text style={styles.bellBadgeText}>
-                    {data.unreadMessages > 9 ? '9+' : data.unreadMessages}
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.welcomeContent}>
-            <Animated.View style={mascotParallaxStyle}>
-              <Image source={require('../assets/images/mascot/HiLynx.png')} style={styles.mascotImg} resizeMode="contain" />
+          <View style={styles.greetingRow}>
+            {/* Mascot avatar */}
+            <Animated.View style={[styles.mascotAvatar, mascotBreathStyle]}>
+              <Image source={require('../assets/images/mascot/HiLynx.png')} style={styles.mascotAvatarImg} resizeMode="contain" />
             </Animated.View>
-            <Text style={styles.welcomeGreeting}>
-              {getTimeGreeting()}, Coach
-            </Text>
-          </View>
 
-          <Text style={styles.briefingText}>{briefingMessage}</Text>
+            {/* Greeting text */}
+            <View style={styles.greetingText}>
+              <Text style={styles.greetingLine1}>Hey Coach! {'\u{1F525}'}</Text>
+              <Text style={styles.greetingLine2} numberOfLines={1}>{briefingMessage}</Text>
+            </View>
+
+            {/* Team selector pill (compact) */}
+            {data.teams && data.teams.length > 1 && selectedTeam && (
+              <TouchableOpacity
+                style={styles.dTeamPill}
+                activeOpacity={0.7}
+                onPress={() => {
+                  // Cycle to next team
+                  const idx = data.teams.findIndex(t => t.id === data.selectedTeamId);
+                  const next = data.teams[(idx + 1) % data.teams.length];
+                  if (next) data.selectTeam(next.id);
+                }}
+              >
+                <Text style={styles.dTeamPillText} numberOfLines={1}>{selectedTeam.name}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </Animated.View>
 
-        {/* ─── 2. TEAM SELECTOR PILLS (in-scroll) ── ↕ 4px ──── */}
-        <View style={{ marginBottom: 12 }}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.teamPillsScroll}
-          >
-            {(data.teams || []).map(team => {
-              const isActive = team.id === data.selectedTeamId;
-              return (
-                <TouchableOpacity
-                  key={team.id}
-                  style={[styles.teamPill, isActive && styles.teamPillActive]}
-                  activeOpacity={0.7}
-                  onPress={() => data.selectTeam(team.id)}
-                >
-                  <Text style={[styles.teamPillText, isActive && styles.teamPillTextActive]}>
-                    {team.name}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
-
-        {/* ─── 3. PREP CHECKLIST (Tier 2 flat — event days only) ── ↕ 8px ── */}
-        <View style={{ marginBottom: 8 }}>
-          <PrepChecklist
-            checklist={data.prepChecklist}
-            eventDate={data.heroEvent?.event_date ?? null}
-          />
-        </View>
-
-        {/* ─── 4. EVENT HERO CARD (Tier 1 — event days only) ── ↕ 20px ── */}
-        {data.heroEvent ? (
-          <Animated.View style={[{ marginBottom: 20 }, heroCardAnimStyle]}>
-            <GamePlanCard event={data.heroEvent} rsvpSummary={data.rsvpSummary} />
-          </Animated.View>
-        ) : (
-          <View style={styles.quietDayCard}>
-            <Text style={styles.quietDayIcon}>{'\u{1F3D0}'}</Text>
-            <Text style={styles.quietDayTitle}>No upcoming events</Text>
-            <Text style={styles.quietDaySubtext}>
-              Use the downtime to review stats, prep your roster, or issue a challenge.
-            </Text>
+        {/* ─── 1b. DYNAMIC MESSAGE BAR (hidden on game day — hero card covers it) ── */}
+        {messageBarInfo && !isGameDayHeroVisible && (
+          <View style={{ marginBottom: 14 }}>
+            <DynamicMessageBar
+              message={messageBarInfo.message}
+              icon={messageBarInfo.icon}
+              variant={messageBarInfo.variant}
+              route={messageBarInfo.route}
+              eventId={messageBarInfo.eventId}
+            />
           </View>
         )}
 
-        {/* ─── Scouting Context ── */}
-        <View style={{ marginBottom: 12 }}>
-          <ScoutingContext previousMatchup={data.previousMatchup} />
-        </View>
-
-        {/* ─── 5. QUICK ACTIONS (subtle container) ── ↕ 12px ── */}
-        <Animated.View style={[{ marginBottom: 12 }, quickActionsAnimStyle]}>
-          <QuickActions
-            isEventDay={data.heroEvent !== null}
-            pendingStatsCount={data.pendingStatsCount}
-            hasRosterIssues={hasRosterIssues}
-            onGiveShoutout={() => setShowShoutoutModal(true)}
+        {/* ─── 3. GAME DAY HERO (D System — integrated readiness) ── ↕ 18px ── */}
+        <Animated.View style={[{ marginBottom: 18 }, heroCardAnimStyle]}>
+          <GameDayHeroCard
+            event={data.heroEvent}
+            rsvpSummary={data.rsvpSummary}
+            prepChecklist={data.prepChecklist}
           />
         </Animated.View>
 
-        {/* ─── 6. ENGAGEMENT NUDGE (Tier 3 — 1 line max) ── ↕ 24px ── */}
-        <View style={{ marginBottom: 24 }}>
-          <EngagementSection
-            onGiveShoutout={() => setShowShoutoutModal(true)}
-            suggestedPlayer={suggestedPlayer}
+        {/* ─── 4. MOMENTUM CARDS (D System — horizontal gradient scroll) ── ↕ 16px ── */}
+        <View style={{ marginBottom: 16 }}>
+          <MomentumCardsRow
+            seasonRecord={data.seasonRecord}
+            attendanceRate={data.attendanceRate}
+            topPerformers={data.topPerformers}
           />
         </View>
 
-        {/* ─── 6b. CHALLENGES QUICK CARD ── ↕ 12px ── */}
-        <ChallengeQuickCard teamId={data.selectedTeamId} />
-
-        {/* ─── 7b. ROSTER ACCESS (Tier 2 — one-tap to carousel) ── ↕ 16px ── */}
-        <TouchableOpacity
-          style={styles.rosterCard}
-          activeOpacity={0.85}
-          onPress={() => router.push(`/roster?teamId=${data.selectedTeamId}` as any)}
-        >
-          <View style={styles.rosterLeft}>
-            <Text style={styles.rosterLabel}>ROSTER</Text>
-            <Text style={styles.rosterTeam} numberOfLines={1}>{teamName}</Text>
-            <Text style={styles.rosterCount}>
-              {selectedTeam?.player_count ?? 0} player{(selectedTeam?.player_count ?? 0) !== 1 ? 's' : ''} {'\u00B7'} View Roster {'\u2192'}
-            </Text>
-          </View>
-          <View style={styles.rosterIcon}>
-            <Ionicons name="people" size={24} color={BRAND.skyBlue} />
-          </View>
-        </TouchableOpacity>
-
-        {/* ─── 8. SEASON & LEADERBOARD CARD (Tier 1.5 — bars + charts) ── ↕ 20px ── */}
-        <View style={{ marginBottom: 20 }}>
-          <SeasonLeaderboardCard
-            record={data.seasonRecord}
-            performers={data.topPerformers}
+        {/* ─── 5. SQUAD FACES (D System — overlapping avatars) ── ↕ 16px ── */}
+        <View style={{ marginBottom: 16 }}>
+          <SquadFacesRow
+            teamId={data.selectedTeamId}
             teamName={teamName}
-            lastGameLine={data.lastGameLine}
-            scrollY={scrollY}
-            cardY={900}
+            playerCount={selectedTeam?.player_count ?? 0}
+            topPerformers={data.topPerformers}
           />
         </View>
 
-        {/* ─── 9. ACTION ITEMS (Tier 2 — compact lines) ── ↕ 16px ── */}
+        {/* ─── 6. SMART NUDGE (D System — contextual suggestion) ── ↕ 14px ── */}
+        <View style={{ marginBottom: 14 }}>
+          <SmartNudgeCard
+            suggestedPlayer={suggestedPlayer}
+            previousMatchup={data.previousMatchup}
+            isGameDay={data.heroEvent?.event_type === 'game'}
+            attendanceRate={data.attendanceRate}
+            onGiveShoutout={() => setShowShoutoutModal(true)}
+          />
+        </View>
+
+        {/* ─── 7. ACTION GRID 2x2 (D System — pastel cells) ── ↕ 16px ── */}
         <View style={{ marginBottom: 16 }}>
-          <ActionItems
-            teamId={data.selectedTeamId}
-            pendingStatsCount={data.pendingStatsCount}
+          <ActionGrid2x2
+            onGiveShoutout={() => setShowShoutoutModal(true)}
           />
         </View>
 
-        {/* ─── 10. TEAM HUB PREVIEW (Tier 1.5 — social feed) ── ↕ 16px ── */}
-        <View style={{ marginBottom: 16 }}>
-          <TeamHubPreviewCard
-            teamId={data.selectedTeamId}
-            scrollY={scrollY}
-            cardY={1100}
-          />
+        {/* ─── 8. TEAM PULSE FEED (D System — flat activity feed) ── ↕ 18px ── */}
+        <View style={{ marginBottom: 18 }}>
+          <CoachPulseFeed teamId={data.selectedTeamId} limit={4} />
         </View>
 
-        {/* ─── 11. RECENT ACTIVITY (Tier 2 — 2 items max) ── ↕ 20px ── */}
-        <View style={{ marginBottom: 20 }}>
-          <ActivityFeed teamId={data.selectedTeamId} />
-        </View>
-
-        {/* ─── 11b. TEAM PULSE (Tier 2 — light variant) ── ↕ 20px ── */}
-        <View style={{ marginBottom: 20 }}>
-          <TeamPulse teamId={data.selectedTeamId} variant="light" limit={4} />
-        </View>
-
-        {/* ─── 11c. TROPHY CASE (Tier 2 — badges + XP) ── ↕ 20px ── */}
+        {/* ─── 9. FORTNITE TROPHY CASE (D System — dark navy badge grid) ── ↕ 18px ── */}
         {profile?.id && (
-          <View style={{ marginBottom: 20 }}>
-            <TrophyCaseWidget userId={profile.id} userRole="coach" />
+          <View style={{ marginBottom: 18 }}>
+            <CoachTrophyCase userId={profile.id} />
           </View>
         )}
 
-        {/* ─── 12. SEASON SETUP (conditional — early season only) ── ↕ 24px ── */}
-        <View style={{ marginBottom: 24 }}>
-          <SeasonSetupCard
-            teamId={data.selectedTeamId}
-            scrollY={scrollY}
-            cardY={1300}
-          />
+        {/* ─── 10. TEAM STATS BAR CHART ── ↕ 18px ── */}
+        <View style={{ marginBottom: 18 }}>
+          <TeamStatsChart topPerformers={data.topPerformers} />
         </View>
 
-        {/* ─── 13. CLOSING (Tier 3) ── ↕ 140px bottom ──────── */}
-        <View style={styles.endSection}>
-          <Image source={require('../assets/images/mascot/HiLynx.png')} style={styles.endMascotImg} resizeMode="contain" />
-          <Text style={styles.endText}>
-            {buildClosingMessage(data.heroEvent, data.seasonRecord)}
-          </Text>
-        </View>
+        {/* ─── 11. AMBIENT CLOSER (D System — quiet contextual message) ── */}
+        <AmbientCloser
+          seasonRecord={data.seasonRecord}
+          heroEvent={data.heroEvent}
+          teamName={teamName}
+        />
         </>
         )}
       </Animated.ScrollView>
@@ -756,16 +693,56 @@ const styles = StyleSheet.create({
     color: BRAND.white,
   },
 
-  // Welcome section
-  welcomeSection: {
-    paddingHorizontal: SPACING.pagePadding,
-    paddingBottom: 4,
+  // D System compact greeting
+  compactGreeting: {
+    paddingHorizontal: 16,
+    paddingBottom: 10,
   },
-  welcomeTopRow: {
+  greetingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    gap: 10,
   },
+  mascotAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mascotAvatarImg: {
+    width: 40,
+    height: 40,
+  },
+  greetingText: {
+    flex: 1,
+    gap: 1,
+  },
+  greetingLine1: {
+    fontFamily: FONTS.bodyExtraBold,
+    fontSize: 17,
+    color: BRAND.textPrimary,
+  },
+  greetingLine2: {
+    fontFamily: FONTS.bodyMedium,
+    fontSize: 12,
+    color: BRAND.textMuted,
+  },
+  dTeamPill: {
+    backgroundColor: BRAND.navyDeep,
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    maxWidth: 100,
+  },
+  dTeamPillText: {
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 10,
+    color: BRAND.white,
+  },
+
+  // Bell (shared)
   bellBtn: {
     position: 'relative',
     padding: 4,
@@ -787,115 +764,5 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: BRAND.white,
   },
-  welcomeContent: {
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  mascotImg: { width: 48, height: 48, marginBottom: 6 },
-  welcomeGreeting: {
-    fontFamily: FONTS.bodyBold,
-    fontSize: 22,
-    color: BRAND.navy,
-    textAlign: 'center',
-  },
-  briefingText: {
-    fontFamily: FONTS.bodySemiBold,
-    fontSize: 17,
-    color: BRAND.textPrimary,
-    textAlign: 'center',
-    lineHeight: 26,
-    paddingHorizontal: 32,
-    marginTop: 8,
-  },
 
-  // End of scroll
-  endSection: {
-    alignItems: 'center',
-    paddingTop: 24,
-  },
-  endMascotImg: {
-    width: 40,
-    height: 40,
-    opacity: 0.3,
-    marginBottom: 8,
-  },
-  endText: {
-    fontFamily: FONTS.bodyMedium,
-    fontSize: 14,
-    color: BRAND.textFaint,
-    textAlign: 'center',
-    paddingHorizontal: 40,
-  },
-  // Roster card
-  rosterCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: 16,
-    marginBottom: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderRadius: 16,
-    backgroundColor: BRAND.white,
-    borderWidth: 1,
-    borderColor: BRAND.border,
-  },
-  rosterLeft: {
-    flex: 1,
-    gap: 2,
-  },
-  rosterLabel: {
-    fontSize: 10,
-    fontFamily: FONTS.bodyBold,
-    color: BRAND.skyBlue,
-    letterSpacing: 1.5,
-  },
-  rosterTeam: {
-    fontSize: 16,
-    fontFamily: FONTS.bodyBold,
-    color: BRAND.textPrimary,
-  },
-  rosterCount: {
-    fontSize: 12,
-    fontFamily: FONTS.bodyMedium,
-    color: BRAND.textMuted,
-    marginTop: 2,
-  },
-  rosterIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: `${BRAND.skyBlue}1A`,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  // Quiet day placeholder (when no upcoming events)
-  quietDayCard: {
-    marginHorizontal: 16,
-    marginBottom: 20,
-    paddingVertical: 28,
-    paddingHorizontal: 24,
-    borderRadius: 16,
-    backgroundColor: BRAND.white,
-    borderWidth: 1,
-    borderColor: BRAND.border,
-    alignItems: 'center',
-  },
-  quietDayIcon: {
-    fontSize: 32,
-    marginBottom: 8,
-  },
-  quietDayTitle: {
-    fontFamily: FONTS.bodyBold,
-    fontSize: 16,
-    color: BRAND.textPrimary,
-    marginBottom: 4,
-  },
-  quietDaySubtext: {
-    fontFamily: FONTS.bodyMedium,
-    fontSize: 13,
-    color: BRAND.textMuted,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
 });

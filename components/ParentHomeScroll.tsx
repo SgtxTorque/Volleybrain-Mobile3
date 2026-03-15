@@ -32,6 +32,7 @@ import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useAuth } from '@/lib/auth';
+import { useSeason } from '@/lib/season';
 import { useParentScroll } from '@/lib/parent-scroll-context';
 import { useScrollAnimations, SCROLL_THRESHOLDS } from '@/hooks/useScrollAnimations';
 import { useParentHomeData } from '@/hooks/useParentHomeData';
@@ -43,6 +44,7 @@ import NoTeamState from './empty-states/NoTeamState';
 import { BRAND } from '@/theme/colors';
 import { SPACING } from '@/theme/spacing';
 import { FONTS } from '@/theme/fonts';
+import { D_COLORS } from '@/theme/d-system';
 
 import RoleSelector from './RoleSelector';
 import DayStripCalendar from './parent-scroll/DayStripCalendar';
@@ -63,6 +65,17 @@ import FamilyPanel from './FamilyPanel';
 import RegistrationCard from './parent-scroll/RegistrationCard';
 import RegistrationStatusCard from './parent-scroll/RegistrationStatusCard';
 import IncompleteProfileCard from './parent-scroll/IncompleteProfileCard';
+import FamilyHeroCard from './parent-scroll/FamilyHeroCard';
+import ParentPaymentNudge from './parent-scroll/ParentPaymentNudge';
+import ParentAttentionStrip from './parent-scroll/ParentAttentionStrip';
+import FamilyKidCard from './parent-scroll/FamilyKidCard';
+import ParentXPBar from './parent-scroll/ParentXPBar';
+import ParentEventHero from './parent-scroll/ParentEventHero';
+import ParentMomentumRow from './parent-scroll/ParentMomentumRow';
+import FamilyPulseFeed from './parent-scroll/FamilyPulseFeed';
+import ParentTeamHubCard from './parent-scroll/ParentTeamHubCard';
+import ParentTrophyBar from './parent-scroll/ParentTrophyBar';
+import ParentAmbientCloser from './parent-scroll/ParentAmbientCloser';
 import TrophyCaseWidget from './TrophyCaseWidget';
 import AchievementCelebrationModal from './AchievementCelebrationModal';
 import { getUnseenRoleAchievements, markAchievementsSeen } from '@/lib/achievement-engine';
@@ -170,6 +183,7 @@ export default function ParentHomeScroll() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { profile, organization } = useAuth();
+  const { workingSeason } = useSeason();
   const parentScroll = useParentScroll();
   const { scrollY, isSlowScroll, scrollHandler } = useScrollAnimations({
     onScrollJS: parentScroll.notifyScroll,
@@ -235,6 +249,10 @@ export default function ParentHomeScroll() {
   const mascotFloat = useSharedValue(0);
 
   const firstName = profile?.full_name?.split(' ')[0] || 'Parent';
+  const lastName = (() => {
+    const parts = (profile?.full_name || '').split(' ').filter(Boolean);
+    return parts.length >= 2 ? parts[parts.length - 1] : '';
+  })();
   const userInitials = (() => {
     const name = profile?.full_name || '';
     const parts = name.split(' ').filter(Boolean);
@@ -242,6 +260,25 @@ export default function ParentHomeScroll() {
     if (parts.length === 1) return parts[0][0].toUpperCase();
     return '?';
   })();
+
+  // ─── Derive greeting context from real data ──
+  const heroContext = useMemo(() => {
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+    const todayEvents = data.allUpcomingEvents.filter(e => e.date === todayStr);
+    const isGameDay = todayEvents.some(e => e.eventType === 'game');
+    const isPracticeDay = !isGameDay && todayEvents.some(e => e.eventType === 'practice');
+
+    // winStreak: use season wins as proxy (exact streak not available)
+    const winStreak = data.seasonRecord?.wins ?? 0;
+
+    // justWon/justLost: not available from current hook data
+    const justWon = false;
+    const justLost = false;
+
+    return { isGameDay, isPracticeDay, winStreak, justWon, justLost };
+  }, [data.allUpcomingEvents, data.seasonRecord]);
 
   // ─── Mascot float animation ──
   useEffect(() => {
@@ -323,7 +360,7 @@ export default function ParentHomeScroll() {
     : null;
 
   return (
-    <View style={[styles.root, { backgroundColor: BRAND.offWhite }]}>
+    <View style={[styles.root, { backgroundColor: D_COLORS.pageBg }]}>
       {/* ─── COMPACT HEADER ──────────────────────────────────── */}
       <Animated.View
         pointerEvents={headerInteractive ? 'auto' : 'none'}
@@ -363,18 +400,6 @@ export default function ParentHomeScroll() {
         </View>
       </Animated.View>
 
-      {/* ─── DAY-STRIP CALENDAR (sticky below header) ────────── */}
-      <Animated.View
-        pointerEvents={headerInteractive ? 'auto' : 'none'}
-        style={[
-          styles.calendarSticky,
-          { top: 56 + insets.top },
-          calendarStickyAnimStyle,
-        ]}
-      >
-        <DayStripCalendar scrollY={scrollY} eventDates={data.eventDates} />
-      </Animated.View>
-
       {/* ─── SCROLLABLE CONTENT ──────────────────────────────── */}
       <Animated.ScrollView
         onScroll={scrollHandler}
@@ -404,99 +429,43 @@ export default function ParentHomeScroll() {
           <View style={{ paddingTop: 120 }}><NoTeamState role="parent" /></View>
         ) : (
         <>
-        {/* ─── WELCOME SECTION ────────────────────────────────── */}
-        <Animated.View
-          style={[styles.welcomeSection, { paddingTop: insets.top + 16 }, welcomeAnimStyle]}
-        >
-          <View style={styles.welcomeTopRow}>
-            <View style={{ flex: 1 }} />
-            <View style={styles.roleSelectorWrap}>
-              <RoleSelector />
-            </View>
-            <TouchableOpacity
-              style={styles.bellBtn}
-              activeOpacity={0.7}
-              onPress={() => router.push('/notification' as any)}
-            >
-              <Ionicons name="notifications-outline" size={22} color={BRAND.navy} />
-              {data.attentionCount > 0 && (
-                <View style={styles.bellBadge}>
-                  <Text style={styles.bellBadgeText}>
-                    {data.attentionCount > 9 ? '9+' : data.attentionCount}
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.welcomeContent}>
-            <Animated.View style={[styles.mascotImageWrap, mascotAnimStyle]}><Image source={require('@/assets/images/mascot/HiLynx.png')} style={[styles.mascotImage, isTabletAny && { width: 80, height: 80 }]} resizeMode="contain" /></Animated.View>
-            <Text style={styles.welcomeGreeting}>Welcome back, {firstName}</Text>
-          </View>
-
-          {currentMessage?.route ? (
-            <TouchableOpacity
-              activeOpacity={0.7}
-              onPress={() => router.push(currentMessage.route as any)}
-            >
-              <Animated.Text
-                style={[
-                  styles.flatMessageText,
-                  { color: currentMessage.textColor },
-                  messageAnimStyle,
-                ]}
-              >
-                {currentMessage.text}
-              </Animated.Text>
-              {currentMessage.hint ? (
-                <Text style={styles.flatMessageHint}>{currentMessage.hint}</Text>
-              ) : null}
-            </TouchableOpacity>
-          ) : (
-            <View>
-              <Animated.Text
-                style={[
-                  styles.flatMessageText,
-                  { color: currentMessage?.textColor ?? BRAND.textPrimary },
-                  messageAnimStyle,
-                ]}
-              >
-                {currentMessage?.text}
-              </Animated.Text>
-            </View>
-          )}
-
-          {messages.length > 1 && (
-            <View style={styles.dotRow}>
-              {messages.map((_, i) => (
-                <View
-                  key={i}
-                  style={[styles.dot, i === activeMessageIndex && styles.dotActive]}
-                />
-              ))}
-            </View>
-          )}
-        </Animated.View>
-
-        {/* ─── REGISTRATION STATUS + OPEN REGISTRATION ─────── */}
-        <View style={{ paddingHorizontal: SPACING.pagePadding }}>
-          <RegistrationStatusCard />
-          <RegistrationCard childName={data.children.length > 0 ? data.children[0].first_name : null} />
-          <IncompleteProfileCard />
+        {/* ─── FAMILY HERO CARD ───────────────────────────────── */}
+        <View style={{ paddingTop: insets.top + 16 }}>
+          <FamilyHeroCard
+            lastName={lastName}
+            firstName={firstName}
+            children={data.allChildren}
+            seasonName={workingSeason?.name || ''}
+            isGameDay={heroContext.isGameDay}
+            isPracticeDay={heroContext.isPracticeDay}
+            winStreak={heroContext.winStreak}
+            hasPaymentDue={data.paymentStatus.balance > 0}
+            justWon={heroContext.justWon}
+            justLost={heroContext.justLost}
+            parentXp={data.childXp}
+          />
         </View>
 
-        {/* ─── CONTEXT BAR (only when context selected) ────────── */}
-        <ContextBar
-          context={data.selectedContext}
-          allChildren={data.allChildren}
-          isMulti={data.isMultiChild || data.isMultiSport}
-          onSwitch={() => setFamilyPanelOpen(true)}
-          onClear={() => data.setSelectedContext(null)}
+        {/* ─── PAYMENT NUDGE ────────────────────────────────────── */}
+        <ParentPaymentNudge balance={data.paymentStatus.balance} />
+
+        {/* ─── ATTENTION STRIP (expandable) ─────────────────────── */}
+        <ParentAttentionStrip
+          count={data.attentionCount}
+          items={data.familyAttentionItems}
         />
 
-        {/* ─── BILLBOARD HERO (auto-cycling events) ───────────── */}
-        <BillboardHero
-          events={data.allUpcomingEvents}
+        {/* ─── FAMILY KID CARDS ──────────────────────────────── */}
+        <FamilyKidCard
+          kids={data.allChildren}
+          nextEvents={data.allUpcomingEvents}
+          onOpenFamilyPanel={() => setFamilyPanelOpen(true)}
+        />
+
+        {/* ─── EVENT HERO (dark navy, +XP on RSVP) ──────────── */}
+        <ParentEventHero
+          event={data.allUpcomingEvents[0] || null}
+          child={data.allChildren.find(c => c.playerId === data.allUpcomingEvents[0]?.childId) || data.allChildren[0] || null}
           onRsvp={(eventId, childId, status) => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             data.rsvpEvent(eventId, childId, status);
@@ -504,174 +473,45 @@ export default function ParentHomeScroll() {
           isMultiChild={data.isMultiChild}
         />
 
-        {/* ─── ALSO TODAY / THIS WEEK STRIP ───────────────────── */}
-        <AlsoStrip events={data.allUpcomingEvents} isMultiChild={data.isMultiChild} />
-
-        {/* ─── ATTENTION NUDGE ──────────────────────────────────── */}
-        <AttentionBanner
-          familyItems={data.familyAttentionItems}
-          count={data.attentionCount}
-          items={data.attentionItems}
-          isMultiChild={data.isMultiChild}
-          onPress={() => router.push('/(tabs)/parent-schedule' as any)}
+        {/* ─── MOMENTUM CARDS ────────────────────────────────── */}
+        <ParentMomentumRow
+          seasonRecord={data.seasonRecord}
+          paymentStatus={data.paymentStatus}
+          childXp={data.childXp}
         />
 
-        {/* ─── FAMILY ENTRY POINT ─────────────────────────────── */}
-        {data.allChildren.length === 1 ? (
-          // Single child: compact player card
-          <TouchableOpacity
-            style={styles.singleChildCard}
-            activeOpacity={0.7}
-            onPress={() => router.push('/family-gallery' as any)}
-          >
-            {/* Photo or initial */}
-            {data.allChildren[0].photoUrl ? (
-              <Image source={{ uri: data.allChildren[0].photoUrl }} style={styles.singleChildPhoto} />
-            ) : (
-              <View style={[styles.singleChildInitial, { backgroundColor: data.allChildren[0].teams[0]?.sportColor || BRAND.skyBlue }]}>
-                <Text style={styles.singleChildInitialText}>{data.allChildren[0].firstName[0]}</Text>
-              </View>
-            )}
-            {/* Info */}
-            <View style={styles.singleChildInfo}>
-              <Text style={styles.singleChildName}>{data.allChildren[0].firstName} {data.allChildren[0].lastName}</Text>
-              <Text style={styles.singleChildMeta}>
-                {[
-                  data.allChildren[0].teams[0]?.jerseyNumber ? `#${data.allChildren[0].teams[0].jerseyNumber}` : null,
-                  data.allChildren[0].teams[0]?.teamName,
-                ].filter(Boolean).join(' \u00B7 ')}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={BRAND.textFaint} />
-          </TouchableOpacity>
-        ) : data.allChildren.length > 1 ? (
-          // Multiple children: avatar row
-          <TouchableOpacity
-            style={styles.multiChildRow}
-            activeOpacity={0.7}
-            onPress={() => router.push('/family-gallery' as any)}
-          >
-            <View style={styles.avatarRow}>
-              {data.allChildren.slice(0, 6).map((child) => (
-                child.photoUrl ? (
-                  <Image key={child.playerId} source={{ uri: child.photoUrl }} style={styles.avatarCircle} />
-                ) : (
-                  <View key={child.playerId} style={[styles.avatarCircleFallback, { backgroundColor: child.teams[0]?.sportColor || BRAND.skyBlue }]}>
-                    <Text style={styles.avatarCircleText}>{child.firstName[0]}</Text>
-                  </View>
-                )
-              ))}
-              {data.allChildren.length > 6 && (
-                <View style={styles.avatarOverflow}>
-                  <Text style={styles.avatarOverflowText}>+{data.allChildren.length - 6}</Text>
-                </View>
-              )}
-            </View>
-            <View style={styles.multiChildLabel}>
-              <Text style={styles.multiChildText}>{data.allChildren.length} Athletes</Text>
-              <Ionicons name="chevron-forward" size={16} color={BRAND.textFaint} />
-            </View>
-          </TouchableOpacity>
-        ) : null}
-
-        {/* ─── AMBIENT CELEBRATION (Tier 3) ─────────────────────── */}
-        {data.children.length > 0 && (
-          <AmbientCelebration
-            playerIds={data.children.map((c) => c.id)}
-            childNames={Object.fromEntries(data.children.map((c) => [c.id, c.first_name]))}
-          />
-        )}
-
-        {/* ─── CHALLENGES ─────────────────────────────────────── */}
-        {data.children.length > 0 && (
-          <ChallengeVerifyCard
-            children={data.children.map((c) => ({
-              id: c.id,
-              first_name: c.first_name,
-              teamId: c.team_id,
-            }))}
-          />
-        )}
-
-        {/* ─── EVALUATIONS ─────────────────────────────────────── */}
-        {data.children.length > 0 && (
-          <ParentEvaluationCard
-            children={data.children.map((c) => ({
-              id: c.id,
-              first_name: c.first_name,
-            }))}
-          />
-        )}
-
-        {/* ─── METRIC GRID ─────────────────────────────────────── */}
-        <MetricGrid
-          record={data.seasonRecord}
-          payment={data.paymentStatus}
-          xp={data.childXp}
-          chat={data.lastChat}
-          childPlayerId={data.children[0]?.id}
-          selectedContext={data.selectedContext}
-          allChildren={data.allChildren}
+        {/* ─── FAMILY PULSE FEED ─────────────────────────────── */}
+        <FamilyPulseFeed
+          latestPost={data.latestPost}
+          lastChat={data.lastChat}
+          seasonRecord={data.seasonRecord}
+          childName={childName}
         />
 
-        {/* ─── TEAM HUB PREVIEW (flat) ──────────────────────── */}
-        <TeamHubPreview post={data.latestPost} />
+        {/* ─── TEAM HUB PREVIEW ──────────────────────────────── */}
+        <ParentTeamHubCard
+          kids={data.allChildren}
+          latestPost={data.latestPost}
+        />
 
-        {/* ─── CHAT PREVIEW (flat) ─────────────────────────── */}
-        <FlatChatPreview chat={data.lastChat} />
-
-        {/* ─── SEASON SCOREBOARD (flat) ────────────────────── */}
-        <SeasonSnapshot record={data.seasonRecord} />
-
-        {/* ─── RECENT BADGES (child's badges) ──────────────── */}
-        <RecentBadges playerIds={data.children.map((c) => c.id)} childPlayerId={data.children[0]?.id} />
-
-        {/* ─── YOUR ACHIEVEMENTS (parent's own badges) ─────── */}
+        {/* ─── PARENT TROPHY BAR ─────────────────────────────── */}
         {profile?.id && (
-          <View style={{ marginHorizontal: 16, marginBottom: 16 }}>
-            <TrophyCaseWidget userId={profile.id} userRole="parent" />
-          </View>
+          <ParentTrophyBar userId={profile.id} />
         )}
 
-        {/* ─── UPCOMING SEASON REGISTRATION (below current content) ─── */}
+        {/* ─── UPCOMING SEASON REGISTRATION (bottom variant) ── */}
         <RegistrationCard
           childName={data.children.length > 0 ? data.children[0].first_name : null}
           variant="bottom"
         />
 
-        {/* ─── END OF SCROLL (contextual closing) ────────────── */}
-        <View style={styles.endSection}>
-          <Image source={require('@/assets/images/mascot/SleepLynx.png')} style={styles.endMascot} resizeMode="contain" />
-          <Text style={styles.endText}>
-            {(() => {
-              const he = data.heroEvent;
-              if (he) {
-                const isToday = (() => {
-                  const today = new Date().toDateString();
-                  const evtDate = new Date(he.event_date + 'T00:00:00').toDateString();
-                  return today === evtDate;
-                })();
-                if (isToday) {
-                  const timeStr = he.event_time
-                    ? (() => { const [h,m] = he.event_time.split(':'); const hr = parseInt(h); return `${hr % 12 || 12}:${m} ${hr >= 12 ? 'PM' : 'AM'}`; })()
-                    : '';
-                  return `See you at ${(he.event_type || 'the event').toLowerCase()}${timeStr ? ` at ${timeStr}` : ''}. \u{1F3D0}`;
-                }
-                const isTomorrow = (() => {
-                  const tmrw = new Date();
-                  tmrw.setDate(tmrw.getDate() + 1);
-                  return tmrw.toDateString() === new Date(he.event_date + 'T00:00:00').toDateString();
-                })();
-                if (isTomorrow) {
-                  return `${(he.event_type || 'Event')} tomorrow. Get some rest.`;
-                }
-                const dayName = new Date(he.event_date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' });
-                return `Next up: ${dayName}'s ${(he.event_type || 'event').toLowerCase()}. ${childName} is ready.`;
-              }
-              return 'That\'s everything for now. Go be great.';
-            })()}
-          </Text>
-        </View>
+        {/* ─── AMBIENT CLOSER ────────────────────────────────── */}
+        <ParentAmbientCloser
+          children={data.allChildren}
+          heroEvent={data.allUpcomingEvents[0] || null}
+          seasonRecord={data.seasonRecord}
+          lastName={lastName}
+        />
         </>
         )}
       </Animated.ScrollView>
