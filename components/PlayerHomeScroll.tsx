@@ -50,6 +50,8 @@ import NoOrgState from './empty-states/NoOrgState';
 import NoTeamState from './empty-states/NoTeamState';
 import PlayerIdentityHero from './player-scroll/PlayerIdentityHero';
 import PlayerDailyQuests from './player-scroll/PlayerDailyQuests';
+import PlayerLeaderboardPreview from './player-scroll/PlayerLeaderboardPreview';
+import PlayerPropsSection from './player-scroll/PlayerPropsSection';
 import HeroIdentityCard from './player-scroll/HeroIdentityCard';
 import StreakBanner from './player-scroll/StreakBanner';
 import TheDrop from './player-scroll/TheDrop';
@@ -358,6 +360,20 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           onOpenShoutout={() => setShowShoutoutModal(true)}
         />
 
+        {/* ─── 3. LEADERBOARD PREVIEW ─────────────────────────── */}
+        <PlayerLeaderboardPreview
+          bestRank={data.bestRank}
+          xp={data.xp}
+          level={data.level}
+          playerName={data.playerName}
+        />
+
+        {/* ─── 4. PROPS FROM THE TEAM (shoutouts) ────────────── */}
+        <PlayerPropsSection
+          shoutouts={data.recentShoutouts}
+          onGiveShoutout={() => setShowShoutoutModal(true)}
+        />
+
         {/* ─── 1b. MY TEAM (one-tap to roster) ─────────────────── */}
         {data.primaryTeam && (
           <TouchableOpacity
@@ -398,12 +414,6 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           attendanceStreak={data.attendanceStreak}
           onRsvp={data.sendRsvp}
         />
-
-        {/* ─── 6. CHAT PEEK ───────────────────────────────────── */}
-        <ChatPeek teamId={data.primaryTeam?.id} />
-
-        {/* ─── 7. QUICK PROPS ─────────────────────────────────── */}
-        <QuickPropsRow teamId={data.primaryTeam?.id} onGiveShoutout={() => setShowShoutoutModal(true)} />
 
         {/* ─── 8. ACTIVE CHALLENGE (if exists) ────────────────── */}
         <ActiveChallengeCard available={data.challengesAvailable} teamId={data.primaryTeam?.id} />
