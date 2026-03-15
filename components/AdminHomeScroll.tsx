@@ -31,6 +31,7 @@ import { useScrollAnimations } from '@/hooks/useScrollAnimations';
 import { useAdminHomeData } from '@/hooks/useAdminHomeData';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
+import { D_COLORS } from '@/theme/d-system';
 
 import { useResponsive } from '@/lib/responsive';
 
@@ -45,6 +46,8 @@ import AdminTeamHealthCards from './admin-scroll/AdminTeamHealthCards';
 import AdminFinancialChart from './admin-scroll/AdminFinancialChart';
 import AdminActionPills from './admin-scroll/AdminActionPills';
 import OrgPulseFeed from './admin-scroll/OrgPulseFeed';
+import AdminTrophyBar from './admin-scroll/AdminTrophyBar';
+import AdminAmbientCloser from './admin-scroll/AdminAmbientCloser';
 // TrophyCaseWidget removed from render (shared, file preserved)
 import AchievementCelebrationModal from './AchievementCelebrationModal';
 import { getUnseenRoleAchievements, markAchievementsSeen } from '@/lib/achievement-engine';
@@ -155,7 +158,7 @@ export default function AdminHomeScroll() {
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
-          { flexGrow: 1, paddingBottom: 140, minHeight: '110%' },
+          { flexGrow: 1, paddingBottom: 24, minHeight: '110%' },
           isTabletAny && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%', paddingHorizontal: contentPadding },
         ]}
         refreshControl={
@@ -237,7 +240,16 @@ export default function AdminHomeScroll() {
           upcomingEvents={data.upcomingEvents}
         />
 
-        {/* ─── 8. TROPHY + CLOSER — placeholders until Phase 6 ── */}
+        {/* ─── 8. ADMIN TROPHY BAR ─────────────────────────── */}
+        {profile?.id && <AdminTrophyBar userId={profile.id} />}
+
+        {/* ─── 9. AMBIENT CLOSER ──────────────────────────── */}
+        <AdminAmbientCloser
+          adminName={data.adminName}
+          teamCount={data.teams.length}
+          playerCount={data.totalPlayers}
+          queueCount={data.queueItems.length}
+        />
         </>
         )}
       </Animated.ScrollView>
@@ -276,7 +288,7 @@ export default function AdminHomeScroll() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: BRAND.offWhite,
+    backgroundColor: D_COLORS.pageBg,
   },
   loadingWrap: {
     flex: 1,
@@ -329,7 +341,6 @@ const styles = StyleSheet.create({
     backgroundColor: BRAND.navy,
     borderRadius: 20,
   },
-  // roleRow removed — selectors now only in compact header
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -357,6 +368,4 @@ const styles = StyleSheet.create({
     color: BRAND.textFaint,
     fontFamily: FONTS.bodyMedium,
   },
-  // queueSection, viewMoreRow, allClearWrap styles removed — replaced by AdminAttentionStrip
-  // sectionWrap, activePill, upcomingSeasonCard styles removed — replaced by AdminTeamHealthCards
 });
