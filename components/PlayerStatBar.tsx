@@ -1,17 +1,26 @@
-import { useTheme } from '@/lib/theme';
+import { getPositionInfo } from '@/constants/sport-display';
+import { BRAND } from '@/theme/colors';
+import { D_COLORS } from '@/theme/d-system';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
-    Dimensions,
     Image,
+    Platform,
+    Pressable,
     StyleSheet,
     Text,
-    TouchableOpacity,
     View,
 } from 'react-native';
+import Animated, {
+    useAnimatedStyle,
+    useSharedValue,
+    withDelay,
+    withSpring,
+    withTiming,
+} from 'react-native-reanimated';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 type PlayerStatBarProps = {
   player: {
@@ -24,345 +33,184 @@ type PlayerStatBarProps = {
     grade?: number | null;
     team_name?: string | null;
     team_color?: string | null;
-    // Future stat placeholders
-    stat1?: number | string | null;
-    stat2?: number | string | null;
-    stat3?: number | string | null;
   };
-  teamLogoUrl?: string | null;
-  statLabels?: [string, string, string];
   onPress?: () => void;
   compact?: boolean;
-};
-
-const positionColors: Record<string, string> = {
-  'OH': '#FF6B6B',
-  'S': '#4ECDC4',
-  'MB': '#45B7D1',
-  'OPP': '#96CEB4',
-  'L': '#FFEAA7',
-  'DS': '#DDA0DD',
-  'RS': '#FF9F43',
+  /** Stagger index for entrance animation */
+  staggerIndex?: number;
 };
 
 export default function PlayerStatBar({
   player,
-  teamLogoUrl,
-  statLabels = ['ST1', 'ST2', 'ST3'],
   onPress,
   compact = false,
+  staggerIndex = 0,
 }: PlayerStatBarProps) {
-  const { colors } = useTheme();
-  // Derive dark mode from background color
-  const isDark = colors.background === '#000' || colors.background === '#000000' || colors.background?.startsWith('#0') || colors.background?.startsWith('#1');
+  const pressScale = useSharedValue(1);
+  const entryOpacity = useSharedValue(0);
+  const entryTranslateX = useSharedValue(20);
 
-  const teamColor = player.team_color || colors.primary;
-  const positionColor = player.position ? positionColors[player.position] || teamColor : teamColor;
-  const jerseyNumber = player.jersey_number;
+  useEffect(() => {
+    const delay = staggerIndex * 40;
+    entryOpacity.value = withDelay(delay, withTiming(1, { duration: 300 }));
+    entryTranslateX.value = withDelay(delay, withSpring(0, { damping: 18, stiffness: 200 }));
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { scale: pressScale.value },
+      { translateX: entryTranslateX.value },
+    ],
+    opacity: entryOpacity.value,
+  }));
+
+  const teamColor = player.team_color || D_COLORS.skyBlue;
+  const posInfo = getPositionInfo(player.position);
+  const positionColor = posInfo?.color || teamColor;
   const hasPhoto = !!player.photo_url;
-
-  const s = createStyles(colors, isDark, teamColor, compact);
+  const initial = player.first_name.charAt(0).toUpperCase();
 
   return (
-    <TouchableOpacity
-      style={s.container}
+    <AnimatedPressable
       onPress={onPress}
-      activeOpacity={0.85}
+      onPressIn={() => { pressScale.value = withSpring(0.97, { damping: 15, stiffness: 300 }); }}
+      onPressOut={() => { pressScale.value = withSpring(1, { damping: 15, stiffness: 300 }); }}
       disabled={!onPress}
+      style={[styles.container, animatedStyle]}
     >
-      {/* Background gradient */}
-      <LinearGradient
-        colors={isDark 
-          ? [teamColor + '40', '#1C1C1E', '#0D0D0D'] 
-          : [teamColor + '30', '#2C2C2E', '#1A1A1A']
-        }
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={s.gradientBg}
-      />
-
-      {/* Team logo watermark */}
-      {teamLogoUrl && (
-        <View style={s.logoBgContainer}>
+      {/* Player Photo — circular with team-color border */}
+      <View style={[styles.photoBorder, { borderColor: teamColor }]}>
+        {hasPhoto ? (
           <Image
-            source={{ uri: teamLogoUrl }}
-            style={s.logoBg}
-            resizeMode="contain"
+            source={{ uri: player.photo_url! }}
+            style={styles.photo}
+            resizeMode="cover"
           />
-        </View>
-      )}
-
-      {/* Left accent bar */}
-      <View style={[s.accentBar, { backgroundColor: teamColor }]} />
-
-      {/* Photo section */}
-      <View style={s.photoSection}>
-        <View style={[s.photoBorder, { borderColor: positionColor }]}>
-          {hasPhoto ? (
-            <Image
-              source={{ uri: player.photo_url! }}
-              style={s.photo}
-              resizeMode="cover"
-            />
-          ) : (
-            <View style={s.photoPlaceholder}>
-              <Ionicons name="person" size={compact ? 24 : 28} color="#555" />
-            </View>
-          )}
-        </View>
+        ) : (
+          <View style={[styles.photoPlaceholder, { backgroundColor: teamColor }]}>
+            <Text style={styles.photoInitial}>{initial}</Text>
+          </View>
+        )}
       </View>
 
-      {/* Name section */}
-      <View style={s.nameSection}>
-        <Text style={s.firstName} numberOfLines={1}>{player.first_name}</Text>
-        <Text style={s.lastName} numberOfLines={1}>{player.last_name}</Text>
+      {/* Name + team */}
+      <View style={styles.nameSection}>
+        <Text style={styles.playerName} numberOfLines={1}>
+          {player.first_name} {player.last_name}
+        </Text>
+        {player.team_name && (
+          <Text style={styles.teamName} numberOfLines={1}>{player.team_name}</Text>
+        )}
+      </View>
+
+      {/* Info pills */}
+      <View style={styles.pillsRow}>
+        {player.position && (
+          <View style={[styles.pill, { backgroundColor: positionColor + '18' }]}>
+            <Text style={[styles.pillText, { color: positionColor }]}>{player.position}</Text>
+          </View>
+        )}
+        {player.jersey_number != null && (
+          <View style={styles.pill}>
+            <Text style={styles.pillText}>#{player.jersey_number}</Text>
+          </View>
+        )}
+        {player.grade != null && (
+          <View style={styles.pill}>
+            <Text style={styles.pillText}>Gr {player.grade}</Text>
+          </View>
+        )}
       </View>
 
       {/* Arrow */}
-      <Ionicons 
-        name="chevron-forward" 
-        size={14} 
-        color={teamColor} 
-        style={s.arrow} 
+      <Ionicons
+        name="chevron-forward"
+        size={16}
+        color={D_COLORS.textMuted}
+        style={styles.arrow}
       />
-
-      {/* Stats row */}
-      <View style={s.statsRow}>
-        {/* Jersey Number */}
-        <StatBox 
-          label="JRS" 
-          value={jerseyNumber} 
-          highlight={!!jerseyNumber}
-          accentColor={teamColor}
-          compact={compact}
-        />
-
-        {/* Position */}
-        <StatBox 
-          label="POS" 
-          value={player.position} 
-          highlight={!!player.position}
-          accentColor={positionColor}
-          compact={compact}
-        />
-
-        {/* Grade */}
-        <StatBox 
-          label="GRD" 
-          value={player.grade} 
-          highlight={!!player.grade}
-          accentColor={teamColor}
-          compact={compact}
-        />
-
-        {/* Divider */}
-        <View style={s.statDivider} />
-
-        {/* Future Stats - dimmed placeholders */}
-        <StatBox 
-          label={statLabels[0]} 
-          value={player.stat1} 
-          dimmed 
-          compact={compact}
-        />
-        <StatBox 
-          label={statLabels[1]} 
-          value={player.stat2} 
-          dimmed 
-          compact={compact}
-        />
-        <StatBox 
-          label={statLabels[2]} 
-          value={player.stat3} 
-          dimmed 
-          compact={compact}
-        />
-      </View>
-
-      {/* Bottom accent line */}
-      <View style={[s.bottomAccent, { backgroundColor: teamColor }]} />
-    </TouchableOpacity>
+    </AnimatedPressable>
   );
 }
 
-// Stat box sub-component
-function StatBox({ 
-  label, 
-  value, 
-  highlight = false,
-  dimmed = false,
-  accentColor = '#F3C623',
-  compact = false,
-}: { 
-  label: string; 
-  value?: string | number | null;
-  highlight?: boolean;
-  dimmed?: boolean;
-  accentColor?: string;
-  compact?: boolean;
-}) {
-  const displayValue = value ?? '--';
-  const hasValue = value !== null && value !== undefined;
-  
-  return (
-    <View style={[statStyles.box, compact && statStyles.boxCompact]}>
-      <View style={[
-        statStyles.valueContainer,
-        compact && statStyles.valueContainerCompact,
-        highlight && hasValue && { borderColor: accentColor + '50', borderWidth: 1 },
-      ]}>
-        <Text style={[
-          statStyles.value,
-          compact && statStyles.valueCompact,
-          dimmed && statStyles.dimmedValue,
-        ]}>
-          {displayValue}
-        </Text>
-      </View>
-      <Text style={[statStyles.label, compact && statStyles.labelCompact]}>{label}</Text>
-    </View>
-  );
-}
-
-const statStyles = StyleSheet.create({
-  box: {
+const styles = StyleSheet.create({
+  container: {
+    marginHorizontal: 16,
+    marginVertical: 4,
+    borderRadius: 14,
+    backgroundColor: BRAND.white,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 4,
-  },
-  boxCompact: {
-    marginHorizontal: 2,
-  },
-  valueContainer: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    minWidth: 38,
-    alignItems: 'center',
+    padding: 12,
     borderWidth: 1,
-    borderColor: 'transparent',
+    borderColor: 'rgba(0,0,0,0.06)',
+    ...Platform.select({
+      ios: {
+        shadowColor: BRAND.navyDeep,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
-  valueContainerCompact: {
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-    minWidth: 32,
+  photoBorder: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 2,
+    overflow: 'hidden',
   },
-  value: {
+  photo: {
+    width: '100%',
+    height: '100%',
+  },
+  photoPlaceholder: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  photoInitial: {
+    fontFamily: FONTS.bodyExtraBold,
+    fontSize: 18,
+    color: BRAND.white,
+  },
+  nameSection: {
+    flex: 1,
+    marginLeft: 12,
+    marginRight: 8,
+  },
+  playerName: {
     fontSize: 15,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    fontFamily: FONTS.bodySemiBold,
+    color: D_COLORS.textPrimary,
   },
-  valueCompact: {
-    fontSize: 13,
-  },
-  dimmedValue: {
-    color: '#4A4A4A',
-  },
-  label: {
-    fontSize: 8,
-    fontWeight: '600',
-    color: '#8E8E93',
-    marginTop: 3,
-    letterSpacing: 0.5,
-  },
-  labelCompact: {
-    fontSize: 7,
+  teamName: {
+    fontSize: 12,
+    fontFamily: FONTS.bodyMedium,
+    color: D_COLORS.textMuted,
     marginTop: 2,
   },
+  pillsRow: {
+    flexDirection: 'row',
+    gap: 4,
+    marginRight: 4,
+  },
+  pill: {
+    backgroundColor: 'rgba(0,0,0,0.04)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  pillText: {
+    fontSize: 11,
+    fontFamily: FONTS.bodySemiBold,
+    color: D_COLORS.textMuted,
+  },
+  arrow: {
+    marginLeft: 2,
+  },
 });
-
-const createStyles = (colors: any, isDark: boolean, teamColor: string, compact: boolean) =>
-  StyleSheet.create({
-    container: {
-      marginHorizontal: 12,
-      marginVertical: 5,
-      borderRadius: 12,
-      overflow: 'hidden',
-      position: 'relative',
-      minHeight: compact ? 70 : 80,
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    gradientBg: {
-      ...StyleSheet.absoluteFillObject,
-    },
-    logoBgContainer: {
-      position: 'absolute',
-      left: 16,
-      top: '50%',
-      transform: [{ translateY: -25 }],
-      width: 50,
-      height: 50,
-      opacity: 0.1,
-    },
-    logoBg: {
-      width: '100%',
-      height: '100%',
-    },
-    accentBar: {
-      width: 4,
-      alignSelf: 'stretch',
-    },
-    photoSection: {
-      marginLeft: 10,
-      marginRight: 8,
-    },
-    photoBorder: {
-      width: compact ? 48 : 54,
-      height: compact ? 48 : 54,
-      borderRadius: 8,
-      borderWidth: 2,
-      overflow: 'hidden',
-      backgroundColor: '#2C2C2E',
-    },
-    photo: {
-      width: '100%',
-      height: '100%',
-    },
-    photoPlaceholder: {
-      width: '100%',
-      height: '100%',
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: isDark ? '#1C1C1E' : '#2A2A2A',
-    },
-    nameSection: {
-      flex: 1,
-      paddingRight: 4,
-      minWidth: 70,
-      maxWidth: 100,
-    },
-    firstName: {
-      fontSize: compact ? 11 : 12,
-      color: '#EBEBF5',
-      fontWeight: '400',
-    },
-    lastName: {
-      fontSize: compact ? 14 : 15,
-      color: '#FFFFFF',
-      fontWeight: '800',
-      textTransform: 'uppercase',
-      letterSpacing: 0.3,
-    },
-    arrow: {
-      marginRight: 6,
-    },
-    statsRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingRight: 8,
-    },
-    statDivider: {
-      width: 1,
-      height: 28,
-      backgroundColor: 'rgba(255,255,255,0.15)',
-      marginHorizontal: 4,
-    },
-    bottomAccent: {
-      position: 'absolute',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      height: 2,
-    },
-  });

@@ -186,7 +186,7 @@ export default function PlayersScreen() {
     />
   );
 
-  const renderListItem = ({ item }: { item: PlayerCardPlayer }) => (
+  const renderListItem = ({ item, index }: { item: PlayerCardPlayer; index: number }) => (
     <PlayerStatBar
       player={{
         id: item.id,
@@ -201,6 +201,7 @@ export default function PlayersScreen() {
       }}
       onPress={() => setSelectedPlayer(item)}
       compact
+      staggerIndex={index}
     />
   );
 
