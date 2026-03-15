@@ -203,6 +203,7 @@ export default function AdminHomeScroll() {
         />
 
         {/* ─── 2. SEARCH BAR ──────────────────────────────── */}
+        {/* TODO: Wire to global search (players, families, teams, coaches) — needs design spec */}
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={() => router.push('/(tabs)/players' as any)}
