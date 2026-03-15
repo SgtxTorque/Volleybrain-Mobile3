@@ -32,6 +32,7 @@ import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 
 import { useAuth } from '@/lib/auth';
+import { useParentScroll } from '@/lib/parent-scroll-context';
 import { useScrollAnimations } from '@/hooks/useScrollAnimations';
 import { useCoachHomeData } from '@/hooks/useCoachHomeData';
 import { BRAND } from '@/theme/colors';
@@ -140,7 +141,10 @@ export default function CoachHomeScroll() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { profile, organization } = useAuth();
-  const { scrollY, scrollHandler } = useScrollAnimations();
+  const parentScroll = useParentScroll();
+  const { scrollY, scrollHandler } = useScrollAnimations({
+    onScrollJS: parentScroll.notifyScroll,
+  });
   const data = useCoachHomeData();
   const { isTabletAny, contentMaxWidth, contentPadding } = useResponsive();
 
@@ -155,6 +159,15 @@ export default function CoachHomeScroll() {
   // Shoutout modal state
   const [showShoutoutModal, setShowShoutoutModal] = useState(false);
   const [shoutoutRecipient, setShoutoutRecipient] = useState<{ id: string; full_name: string; avatar_url: string | null; role: string } | null>(null);
+
+  // Signal to tab bar that this scroll is active
+  useEffect(() => {
+    parentScroll.setParentScrollActive(true);
+    return () => {
+      parentScroll.setParentScrollActive(false);
+      parentScroll.setScrolling(false);
+    };
+  }, []);
 
   // Unseen achievement celebration
   const [unseenBadges, setUnseenBadges] = useState<UnseenAchievement[]>([]);

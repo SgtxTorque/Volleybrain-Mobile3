@@ -39,6 +39,7 @@ import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useAuth } from '@/lib/auth';
+import { useParentScroll } from '@/lib/parent-scroll-context';
 import { useScrollAnimations } from '@/hooks/useScrollAnimations';
 import { usePlayerHomeData } from '@/hooks/usePlayerHomeData';
 
@@ -84,9 +85,21 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user, organization } = useAuth();
-  const { scrollY, scrollHandler } = useScrollAnimations();
+  const parentScroll = useParentScroll();
+  const { scrollY, scrollHandler } = useScrollAnimations({
+    onScrollJS: parentScroll.notifyScroll,
+  });
   const data = usePlayerHomeData(playerId);
   const { isTabletAny, contentMaxWidth, contentPadding } = useResponsive();
+
+  // Signal to tab bar that this scroll is active
+  useEffect(() => {
+    parentScroll.setParentScrollActive(true);
+    return () => {
+      parentScroll.setParentScrollActive(false);
+      parentScroll.setScrolling(false);
+    };
+  }, []);
 
   // ─── Shoutout modal ──
   const [showShoutoutModal, setShowShoutoutModal] = useState(false);

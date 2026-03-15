@@ -26,6 +26,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 
 import { useAuth } from '@/lib/auth';
+import { useParentScroll } from '@/lib/parent-scroll-context';
 import { useScrollAnimations } from '@/hooks/useScrollAnimations';
 import { useAdminHomeData } from '@/hooks/useAdminHomeData';
 import { BRAND } from '@/theme/colors';
@@ -56,9 +57,21 @@ export default function AdminHomeScroll() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { organization, profile } = useAuth();
-  const { scrollY, scrollHandler } = useScrollAnimations();
+  const parentScroll = useParentScroll();
+  const { scrollY, scrollHandler } = useScrollAnimations({
+    onScrollJS: parentScroll.notifyScroll,
+  });
   const data = useAdminHomeData();
   const { isTabletAny, contentMaxWidth, contentPadding } = useResponsive();
+
+  // Signal to tab bar that this scroll is active
+  useEffect(() => {
+    parentScroll.setParentScrollActive(true);
+    return () => {
+      parentScroll.setParentScrollActive(false);
+      parentScroll.setScrolling(false);
+    };
+  }, []);
 
   // Header interactivity
   const [headerVisible, setHeaderVisible] = React.useState(false);
