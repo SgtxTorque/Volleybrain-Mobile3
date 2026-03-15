@@ -73,6 +73,7 @@ import ParentXPBar from './parent-scroll/ParentXPBar';
 import ParentEventHero from './parent-scroll/ParentEventHero';
 import ParentMomentumRow from './parent-scroll/ParentMomentumRow';
 import FamilyPulseFeed from './parent-scroll/FamilyPulseFeed';
+import ParentTeamHubCard from './parent-scroll/ParentTeamHubCard';
 import ParentTrophyBar from './parent-scroll/ParentTrophyBar';
 import ParentAmbientCloser from './parent-scroll/ParentAmbientCloser';
 import TrophyCaseWidget from './TrophyCaseWidget';
@@ -466,6 +467,12 @@ export default function ParentHomeScroll() {
           lastChat={data.lastChat}
           seasonRecord={data.seasonRecord}
           childName={childName}
+        />
+
+        {/* ─── TEAM HUB PREVIEW ──────────────────────────────── */}
+        <ParentTeamHubCard
+          kids={data.allChildren}
+          latestPost={data.latestPost}
         />
 
         {/* ─── PARENT TROPHY BAR ─────────────────────────────── */}
