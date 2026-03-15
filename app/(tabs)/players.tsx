@@ -6,17 +6,17 @@ import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
+import { BRAND } from '@/theme/colors';
+import { D_COLORS } from '@/theme/d-system';
 import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Dimensions,
   FlatList,
   Modal,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -25,8 +25,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
 type Team = {
   id: string;
   name: string;
@@ -34,7 +32,7 @@ type Team = {
   age_group_name: string | null;
 };
 
-type ViewMode = 'grid' | 'lineup' | 'list';
+type ViewMode = 'grid' | 'list';
 
 export default function PlayersScreen() {
   const { colors } = useTheme();
@@ -145,7 +143,7 @@ export default function PlayersScreen() {
           age_group_name: null,
         };
       });
-      
+
       setPlayers(formattedPlayers);
 
     } catch (error) {
@@ -162,20 +160,12 @@ export default function PlayersScreen() {
   };
 
   const filteredPlayers = players.filter(p => {
-    const matchesSearch = searchQuery === '' || 
+    const matchesSearch = searchQuery === '' ||
       `${p.first_name} ${p.last_name}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.jersey_number?.toString().includes(searchQuery);
     const matchesTeam = !selectedTeam || (p as any).team_id === selectedTeam;
     return matchesSearch && matchesTeam;
   });
-
-  // Group players by team for lineup view
-  const playersByTeam = teams.reduce((acc, team) => {
-    acc[team.id] = filteredPlayers.filter(p => (p as any).team_id === team.id);
-    return acc;
-  }, {} as Record<string, PlayerCardPlayer[]>);
-
-  const unassignedPlayers = filteredPlayers.filter(p => !(p as any).team_id);
 
   const renderGridItem = ({ item }: { item: PlayerCardPlayer }) => (
     <PlayerCard
@@ -195,73 +185,6 @@ export default function PlayersScreen() {
     />
   );
 
-  const renderLineupView = () => (
-    <ScrollView style={s.lineupScroll} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
-      {teams.map(team => {
-        const teamPlayers = playersByTeam[team.id] || [];
-        if (teamPlayers.length === 0) return null;
-
-        return (
-          <View key={team.id} style={s.lineupTeam}>
-            <View style={[s.lineupHeader, { backgroundColor: team.color || colors.card }]}>
-              <Text style={s.lineupTeamName}>{team.name}</Text>
-              <Text style={s.lineupCount}>{teamPlayers.length} players</Text>
-            </View>
-            <View style={s.lineupGrid}>
-              {teamPlayers.map(player => (
-                <PlayerCard
-                  key={player.id}
-                  player={{
-                    id: player.id,
-                    first_name: player.first_name,
-                    last_name: player.last_name,
-                    jersey_number: player.jersey_number,
-                    position: player.position,
-                    photo_url: player.photo_url,
-                    grade: player.grade,
-                    team_color: team.color,
-                  }}
-                  onPress={() => setSelectedPlayer(player)}
-                  size="small"
-                />
-              ))}
-            </View>
-          </View>
-        );
-      })}
-
-      {unassignedPlayers.length > 0 && (
-        <View style={s.lineupTeam}>
-          <View style={[s.lineupHeader, { backgroundColor: colors.warning }]}>
-            <Text style={s.lineupTeamName}>Unassigned</Text>
-            <Text style={s.lineupCount}>{unassignedPlayers.length} players</Text>
-          </View>
-          <View style={s.lineupGrid}>
-            {unassignedPlayers.map(player => (
-              <PlayerCard
-                key={player.id}
-                player={{
-                  id: player.id,
-                  first_name: player.first_name,
-                  last_name: player.last_name,
-                  jersey_number: player.jersey_number,
-                  position: player.position,
-                  photo_url: player.photo_url,
-                  grade: player.grade,
-                }}
-                onPress={() => setSelectedPlayer(player)}
-                size="small"
-              />
-            ))}
-          </View>
-        </View>
-      )}
-      
-      <View style={{ height: 100 }} />
-    </ScrollView>
-  );
-
-  // NEW: ESPN-style stat bar for list view
   const renderListItem = ({ item }: { item: PlayerCardPlayer }) => (
     <PlayerStatBar
       player={{
@@ -276,7 +199,6 @@ export default function PlayersScreen() {
         team_color: item.team_color,
       }}
       onPress={() => setSelectedPlayer(item)}
-      statLabels={['SRV', 'ACE', 'KIL']} // Volleyball stat placeholders
       compact
     />
   );
@@ -285,7 +207,7 @@ export default function PlayersScreen() {
     return (
       <SafeAreaView style={s.container}>
         <View style={s.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <ActivityIndicator size="large" color={D_COLORS.skyBlue} />
         </View>
       </SafeAreaView>
     );
@@ -295,9 +217,9 @@ export default function PlayersScreen() {
     return (
       <SafeAreaView style={s.container}>
         <View style={s.loadingContainer}>
-          <Ionicons name="calendar-outline" size={48} color={colors.textMuted} />
-          <Text style={{ fontFamily: FONTS.bodyBold, fontSize: 16, color: colors.text, marginTop: 12 }}>No Active Season</Text>
-          <Text style={{ fontFamily: FONTS.bodyMedium, fontSize: 13, color: colors.textMuted, textAlign: 'center', marginTop: 4 }}>
+          <Ionicons name="calendar-outline" size={48} color={D_COLORS.textMuted} />
+          <Text style={{ fontFamily: FONTS.bodyBold, fontSize: 16, color: D_COLORS.textPrimary, marginTop: 12 }}>No Active Season</Text>
+          <Text style={{ fontFamily: FONTS.bodyMedium, fontSize: 13, color: D_COLORS.textMuted, textAlign: 'center', marginTop: 4 }}>
             Select a season to view players.
           </Text>
         </View>
@@ -310,87 +232,93 @@ export default function PlayersScreen() {
       {/* Header */}
       <View style={s.header}>
         <View>
-          <Text style={s.title}>Players</Text>
-          <Text style={s.subtitle}>{workingSeason?.name} • {players.length} total</Text>
+          <Text style={s.title}>PLAYERS</Text>
+          <Text style={s.subtitle}>{workingSeason?.name} {'\u00B7'} {players.length} total</Text>
         </View>
         {isAdmin && (
           <TouchableOpacity style={s.addBtn} onPress={() => setShowAddModal(true)}>
-            <Ionicons name="add" size={28} color={colors.background} />
+            <Ionicons name="add" size={28} color={BRAND.white} />
           </TouchableOpacity>
         )}
       </View>
 
-      {/* Search & Filter Bar */}
+      {/* Search Bar */}
       <View style={s.filterBar}>
         <View style={s.searchBox}>
-          <Ionicons name="search" size={20} color={colors.textMuted} />
+          <Ionicons name="search" size={20} color={D_COLORS.textMuted} />
           <TextInput
             style={s.searchInput}
             placeholder="Search players..."
-            placeholderTextColor={colors.textMuted}
+            placeholderTextColor={D_COLORS.textMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={20} color={colors.textMuted} />
+              <Ionicons name="close-circle" size={20} color={D_COLORS.textMuted} />
             </TouchableOpacity>
           )}
         </View>
       </View>
 
-      {/* Team Filter */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.teamFilter}>
-        <TouchableOpacity
-          style={[s.teamChip, !selectedTeam && s.teamChipActive]}
-          onPress={() => setSelectedTeam(null)}
-        >
-          <Text style={[s.teamChipText, !selectedTeam && s.teamChipTextActive]}>All</Text>
-        </TouchableOpacity>
-        {teams.map(team => (
-          <TouchableOpacity
-            key={team.id}
-            style={[
-              s.teamChip,
-              selectedTeam === team.id && s.teamChipActive,
-              { borderColor: team.color || colors.border }
-            ]}
-            onPress={() => setSelectedTeam(selectedTeam === team.id ? null : team.id)}
-          >
-            {team.color && <View style={[s.teamDot, { backgroundColor: team.color }]} />}
-            <Text style={[s.teamChipText, selectedTeam === team.id && s.teamChipTextActive]}>
-              {team.name}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      {/* Team Filter Chips */}
+      <View style={s.teamFilterWrap}>
+        <FlatList
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={s.teamFilterContent}
+          data={[{ id: '__all__', name: 'All', color: null }, ...teams]}
+          keyExtractor={item => item.id}
+          renderItem={({ item: team }) => {
+            const isAll = team.id === '__all__';
+            const isActive = isAll ? !selectedTeam : selectedTeam === team.id;
+            return (
+              <TouchableOpacity
+                style={[
+                  s.teamChip,
+                  isActive && {
+                    backgroundColor: isAll ? D_COLORS.skyBlue : (team.color || D_COLORS.skyBlue),
+                  },
+                ]}
+                onPress={() => setSelectedTeam(isAll ? null : (selectedTeam === team.id ? null : team.id))}
+              >
+                {!isAll && team.color && !isActive && (
+                  <View style={[s.teamDot, { backgroundColor: team.color }]} />
+                )}
+                <Text style={[
+                  s.teamChipText,
+                  isActive && s.teamChipTextActive,
+                ]}>
+                  {team.name}
+                </Text>
+              </TouchableOpacity>
+            );
+          }}
+        />
+      </View>
 
       {/* View Mode Toggle */}
       <View style={s.viewToggle}>
-        <TouchableOpacity
-          style={[s.viewBtn, viewMode === 'grid' && s.viewBtnActive]}
-          onPress={() => setViewMode('grid')}
-        >
-          <Ionicons name="grid" size={18} color={viewMode === 'grid' ? colors.primary : colors.textMuted} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[s.viewBtn, viewMode === 'lineup' && s.viewBtnActive]}
-          onPress={() => setViewMode('lineup')}
-        >
-          <Ionicons name="people" size={18} color={viewMode === 'lineup' ? colors.primary : colors.textMuted} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[s.viewBtn, viewMode === 'list' && s.viewBtnActive]}
-          onPress={() => setViewMode('list')}
-        >
-          <Ionicons name="list" size={18} color={viewMode === 'list' ? colors.primary : colors.textMuted} />
-        </TouchableOpacity>
+        <View style={s.viewToggleContainer}>
+          <TouchableOpacity
+            style={[s.viewBtn, viewMode === 'grid' && s.viewBtnActive]}
+            onPress={() => setViewMode('grid')}
+          >
+            <Ionicons name="grid" size={18} color={viewMode === 'grid' ? D_COLORS.skyBlue : D_COLORS.textMuted} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[s.viewBtn, viewMode === 'list' && s.viewBtnActive]}
+            onPress={() => setViewMode('list')}
+          >
+            <Ionicons name="list" size={18} color={viewMode === 'list' ? D_COLORS.skyBlue : D_COLORS.textMuted} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Player Content */}
       {filteredPlayers.length === 0 ? (
         <View style={s.empty}>
-          <Ionicons name="people-outline" size={64} color={colors.textMuted} />
+          <Ionicons name="people-outline" size={64} color={D_COLORS.textMuted} />
           <Text style={s.emptyText}>No players found</Text>
           {isAdmin && (
             <TouchableOpacity style={s.emptyBtn} onPress={() => setShowAddModal(true)}>
@@ -398,8 +326,6 @@ export default function PlayersScreen() {
             </TouchableOpacity>
           )}
         </View>
-      ) : viewMode === 'lineup' ? (
-        renderLineupView()
       ) : (
         <FlatList
           key={viewMode}
@@ -422,21 +348,21 @@ export default function PlayersScreen() {
         onUpdate={fetchData}
       />
 
-      {/* Add Player Modal - simplified for now */}
+      {/* Add Player Modal */}
       <Modal visible={showAddModal} animationType="slide" transparent>
         <View style={s.modalOverlay}>
           <View style={s.modal}>
             <View style={s.modalHeader}>
               <Text style={s.modalTitle}>Add Player</Text>
               <TouchableOpacity onPress={() => setShowAddModal(false)}>
-                <Ionicons name="close" size={24} color={colors.text} />
+                <Ionicons name="close" size={24} color={D_COLORS.textPrimary} />
               </TouchableOpacity>
             </View>
             <View style={s.modalContent}>
               <Text style={s.modalText}>
                 Use the public registration form or manually add players through the registration system.
               </Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={s.modalBtn}
                 onPress={() => {
                   setShowAddModal(false);
@@ -453,50 +379,44 @@ export default function PlayersScreen() {
 }
 
 const createStyles = (colors: any) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'transparent' },
+  container: { flex: 1, backgroundColor: D_COLORS.pageBg },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  
+
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: spacing.screenPadding, paddingTop: 8, paddingBottom: 16 },
-  title: { fontSize: 28, ...displayTextStyle, color: colors.text },
-  subtitle: { fontSize: 14, color: colors.primary, marginTop: 2 },
-  addBtn: { backgroundColor: colors.primary, width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
+  title: { fontSize: 28, ...displayTextStyle, color: D_COLORS.textPrimary },
+  subtitle: { fontSize: 13, fontFamily: FONTS.bodyMedium, color: D_COLORS.skyBlue, marginTop: 2 },
+  addBtn: { backgroundColor: D_COLORS.skyBlue, width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
 
   filterBar: { paddingHorizontal: spacing.screenPadding, marginBottom: 12 },
-  searchBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.glassCard, borderRadius: 12, paddingHorizontal: 12, height: 44, borderWidth: 1, borderColor: colors.glassBorder },
-  searchInput: { flex: 1, marginLeft: 8, fontSize: 16, color: colors.text },
+  searchBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: D_COLORS.pageBg, borderRadius: 12, paddingHorizontal: 12, height: 44, borderWidth: 1, borderColor: 'rgba(0,0,0,0.06)' },
+  searchInput: { flex: 1, marginLeft: 8, fontSize: 16, fontFamily: FONTS.bodyMedium, color: D_COLORS.textPrimary },
 
-  teamFilter: { paddingHorizontal: spacing.screenPadding, marginBottom: 12, maxHeight: 40 },
-  teamChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, marginRight: 8, borderWidth: 1, borderColor: colors.border },
-  teamChipActive: { backgroundColor: colors.primary + '20', borderColor: colors.primary },
-  teamChipText: { fontSize: 13, color: colors.textMuted },
-  teamChipTextActive: { color: colors.primary, fontFamily: FONTS.bodySemiBold },
+  teamFilterWrap: { marginBottom: 12 },
+  teamFilterContent: { paddingHorizontal: spacing.screenPadding, paddingVertical: 8 },
+  teamChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.04)', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, marginRight: 8 },
+  teamChipText: { fontSize: 13, fontFamily: FONTS.bodyMedium, color: D_COLORS.textPrimary },
+  teamChipTextActive: { color: BRAND.white, fontFamily: FONTS.bodySemiBold },
   teamDot: { width: 8, height: 8, borderRadius: 4, marginRight: 6 },
 
-  viewToggle: { flexDirection: 'row', justifyContent: 'center', gap: 4, marginBottom: 12, paddingHorizontal: spacing.screenPadding },
-  viewBtn: { width: 44, height: 36, borderRadius: 8, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.card },
-  viewBtnActive: { backgroundColor: colors.primary + '20' },
+  viewToggle: { flexDirection: 'row', justifyContent: 'center', marginBottom: 12, paddingHorizontal: spacing.screenPadding },
+  viewToggleContainer: { flexDirection: 'row', gap: 4, backgroundColor: 'rgba(0,0,0,0.04)', borderRadius: 10, padding: 2 },
+  viewBtn: { width: 44, height: 36, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
+  viewBtnActive: { backgroundColor: BRAND.white },
 
   gridRow: { justifyContent: 'space-between', paddingHorizontal: spacing.screenPadding, marginBottom: 12 },
-  listContent: { paddingBottom: 100 },
-
-  lineupScroll: { flex: 1, paddingHorizontal: spacing.screenPadding },
-  lineupTeam: { marginBottom: 24 },
-  lineupHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: spacing.screenPadding, paddingVertical: 12, borderRadius: 12, marginBottom: 12 },
-  lineupTeamName: { fontSize: 18, ...displayTextStyle, color: colors.background },
-  lineupCount: { fontSize: 13, color: colors.background, opacity: 0.8 },
-  lineupGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  listContent: { paddingBottom: 24 },
 
   empty: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
-  emptyText: { fontSize: 16, color: colors.textMuted, marginTop: 12 },
-  emptyBtn: { backgroundColor: colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, marginTop: 16 },
-  emptyBtnText: { fontSize: 16, fontFamily: FONTS.bodySemiBold, color: colors.background },
+  emptyText: { fontSize: 16, fontFamily: FONTS.bodyMedium, color: D_COLORS.textMuted, marginTop: 12 },
+  emptyBtn: { backgroundColor: D_COLORS.skyBlue, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, marginTop: 16 },
+  emptyBtnText: { fontSize: 16, fontFamily: FONTS.bodySemiBold, color: BRAND.white },
 
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-  modal: { backgroundColor: colors.card, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 },
+  modal: { backgroundColor: BRAND.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  modalTitle: { fontSize: 20, ...displayTextStyle, color: colors.text },
+  modalTitle: { fontSize: 20, ...displayTextStyle, color: D_COLORS.textPrimary },
   modalContent: { alignItems: 'center', paddingVertical: 20 },
-  modalText: { fontSize: 15, color: colors.textMuted, textAlign: 'center', marginBottom: 20 },
-  modalBtn: { backgroundColor: colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
-  modalBtnText: { fontSize: 16, fontFamily: FONTS.bodySemiBold, color: colors.background },
+  modalText: { fontSize: 15, fontFamily: FONTS.bodyMedium, color: D_COLORS.textMuted, textAlign: 'center', marginBottom: 20 },
+  modalBtn: { backgroundColor: D_COLORS.skyBlue, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
+  modalBtnText: { fontSize: 16, fontFamily: FONTS.bodySemiBold, color: BRAND.white },
 });
