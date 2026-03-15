@@ -65,6 +65,22 @@ export const D_COLORS = {
   balanceEnd: '#e55039',
   levelStart: '#8B5CF6',
   levelEnd: '#6c2bd9',
+
+  // Admin D+ specific tokens
+  missionHeroBgStart: '#0B1628',
+  missionHeroBgEnd: '#162d50',
+  statsGridBg: 'rgba(255,255,255,0.06)',
+  statsGridBorder: 'rgba(255,255,255,0.08)',
+  financialChartLine: '#22C55E',
+  financialChartFill: 'rgba(34,197,94,0.15)',
+  financialChartDot: '#22C55E',
+  teamHealthDark: '#0B1628',
+  teamHealthLight: '#FFFFFF',
+  overdueRed: '#FF6B6B',
+  collectedGreen: '#22C55E',
+  pendingBlue: '#4BB9EC',
+  actionPillActive: '#0B1628',
+  actionPillInactive: 'rgba(11,22,40,0.06)',
 } as const;
 
 export const D_RADII = {

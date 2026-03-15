@@ -39,7 +39,7 @@ import NoTeamState from './empty-states/NoTeamState';
 
 import RoleSelector from './RoleSelector';
 import SeasonSelector from './SeasonSelector';
-import WelcomeBriefing from './admin-scroll/WelcomeBriefing';
+import MissionControlHero from './admin-scroll/MissionControlHero';
 import SmartQueueCard from './admin-scroll/SmartQueueCard';
 import TeamHealthTiles from './admin-scroll/TeamHealthTiles';
 import PaymentSnapshot from './admin-scroll/PaymentSnapshot';
@@ -170,17 +170,6 @@ export default function AdminHomeScroll() {
       >
         <View style={{ height: insets.top + 16 }} />
 
-        {/* ─── SEASON + ROLE SELECTORS (in-scroll) ────────────── */}
-        <View style={styles.roleRow}>
-          <View style={{ flex: 1 }} />
-          <View style={styles.roleSelectorWrap}>
-            <SeasonSelector />
-          </View>
-          <View style={styles.roleSelectorWrap}>
-            <RoleSelector />
-          </View>
-        </View>
-
         {/* ─── EMPTY STATES (inside scroll, never early return) ── */}
         {emptyState === 'loading' ? (
           <View style={styles.loadingWrap}>
@@ -192,15 +181,23 @@ export default function AdminHomeScroll() {
           <NoTeamState role="admin" />
         ) : (
         <>
-        {/* ─── 1. WELCOME BRIEFING ─────────────────────────── */}
-        <WelcomeBriefing
-          greeting={data.greeting}
+        {/* ─── 1. MISSION CONTROL HERO ─────────────────────── */}
+        <MissionControlHero
           adminName={data.adminName}
+          orgName={data.orgName}
           teamCount={data.teams.length}
           playerCount={data.totalPlayers}
-          overdueCount={data.overdueQueueCount}
-          thisWeekCount={data.thisWeekQueueCount}
-          scrollY={scrollY}
+          coachCount={data.coaches.length}
+          overdueCount={data.overdueCount}
+          collected={data.collected}
+          pendingRegs={data.pendingRegs}
+          paymentPct={data.paymentPct}
+          queueLength={data.queueItems.length}
+          hasGameToday={data.upcomingEvents.some(e => {
+            const today = new Date();
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            return e.event_date === todayStr && e.event_type === 'game';
+          })}
         />
 
         {/* ─── 2. SEARCH BAR ──────────────────────────────── */}
@@ -409,13 +406,7 @@ const styles = StyleSheet.create({
     backgroundColor: BRAND.navy,
     borderRadius: 20,
   },
-  roleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 8,
-    gap: 6,
-  },
+  // roleRow removed — selectors now only in compact header
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
