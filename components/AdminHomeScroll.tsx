@@ -40,7 +40,7 @@ import NoTeamState from './empty-states/NoTeamState';
 import RoleSelector from './RoleSelector';
 import SeasonSelector from './SeasonSelector';
 import MissionControlHero from './admin-scroll/MissionControlHero';
-import SmartQueueCard from './admin-scroll/SmartQueueCard';
+import AdminAttentionStrip from './admin-scroll/AdminAttentionStrip';
 import TeamHealthTiles from './admin-scroll/TeamHealthTiles';
 import PaymentSnapshot from './admin-scroll/PaymentSnapshot';
 import QuickActionsGrid from './admin-scroll/QuickActionsGrid';
@@ -51,7 +51,7 @@ import type { UnseenAchievement } from '@/lib/achievement-types';
 import CoachSection from './admin-scroll/CoachSection';
 import UpcomingEvents from './admin-scroll/UpcomingEvents';
 import ClosingMotivation from './admin-scroll/ClosingMotivation';
-import DayStripCalendar from './parent-scroll/DayStripCalendar';
+// DayStripCalendar removed from admin render (lives in Schedule tab)
 
 export default function AdminHomeScroll() {
   const insets = useSafeAreaInsets();
@@ -210,33 +210,8 @@ export default function AdminHomeScroll() {
           <Text style={styles.searchPlaceholder}>Search players, families, teams...</Text>
         </TouchableOpacity>
 
-        {/* ─── 2b. DAY STRIP CALENDAR ─────────────────────── */}
-        <DayStripCalendar scrollY={scrollY} eventDates={data.eventDates} />
-
-        {/* ─── 3. SMART QUEUE ─────────────────────────────── */}
-        {data.queueItems.length > 0 ? (
-          <View style={styles.queueSection}>
-            {data.queueItems.slice(0, 4).map((item, idx) => (
-              <SmartQueueCard key={item.id} item={item} index={idx} />
-            ))}
-            {data.queueItems.length > 4 && (
-              <TouchableOpacity
-                style={styles.viewMoreRow}
-                onPress={() => router.push('/registration-hub' as any)}
-              >
-                <Text style={styles.viewMoreText}>
-                  View {data.queueItems.length - 4} more {'\u203A'}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        ) : (
-          <View style={styles.allClearWrap}>
-            <Text style={styles.allClearIcon}>{'\u2705'}</Text>
-            <Text style={styles.allClearTitle}>All clear!</Text>
-            <Text style={styles.allClearSub}>Nothing needs your attention right now.</Text>
-          </View>
-        )}
+        {/* ─── 3. ATTENTION STRIP ───────────────────────────── */}
+        <AdminAttentionStrip items={data.queueItems} />
 
         {/* ─── 4. SEASON + TEAM TILES ─────────────────────── */}
         {data.teams.length > 0 && (
@@ -410,13 +385,20 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 20,
-    backgroundColor: BRAND.warmGray,
+    marginHorizontal: 16,
+    backgroundColor: BRAND.white,
     borderRadius: 16,
-    height: 44,
-    paddingHorizontal: 14,
+    height: 48,
+    paddingHorizontal: 16,
     marginBottom: 16,
     gap: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
   searchIcon: {
     fontSize: 16,
@@ -427,39 +409,7 @@ const styles = StyleSheet.create({
     color: BRAND.textFaint,
     fontFamily: FONTS.bodyMedium,
   },
-  queueSection: {
-    marginBottom: 20,
-    gap: 10,
-  },
-  viewMoreRow: {
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  viewMoreText: {
-    fontSize: 13,
-    fontFamily: FONTS.bodyMedium,
-    color: BRAND.skyBlue,
-  },
-  allClearWrap: {
-    alignItems: 'center',
-    paddingVertical: 24,
-    marginBottom: 20,
-  },
-  allClearIcon: {
-    fontSize: 32,
-    marginBottom: 8,
-  },
-  allClearTitle: {
-    fontSize: 16,
-    fontFamily: FONTS.bodyBold,
-    color: BRAND.success,
-    marginBottom: 4,
-  },
-  allClearSub: {
-    fontSize: 13,
-    fontFamily: FONTS.bodyMedium,
-    color: BRAND.textMuted,
-  },
+  // queueSection, viewMoreRow, allClearWrap styles removed — replaced by AdminAttentionStrip
   sectionWrap: {
     marginBottom: 16,
   },
