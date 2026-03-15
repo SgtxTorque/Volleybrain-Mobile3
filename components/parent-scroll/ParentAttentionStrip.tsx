@@ -88,10 +88,10 @@ const styles = StyleSheet.create({
   container: {
     marginHorizontal: 16,
     marginTop: 10,
-    backgroundColor: D_COLORS.attentionBg,
-    borderRadius: D_RADII.cardSmall,
-    borderLeftWidth: 4,
-    borderLeftColor: D_COLORS.attentionBorder,
+    backgroundColor: 'rgba(255,107,107,0.06)',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255,107,107,0.12)',
     overflow: 'hidden',
   },
   collapsedRow: {
