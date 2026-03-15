@@ -24,6 +24,12 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import Animated, {
+    useAnimatedStyle,
+    useSharedValue,
+    withDelay,
+    withTiming,
+} from 'react-native-reanimated';
 import EmergencyContactModal from './EmergencyContactModal';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -428,12 +434,12 @@ export default function PlayerCardExpanded({ player, visible, onClose, onUpdate 
 
               {activeTab === 'skills' && isVolleyball && (
                 <View style={s.skillsList}>
-                  <SkillBar label="Passing" value={skills?.passing ?? null} color={BRAND.teal} />
-                  <SkillBar label="Serving" value={skills?.serving ?? null} color={BRAND.teal} />
-                  <SkillBar label="Hitting" value={skills?.hitting ?? null} color={BRAND.teal} />
-                  <SkillBar label="Blocking" value={skills?.blocking ?? null} color={BRAND.skyBlue} />
-                  <SkillBar label="Setting" value={skills?.setting ?? null} color={BRAND.skyBlue} />
-                  <SkillBar label="Defense" value={skills?.defense ?? null} color={BRAND.skyBlue} />
+                  <SkillBar label="Passing" value={skills?.passing ?? null} color={BRAND.teal} delayMs={0} />
+                  <SkillBar label="Serving" value={skills?.serving ?? null} color={BRAND.teal} delayMs={80} />
+                  <SkillBar label="Hitting" value={skills?.hitting ?? null} color={BRAND.teal} delayMs={160} />
+                  <SkillBar label="Blocking" value={skills?.blocking ?? null} color={BRAND.skyBlue} delayMs={240} />
+                  <SkillBar label="Setting" value={skills?.setting ?? null} color={BRAND.skyBlue} delayMs={320} />
+                  <SkillBar label="Defense" value={skills?.defense ?? null} color={BRAND.skyBlue} delayMs={400} />
                 </View>
               )}
 
@@ -518,9 +524,23 @@ function StatBox({ label, value, color }: { label: string; value: number | strin
   );
 }
 
-function SkillBar({ label, value, color }: { label: string; value: number | null; color: string }) {
+function SkillBar({ label, value, color, delayMs = 0 }: { label: string; value: number | null; color: string; delayMs?: number }) {
   const hasData = value !== null && value !== undefined;
   const displayValue = hasData ? value : 0;
+  const fillWidth = useSharedValue(0);
+
+  useEffect(() => {
+    if (hasData) {
+      fillWidth.value = withDelay(delayMs, withTiming(displayValue, { duration: 500 }));
+    } else {
+      fillWidth.value = 0;
+    }
+  }, [hasData, displayValue]);
+
+  const fillStyle = useAnimatedStyle(() => ({
+    width: `${fillWidth.value}%` as any,
+    backgroundColor: color,
+  }));
 
   const getGrade = (v: number) => {
     if (v >= 90) return 'A+';
@@ -536,7 +556,7 @@ function SkillBar({ label, value, color }: { label: string; value: number | null
       <Text style={s.skillLabel}>{label}</Text>
       <View style={s.skillBarContainer}>
         {hasData && (
-          <View style={[s.skillBarFill, { width: `${displayValue}%`, backgroundColor: color }]} />
+          <Animated.View style={[s.skillBarFill, fillStyle]} />
         )}
       </View>
       <View style={[s.skillGrade, hasData ? { backgroundColor: color + '20' } : { backgroundColor: 'rgba(0,0,0,0.04)' }]}>

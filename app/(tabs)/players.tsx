@@ -11,19 +11,26 @@ import { D_COLORS } from '@/theme/d-system';
 import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  LayoutAnimation,
   Modal,
+  Platform,
   RefreshControl,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
+  UIManager,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 type Team = {
   id: string;
@@ -49,6 +56,11 @@ export default function PlayersScreen() {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerCardPlayer | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+
+  const switchViewMode = useCallback((mode: ViewMode) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setViewMode(mode);
+  }, []);
 
   const s = createStyles(colors);
 
@@ -304,13 +316,13 @@ export default function PlayersScreen() {
         <View style={s.viewToggleContainer}>
           <TouchableOpacity
             style={[s.viewBtn, viewMode === 'grid' && s.viewBtnActive]}
-            onPress={() => setViewMode('grid')}
+            onPress={() => switchViewMode('grid')}
           >
             <Ionicons name="grid" size={18} color={viewMode === 'grid' ? D_COLORS.skyBlue : D_COLORS.textMuted} />
           </TouchableOpacity>
           <TouchableOpacity
             style={[s.viewBtn, viewMode === 'list' && s.viewBtnActive]}
-            onPress={() => setViewMode('list')}
+            onPress={() => switchViewMode('list')}
           >
             <Ionicons name="list" size={18} color={viewMode === 'list' ? D_COLORS.skyBlue : D_COLORS.textMuted} />
           </TouchableOpacity>
