@@ -48,6 +48,7 @@ import { FONTS } from '@/theme/fonts';
 
 import NoOrgState from './empty-states/NoOrgState';
 import NoTeamState from './empty-states/NoTeamState';
+import PlayerIdentityHero from './player-scroll/PlayerIdentityHero';
 import HeroIdentityCard from './player-scroll/HeroIdentityCard';
 import StreakBanner from './player-scroll/StreakBanner';
 import TheDrop from './player-scroll/TheDrop';
@@ -292,20 +293,26 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           <View style={{ paddingTop: 80 }}><NoTeamState role="player" /></View>
         ) : (
         <>
-        {/* ─── 1. HERO IDENTITY CARD ─────────────────────────── */}
-        <HeroIdentityCard
+        {/* ─── 1. PLAYER IDENTITY HERO ─────────────────────────── */}
+        <PlayerIdentityHero
           firstName={data.firstName}
           lastName={data.lastName}
+          photoUrl={data.photoUrl}
           teamName={data.primaryTeam?.name || ''}
+          teamColor={data.primaryTeam?.color || null}
           position={data.position}
           jerseyNumber={data.jerseyNumber}
-          ovr={data.ovr}
           level={data.level}
           xpProgress={data.xpProgress}
           xpCurrent={data.xp}
-          xpMax={(data.level) * 1000}
+          xpToNext={data.xpToNext}
+          attendanceStreak={data.attendanceStreak}
+          lastGame={data.lastGame}
+          nextEvent={data.nextEvent}
+          badges={data.badges}
+          challengesAvailable={data.challengesAvailable}
+          recentShoutouts={data.recentShoutouts}
           scrollY={scrollY}
-          playerId={playerId}
         />
 
         {/* ─── CHILD SWITCHER (multi-child parents only) ─── */}

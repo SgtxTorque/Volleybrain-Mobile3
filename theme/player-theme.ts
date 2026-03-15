@@ -18,4 +18,10 @@ export const PLAYER_THEME = {
   border: 'rgba(255,255,255,0.06)',
   borderAccent: 'rgba(75,185,236,0.15)',
   borderGold: 'rgba(255,215,0,0.20)',
+
+  // Player D+ additions
+  questCard: 'rgba(75,185,236,0.06)',
+  questDone: 'rgba(34,197,94,0.06)',
+  streakFire: '#FF6B6B',
+  xpGold: '#FFD700',
 } as const;

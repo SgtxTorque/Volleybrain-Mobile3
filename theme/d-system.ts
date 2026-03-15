@@ -81,6 +81,17 @@ export const D_COLORS = {
   pendingBlue: '#4BB9EC',
   actionPillActive: '#0B1628',
   actionPillInactive: 'rgba(11,22,40,0.06)',
+
+  // Player D+ specific
+  questBgActive: 'rgba(75,185,236,0.08)',
+  questBgDone: 'rgba(34,197,94,0.08)',
+  questBorderActive: 'rgba(75,185,236,0.15)',
+  questBorderDone: 'rgba(34,197,94,0.15)',
+  leaderboardGold: '#FFD700',
+  leaderboardSilver: '#C0C0C0',
+  leaderboardBronze: '#CD7F32',
+  trainingCardStart: '#8B5CF6',
+  trainingCardEnd: '#6c2bd9',
 } as const;
 
 export const D_RADII = {
