@@ -91,9 +91,13 @@ function FamilyHeroCard({
       end={{ x: 1, y: 1 }}
       style={styles.card}
     >
-      <Text style={styles.greeting}>{greeting}</Text>
-      {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+      {/* Left: greeting text (~65%) */}
+      <View style={styles.leftCol}>
+        <Text style={styles.greeting}>{greeting}</Text>
+        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+      </View>
 
+      {/* Right: mascot (~35%), vertically centered */}
       <Animated.View style={[styles.mascotWrap, mascotBreathStyle]}>
         <Image
           source={require('@/assets/images/mascot/HiLynx.png')}
@@ -112,16 +116,20 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     borderRadius: D_RADII.hero,
     padding: 22,
-    paddingBottom: 26,
-    minHeight: 110,
+    minHeight: 130,
     overflow: 'hidden',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  leftCol: {
+    flex: 1,
+    paddingRight: 12,
   },
   greeting: {
     fontFamily: FONTS.bodyExtraBold,
     fontSize: 21,
     color: '#FFFFFF',
     marginBottom: 6,
-    paddingRight: 60,
   },
   subtitle: {
     fontFamily: FONTS.bodyMedium,
@@ -129,13 +137,10 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.35)',
   },
   mascotWrap: {
-    position: 'absolute',
-    bottom: 10,
-    right: 16,
+    // No absolute positioning — sits in the row flow
   },
   mascotImg: {
-    width: 44,
-    height: 44,
-    opacity: 0.6,
+    width: 85,
+    height: 85,
   },
 });
