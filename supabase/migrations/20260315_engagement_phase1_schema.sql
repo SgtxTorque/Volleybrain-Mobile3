@@ -118,3 +118,93 @@ CREATE TABLE IF NOT EXISTS streak_milestones (
 );
 
 CREATE INDEX idx_streak_milestones_player ON streak_milestones(player_id);
+
+-- ---------------------------------------------------------------------------
+-- skill_categories: Top-level skill categories per sport (e.g., Serving, Passing)
+-- Separate from sport_skill_templates which is for coach evaluation ratings.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS skill_categories (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  sport TEXT NOT NULL DEFAULT 'volleyball',
+  name TEXT NOT NULL,
+  display_name TEXT NOT NULL,
+  icon TEXT,
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(sport, name)
+);
+
+CREATE INDEX idx_skill_categories_sport ON skill_categories(sport);
+
+-- ---------------------------------------------------------------------------
+-- skill_content: Individual skill modules (Tip + Drill + optional Quiz)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS skill_content (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  category_id UUID NOT NULL REFERENCES skill_categories(id) ON DELETE CASCADE,
+  sport TEXT NOT NULL DEFAULT 'volleyball',
+  difficulty TEXT NOT NULL DEFAULT 'beginner',
+  title TEXT NOT NULL,
+  slug TEXT NOT NULL,
+  tip_text TEXT,
+  tip_image_url TEXT,
+  drill_title TEXT,
+  drill_instructions TEXT,
+  drill_reps TEXT,
+  drill_location TEXT DEFAULT 'home',
+  mascot_demo_frames JSONB,
+  has_quiz BOOLEAN DEFAULT FALSE,
+  xp_tip INTEGER DEFAULT 10,
+  xp_drill INTEGER DEFAULT 20,
+  xp_quiz INTEGER DEFAULT 15,
+  sort_order INTEGER DEFAULT 0,
+  is_published BOOLEAN DEFAULT TRUE,
+  created_by UUID,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(sport, slug)
+);
+
+CREATE INDEX idx_skill_content_category ON skill_content(category_id);
+CREATE INDEX idx_skill_content_sport_diff ON skill_content(sport, difficulty);
+
+-- ---------------------------------------------------------------------------
+-- skill_quizzes: Quiz questions tied to a skill module (2-3 per module)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS skill_quizzes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  skill_content_id UUID NOT NULL REFERENCES skill_content(id) ON DELETE CASCADE,
+  question_text TEXT NOT NULL,
+  options JSONB NOT NULL,
+  correct_option_index INTEGER NOT NULL,
+  explanation TEXT,
+  sort_order INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_skill_quizzes_content ON skill_quizzes(skill_content_id);
+
+-- ---------------------------------------------------------------------------
+-- skill_progress: Tracks player progress through individual skill modules
+-- Separate from player_skill_ratings which is for coach evaluation scores.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS skill_progress (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  player_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  skill_content_id UUID NOT NULL REFERENCES skill_content(id) ON DELETE CASCADE,
+  tip_viewed BOOLEAN DEFAULT FALSE,
+  tip_viewed_at TIMESTAMPTZ,
+  drill_completed BOOLEAN DEFAULT FALSE,
+  drill_completed_at TIMESTAMPTZ,
+  quiz_completed BOOLEAN DEFAULT FALSE,
+  quiz_score INTEGER,
+  quiz_completed_at TIMESTAMPTZ,
+  is_fully_complete BOOLEAN DEFAULT FALSE,
+  completed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(player_id, skill_content_id)
+);
+
+CREATE INDEX idx_skill_progress_player ON skill_progress(player_id);
+CREATE INDEX idx_skill_progress_content ON skill_progress(skill_content_id);
