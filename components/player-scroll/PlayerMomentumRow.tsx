@@ -43,26 +43,27 @@ function buildCards(
 ): MomentumCard[] {
   const cards: MomentumCard[] = [];
 
+  // Streak FIRST — most motivating
+  if (attendanceStreak > 0) {
+    cards.push({
+      emoji: '\u{1F525}',
+      value: attendanceStreak,
+      label: 'STREAK',
+      gradientStart: D_COLORS.streakStart,
+      gradientEnd: D_COLORS.streakEnd,
+      route: '/standings',
+    });
+  }
+
   const kills = seasonStats?.total_kills || 0;
   if (kills > 0) {
     cards.push({
       emoji: '\u{1F4A5}',
       value: kills,
       label: 'KILLS',
-      gradientStart: D_COLORS.streakStart,
-      gradientEnd: D_COLORS.streakEnd,
+      gradientStart: D_COLORS.killsStart,
+      gradientEnd: D_COLORS.killsEnd,
       route: '/my-stats',
-    });
-  }
-
-  if (attendanceStreak > 0) {
-    cards.push({
-      emoji: '\u{1F525}',
-      value: attendanceStreak,
-      label: 'STREAK',
-      gradientStart: '#F59E0B',
-      gradientEnd: '#D97706',
-      route: '/standings',
     });
   }
 
