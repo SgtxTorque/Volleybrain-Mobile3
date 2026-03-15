@@ -115,6 +115,14 @@ export default function AdminHomeScroll() {
 
   const showPaymentCard = data.expected > 0;
 
+  // KNOWN ISSUE: Season selector defaults to active season and only shows seasons.
+  // Admin home should default to "All Org" view (no season filter) with seasons as drill-down.
+  // This requires:
+  // 1. SeasonSelector to include an "All" option
+  // 2. useAdminHomeData to support a null/undefined season (meaning "show everything")
+  // 3. The hero stats grid to aggregate across all seasons when no filter is applied
+  // Tracked for future sprint — season model flexibility spec needed.
+
   // Determine which empty state to show INSIDE the scroll (never early return)
   const emptyState: 'loading' | 'no-org' | 'no-teams' | null =
     data.loading ? 'loading'
