@@ -436,13 +436,11 @@ export default function ParentHomeScroll() {
         />
 
         {/* ─── FAMILY KID CARDS ──────────────────────────────── */}
-        {data.allChildren.map((child) => (
-          <FamilyKidCard
-            key={child.playerId}
-            child={child}
-            nextEvent={data.allUpcomingEvents.find(e => e.childId === child.playerId) || null}
-          />
-        ))}
+        <FamilyKidCard
+          kids={data.allChildren}
+          nextEvents={data.allUpcomingEvents}
+          onOpenFamilyPanel={() => setFamilyPanelOpen(true)}
+        />
 
         {/* ─── EVENT HERO (dark navy, +XP on RSVP) ──────────── */}
         <ParentEventHero
