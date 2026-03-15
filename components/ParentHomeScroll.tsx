@@ -422,6 +422,7 @@ export default function ParentHomeScroll() {
             hasPaymentDue={data.paymentStatus.balance > 0}
             justWon={false}
             justLost={false}
+            parentXp={data.childXp}
           />
         </View>
 
@@ -442,16 +443,6 @@ export default function ParentHomeScroll() {
             nextEvent={data.allUpcomingEvents.find(e => e.childId === child.playerId) || null}
           />
         ))}
-
-        {/* ─── PARENT XP BAR ────────────────────────────────── */}
-        {data.childXp && (
-          <ParentXPBar
-            totalXp={data.childXp.totalXp}
-            level={data.childXp.level}
-            progress={data.childXp.progress}
-            nextLevelXp={0}
-          />
-        )}
 
         {/* ─── EVENT HERO (dark navy, +XP on RSVP) ──────────── */}
         <ParentEventHero
