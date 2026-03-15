@@ -368,15 +368,15 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: PLAYER_THEME.textMuted,
   },
-  // Mascot
+  // Mascot — vertically centered with greeting/info, above the XP bar
   mascotWrap: {
     position: 'absolute',
-    right: 8,
-    bottom: 8,
-    opacity: 0.15,
+    right: 10,
+    top: 18,
+    opacity: 0.18,
   },
   mascotImage: {
-    width: 70,
-    height: 70,
+    width: 75,
+    height: 75,
   },
 });
