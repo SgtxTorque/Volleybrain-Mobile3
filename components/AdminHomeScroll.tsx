@@ -42,7 +42,7 @@ import SeasonSelector from './SeasonSelector';
 import MissionControlHero from './admin-scroll/MissionControlHero';
 import AdminAttentionStrip from './admin-scroll/AdminAttentionStrip';
 import TeamHealthTiles from './admin-scroll/TeamHealthTiles';
-import PaymentSnapshot from './admin-scroll/PaymentSnapshot';
+import AdminFinancialChart from './admin-scroll/AdminFinancialChart';
 import QuickActionsGrid from './admin-scroll/QuickActionsGrid';
 import TrophyCaseWidget from './TrophyCaseWidget';
 import AchievementCelebrationModal from './AchievementCelebrationModal';
@@ -252,16 +252,15 @@ export default function AdminHomeScroll() {
           </View>
         )}
 
-        {/* ─── 5. PAYMENT SNAPSHOT ────────────────────────── */}
+        {/* ─── 4. FINANCIAL CHART ───────────────────────────── */}
         {showPaymentCard && (
-          <PaymentSnapshot
+          <AdminFinancialChart
             collected={data.collected}
             expected={data.expected}
             overdueAmount={data.overdueAmount}
             overdueCount={data.overdueCount}
             paymentPct={data.paymentPct}
             seasonName={data.seasonName}
-            sportName={data.sportName}
           />
         )}
 
