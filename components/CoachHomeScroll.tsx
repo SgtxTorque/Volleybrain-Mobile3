@@ -411,7 +411,7 @@ export default function CoachHomeScroll() {
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
-          { paddingBottom: 90 },
+          { paddingBottom: 24 },
           isTabletAny && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%', paddingHorizontal: contentPadding },
         ]}
         refreshControl={

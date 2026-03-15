@@ -407,7 +407,7 @@ export default function ParentHomeScroll() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={[
-          { paddingBottom: 90 },
+          { paddingBottom: 24 },
           isTabletAny && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%', paddingHorizontal: contentPadding },
         ]}
         refreshControl={
