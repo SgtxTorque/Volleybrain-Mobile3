@@ -53,6 +53,8 @@ import PlayerDailyQuests from './player-scroll/PlayerDailyQuests';
 import PlayerLeaderboardPreview from './player-scroll/PlayerLeaderboardPreview';
 import PlayerPropsSection from './player-scroll/PlayerPropsSection';
 import PlayerContinueTraining from './player-scroll/PlayerContinueTraining';
+import PlayerMomentumRow from './player-scroll/PlayerMomentumRow';
+import PlayerTrophyCase from './player-scroll/PlayerTrophyCase';
 import HeroIdentityCard from './player-scroll/HeroIdentityCard';
 import StreakBanner from './player-scroll/StreakBanner';
 import TheDrop from './player-scroll/TheDrop';
@@ -396,22 +398,7 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           </TouchableOpacity>
         )}
 
-        {/* ─── 2. STREAK BANNER (if streak ≥ 2) ──────────────── */}
-        <StreakBanner streak={data.attendanceStreak} freezeUsed={data.streakFreezeUsed} />
-
-        {/* ─── 3. THE DROP ─────────────────────────────────────── */}
-        <TheDrop
-          badges={data.badges}
-          lastGame={data.lastGame}
-          nextEvent={data.nextEvent}
-          attendanceStreak={data.attendanceStreak}
-          recentShoutouts={data.recentShoutouts}
-        />
-
-        {/* ─── 4. PHOTO STRIP (if photos exist) ───────────────── */}
-        <PhotoStrip photos={data.recentPhotos} teamId={data.primaryTeam?.id} />
-
-        {/* ─── 5. NEXT UP — event + RSVP ──────────────────────── */}
+        {/* ─── 6. NEXT UP — event + RSVP ──────────────────────── */}
         <NextUpCard
           event={data.nextEvent}
           rsvpStatus={data.rsvpStatus}
@@ -419,50 +406,30 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           onRsvp={data.sendRsvp}
         />
 
-        {/* ─── 8. ACTIVE CHALLENGE (if exists) ────────────────── */}
-        <ActiveChallengeCard available={data.challengesAvailable} teamId={data.primaryTeam?.id} />
+        {/* ─── 7. MOMENTUM CARDS ────────────────────────────── */}
+        <PlayerMomentumRow
+          seasonStats={data.seasonStats}
+          attendanceStreak={data.attendanceStreak}
+          level={data.level}
+        />
 
-        {/* ─── 8c. NEW EVALUATION CARD ──────────────────────────── */}
-        <EvaluationCard playerId={playerId} teamId={data.primaryTeam?.id || null} />
-
-        {/* ─── 8b. TEAM PULSE (social feed) ─────────────────────── */}
-        <View style={{ marginBottom: 12 }}>
-          <TeamPulse teamId={data.primaryTeam?.id} variant="dark" limit={3} />
-        </View>
-
-        {/* ─── 9. LAST GAME STATS ─────────────────────────────── */}
+        {/* ─── 8. LAST GAME STATS ─────────────────────────────── */}
         <LastGameStats
           lastGame={data.lastGame}
           position={data.position}
           personalBest={data.personalBest}
         />
 
-        {/* ─── 9b. LEADERBOARD LINK ──────────────────────────── */}
-        <TouchableOpacity
-          style={styles.leaderboardLink}
-          onPress={() => router.push('/standings' as any)}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.leaderboardLinkText}>
-            {'\u{1F3C6}'} See where you rank
-          </Text>
-        </TouchableOpacity>
+        {/* ─── 9. TROPHY CASE ──────────────────────────────── */}
+        <PlayerTrophyCase
+          badges={data.badges}
+          level={data.level}
+          xpProgress={data.xpProgress}
+          xpCurrent={data.xp}
+        />
 
-        {/* ─── 9c. TROPHY CASE / ACHIEVEMENTS ──────────────── */}
-        {playerId && (
-          <View style={{ marginBottom: 12 }}>
-            <TrophyCaseWidget userId={playerId} userRole="player" />
-          </View>
-        )}
-        <TouchableOpacity
-          style={styles.leaderboardLink}
-          onPress={() => router.push('/achievements' as any)}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.leaderboardLinkText}>
-            {'\u{1F3C5}'} View Trophy Case
-          </Text>
-        </TouchableOpacity>
+        {/* ─── 8. ACTIVE CHALLENGE (if exists) ────────────────── */}
+        <ActiveChallengeCard available={data.challengesAvailable} teamId={data.primaryTeam?.id} />
 
         {/* ─── 10. CLOSING MASCOT + XP CALLBACK ──────────────── */}
         <ClosingMascot

@@ -13,13 +13,16 @@ import Animated, {
 import { FONTS } from '@/theme/fonts';
 import type { LastGameStats as LastGameStatsType } from '@/hooks/usePlayerHomeData';
 
-const PT = {
-  cardBg: '#10284C',
-  gold: '#FFD700',
-  accent: '#4BB9EC',
-  textPrimary: '#FFFFFF',
-  textFaint: 'rgba(255,255,255,0.15)',
-  border: 'rgba(255,255,255,0.06)',
+import { PLAYER_THEME } from '@/theme/player-theme';
+import { D_RADII } from '@/theme/d-system';
+
+const STAT_COLORS: Record<string, string> = {
+  kills: '#FF6B6B',    // coral
+  aces: '#22C55E',     // green
+  digs: '#F59E0B',     // amber
+  blocks: '#8B5CF6',   // purple
+  assists: '#4BB9EC',  // sky
+  points: '#FFD700',   // gold
 };
 
 type Props = {
@@ -79,10 +82,12 @@ function StatBox({ item }: { item: StatItem }) {
     opacity: animOpacity.value,
   }));
 
+  const statColor = STAT_COLORS[item.key] || PLAYER_THEME.textPrimary;
+
   return (
     <Animated.View style={[styles.statBox, fadeStyle]}>
-      <Text style={styles.statValue}>{item.value}</Text>
-      <Text style={styles.statLabel}>{item.label}</Text>
+      <Text style={[styles.statValue, { color: statColor }]}>{item.value}</Text>
+      <Text style={styles.statLabel}>{item.label.toUpperCase()}</Text>
     </Animated.View>
   );
 }
@@ -119,17 +124,17 @@ export default function LastGameStats({ lastGame, position, personalBest }: Prop
 const styles = StyleSheet.create({
   card: {
     marginHorizontal: 20,
-    borderRadius: 16,
-    backgroundColor: PT.cardBg,
+    borderRadius: D_RADII.card,
+    backgroundColor: PLAYER_THEME.cardBg,
     borderWidth: 1,
-    borderColor: PT.border,
+    borderColor: PLAYER_THEME.border,
     padding: 16,
-    marginBottom: 24,
+    marginBottom: 12,
   },
   header: {
     fontFamily: FONTS.display,
-    fontSize: 12,
-    color: PT.accent,
+    fontSize: 14,
+    color: PLAYER_THEME.accent,
     letterSpacing: 1.2,
     marginBottom: 14,
   },
@@ -139,27 +144,28 @@ const styles = StyleSheet.create({
   },
   statBox: {
     flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 14,
     paddingVertical: 12,
     alignItems: 'center',
   },
   statValue: {
     fontFamily: FONTS.display,
-    fontSize: 22,
-    color: PT.textPrimary,
-    lineHeight: 24,
+    fontSize: 24,
+    color: PLAYER_THEME.textPrimary,
+    lineHeight: 26,
   },
   statLabel: {
-    fontFamily: FONTS.bodySemiBold,
+    fontFamily: FONTS.bodyBold,
     fontSize: 9,
-    color: PT.textFaint,
+    color: PLAYER_THEME.textMuted,
+    letterSpacing: 0.5,
     marginTop: 4,
   },
   bestCallout: {
     fontFamily: FONTS.bodyBold,
     fontSize: 12,
-    color: PT.gold,
+    color: PLAYER_THEME.xpGold,
     textAlign: 'center',
     marginTop: 12,
   },
