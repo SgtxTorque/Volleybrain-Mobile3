@@ -3,8 +3,15 @@
  * category breakdown, and Send Reminders button.
  * Replaces PaymentSnapshot with richer visual hierarchy.
  */
-import React from 'react';
+import React, { useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withTiming,
+} from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { FONTS } from '@/theme/fonts';
 import { BRAND } from '@/theme/colors';
@@ -30,6 +37,27 @@ function AdminFinancialChart({
   const router = useRouter();
   const outstanding = Math.max(0, expected - collected);
 
+  // Animated bar fill: 0 → actual over 800ms
+  const barFillWidth = useSharedValue(0);
+  // Amounts fade in after bar fill
+  const amountsOpacity = useSharedValue(0);
+
+  useEffect(() => {
+    barFillWidth.value = withTiming(Math.min(paymentPct, 100), {
+      duration: 800,
+      easing: Easing.out(Easing.ease),
+    });
+    amountsOpacity.value = withDelay(800, withTiming(1, { duration: 300 }));
+  }, [paymentPct]);
+
+  const barFillStyle = useAnimatedStyle(() => ({
+    width: `${barFillWidth.value}%` as any,
+  }));
+
+  const amountsFadeStyle = useAnimatedStyle(() => ({
+    opacity: amountsOpacity.value,
+  }));
+
   return (
     <View style={styles.wrapper}>
       <View style={styles.card}>
@@ -39,16 +67,16 @@ function AdminFinancialChart({
           <Text style={styles.seasonLabel}>{seasonName}</Text>
         </View>
 
-        {/* Progress bar */}
+        {/* Progress bar — animated fill */}
         <View style={styles.barTrack}>
-          <View style={[styles.barFill, { width: `${Math.min(paymentPct, 100)}%` }]} />
+          <Animated.View style={[styles.barFill, barFillStyle]} />
         </View>
 
         {/* Percentage */}
         <Text style={styles.pctText}>{paymentPct}% collected</Text>
 
-        {/* Category breakdown */}
-        <View style={styles.breakdownContainer}>
+        {/* Category breakdown — fades in after bar fill */}
+        <Animated.View style={[styles.breakdownContainer, amountsFadeStyle]}>
           {/* Collected */}
           <View style={styles.breakdownRow}>
             <View style={[styles.dot, { backgroundColor: D_COLORS.collectedGreen }]} />
@@ -82,7 +110,7 @@ function AdminFinancialChart({
               </Text>
             </View>
           )}
-        </View>
+        </Animated.View>
 
         {/* Action buttons */}
         <View style={styles.actionsRow}>

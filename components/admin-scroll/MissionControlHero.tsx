@@ -2,13 +2,16 @@
  * MissionControlHero — Dark navy hero card with org stats grid + dynamic greeting.
  * Mascot breathing animation. All hooks above early returns.
  */
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
   cancelAnimation,
+  runOnJS,
   useAnimatedStyle,
+  useAnimatedReaction,
   useSharedValue,
+  withDelay,
   withRepeat,
   withSequence,
   withTiming,
@@ -17,6 +20,54 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { FONTS } from '@/theme/fonts';
 import { D_COLORS, D_RADII } from '@/theme/d-system';
 import { getAdminGreeting } from './AdminLynxGreetings';
+
+/** Sub-component: animated stat cell with count-up */
+function AnimatedStatCell({
+  cell,
+  index,
+  hasRightBorder,
+  hasBottomBorder,
+}: {
+  cell: { numericValue: number; prefix: string; label: string; color: string };
+  index: number;
+  hasRightBorder: boolean;
+  hasBottomBorder: boolean;
+}) {
+  const animatedNum = useSharedValue(0);
+  const [displayNum, setDisplayNum] = useState(0);
+
+  useEffect(() => {
+    animatedNum.value = withDelay(
+      index * 100,
+      withTiming(cell.numericValue, { duration: 600, easing: Easing.out(Easing.ease) }),
+    );
+  }, [cell.numericValue]);
+
+  useAnimatedReaction(
+    () => Math.round(animatedNum.value),
+    (current, previous) => {
+      if (current !== previous) {
+        runOnJS(setDisplayNum)(current);
+      }
+    },
+    [cell.numericValue],
+  );
+
+  return (
+    <View
+      style={[
+        styles.statCell,
+        hasRightBorder && styles.statCellRightBorder,
+        hasBottomBorder && styles.statCellBottomBorder,
+      ]}
+    >
+      <Text style={[styles.statValue, { color: cell.color }]}>
+        {cell.prefix}{displayNum.toLocaleString()}
+      </Text>
+      <Text style={styles.statLabel}>{cell.label}</Text>
+    </View>
+  );
+}
 
 interface Props {
   adminName: string;
@@ -72,13 +123,13 @@ function MissionControlHero({
     hasGameToday,
   });
 
-  const statCells: { value: string; label: string; color: string }[] = [
-    { value: String(teamCount), label: 'TEAMS', color: '#FFFFFF' },
-    { value: String(playerCount), label: 'PLAYERS', color: '#FFFFFF' },
-    { value: String(coachCount), label: 'COACHES', color: '#FFFFFF' },
-    { value: String(overdueCount), label: 'OVERDUE', color: D_COLORS.overdueRed },
-    { value: `$${Math.round(collected).toLocaleString()}`, label: 'COLLECTED', color: D_COLORS.collectedGreen },
-    { value: String(pendingRegs), label: 'PENDING', color: D_COLORS.pendingBlue },
+  const statCells = [
+    { numericValue: teamCount, prefix: '', label: 'TEAMS', color: '#FFFFFF' },
+    { numericValue: playerCount, prefix: '', label: 'PLAYERS', color: '#FFFFFF' },
+    { numericValue: coachCount, prefix: '', label: 'COACHES', color: '#FFFFFF' },
+    { numericValue: overdueCount, prefix: '', label: 'OVERDUE', color: D_COLORS.overdueRed },
+    { numericValue: Math.round(collected), prefix: '$', label: 'COLLECTED', color: D_COLORS.collectedGreen },
+    { numericValue: pendingRegs, prefix: '', label: 'PENDING', color: D_COLORS.pendingBlue },
   ];
 
   return (
@@ -104,22 +155,16 @@ function MissionControlHero({
           </Animated.View>
         </View>
 
-        {/* 3x2 Stats Grid */}
+        {/* 3x2 Stats Grid with count-up animation */}
         <View style={styles.statsGrid}>
           {statCells.map((cell, i) => (
-            <View
+            <AnimatedStatCell
               key={cell.label}
-              style={[
-                styles.statCell,
-                i % 3 !== 2 && styles.statCellRightBorder,
-                i < 3 && styles.statCellBottomBorder,
-              ]}
-            >
-              <Text style={[styles.statValue, { color: cell.color }]}>
-                {cell.value}
-              </Text>
-              <Text style={styles.statLabel}>{cell.label}</Text>
-            </View>
+              cell={cell}
+              index={i}
+              hasRightBorder={i % 3 !== 2}
+              hasBottomBorder={i < 3}
+            />
           ))}
         </View>
       </LinearGradient>

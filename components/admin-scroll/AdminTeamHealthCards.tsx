@@ -5,8 +5,15 @@
  * 7+ teams: compact horizontal scroll + "See All Teams" link.
  * ALL hooks above early returns.
  */
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { FONTS } from '@/theme/fonts';
@@ -14,6 +21,24 @@ import { BRAND } from '@/theme/colors';
 import { D_COLORS, D_RADII } from '@/theme/d-system';
 import type { TeamHealth } from '@/hooks/useAdminHomeData';
 import CompactTeamCard from './CompactTeamCard';
+
+/** Sub-component: stagger entrance for full cards — slide up 15px + fade in */
+function StaggerEntrance({ index, children }: { index: number; children: React.ReactNode }) {
+  const opacity = useSharedValue(0);
+  const translateY = useSharedValue(15);
+
+  useEffect(() => {
+    opacity.value = withDelay(index * 100, withTiming(1, { duration: 300 }));
+    translateY.value = withDelay(index * 100, withTiming(0, { duration: 300 }));
+  }, []);
+
+  const style = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateY: translateY.value }],
+  }));
+
+  return <Animated.View style={style}>{children}</Animated.View>;
+}
 
 interface Props {
   teams: TeamHealth[];
@@ -96,10 +121,12 @@ function AdminTeamHealthCards({ teams }: Props) {
       </View>
 
       {teamCount <= 3 ? (
-        /* 1-3 teams: full editorial cards */
+        /* 1-3 teams: full editorial cards with stagger entrance */
         <View style={styles.cardsContainer}>
           {teams.map((team, index) => (
-            <TeamCard key={team.id} team={team} isDark={index % 2 === 0} />
+            <StaggerEntrance key={team.id} index={index}>
+              <TeamCard team={team} isDark={index % 2 === 0} />
+            </StaggerEntrance>
           ))}
         </View>
       ) : (
@@ -113,7 +140,7 @@ function AdminTeamHealthCards({ teams }: Props) {
             contentContainerStyle={styles.compactScrollContent}
           >
             {teams.map((team, index) => (
-              <CompactTeamCard key={team.id} team={team} isDark={index % 2 === 0} />
+              <CompactTeamCard key={team.id} team={team} isDark={index % 2 === 0} index={index} />
             ))}
           </ScrollView>
 

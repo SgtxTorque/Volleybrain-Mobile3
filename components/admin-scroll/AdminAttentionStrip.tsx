@@ -3,8 +3,14 @@
  * Full tinted card (NO side-border), urgency dots, tappable items.
  * LayoutAnimation for expand/collapse.
  */
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { LayoutAnimation, Platform, StyleSheet, Text, TouchableOpacity, UIManager, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withTiming,
+} from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { FONTS } from '@/theme/fonts';
@@ -32,6 +38,41 @@ const CATEGORY_ROUTES: Record<string, string> = {
   schedule: '/(tabs)/admin-schedule',
   jersey: '/(tabs)/jersey-management',
 };
+
+/** Sub-component: stagger-fade per item when expanded */
+function FadeItem({ item, index, onPress }: { item: QueueItem; index: number; onPress: () => void }) {
+  const opacity = useSharedValue(0);
+  const translateY = useSharedValue(6);
+
+  useEffect(() => {
+    opacity.value = withDelay(index * 60, withTiming(1, { duration: 200 }));
+    translateY.value = withDelay(index * 60, withTiming(0, { duration: 200 }));
+  }, []);
+
+  const fadeStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateY: translateY.value }],
+  }));
+
+  const dotColor = URGENCY_DOT[item.urgency] || '#94A3B8';
+
+  return (
+    <Animated.View style={fadeStyle}>
+      <TouchableOpacity
+        style={styles.itemRow}
+        activeOpacity={0.7}
+        onPress={onPress}
+      >
+        <View style={[styles.urgencyDot, { backgroundColor: dotColor }]} />
+        <View style={styles.itemTextCol}>
+          <Text style={styles.itemTitle} numberOfLines={1}>{item.title}</Text>
+          <Text style={styles.itemSubtitle} numberOfLines={1}>{item.subtitle}</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={14} color={BRAND.textFaint} />
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
 
 interface Props {
   items: QueueItem[];
@@ -78,26 +119,18 @@ function AdminAttentionStrip({ items }: Props) {
           />
         </View>
 
-        {/* Expanded items */}
+        {/* Expanded items with stagger-fade */}
         {expanded && (
           <View style={styles.itemsContainer}>
-            {items.map((item) => {
-              const dotColor = URGENCY_DOT[item.urgency] || '#94A3B8';
+            {items.map((item, index) => {
               const route = item.actionRoute || CATEGORY_ROUTES[item.category.toLowerCase()] || '/registration-hub';
               return (
-                <TouchableOpacity
+                <FadeItem
                   key={item.id}
-                  style={styles.itemRow}
-                  activeOpacity={0.7}
+                  item={item}
+                  index={index}
                   onPress={() => router.push(route as any)}
-                >
-                  <View style={[styles.urgencyDot, { backgroundColor: dotColor }]} />
-                  <View style={styles.itemTextCol}>
-                    <Text style={styles.itemTitle} numberOfLines={1}>{item.title}</Text>
-                    <Text style={styles.itemSubtitle} numberOfLines={1}>{item.subtitle}</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={14} color={BRAND.textFaint} />
-                </TouchableOpacity>
+                />
               );
             })}
           </View>

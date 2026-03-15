@@ -4,7 +4,12 @@
  * contentContainerStyle paddingVertical: 8 to prevent clipping.
  */
 import React from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { FONTS } from '@/theme/fonts';
 import { BRAND } from '@/theme/colors';
@@ -15,6 +20,31 @@ type ActionPill = {
   route: string;
   primary?: boolean;
 };
+
+/** Sub-component: pill with press spring animation */
+function SpringPill({ pill, onPress }: { pill: ActionPill; onPress: () => void }) {
+  const scale = useSharedValue(1);
+
+  const springStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Pressable
+      onPressIn={() => { scale.value = withSpring(0.95, { damping: 15, stiffness: 300 }); }}
+      onPressOut={() => { scale.value = withSpring(1, { damping: 10, stiffness: 200 }); }}
+      onPress={onPress}
+    >
+      <Animated.View
+        style={[styles.pill, pill.primary ? styles.pillPrimary : styles.pillSecondary, springStyle]}
+      >
+        <Text style={[styles.pillText, pill.primary ? styles.pillTextPrimary : styles.pillTextSecondary]}>
+          {pill.label}
+        </Text>
+      </Animated.View>
+    </Pressable>
+  );
+}
 
 const PILLS: ActionPill[] = [
   { label: 'Create Event', route: '/(tabs)/admin-schedule', primary: true },
@@ -35,16 +65,11 @@ function AdminActionPills() {
         contentContainerStyle={styles.scrollContent}
       >
         {PILLS.map((pill) => (
-          <TouchableOpacity
+          <SpringPill
             key={pill.label}
-            activeOpacity={0.7}
-            style={[styles.pill, pill.primary ? styles.pillPrimary : styles.pillSecondary]}
+            pill={pill}
             onPress={() => router.push(pill.route as any)}
-          >
-            <Text style={[styles.pillText, pill.primary ? styles.pillTextPrimary : styles.pillTextSecondary]}>
-              {pill.label}
-            </Text>
-          </TouchableOpacity>
+          />
         ))}
       </ScrollView>
     </View>

@@ -3,8 +3,15 @@
  * Alternating dark navy / white. Tappable → team players screen.
  * ALL hooks above early returns.
  */
-import React from 'react';
+import React, { useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { FONTS } from '@/theme/fonts';
@@ -15,10 +22,25 @@ import type { TeamHealth } from '@/hooks/useAdminHomeData';
 interface Props {
   team: TeamHealth;
   isDark: boolean;
+  index?: number;
 }
 
-function CompactTeamCard({ team, isDark }: Props) {
+function CompactTeamCard({ team, isDark, index = 0 }: Props) {
   const router = useRouter();
+
+  // Pop-in spring animation staggered 80ms apart
+  const scale = useSharedValue(0.85);
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    scale.value = withDelay(index * 80, withSpring(1, { damping: 10, stiffness: 150 }));
+    opacity.value = withDelay(index * 80, withTiming(1, { duration: 200 }));
+  }, []);
+
+  const popStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    opacity: opacity.value,
+  }));
 
   const statusColor =
     team.paymentStatus === 'overdue' ? D_COLORS.overdueRed
@@ -81,21 +103,25 @@ function CompactTeamCard({ team, isDark }: Props) {
 
   if (isDark) {
     return (
-      <LinearGradient
-        colors={[D_COLORS.missionHeroBgStart, D_COLORS.missionHeroBgEnd]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.card}
-      >
-        {inner}
-      </LinearGradient>
+      <Animated.View style={popStyle}>
+        <LinearGradient
+          colors={[D_COLORS.missionHeroBgStart, D_COLORS.missionHeroBgEnd]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.card}
+        >
+          {inner}
+        </LinearGradient>
+      </Animated.View>
     );
   }
 
   return (
-    <View style={[styles.card, styles.cardLight]}>
-      {inner}
-    </View>
+    <Animated.View style={popStyle}>
+      <View style={[styles.card, styles.cardLight]}>
+        {inner}
+      </View>
+    </Animated.View>
   );
 }
 
