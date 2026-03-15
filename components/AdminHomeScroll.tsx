@@ -43,15 +43,13 @@ import MissionControlHero from './admin-scroll/MissionControlHero';
 import AdminAttentionStrip from './admin-scroll/AdminAttentionStrip';
 import AdminTeamHealthCards from './admin-scroll/AdminTeamHealthCards';
 import AdminFinancialChart from './admin-scroll/AdminFinancialChart';
-import QuickActionsGrid from './admin-scroll/QuickActionsGrid';
-import TrophyCaseWidget from './TrophyCaseWidget';
+import AdminActionPills from './admin-scroll/AdminActionPills';
+import OrgPulseFeed from './admin-scroll/OrgPulseFeed';
+// TrophyCaseWidget removed from render (shared, file preserved)
 import AchievementCelebrationModal from './AchievementCelebrationModal';
 import { getUnseenRoleAchievements, markAchievementsSeen } from '@/lib/achievement-engine';
 import type { UnseenAchievement } from '@/lib/achievement-types';
-import CoachSection from './admin-scroll/CoachSection';
-import UpcomingEvents from './admin-scroll/UpcomingEvents';
-import ClosingMotivation from './admin-scroll/ClosingMotivation';
-// DayStripCalendar removed from admin render (lives in Schedule tab)
+// CoachSection, UpcomingEvents, ClosingMotivation, DayStripCalendar removed from render (files preserved)
 
 export default function AdminHomeScroll() {
   const insets = useSafeAreaInsets();
@@ -228,31 +226,18 @@ export default function AdminHomeScroll() {
         {/* ─── 5. TEAM HEALTH CARDS ─────────────────────────── */}
         <AdminTeamHealthCards teams={data.teams} />
 
-        {/* ─── 6. QUICK ACTIONS ──────────────────────────── */}
-        <QuickActionsGrid />
+        {/* ─── 6. ACTION PILLS ──────────────────────────────── */}
+        <AdminActionPills />
 
-        {/* ─── 7. COACHES ────────────────────────────────── */}
-        {data.coaches.length > 0 && (
-          <CoachSection coaches={data.coaches} />
-        )}
-
-        {/* ─── 7b. TROPHY CASE ─────────────────────────── */}
-        {profile?.id && (
-          <View style={{ marginHorizontal: 16, marginBottom: 16 }}>
-            <TrophyCaseWidget userId={profile.id} userRole="admin" />
-          </View>
-        )}
-
-        {/* ─── 8. UPCOMING EVENTS ────────────────────────── */}
-        <UpcomingEvents events={data.upcomingEvents} />
-
-        {/* ─── 9. CLOSING ────────────────────────────────── */}
-        <ClosingMotivation
-          adminName={data.adminName}
-          teamCount={data.teams.length}
-          playerCount={data.totalPlayers}
-          queueTotal={data.queueItems.length}
+        {/* ─── 7. ORG PULSE FEED ──────────────────────────── */}
+        <OrgPulseFeed
+          collected={data.collected}
+          pendingRegs={data.pendingRegs}
+          overdueCount={data.overdueCount}
+          upcomingEvents={data.upcomingEvents}
         />
+
+        {/* ─── 8. TROPHY + CLOSER — placeholders until Phase 6 ── */}
         </>
         )}
       </Animated.ScrollView>
