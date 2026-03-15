@@ -86,3 +86,35 @@ CREATE TABLE IF NOT EXISTS quest_bonus_tracking (
 );
 
 CREATE INDEX idx_quest_bonus_player ON quest_bonus_tracking(player_id, bonus_type, period_date);
+
+-- ---------------------------------------------------------------------------
+-- streak_data: One row per player. Current streak state + freeze inventory.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS streak_data (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  player_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  current_streak INTEGER NOT NULL DEFAULT 0,
+  longest_streak INTEGER NOT NULL DEFAULT 0,
+  last_active_date DATE,
+  streak_freezes_available INTEGER NOT NULL DEFAULT 0,
+  streak_freeze_used_date DATE,
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(player_id)
+);
+
+CREATE INDEX idx_streak_data_player ON streak_data(player_id);
+
+-- ---------------------------------------------------------------------------
+-- streak_milestones: Records when player hits streak milestones (7, 14, 30, 60, 100)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS streak_milestones (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  player_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  milestone_days INTEGER NOT NULL,
+  reached_at TIMESTAMPTZ DEFAULT now(),
+  freeze_awarded BOOLEAN DEFAULT TRUE,
+  badge_id UUID,
+  UNIQUE(player_id, milestone_days)
+);
+
+CREATE INDEX idx_streak_milestones_player ON streak_milestones(player_id);
