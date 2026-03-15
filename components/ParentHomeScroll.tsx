@@ -413,8 +413,15 @@ export default function ParentHomeScroll() {
         <View style={{ paddingTop: insets.top + 16 }}>
           <FamilyHeroCard
             lastName={lastName}
+            firstName={firstName}
             children={data.allChildren}
             seasonName={workingSeason?.name || ''}
+            isGameDay={false}
+            isPracticeDay={false}
+            winStreak={0}
+            hasPaymentDue={data.paymentStatus.balance > 0}
+            justWon={false}
+            justLost={false}
           />
         </View>
 

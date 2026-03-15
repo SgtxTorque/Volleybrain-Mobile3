@@ -1,6 +1,6 @@
 /**
  * FamilyHeroCard — Dark navy family identity hero card.
- * Shows "The [LastName] Family" with child/team counts, mascot breathing animation.
+ * Dynamic Lynx-tone greeting with mascot breathing animation.
  */
 import React, { useEffect } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
@@ -16,15 +16,34 @@ import Animated, {
 import { LinearGradient } from 'expo-linear-gradient';
 import { FONTS } from '@/theme/fonts';
 import { D_COLORS, D_RADII } from '@/theme/d-system';
+import { getParentGreeting } from './LynxGreetings';
 import type { FamilyChild } from '@/hooks/useParentHomeData';
 
 interface Props {
   lastName: string;
+  firstName: string;
   children: FamilyChild[];
   seasonName: string;
+  isGameDay: boolean;
+  isPracticeDay: boolean;
+  winStreak: number;
+  hasPaymentDue: boolean;
+  justWon: boolean;
+  justLost: boolean;
 }
 
-function FamilyHeroCard({ lastName, children, seasonName }: Props) {
+function FamilyHeroCard({
+  lastName,
+  firstName,
+  children,
+  seasonName,
+  isGameDay,
+  isPracticeDay,
+  winStreak,
+  hasPaymentDue,
+  justWon,
+  justLost,
+}: Props) {
   // Mascot breathing animation — hooks ABOVE any early return
   const mascotScale = useSharedValue(1.0);
   useEffect(() => {
@@ -43,9 +62,19 @@ function FamilyHeroCard({ lastName, children, seasonName }: Props) {
   }));
 
   const hour = new Date().getHours();
-  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
-  const familyName = lastName || 'Your';
+  const greeting = getParentGreeting({
+    firstName,
+    isGameDay,
+    isPracticeDay,
+    winStreak,
+    hasPaymentDue,
+    justWon,
+    justLost,
+    hour,
+    childCount: children.length,
+  });
+
   const childCount = children.length;
   const teamCount = new Set(children.flatMap(c => c.teams.map(t => t.teamId))).size;
 
@@ -63,7 +92,6 @@ function FamilyHeroCard({ lastName, children, seasonName }: Props) {
       style={styles.card}
     >
       <Text style={styles.greeting}>{greeting}</Text>
-      <Text style={styles.familyName}>The {familyName} Family</Text>
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
 
       <Animated.View style={[styles.mascotWrap, mascotBreathStyle]}>
@@ -89,16 +117,11 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   greeting: {
-    fontFamily: FONTS.bodyMedium,
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.4)',
-    marginBottom: 4,
-  },
-  familyName: {
     fontFamily: FONTS.bodyExtraBold,
-    fontSize: 22,
+    fontSize: 21,
     color: '#FFFFFF',
-    marginBottom: 4,
+    marginBottom: 6,
+    paddingRight: 60,
   },
   subtitle: {
     fontFamily: FONTS.bodyMedium,
