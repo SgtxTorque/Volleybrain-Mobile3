@@ -261,6 +261,25 @@ export default function ParentHomeScroll() {
     return '?';
   })();
 
+  // ─── Derive greeting context from real data ──
+  const heroContext = useMemo(() => {
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+    const todayEvents = data.allUpcomingEvents.filter(e => e.date === todayStr);
+    const isGameDay = todayEvents.some(e => e.eventType === 'game');
+    const isPracticeDay = !isGameDay && todayEvents.some(e => e.eventType === 'practice');
+
+    // winStreak: use season wins as proxy (exact streak not available)
+    const winStreak = data.seasonRecord?.wins ?? 0;
+
+    // justWon/justLost: not available from current hook data
+    const justWon = false;
+    const justLost = false;
+
+    return { isGameDay, isPracticeDay, winStreak, justWon, justLost };
+  }, [data.allUpcomingEvents, data.seasonRecord]);
+
   // ─── Mascot float animation ──
   useEffect(() => {
     mascotFloat.value = withRepeat(
@@ -417,12 +436,12 @@ export default function ParentHomeScroll() {
             firstName={firstName}
             children={data.allChildren}
             seasonName={workingSeason?.name || ''}
-            isGameDay={false}
-            isPracticeDay={false}
-            winStreak={0}
+            isGameDay={heroContext.isGameDay}
+            isPracticeDay={heroContext.isPracticeDay}
+            winStreak={heroContext.winStreak}
             hasPaymentDue={data.paymentStatus.balance > 0}
-            justWon={false}
-            justLost={false}
+            justWon={heroContext.justWon}
+            justLost={heroContext.justLost}
             parentXp={data.childXp}
           />
         </View>
