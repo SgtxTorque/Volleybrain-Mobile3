@@ -208,3 +208,69 @@ CREATE TABLE IF NOT EXISTS skill_progress (
 
 CREATE INDEX idx_skill_progress_player ON skill_progress(player_id);
 CREATE INDEX idx_skill_progress_content ON skill_progress(skill_content_id);
+
+-- ---------------------------------------------------------------------------
+-- journey_chapters: Chapter definitions for the Journey Path (8 volleyball chapters)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS journey_chapters (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  sport TEXT NOT NULL DEFAULT 'volleyball',
+  chapter_number INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  theme TEXT,
+  description TEXT,
+  required_level INTEGER NOT NULL DEFAULT 1,
+  badge_id UUID,
+  node_count INTEGER DEFAULT 0,
+  sort_order INTEGER DEFAULT 0,
+  is_published BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(sport, chapter_number)
+);
+
+CREATE INDEX idx_journey_chapters_sport ON journey_chapters(sport);
+
+-- ---------------------------------------------------------------------------
+-- journey_nodes: Individual nodes within a chapter (skill, challenge, boss, bonus)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS journey_nodes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  chapter_id UUID NOT NULL REFERENCES journey_chapters(id) ON DELETE CASCADE,
+  node_type TEXT NOT NULL DEFAULT 'skill',
+  title TEXT NOT NULL,
+  description TEXT,
+  skill_content_id UUID REFERENCES skill_content(id) ON DELETE SET NULL,
+  challenge_config JSONB,
+  xp_reward INTEGER NOT NULL DEFAULT 20,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  is_boss BOOLEAN DEFAULT FALSE,
+  is_bonus BOOLEAN DEFAULT FALSE,
+  position_offset TEXT DEFAULT 'center',
+  icon_emoji TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(chapter_id, sort_order)
+);
+
+CREATE INDEX idx_journey_nodes_chapter ON journey_nodes(chapter_id);
+
+-- ---------------------------------------------------------------------------
+-- journey_progress: Player's completion state per journey node
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS journey_progress (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  player_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  node_id UUID NOT NULL REFERENCES journey_nodes(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'locked',
+  started_at TIMESTAMPTZ,
+  completed_at TIMESTAMPTZ,
+  attempts INTEGER DEFAULT 0,
+  best_score JSONB,
+  xp_earned INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(player_id, node_id)
+);
+
+CREATE INDEX idx_journey_progress_player ON journey_progress(player_id);
+CREATE INDEX idx_journey_progress_node ON journey_progress(node_id);
+CREATE INDEX idx_journey_progress_status ON journey_progress(player_id, status);
