@@ -41,7 +41,7 @@ import RoleSelector from './RoleSelector';
 import SeasonSelector from './SeasonSelector';
 import MissionControlHero from './admin-scroll/MissionControlHero';
 import AdminAttentionStrip from './admin-scroll/AdminAttentionStrip';
-import TeamHealthTiles from './admin-scroll/TeamHealthTiles';
+import AdminTeamHealthCards from './admin-scroll/AdminTeamHealthCards';
 import AdminFinancialChart from './admin-scroll/AdminFinancialChart';
 import QuickActionsGrid from './admin-scroll/QuickActionsGrid';
 import TrophyCaseWidget from './TrophyCaseWidget';
@@ -213,45 +213,6 @@ export default function AdminHomeScroll() {
         {/* ─── 3. ATTENTION STRIP ───────────────────────────── */}
         <AdminAttentionStrip items={data.queueItems} />
 
-        {/* ─── 4. SEASON + TEAM TILES ─────────────────────── */}
-        {data.teams.length > 0 && (
-          <View style={styles.sectionWrap}>
-            <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionHeader}>{data.seasonName.toUpperCase() || 'SEASON'}</Text>
-              <View style={styles.activePill}>
-                <View style={styles.activeDot} />
-                <Text style={styles.activeText}>Active</Text>
-              </View>
-            </View>
-            <TeamHealthTiles teams={data.teams} />
-          </View>
-        )}
-
-        {/* ─── 4b. UPCOMING SEASON PROMPT ────────────────── */}
-        {data.upcomingSeason && (
-          <View style={styles.upcomingSeasonCard}>
-            <View style={styles.upcomingSeasonHeader}>
-              <Text style={styles.upcomingSeasonName}>
-                {data.upcomingSeason.name.toUpperCase()}
-              </Text>
-              <View style={styles.planningPill}>
-                <View style={styles.planningDot} />
-                <Text style={styles.planningText}>Planning</Text>
-              </View>
-            </View>
-            <Text style={styles.upcomingSeasonSub}>
-              Starts {new Date(data.upcomingSeason.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-            </Text>
-            <TouchableOpacity
-              activeOpacity={0.7}
-              style={styles.setupBtn}
-              onPress={() => router.push('/season-setup-wizard' as any)}
-            >
-              <Text style={styles.setupBtnText}>Start Setup {'\u203A'}</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
         {/* ─── 4. FINANCIAL CHART ───────────────────────────── */}
         {showPaymentCard && (
           <AdminFinancialChart
@@ -263,6 +224,9 @@ export default function AdminHomeScroll() {
             seasonName={data.seasonName}
           />
         )}
+
+        {/* ─── 5. TEAM HEALTH CARDS ─────────────────────────── */}
+        <AdminTeamHealthCards teams={data.teams} />
 
         {/* ─── 6. QUICK ACTIONS ──────────────────────────── */}
         <QuickActionsGrid />
@@ -409,91 +373,5 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bodyMedium,
   },
   // queueSection, viewMoreRow, allClearWrap styles removed — replaced by AdminAttentionStrip
-  sectionWrap: {
-    marginBottom: 16,
-  },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    marginBottom: 12,
-  },
-  sectionHeader: {
-    fontSize: 10,
-    fontFamily: FONTS.bodyBold,
-    letterSpacing: 1.2,
-    color: BRAND.textMuted,
-  },
-  activePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  activeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: BRAND.success,
-  },
-  activeText: {
-    fontSize: 10,
-    fontFamily: FONTS.bodySemiBold,
-    color: BRAND.success,
-  },
-  upcomingSeasonCard: {
-    backgroundColor: BRAND.attentionBannerBg,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(245,158,11,0.15)',
-    marginHorizontal: 20,
-    padding: 16,
-    marginBottom: 16,
-  },
-  upcomingSeasonHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  upcomingSeasonName: {
-    fontFamily: FONTS.bodyBold,
-    fontSize: 10,
-    letterSpacing: 1.2,
-    color: BRAND.textMuted,
-  },
-  planningPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  planningDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: BRAND.warning,
-  },
-  planningText: {
-    fontSize: 10,
-    fontFamily: FONTS.bodySemiBold,
-    color: BRAND.warning,
-  },
-  upcomingSeasonSub: {
-    fontFamily: FONTS.bodyMedium,
-    fontSize: 13,
-    color: BRAND.textMuted,
-    marginBottom: 12,
-  },
-  setupBtn: {
-    backgroundColor: BRAND.skyBlue,
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    alignSelf: 'flex-start',
-  },
-  setupBtnText: {
-    fontFamily: FONTS.bodySemiBold,
-    fontSize: 13,
-    color: BRAND.white,
-  },
+  // sectionWrap, activePill, upcomingSeasonCard styles removed — replaced by AdminTeamHealthCards
 });
