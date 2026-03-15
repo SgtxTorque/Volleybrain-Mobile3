@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 30,
     paddingTop: 24,
-    paddingBottom: 120,
+    paddingBottom: 16,
   },
   mascotImg: {
     width: 40,

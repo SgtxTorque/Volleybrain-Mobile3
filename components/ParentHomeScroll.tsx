@@ -407,7 +407,7 @@ export default function ParentHomeScroll() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={[
-          { paddingBottom: 120 },
+          { paddingBottom: 90 },
           isTabletAny && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%', paddingHorizontal: contentPadding },
         ]}
         refreshControl={
@@ -814,28 +814,4 @@ const styles = StyleSheet.create({
     color: BRAND.textMuted,
   },
 
-  // End of scroll (contextual closing)
-  endSection: {
-    alignItems: 'center',
-    paddingTop: 24,
-    paddingBottom: 140,
-  },
-  endEmoji: {
-    fontSize: 40,
-    opacity: 0.3,
-    marginBottom: 8,
-  },
-  endMascot: {
-    width: 48,
-    height: 48,
-    opacity: 0.3,
-    marginBottom: 8,
-  },
-  endText: {
-    fontFamily: FONTS.bodyMedium,
-    fontSize: 14,
-    color: BRAND.textFaint,
-    textAlign: 'center',
-    paddingHorizontal: 40,
-  },
 });
