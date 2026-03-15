@@ -108,6 +108,7 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
     onScrollJS: parentScroll.notifyScroll,
   });
   const data = usePlayerHomeData(playerId);
+  const streakCount = data.engagementStreak?.currentStreak ?? data.attendanceStreak ?? 0;
   const { isTabletAny, contentMaxWidth, contentPadding } = useResponsive();
 
   // Signal to tab bar that this scroll is active
@@ -142,19 +143,19 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
   const [showStreakMilestone, setShowStreakMilestone] = useState(false);
   const [milestoneTier, setMilestoneTier] = useState<StreakTier | null>(null);
   useEffect(() => {
-    if (data.loading || !playerId || data.attendanceStreak <= 0) return;
+    if (data.loading || !playerId || streakCount <= 0) return;
     AsyncStorage.getItem(STREAK_KEY).then((stored) => {
       const prevStreak = stored ? parseInt(stored, 10) : 0;
-      const crossed = checkMilestoneReached(prevStreak, data.attendanceStreak);
+      const crossed = checkMilestoneReached(prevStreak, streakCount);
       if (crossed) {
         setMilestoneTier(crossed);
         setShowStreakMilestone(true);
         // Award XP (best-effort, fire and forget)
         awardStreakMilestoneXP(playerId, crossed);
       }
-      AsyncStorage.setItem(STREAK_KEY, String(data.attendanceStreak));
+      AsyncStorage.setItem(STREAK_KEY, String(streakCount));
     });
-  }, [data.loading, data.attendanceStreak, playerId]);
+  }, [data.loading, streakCount, playerId]);
 
   // ─── Challenge arrival modal ──
   const [showChallengeArrival, setShowChallengeArrival] = useState(false);
@@ -251,10 +252,10 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
         <View style={styles.compactInner}>
           <Text style={styles.compactBrand}>lynx</Text>
           <View style={styles.compactRight}>
-            {data.attendanceStreak >= 2 && (
+            {streakCount >= 2 && (
               <View style={styles.streakPill}>
                 <Text style={styles.streakPillText}>
-                  {'\u{1F525}'} {data.attendanceStreak}
+                  {'\u{1F525}'} {streakCount}
                 </Text>
               </View>
             )}
@@ -323,7 +324,7 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           xpProgress={data.xpProgress}
           xpCurrent={data.xp}
           xpToNext={data.xpToNext}
-          attendanceStreak={data.attendanceStreak}
+          attendanceStreak={streakCount}
           lastGame={data.lastGame}
           nextEvent={data.nextEvent}
           badges={data.badges}
@@ -425,14 +426,14 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
         <NextUpCard
           event={data.nextEvent}
           rsvpStatus={data.rsvpStatus}
-          attendanceStreak={data.attendanceStreak}
+          attendanceStreak={streakCount}
           onRsvp={data.sendRsvp}
         />
 
         {/* ─── 11. MOMENTUM CARDS ───────────────────────────── */}
         <PlayerMomentumRow
           seasonStats={data.seasonStats}
-          attendanceStreak={data.attendanceStreak}
+          attendanceStreak={streakCount}
           level={data.level}
           scrollY={scrollY}
         />
@@ -467,7 +468,7 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
         <PlayerAmbientCloser
           xpToNext={data.xpToNext}
           level={data.level}
-          attendanceStreak={data.attendanceStreak}
+          attendanceStreak={streakCount}
           badgeCount={data.badges.length}
         />
         </>
@@ -487,7 +488,7 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
         <StreakMilestoneCelebrationModal
           visible={showStreakMilestone}
           tier={milestoneTier}
-          streak={data.attendanceStreak}
+          streak={streakCount}
           onDismiss={() => setShowStreakMilestone(false)}
         />
       )}
