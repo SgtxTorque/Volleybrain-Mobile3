@@ -1,18 +1,19 @@
 /**
- * PlayerHomeScroll — scroll-driven player home dashboard.
- * Dark mode (#0D1B3E) — game-menu feel, not admin tool.
+ * PlayerHomeScroll — D+ redesigned scroll-driven player home.
+ * Dark mode (#0D1B3E) — game-menu feel, action center not dashboard.
  *
- * Section order:
- *   1. Hero Identity Card (always)
- *   2. Streak Banner (if streak ≥ 2)
- *   3. The Drop (1-3 items or contextual message)
- *   4. Photo Strip (if photos exist)
- *   5. Next Up — event + RSVP (if event exists, otherwise ambient text)
- *   6. Chat Peek (flat row)
- *   7. Quick Props row
- *   8. Active Challenge (if exists)
- *   9. Last Game Stats (if game stats exist)
- *  10. Closing Mascot + XP callback
+ * Final scroll order:
+ *   1. PlayerIdentityHero (greeting, identity, streak, level/XP)
+ *   2. PlayerDailyQuests (3 quests with XP rewards)
+ *   3. PlayerLeaderboardPreview (team ranking, competition)
+ *   4. PlayerPropsSection — Props from the Team (social proof)
+ *   5. PlayerContinueTraining (Journey Path teaser)
+ *   6. NextUpCard (next event with +XP on RSVP)
+ *   7. PlayerMomentumRow (horizontal gradient cards)
+ *   8. LastGameStats (restyled with stat colors)
+ *   9. PlayerTrophyCase (Fortnite-style badge grid)
+ *  10. PlayerTeamActivity (team feed)
+ *  11. PlayerAmbientCloser (mascot + data message)
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -55,6 +56,8 @@ import PlayerPropsSection from './player-scroll/PlayerPropsSection';
 import PlayerContinueTraining from './player-scroll/PlayerContinueTraining';
 import PlayerMomentumRow from './player-scroll/PlayerMomentumRow';
 import PlayerTrophyCase from './player-scroll/PlayerTrophyCase';
+import PlayerTeamActivity from './player-scroll/PlayerTeamActivity';
+import PlayerAmbientCloser from './player-scroll/PlayerAmbientCloser';
 import HeroIdentityCard from './player-scroll/HeroIdentityCard';
 import StreakBanner from './player-scroll/StreakBanner';
 import TheDrop from './player-scroll/TheDrop';
@@ -380,24 +383,6 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
         {/* ─── 5. CONTINUE TRAINING (teaser) ───────────────────── */}
         <PlayerContinueTraining />
 
-        {/* ─── 1b. MY TEAM (one-tap to roster) ─────────────────── */}
-        {data.primaryTeam && (
-          <TouchableOpacity
-            style={styles.myTeamCard}
-            activeOpacity={0.85}
-            onPress={() => router.push(`/roster?teamId=${data.primaryTeam!.id}` as any)}
-          >
-            <View style={styles.myTeamLeft}>
-              <Text style={styles.myTeamLabel}>MY TEAM</Text>
-              <Text style={styles.myTeamName}>{data.primaryTeam.name}</Text>
-              <Text style={styles.myTeamCta}>See your teammates {'\u2192'}</Text>
-            </View>
-            <View style={styles.myTeamAvatars}>
-              <Text style={{ fontSize: 22 }}>{'\u{1F465}'}</Text>
-            </View>
-          </TouchableOpacity>
-        )}
-
         {/* ─── 6. NEXT UP — event + RSVP ──────────────────────── */}
         <NextUpCard
           event={data.nextEvent}
@@ -428,14 +413,20 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           xpCurrent={data.xp}
         />
 
-        {/* ─── 8. ACTIVE CHALLENGE (if exists) ────────────────── */}
-        <ActiveChallengeCard available={data.challengesAvailable} teamId={data.primaryTeam?.id} />
+        {/* ─── 10. TEAM ACTIVITY ────────────────────────────── */}
+        <PlayerTeamActivity
+          recentShoutouts={data.recentShoutouts}
+          badges={data.badges}
+          lastGame={data.lastGame}
+          teamId={data.primaryTeam?.id}
+        />
 
-        {/* ─── 10. CLOSING MASCOT + XP CALLBACK ──────────────── */}
-        <ClosingMascot
+        {/* ─── 11. AMBIENT CLOSER ─────────────────────────────── */}
+        <PlayerAmbientCloser
           xpToNext={data.xpToNext}
           level={data.level}
-          nextEvent={data.nextEvent}
+          attendanceStreak={data.attendanceStreak}
+          badgeCount={data.badges.length}
         />
         </>
         )}
