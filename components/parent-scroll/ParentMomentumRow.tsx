@@ -123,6 +123,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 16,
+    paddingVertical: 8,
     gap: 10,
   },
   card: {
