@@ -550,3 +550,29 @@ CREATE POLICY "xp_boost_events_admin_insert" ON xp_boost_events
         AND is_active = true
     )
   );
+
+-- ---------------------------------------------------------------------------
+-- SEED: Volleyball skill categories
+-- ---------------------------------------------------------------------------
+INSERT INTO skill_categories (sport, name, display_name, icon, sort_order) VALUES
+  ('volleyball', 'serving', 'Serving', '🏐', 1),
+  ('volleyball', 'passing', 'Passing', '🤲', 2),
+  ('volleyball', 'setting', 'Setting', '🙌', 3),
+  ('volleyball', 'hitting', 'Hitting', '💥', 4),
+  ('volleyball', 'defense', 'Defense', '🛡️', 5),
+  ('volleyball', 'court_iq', 'Court IQ', '🧠', 6)
+ON CONFLICT (sport, name) DO NOTHING;
+
+-- ---------------------------------------------------------------------------
+-- SEED: Volleyball journey chapters (8 chapters)
+-- ---------------------------------------------------------------------------
+INSERT INTO journey_chapters (sport, chapter_number, title, theme, description, required_level, node_count, sort_order) VALUES
+  ('volleyball', 1, 'First Touch', 'passing_foundations', 'Master the basics of ball control and platform passing', 1, 6, 1),
+  ('volleyball', 2, 'Serve It Up', 'serving_foundations', 'Build your serve from the ground up', 1, 7, 2),
+  ('volleyball', 3, 'Net Game', 'setting_hitting', 'Setting and hitting fundamentals at the net', 5, 6, 3),
+  ('volleyball', 4, 'Defense Wins', 'defensive_skills', 'Dig, dive, and defend like a wall', 5, 5, 4),
+  ('volleyball', 5, 'Court Commander', 'court_awareness', 'Rotations, coverage, and game IQ', 10, 8, 5),
+  ('volleyball', 6, 'Advanced Arsenal', 'advanced_offense', 'Advanced serves and attacks under pressure', 10, 7, 6),
+  ('volleyball', 7, 'Team Synergy', 'team_play', 'Team coordination and communication', 15, 6, 7),
+  ('volleyball', 8, 'Championship Road', 'mastery', 'Full-game simulation and mastery', 15, 8, 8)
+ON CONFLICT (sport, chapter_number) DO NOTHING;
