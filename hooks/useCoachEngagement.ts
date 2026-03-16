@@ -90,7 +90,7 @@ export function useCoachEngagement(teamId: string | null) {
       // Profiles (XP, level)
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('id, total_xp, player_level')
+        .select('id, total_xp, player_level, tier')
         .in('id', profileIds);
 
       const profileMap = Object.fromEntries(
@@ -215,7 +215,7 @@ export function useCoachEngagement(teamId: string | null) {
           totalXp: profile.total_xp || 0,
           weeklyXp: standingData.xp,
           level: profile.player_level || 1,
-          tier: standingData.tier,
+          tier: profile.tier || 'Bronze',
           currentStreak: streak.current_streak || 0,
           longestStreak: streak.longest_streak || 0,
           dailyQuestsCompletedToday: daily.completed,
