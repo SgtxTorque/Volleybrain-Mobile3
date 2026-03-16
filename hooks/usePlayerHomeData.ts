@@ -9,7 +9,7 @@ import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { calculateStreakWithFreeze, checkStreakState, StreakState } from '@/lib/streak-engine';
 import { calculateLevel } from '@/lib/quest-engine';
-import { checkEarlyBird } from '@/lib/xp-boost-engine';
+import { checkEarlyBird, checkAndCreateAutoBoosts } from '@/lib/xp-boost-engine';
 import { supabase } from '@/lib/supabase';
 
 /** Local date string (YYYY-MM-DD) to avoid UTC timezone shift issues */
@@ -229,6 +229,11 @@ export function usePlayerHomeData(playerId: string | null) {
         .map((t: any) => ({ id: t.id, name: t.name, color: t.color }));
       setTeams(playerTeams);
       const teamIds = playerTeams.map(t => t.id);
+
+      // Auto XP boost check (Game Day / Practice Day / Weekend Warrior)
+      if (teamIds.length > 0) {
+        checkAndCreateAutoBoosts(teamIds[0]).catch(() => {});
+      }
 
       // 2. Season stats
       if (workingSeason?.id) {
