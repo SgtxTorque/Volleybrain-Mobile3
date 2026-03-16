@@ -12,12 +12,13 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import AdminHomeScroll from './AdminHomeScroll';
 import ChildPickerScreen, { type ChildPlayer } from './ChildPickerScreen';
 import CoachHomeScroll from './CoachHomeScroll';
+import TeamManagerSetupPrompt from './empty-states/TeamManagerSetupPrompt';
 import ParentHomeScroll from './ParentHomeScroll';
 import PlayerHomeScroll from './PlayerHomeScroll';
 
 const LAST_CHILD_KEY = 'vb_player_last_child_id';
 
-type DashboardType = 'admin' | 'coach' | 'team_manager' | 'parent' | 'coach_parent' | 'player' | 'loading';
+type DashboardType = 'admin' | 'coach' | 'team_manager' | 'team_manager_setup' | 'parent' | 'coach_parent' | 'player' | 'loading';
 
 export default function DashboardRouter() {
   const { colors } = useTheme();
@@ -145,8 +146,10 @@ export default function DashboardRouter() {
 
       if (tmTeams && tmTeams.length > 0) {
         setDashboardType('team_manager');
-        return;
+      } else {
+        setDashboardType('team_manager_setup');
       }
+      return;
     }
 
     // Check actual coaching status and parent status (canonical resolver)
@@ -211,6 +214,8 @@ export default function DashboardRouter() {
       return <CoachHomeScroll />;
     case 'team_manager':
       return <CoachHomeScroll />;
+    case 'team_manager_setup':
+      return <TeamManagerSetupPrompt />;
     case 'parent':
       return <ParentHomeScroll />;
     case 'coach_parent':
