@@ -10,6 +10,7 @@ import {
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -49,6 +50,9 @@ import OrgPulseFeed from './admin-scroll/OrgPulseFeed';
 import OrgHealthChart from './admin-scroll/OrgHealthChart';
 import AdminTrophyBar from './admin-scroll/AdminTrophyBar';
 import AdminAmbientCloser from './admin-scroll/AdminAmbientCloser';
+import SearchPreviewDropdown from './admin-scroll/SearchPreviewDropdown';
+import { useGlobalSearch } from '@/hooks/useGlobalSearch';
+import { Ionicons } from '@expo/vector-icons';
 // TrophyCaseWidget removed from render (shared, file preserved)
 import AchievementCelebrationModal from './AchievementCelebrationModal';
 import { getUnseenRoleAchievements, markAchievementsSeen } from '@/lib/achievement-engine';
@@ -65,6 +69,15 @@ export default function AdminHomeScroll() {
   });
   const data = useAdminHomeData();
   const { isTabletAny, contentMaxWidth, contentPadding } = useResponsive();
+  const {
+    query: searchQuery,
+    previewResults,
+    handleQueryChange,
+    executeFullSearch,
+    clearSearch,
+    setPreviewResults,
+  } = useGlobalSearch();
+  const [searchFocused, setSearchFocused] = useState(false);
 
   // Signal to tab bar that this scroll is active
   useEffect(() => {
@@ -211,15 +224,51 @@ export default function AdminHomeScroll() {
         />
 
         {/* ─── 2. SEARCH BAR ──────────────────────────────── */}
-        {/* TODO: Wire to global search (players, families, teams, coaches) — needs design spec */}
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => router.push('/(tabs)/players' as any)}
-          style={styles.searchBar}
-        >
-          <Text style={styles.searchIcon}>{'\u{1F50D}'}</Text>
-          <Text style={styles.searchPlaceholder}>Search players, families, teams...</Text>
-        </TouchableOpacity>
+        <View style={{ zIndex: 100, position: 'relative' }}>
+          <View style={styles.searchBar}>
+            <Ionicons name="search" size={16} color={BRAND.textFaint} />
+            <TextInput
+              style={styles.searchInput}
+              value={searchQuery}
+              onChangeText={handleQueryChange}
+              onSubmitEditing={() => {
+                if (searchQuery.trim().length >= 2) {
+                  setPreviewResults([]);
+                  router.push(`/admin-search-results?q=${encodeURIComponent(searchQuery)}` as any);
+                }
+              }}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
+              placeholder="Search players, families, teams..."
+              placeholderTextColor={BRAND.textFaint}
+              returnKeyType="search"
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={clearSearch} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Ionicons name="close-circle" size={18} color={BRAND.textFaint} />
+              </TouchableOpacity>
+            )}
+          </View>
+          <SearchPreviewDropdown
+            results={previewResults}
+            query={searchQuery}
+            visible={searchFocused && previewResults.length > 0 && searchQuery.length >= 2}
+            onResultTap={(result) => {
+              clearSearch();
+              if (result.navigateTo) {
+                const params = result.navigateParams || {};
+                const qs = Object.entries(params).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+                router.push(`${result.navigateTo}${qs ? '?' + qs : ''}` as any);
+              }
+            }}
+            onSeeAll={() => {
+              const q = searchQuery;
+              setPreviewResults([]);
+              router.push(`/admin-search-results?q=${encodeURIComponent(q)}` as any);
+            }}
+            onDismiss={() => setPreviewResults([])}
+          />
+        </View>
 
         {/* ─── 3. ATTENTION STRIP ───────────────────────────── */}
         <AdminAttentionStrip items={data.queueItems} />
@@ -379,13 +428,11 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 1,
   },
-  searchIcon: {
-    fontSize: 16,
-    opacity: 0.4,
-  },
-  searchPlaceholder: {
+  searchInput: {
+    flex: 1,
     fontSize: 14,
-    color: BRAND.textFaint,
+    color: BRAND.textPrimary,
     fontFamily: FONTS.bodyMedium,
+    padding: 0,
   },
 });

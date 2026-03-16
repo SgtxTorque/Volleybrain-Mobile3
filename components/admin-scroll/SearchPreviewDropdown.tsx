@@ -94,8 +94,9 @@ const styles = StyleSheet.create({
   },
   dropdown: {
     position: 'absolute',
-    left: 16,
-    right: 16,
+    top: 52,
+    left: 0,
+    right: 0,
     backgroundColor: BRAND.white,
     borderRadius: D_RADII.cardSmall,
     borderWidth: 1,
