@@ -404,10 +404,7 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
 
         {/* ─── 6. LEADERBOARD PREVIEW ─────────────────────────── */}
         <PlayerLeaderboardPreview
-          bestRank={data.bestRank}
-          xp={data.xp}
-          level={data.level}
-          playerName={data.playerName}
+          teamId={data.primaryTeam?.id}
         />
 
         {/* ─── 7. PROPS FROM THE TEAM (shoutouts) ────────────── */}
