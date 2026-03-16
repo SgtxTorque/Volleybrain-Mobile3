@@ -38,7 +38,7 @@ export default function TeamManagerSetupPrompt() {
       <TouchableOpacity
         style={s.secondaryBtn}
         activeOpacity={0.7}
-        onPress={() => router.push('/join-team' as any)}
+        onPress={() => router.push('/(auth)/redeem-code' as any)}
       >
         <Text style={s.secondaryBtnText}>I have an invite code</Text>
       </TouchableOpacity>
