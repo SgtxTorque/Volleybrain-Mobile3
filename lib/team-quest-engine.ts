@@ -230,7 +230,7 @@ async function awardTeamQuestXp(quest: any) {
       .from('profiles')
       .select('total_xp')
       .eq('id', pid)
-      .single();
+      .maybeSingle();
 
     if (profile) {
       const newTotal = (profile.total_xp || 0) + quest.xp_reward_per_player;

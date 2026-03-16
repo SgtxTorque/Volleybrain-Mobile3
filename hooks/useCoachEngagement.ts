@@ -79,6 +79,12 @@ export function useCoachEngagement(teamId: string | null) {
 
       const profileIds = playerEntries.map((p: any) => p.profileId);
 
+      if (profileIds.length === 0) {
+        setPlayers([]);
+        setSummary(null);
+        return;
+      }
+
       // Step 2: Batch fetch all engagement data
 
       // Profiles (XP, level)

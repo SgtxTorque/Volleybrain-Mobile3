@@ -627,7 +627,7 @@ async function awardXp(
     .from('profiles')
     .select('total_xp')
     .eq('id', profileId)
-    .single();
+    .maybeSingle();
 
   const currentXp = profile?.total_xp || 0;
   const newTotalXp = currentXp + finalAmount;

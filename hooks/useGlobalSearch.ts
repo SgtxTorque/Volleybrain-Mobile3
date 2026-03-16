@@ -54,7 +54,7 @@ export function useGlobalSearch() {
       .from('profiles')
       .select('current_organization_id')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
 
     orgIdRef.current = profile?.current_organization_id || null;
     return orgIdRef.current;

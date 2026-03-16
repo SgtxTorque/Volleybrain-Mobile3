@@ -48,7 +48,7 @@ export function useSkillModule(nodeId: string, skillContentId: string) {
         .from('skill_content')
         .select('*')
         .eq('id', skillContentId)
-        .single();
+        .maybeSingle();
 
       if (!content) return;
 
@@ -211,7 +211,7 @@ async function awardModuleXp(profileId: string, amount: number, sourceType: stri
     .from('profiles')
     .select('total_xp')
     .eq('id', profileId)
-    .single();
+    .maybeSingle();
 
   const newTotal = (profile?.total_xp ?? 0) + amount;
   const { level, tier, xpToNext } = calculateLevel(newTotal);

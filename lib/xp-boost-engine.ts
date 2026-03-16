@@ -124,7 +124,7 @@ export async function checkEarlyBird(
     .from('profiles')
     .select('total_xp')
     .eq('id', playerProfileId)
-    .single();
+    .maybeSingle();
 
   if (profile) {
     const { calculateLevel } = require('@/lib/quest-engine');

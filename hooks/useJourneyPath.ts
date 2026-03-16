@@ -65,7 +65,7 @@ export function useJourneyPath() {
         .from('profiles')
         .select('player_level')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       const level = profile?.player_level ?? 1;
       setPlayerLevel(level);

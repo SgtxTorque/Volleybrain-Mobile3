@@ -200,7 +200,7 @@ export function usePlayerHomeData(playerId: string | null) {
           const { count } = await supabase
             .from('player_guardians')
             .select('id', { count: 'exact', head: true })
-            .eq('guardian_id', user!.id)
+            .eq('guardian_id', user?.id ?? '')
             .eq('player_id', playerId);
           hasAccess = (count ?? 0) > 0;
         }
@@ -494,7 +494,7 @@ export function usePlayerHomeData(playerId: string | null) {
             .from('profiles')
             .select('total_xp, player_level, tier, xp_to_next_level')
             .eq('id', engProfileId)
-            .single();
+            .maybeSingle();
 
           if (engData) {
             setDbXp(engData.total_xp ?? 0);
