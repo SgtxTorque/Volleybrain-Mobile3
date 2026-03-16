@@ -359,30 +359,34 @@ function QuizStep({
 
         <View style={styles.optionsContainer}>
           {question.options.map((option: string, idx: number) => {
-            let optionStyle = styles.optionDefault;
-            if (hasSubmitted) {
-              if (idx === question.correct_option_index) {
-                optionStyle = styles.optionCorrect;
-              } else if (idx === selectedIdx) {
-                optionStyle = styles.optionIncorrect;
-              }
-            } else if (idx === selectedIdx) {
-              optionStyle = styles.optionSelected;
-            }
+            const isCorrectAnswer = idx === question.correct_option_index;
+            const isSelected = idx === selectedIdx;
+
+            const bgColor = hasSubmitted && isCorrectAnswer
+              ? 'rgba(34,197,94,0.25)'
+              : hasSubmitted && isSelected
+                ? 'rgba(239,68,68,0.25)'
+                : PLAYER_THEME.cardBg;
+
+            const borderColor = hasSubmitted && isCorrectAnswer
+              ? PLAYER_THEME.success
+              : hasSubmitted && isSelected
+                ? PLAYER_THEME.error
+                : isSelected
+                  ? PLAYER_THEME.accent
+                  : PLAYER_THEME.border;
+
+            const textColor = hasSubmitted && (isCorrectAnswer || isSelected)
+              ? '#FFFFFF'
+              : PLAYER_THEME.textSecondary;
 
             return (
               <Pressable
                 key={idx}
                 onPress={() => handleSelectOption(idx)}
-                style={[styles.optionCard, optionStyle]}
+                style={[styles.optionCard, { backgroundColor: bgColor, borderColor }]}
               >
-                <Text
-                  style={[
-                    styles.optionText,
-                    hasSubmitted && idx === question.correct_option_index && { color: '#FFFFFF' },
-                    hasSubmitted && idx === selectedIdx && idx !== question.correct_option_index && { color: '#FFFFFF' },
-                  ]}
-                >
+                <Text style={[styles.optionText, { color: textColor }]}>
                   {option}
                 </Text>
               </Pressable>
@@ -665,22 +669,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderWidth: 1.5,
-  },
-  optionDefault: {
-    backgroundColor: PLAYER_THEME.cardBg,
-    borderColor: PLAYER_THEME.border,
-  },
-  optionSelected: {
-    backgroundColor: PLAYER_THEME.cardBg,
-    borderColor: PLAYER_THEME.accent,
-  },
-  optionCorrect: {
-    backgroundColor: 'rgba(34,197,94,0.25)',
-    borderColor: PLAYER_THEME.success,
-  },
-  optionIncorrect: {
-    backgroundColor: 'rgba(239,68,68,0.25)',
-    borderColor: PLAYER_THEME.error,
   },
   optionText: {
     fontFamily: FONTS.bodyMedium,
