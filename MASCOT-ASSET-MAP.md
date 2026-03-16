@@ -16,24 +16,58 @@
 | OVERHANDSERVE.png | Overhand serve intro | 2: Serve It Up |
 | watchingfilm.png | Serve receive awareness | 2: Serve It Up |
 | AREYOUREADY.png | Serving under pressure | 2: Serve It Up |
+| SETTERHANDS.png | Setter hand position | 3: Net Game |
+| MOVEMENTDRILL.png | Setting footwork | 3: Net Game |
+| HITAPPROACH.png | Hitting approach | 3: Net Game |
+| BACKROWATTACK.png | Contact point | 3: Net Game |
+| defenseready.png | Defensive ready position | 4: Defense Wins |
+| DIVEPASS.png | Dig technique | 4: Defense Wins |
+| PANCAKE.png | Dive and roll recovery | 4: Defense Wins |
+| VISUALIZE.png | Court positions 1-6 | 5: Court Commander |
+| MOVEMENTDRILL.png | Rotation basics | 5: Court Commander |
+| TEAMHUDDLE.png | Serve receive formations | 5: Court Commander |
+| GETACTIVE.png | Transition offense | 5: Court Commander |
+| AREYOUREADY.png | Free ball plays | 5: Court Commander |
+| ENCOURAGINGTEAMMATE.png | Hitter coverage | 5: Court Commander |
+| OVERHANDSERVE.png | Float serve | 6: Advanced Arsenal |
+| BEGINNERJUMPSERVE.png | Jump serve intro | 6: Advanced Arsenal |
+| HITAPPROACH.png | Off-speed shots | 6: Advanced Arsenal |
+| BACKROWATTACK.png | Shot selection | 6: Advanced Arsenal |
+| BACKROWATTACK.png | Back row attack | 6: Advanced Arsenal |
+| CALLBALL.png | Communication systems | 7: Team Synergy |
+| ENCOURAGINGTEAMMATE.png | Setter-hitter connection | 7: Team Synergy |
+| defenseready.png | Defensive schemes | 7: Team Synergy |
+| watchingfilm.png | Serve receive adjustments | 7: Team Synergy |
+| LYNXREADY.png | Game day preparation | 8: Championship Road |
+| ADVANCEJUMPSERVE.png | Situational serving | 8: Championship Road |
+| HITAPPROACH.png | Clutch hitting | 8: Championship Road |
+| watchingfilm.png | Reading the opponent | 8: Championship Road |
+| ENCOURAGINGTEAMMATE.png | Leadership on the court | 8: Championship Road |
+| VISUALIZE.png | Mental toughness | 8: Championship Road |
 
 ## Drill Demo Frames (secondary images in modules)
 
 | Image | Used In |
 |-------|---------|
 | MOREPASSING.png | Platform basics, Wall passing (drill demo) |
-| GETACTIVE.png | Shuffle step (drill demo) |
+| GETACTIVE.png | Shuffle step (drill demo), Transition offense (drill demo) |
 | PARENTPASS.png | Buddy passing (drill demo) |
 | 3PERSONPEPPER.png | Call the ball (drill demo) |
 | SURPRISED.png | Serving under pressure (drill demo) |
+| WALLSETS.png | Setter hand position (drill demo) |
+| CALLBALL.png | Serve receive formations (drill demo) |
+| TEAMHUDDLE.png | Communication systems (drill demo) |
+| ADVANCEJUMPSERVE.png | Jump serve intro (drill demo) |
+| AREYOUREADY.png | Game day preparation (drill demo) |
+| SPORTSMANSHIP.png | Leadership on the court (drill demo) |
 
 ## Boss / Achievement Moments
 
 | Image | Usage |
 |-------|-------|
-| EXCITEDACHIEVEMENT.png | Chapter boss completion celebration |
-| TEAMACHIEVEMENT.png | Team quest completion |
-| 100DAYSTREAKLEGENDARY.png | 100-day streak milestone |
+| EXCITEDACHIEVEMENT.png | Chapter boss completion celebration (Ch 1-6) |
+| TEAMACHIEVEMENT.png | Team quest completion (Ch 7 boss) |
+| 100DAYSTREAKLEGENDARY.png | 100-day streak milestone, Ch 8 championship boss |
 
 ## Streak States
 
@@ -67,13 +101,6 @@
 | BACKYARDPRACTICE.png | Home drill context |
 | FOOLINGAROUNDWITHDAD.png | Parent-child engagement moments |
 | ADVANCECOACH.png | Coach challenge cards |
-| WALLSETS.png | Setting chapter (future) |
-| SETTERHANDS.png | Setting chapter (future) |
-| HITAPPROACH.png | Hitting chapter (future) |
-| BACKROWATTACK.png | Advanced hitting chapter (future) |
-| defenseready.png | Defense chapter (future) |
-| DIVEPASS.png | Defense chapter (future) |
-| PANCAKE.png | Advanced defense chapter (future) |
 | RUSSIANTWIST.png | Conditioning drills (future) |
 | PUSHUP.png | Conditioning drills (future) |
 
