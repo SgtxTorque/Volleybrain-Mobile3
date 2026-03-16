@@ -4,7 +4,7 @@
  * useQuestEngine. Tapping a quest marks it complete and awards XP.
  */
 import React, { useEffect } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -17,6 +17,7 @@ import { PLAYER_THEME } from '@/theme/player-theme';
 import { D_COLORS, D_RADII } from '@/theme/d-system';
 import { useQuestEngine } from '@/hooks/useQuestEngine';
 import type { DailyQuest } from '@/lib/quest-engine';
+import { getQuestMascot } from '@/lib/mascot-images';
 import type { NextEvent, RsvpStatus, RecentShoutout, PlayerBadge } from '@/hooks/usePlayerHomeData';
 
 type Props = {
@@ -75,6 +76,13 @@ function QuestCard({
             <Text style={styles.checkmark}>{'\u2713'}</Text>
           ) : null}
         </View>
+
+        {/* Quest mascot */}
+        <Image
+          source={getQuestMascot(quest.quest_type)}
+          style={styles.questMascot}
+          resizeMode="contain"
+        />
 
         {/* Quest text */}
         <Text
@@ -192,6 +200,11 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bodyBold,
     fontSize: 12,
     color: PLAYER_THEME.bg,
+  },
+  questMascot: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
   },
   questText: {
     flex: 1,
