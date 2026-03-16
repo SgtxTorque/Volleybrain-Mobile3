@@ -60,6 +60,7 @@ import CoachPulseFeed from './coach-scroll/CoachPulseFeed';
 import CoachTrophyCase from './coach-scroll/CoachTrophyCase';
 import TeamStatsChart from './coach-scroll/TeamStatsChart';
 import AmbientCloser from './coach-scroll/AmbientCloser';
+import CoachEngagementCard from './coach-scroll/CoachEngagementCard';
 
 import { getUnseenRoleAchievements, markAchievementsSeen } from '@/lib/achievement-engine';
 import type { UnseenAchievement } from '@/lib/achievement-types';
@@ -529,6 +530,11 @@ export default function CoachHomeScroll() {
             attendanceRate={data.attendanceRate}
             onGiveShoutout={() => setShowShoutoutModal(true)}
           />
+        </View>
+
+        {/* ─── 6b. TEAM ENGAGEMENT (compact engagement summary) ── ↕ 14px ── */}
+        <View style={{ marginBottom: 14 }}>
+          <CoachEngagementCard teamId={data.selectedTeamId ?? null} />
         </View>
 
         {/* ─── 7. ACTION GRID 2x2 (D System — pastel cells) ── ↕ 16px ── */}
