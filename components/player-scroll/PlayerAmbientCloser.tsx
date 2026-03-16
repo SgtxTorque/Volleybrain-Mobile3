@@ -14,6 +14,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { FONTS } from '@/theme/fonts';
 import { PLAYER_THEME } from '@/theme/player-theme';
+import { getCloserMascot } from '@/lib/mascot-images';
 
 type Props = {
   xpToNext: number;
@@ -68,16 +69,29 @@ export default function PlayerAmbientCloser({ xpToNext, level, attendanceStreak,
     transform: [{ rotate: `${swayRotation.value}deg` }],
   }));
 
-  const message = useMemo(
-    () => getClosingMessage(xpToNext, level, attendanceStreak, badgeCount),
-    [xpToNext, level, attendanceStreak, badgeCount],
+  const closerData = useMemo(
+    () => getCloserMascot({
+      streakCount: attendanceStreak,
+      hasEventTomorrow: false,
+      justLeveledUp: false,
+      timeOfDay: new Date().getHours(),
+    }),
+    [attendanceStreak],
   );
+
+  // Use closer mascot message, but prefer XP-proximity message when close to leveling
+  const message = useMemo(() => {
+    if (xpToNext <= 200) {
+      return `${xpToNext} XP to Level ${level + 1}. Keep grinding.`;
+    }
+    return closerData.message;
+  }, [xpToNext, level, closerData.message]);
 
   return (
     <View style={styles.container}>
       <Animated.View style={swayStyle}>
         <Image
-          source={require('@/assets/images/lynx-mascot.png')}
+          source={closerData.image}
           style={styles.mascot}
           resizeMode="contain"
         />
