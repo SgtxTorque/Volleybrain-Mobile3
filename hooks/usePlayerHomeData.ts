@@ -9,6 +9,7 @@ import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { calculateStreakWithFreeze, checkStreakState, StreakState } from '@/lib/streak-engine';
 import { calculateLevel } from '@/lib/quest-engine';
+import { checkEarlyBird } from '@/lib/xp-boost-engine';
 import { supabase } from '@/lib/supabase';
 
 /** Local date string (YYYY-MM-DD) to avoid UTC timezone shift issues */
@@ -538,10 +539,15 @@ export function usePlayerHomeData(playerId: string | null) {
         { onConflict: 'event_id,player_id' },
       );
       setRsvpStatus(status === 'yes' ? 'confirmed' : 'no');
+
+      // Early Bird check — award XP if among first 5 RSVPs
+      if (status === 'yes' && user?.id) {
+        checkEarlyBird(nextEvent.id, user.id).catch(() => {});
+      }
     } catch (err) {
       if (__DEV__) console.error('[usePlayerHomeData] RSVP error:', err);
     }
-  }, [playerId, nextEvent]);
+  }, [playerId, nextEvent, user?.id]);
 
   // Computed values — use DB XP if available, else fall back to formula
   const computedXp = useMemo(() => computeXP(seasonStats, badges.length), [seasonStats, badges.length]);
