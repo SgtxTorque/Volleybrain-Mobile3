@@ -274,6 +274,35 @@ export default function SignupScreen() {
 
   const handleSkip = () => createAccount();
 
+  // ── Team Manager: "Start my own team" creates account then opens wizard ──
+  const handleStartMyOwnTeam = async () => {
+    setSubmitting(true);
+    try {
+      const fullName = `${firstName.trim()} ${lastName.trim()}`;
+      const { error } = await signUp(email.trim().toLowerCase(), password, fullName);
+      if (error) {
+        Alert.alert('Signup Failed', error.message);
+        setSubmitting(false);
+        return;
+      }
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Account created but user not found');
+
+      // Mark onboarding complete (no org yet — wizard will set it up)
+      await supabase.from('profiles').update({
+        onboarding_completed: true,
+      }).eq('id', user.id);
+
+      await refreshProfile();
+      router.replace('/team-manager-setup' as any);
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Account creation failed.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   // ── Step Indicator ───────────────────────────────────
   const StepIndicator = () => (
     <View style={s.stepRow}>
@@ -571,6 +600,19 @@ export default function SignupScreen() {
                   >
                     <Text style={s.textBtnLabel}>
                       Or, <Text style={{ fontFamily: FONTS.bodyBold }}>create a new organization</Text>
+                    </Text>
+                  </TouchableOpacity>
+                )}
+
+                {/* Start own team (team managers only) */}
+                {selectedRole === 'team_manager' && (
+                  <TouchableOpacity
+                    onPress={handleStartMyOwnTeam}
+                    style={s.textBtn}
+                    disabled={submitting}
+                  >
+                    <Text style={s.textBtnLabel}>
+                      Or, <Text style={{ fontFamily: FONTS.bodyBold }}>start my own team</Text>
                     </Text>
                   </TouchableOpacity>
                 )}
