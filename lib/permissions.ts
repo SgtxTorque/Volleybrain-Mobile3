@@ -79,9 +79,9 @@ export const can = {
     ctx.roles.includes('league_admin'),
 
   // Team level
-  manageTeam: (ctx: PermissionContext, teamId: string) => 
-    ctx.roles.includes('league_admin') || 
-    ctx.teamAssignments.some(t => t.teamId === teamId && t.role === 'head_coach'),
+  manageTeam: (ctx: PermissionContext, teamId: string) =>
+    ctx.roles.includes('league_admin') ||
+    ctx.teamAssignments.some(t => t.teamId === teamId && (t.role === 'head_coach' || t.role === 'team_manager')),
 
   addAssistantCoach: (ctx: PermissionContext, teamId: string) => 
     ctx.roles.includes('league_admin') || 
@@ -96,41 +96,44 @@ export const can = {
     ctx.teamAssignments.some(t => t.teamId === teamId) ||
     ctx.roles.includes('parent'), // Parents can view their child's team
 
-  viewTeamPayments: (ctx: PermissionContext, teamId: string) => 
-    ctx.roles.includes('league_admin') || 
-    ctx.teamAssignments.some(t => t.teamId === teamId && t.role === 'head_coach'),
+  viewTeamPayments: (ctx: PermissionContext, teamId: string) =>
+    ctx.roles.includes('league_admin') ||
+    ctx.teamAssignments.some(t => t.teamId === teamId && (t.role === 'head_coach' || t.role === 'team_manager')),
 
-  sendTeamBlasts: (ctx: PermissionContext, teamId: string) => 
-    ctx.roles.includes('league_admin') || 
-    ctx.teamAssignments.some(t => t.teamId === teamId && t.role === 'head_coach'),
+  sendTeamBlasts: (ctx: PermissionContext, teamId: string) =>
+    ctx.roles.includes('league_admin') ||
+    ctx.teamAssignments.some(t => t.teamId === teamId && (t.role === 'head_coach' || t.role === 'team_manager')),
 
-  createTeamInviteCodes: (ctx: PermissionContext, teamId: string) => 
-    ctx.roles.includes('league_admin') || 
-    ctx.teamAssignments.some(t => t.teamId === teamId && t.role === 'head_coach'),
+  createTeamInviteCodes: (ctx: PermissionContext, teamId: string) =>
+    ctx.roles.includes('league_admin') ||
+    ctx.teamAssignments.some(t => t.teamId === teamId && (t.role === 'head_coach' || t.role === 'team_manager')),
 
   // Chat
-  postInTeamChat: (ctx: PermissionContext) => 
+  postInTeamChat: (ctx: PermissionContext) =>
     ctx.roles.includes('league_admin') ||
     ctx.roles.includes('head_coach') ||
     ctx.roles.includes('assistant_coach') ||
+    ctx.roles.includes('team_manager') ||
     ctx.roles.includes('parent'),
 
-  postInPlayerChat: (ctx: PermissionContext) => 
+  postInPlayerChat: (ctx: PermissionContext) =>
     ctx.roles.includes('league_admin') ||
     ctx.roles.includes('head_coach') ||
     ctx.roles.includes('assistant_coach') ||
+    ctx.roles.includes('team_manager') ||
     ctx.roles.includes('player'),
 
-  viewPlayerChat: (ctx: PermissionContext) => 
+  viewPlayerChat: (ctx: PermissionContext) =>
     ctx.roles.includes('league_admin') ||
     ctx.roles.includes('head_coach') ||
     ctx.roles.includes('assistant_coach') ||
+    ctx.roles.includes('team_manager') ||
     ctx.roles.includes('parent') ||
     ctx.roles.includes('player'),
 
-  moderateChat: (ctx: PermissionContext, teamId: string) => 
-    ctx.roles.includes('league_admin') || 
-    ctx.teamAssignments.some(t => t.teamId === teamId && t.role === 'head_coach'),
+  moderateChat: (ctx: PermissionContext, teamId: string) =>
+    ctx.roles.includes('league_admin') ||
+    ctx.teamAssignments.some(t => t.teamId === teamId && (t.role === 'head_coach' || t.role === 'team_manager')),
 
   createDMs: (ctx: PermissionContext) => 
     !ctx.roles.includes('player'), // Everyone except players
