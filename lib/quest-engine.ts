@@ -35,6 +35,30 @@ export interface DailyQuest {
   sort_order: number;
 }
 
+export type WeeklyQuestType =
+  | 'attendance'
+  | 'skill_module'
+  | 'game_performance'
+  | 'community'
+  | 'consistency';
+
+export interface WeeklyQuest {
+  id: string;
+  player_id: string;
+  team_id: string | null;
+  week_start: string;
+  quest_type: WeeklyQuestType;
+  title: string;
+  description: string | null;
+  xp_reward: number;
+  verification_type: VerificationType;
+  target_value: number;
+  current_value: number;
+  is_completed: boolean;
+  completed_at: string | null;
+  sort_order: number;
+}
+
 export interface QuestContext {
   profileId: string;
   playerId: string | null;
@@ -119,6 +143,22 @@ function daysAgo(days: number): string {
   const d = new Date();
   d.setDate(d.getDate() - days);
   return d.toISOString();
+}
+
+function localMondayOfWeek(): string {
+  const d = new Date();
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Monday
+  const monday = new Date(d.getFullYear(), d.getMonth(), diff);
+  return `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
+}
+
+function sundayOfWeek(): string {
+  const d = new Date();
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? 0 : 7); // Sunday
+  const sunday = new Date(d.getFullYear(), d.getMonth(), diff);
+  return `${sunday.getFullYear()}-${String(sunday.getMonth() + 1).padStart(2, '0')}-${String(sunday.getDate()).padStart(2, '0')}`;
 }
 
 // ─── Context Gathering ───────────────────────────────────────────────────────
@@ -567,4 +607,321 @@ async function awardXp(
     .eq('id', profileId);
 
   return { newTotalXp, newLevel: level, newTier: tier };
+}
+
+// ─── Weekly Quest Context ────────────────────────────────────────────────────
+
+async function gatherWeeklyContext(profileId: string, playerId: string | null, teamIds: string[]): Promise<{
+  practicesThisWeek: number;
+  gamesThisWeek: number;
+  hasActiveChallenge: boolean;
+  shoutoutsGivenThisWeek: number;
+  dailyQuestsCompletedThisWeek: number;
+}> {
+  const mondayStr = localMondayOfWeek();
+
+  // Count practices and games scheduled this week
+  let practicesThisWeek = 0;
+  let gamesThisWeek = 0;
+  if (teamIds.length > 0) {
+    const { data: events } = await supabase
+      .from('schedule_events')
+      .select('event_type')
+      .in('team_id', teamIds)
+      .gte('event_date', mondayStr)
+      .lte('event_date', sundayOfWeek());
+
+    if (events) {
+      practicesThisWeek = events.filter((e: { event_type: string }) => e.event_type === 'practice').length;
+      gamesThisWeek = events.filter((e: { event_type: string }) => e.event_type === 'game').length;
+    }
+  }
+
+  // Check active challenges
+  let hasActiveChallenge = false;
+  if (teamIds.length > 0) {
+    const { count } = await supabase
+      .from('coach_challenges')
+      .select('id', { count: 'exact', head: true })
+      .in('team_id', teamIds)
+      .eq('status', 'active');
+    hasActiveChallenge = (count ?? 0) > 0;
+  }
+
+  // Shoutouts given this week
+  const { count: shoutoutCount } = await supabase
+    .from('shoutouts')
+    .select('id', { count: 'exact', head: true })
+    .eq('giver_id', profileId)
+    .gte('created_at', new Date(mondayStr + 'T00:00:00').toISOString());
+
+  // Daily quests completed this week
+  const { count: questCount } = await supabase
+    .from('daily_quests')
+    .select('id', { count: 'exact', head: true })
+    .eq('player_id', profileId)
+    .gte('quest_date', mondayStr)
+    .eq('is_completed', true);
+
+  return {
+    practicesThisWeek,
+    gamesThisWeek,
+    hasActiveChallenge,
+    shoutoutsGivenThisWeek: shoutoutCount ?? 0,
+    dailyQuestsCompletedThisWeek: questCount ?? 0,
+  };
+}
+
+// ─── Weekly Quest Generation ─────────────────────────────────────────────────
+
+function generateWeeklyQuestDefinitions(
+  profileId: string,
+  primaryTeamId: string | null,
+  weeklyCtx: Awaited<ReturnType<typeof gatherWeeklyContext>>
+): Omit<WeeklyQuest, 'id' | 'created_at'>[] {
+  const weekStart = localMondayOfWeek();
+  const quests: Omit<WeeklyQuest, 'id' | 'created_at'>[] = [];
+  let sortOrder = 0;
+
+  // ── Quest 1: Attendance (always present if practices/games exist) ──
+  if (weeklyCtx.practicesThisWeek > 0 || weeklyCtx.gamesThisWeek > 0) {
+    const totalEvents = weeklyCtx.practicesThisWeek + weeklyCtx.gamesThisWeek;
+    const target = Math.min(totalEvents, 3);
+    quests.push({
+      player_id: profileId,
+      team_id: primaryTeamId,
+      week_start: weekStart,
+      quest_type: 'attendance',
+      title: target === 1 ? 'Attend practice or game this week' : `Attend ${target} events this week`,
+      description: 'Show up and put in the work.',
+      xp_reward: target === 1 ? 30 : 50,
+      verification_type: 'coach_verified',
+      target_value: target,
+      current_value: 0,
+      is_completed: false,
+      completed_at: null,
+      sort_order: sortOrder++,
+    });
+  }
+
+  // ── Quest 2: Community (shoutouts) ──
+  quests.push({
+    player_id: profileId,
+    team_id: primaryTeamId,
+    week_start: weekStart,
+    quest_type: 'community',
+    title: 'Give 3 shoutouts this week',
+    description: 'Lift your teammates up.',
+    xp_reward: 25,
+    verification_type: 'automatic',
+    target_value: 3,
+    current_value: weeklyCtx.shoutoutsGivenThisWeek,
+    is_completed: weeklyCtx.shoutoutsGivenThisWeek >= 3,
+    completed_at: weeklyCtx.shoutoutsGivenThisWeek >= 3 ? new Date().toISOString() : null,
+    sort_order: sortOrder++,
+  });
+
+  // ── Quest 3: Consistency (complete daily quests) ──
+  quests.push({
+    player_id: profileId,
+    team_id: primaryTeamId,
+    week_start: weekStart,
+    quest_type: 'consistency',
+    title: 'Complete daily quests 5 of 7 days',
+    description: 'Consistency beats everything.',
+    xp_reward: 60,
+    verification_type: 'automatic',
+    target_value: 5,
+    current_value: 0,
+    is_completed: false,
+    completed_at: null,
+    sort_order: sortOrder++,
+  });
+
+  // ── Quest 4 (conditional): Game performance ──
+  if (weeklyCtx.gamesThisWeek > 0) {
+    quests.push({
+      player_id: profileId,
+      team_id: primaryTeamId,
+      week_start: weekStart,
+      quest_type: 'game_performance',
+      title: 'Play in a game this week',
+      description: 'Step on the court and compete.',
+      xp_reward: 30,
+      verification_type: 'automatic',
+      target_value: 1,
+      current_value: 0,
+      is_completed: false,
+      completed_at: null,
+      sort_order: sortOrder++,
+    });
+  }
+
+  // ── Quest 5 (conditional): Skill module ──
+  if (weeklyCtx.gamesThisWeek === 0) {
+    quests.push({
+      player_id: profileId,
+      team_id: primaryTeamId,
+      week_start: weekStart,
+      quest_type: 'skill_module',
+      title: 'Complete a skill module',
+      description: 'Learn something new this week.',
+      xp_reward: 40,
+      verification_type: 'automatic',
+      target_value: 1,
+      current_value: 0,
+      is_completed: false,
+      completed_at: null,
+      sort_order: sortOrder++,
+    });
+  }
+
+  return quests;
+}
+
+// ─── Weekly Quest Entry Points ───────────────────────────────────────────────
+
+export async function getOrCreateWeeklyQuests(profileId: string): Promise<WeeklyQuest[]> {
+  const weekStart = localMondayOfWeek();
+
+  const { data: existing, error: fetchError } = await supabase
+    .from('weekly_quests')
+    .select('*')
+    .eq('player_id', profileId)
+    .eq('week_start', weekStart)
+    .order('sort_order', { ascending: true });
+
+  if (fetchError) {
+    console.error('[quest-engine] Error fetching weekly quests:', fetchError);
+    return [];
+  }
+
+  if (existing && existing.length > 0) {
+    return existing as WeeklyQuest[];
+  }
+
+  const ctx = await gatherQuestContext(profileId);
+  const weeklyCtx = await gatherWeeklyContext(profileId, ctx.playerId, ctx.teamIds);
+  const questDefs = generateWeeklyQuestDefinitions(profileId, ctx.primaryTeamId, weeklyCtx);
+
+  const { data: inserted, error: insertError } = await supabase
+    .from('weekly_quests')
+    .insert(questDefs)
+    .select('*');
+
+  if (insertError) {
+    console.error('[quest-engine] Error inserting weekly quests:', insertError);
+    return questDefs.map((q, i) => ({
+      ...q,
+      id: `temp-weekly-${i}`,
+      created_at: new Date().toISOString(),
+    })) as unknown as WeeklyQuest[];
+  }
+
+  return (inserted || []) as WeeklyQuest[];
+}
+
+export async function completeWeeklyQuest(questId: string, profileId: string): Promise<{
+  success: boolean;
+  xpAwarded: number;
+  allComplete: boolean;
+  bonusAwarded: boolean;
+  newTotalXp: number;
+  newLevel: number;
+  newTier: string;
+}> {
+  const { data: quest, error: updateError } = await supabase
+    .from('weekly_quests')
+    .update({
+      is_completed: true,
+      completed_at: new Date().toISOString(),
+    })
+    .eq('id', questId)
+    .eq('player_id', profileId)
+    .select('*')
+    .single();
+
+  if (updateError || !quest) {
+    console.error('[quest-engine] Error completing weekly quest:', updateError);
+    return { success: false, xpAwarded: 0, allComplete: false, bonusAwarded: false, newTotalXp: 0, newLevel: 1, newTier: 'Rookie' };
+  }
+
+  const xpResult = await awardXp(profileId, quest.xp_reward, 'quest_weekly', questId, quest.team_id);
+
+  const weekStart = localMondayOfWeek();
+  const { data: allQuests } = await supabase
+    .from('weekly_quests')
+    .select('is_completed')
+    .eq('player_id', profileId)
+    .eq('week_start', weekStart);
+
+  const allComplete = (allQuests || []).every((q: { is_completed: boolean }) => q.is_completed);
+  let bonusAwarded = false;
+
+  if (allComplete) {
+    const { data: existingBonus } = await supabase
+      .from('quest_bonus_tracking')
+      .select('id')
+      .eq('player_id', profileId)
+      .eq('bonus_type', 'weekly_all_complete')
+      .eq('period_date', weekStart)
+      .maybeSingle();
+
+    if (!existingBonus) {
+      await awardXp(profileId, 50, 'quest_bonus', null, quest.team_id);
+      await supabase.from('quest_bonus_tracking').insert({
+        player_id: profileId,
+        bonus_type: 'weekly_all_complete',
+        period_date: weekStart,
+        xp_awarded: 50,
+      });
+      bonusAwarded = true;
+    }
+  }
+
+  return {
+    success: true,
+    xpAwarded: quest.xp_reward,
+    allComplete,
+    bonusAwarded,
+    newTotalXp: xpResult.newTotalXp,
+    newLevel: xpResult.newLevel,
+    newTier: xpResult.newTier,
+  };
+}
+
+export async function updateWeeklyQuestProgress(
+  profileId: string,
+  questType: WeeklyQuestType,
+  incrementBy: number = 1
+): Promise<{ questCompleted: boolean; questId: string | null }> {
+  const weekStart = localMondayOfWeek();
+
+  const { data: quest } = await supabase
+    .from('weekly_quests')
+    .select('*')
+    .eq('player_id', profileId)
+    .eq('week_start', weekStart)
+    .eq('quest_type', questType)
+    .eq('is_completed', false)
+    .maybeSingle();
+
+  if (!quest) return { questCompleted: false, questId: null };
+
+  const newValue = Math.min(quest.current_value + incrementBy, quest.target_value);
+  const nowComplete = newValue >= quest.target_value;
+
+  await supabase
+    .from('weekly_quests')
+    .update({
+      current_value: newValue,
+      ...(nowComplete ? { is_completed: true, completed_at: new Date().toISOString() } : {}),
+    })
+    .eq('id', quest.id);
+
+  if (nowComplete) {
+    await completeWeeklyQuest(quest.id, profileId);
+  }
+
+  return { questCompleted: nowComplete, questId: quest.id };
 }
