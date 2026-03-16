@@ -35,6 +35,8 @@ import { useAuth } from '@/lib/auth';
 import { useParentScroll } from '@/lib/parent-scroll-context';
 import { useScrollAnimations } from '@/hooks/useScrollAnimations';
 import { useCoachHomeData } from '@/hooks/useCoachHomeData';
+import { useTeamManagerData } from '@/hooks/useTeamManagerData';
+import { usePermissions } from '@/lib/permissions-context';
 import { BRAND } from '@/theme/colors';
 import { SPACING } from '@/theme/spacing';
 import { FONTS } from '@/theme/fonts';
@@ -61,6 +63,9 @@ import CoachTrophyCase from './coach-scroll/CoachTrophyCase';
 import TeamStatsChart from './coach-scroll/TeamStatsChart';
 import AmbientCloser from './coach-scroll/AmbientCloser';
 import CoachEngagementCard from './coach-scroll/CoachEngagementCard';
+import ManagerPaymentCard from './coach-scroll/ManagerPaymentCard';
+import ManagerAvailabilityCard from './coach-scroll/ManagerAvailabilityCard';
+import ManagerRosterCard from './coach-scroll/ManagerRosterCard';
 
 import { getUnseenRoleAchievements, markAchievementsSeen } from '@/lib/achievement-engine';
 import type { UnseenAchievement } from '@/lib/achievement-types';
@@ -147,6 +152,8 @@ export default function CoachHomeScroll() {
     onScrollJS: parentScroll.notifyScroll,
   });
   const data = useCoachHomeData();
+  const { isTeamManager } = usePermissions();
+  const tmData = useTeamManagerData(isTeamManager ? data.selectedTeamId : null);
   const { isTabletAny, contentMaxWidth, contentPadding } = useResponsive();
 
   const userInitials = useMemo(() => {
@@ -501,6 +508,41 @@ export default function CoachHomeScroll() {
             prepChecklist={data.prepChecklist}
           />
         </Animated.View>
+
+        {/* ─── 3b. TEAM MANAGER CARDS (only visible for TMs) ── ↕ 14px each ── */}
+        {isTeamManager && !tmData.loading && data.selectedTeamId && (
+          <>
+            <View style={{ marginBottom: 14 }}>
+              <ManagerPaymentCard
+                overduePayments={tmData.overduePayments}
+                overdueAmount={tmData.overdueAmount}
+                pendingPayments={tmData.pendingPayments}
+                totalCollected={tmData.totalCollected}
+                teamId={data.selectedTeamId}
+              />
+            </View>
+            <View style={{ marginBottom: 14 }}>
+              <ManagerAvailabilityCard
+                nextEventTitle={tmData.nextEventTitle}
+                nextEventDate={tmData.nextEventDate}
+                nextEventType={tmData.nextEventType}
+                nextEventId={tmData.nextEventId}
+                rsvpConfirmed={tmData.rsvpConfirmed}
+                rsvpMaybe={tmData.rsvpMaybe}
+                rsvpNoResponse={tmData.rsvpNoResponse}
+                rsvpTotal={tmData.rsvpTotal}
+                teamId={data.selectedTeamId}
+              />
+            </View>
+            <View style={{ marginBottom: 14 }}>
+              <ManagerRosterCard
+                rosterCount={tmData.rosterCount}
+                pendingApproval={0}
+                teamId={data.selectedTeamId}
+              />
+            </View>
+          </>
+        )}
 
         {/* ─── 4. MOMENTUM CARDS (D System — horizontal gradient scroll) ── ↕ 16px ── */}
         <View style={{ marginBottom: 16 }}>
