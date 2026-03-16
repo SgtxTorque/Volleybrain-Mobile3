@@ -4,7 +4,7 @@
  * gold pulse on "+XP" when bar finishes.
  */
 import React, { useCallback, useEffect, useState } from 'react';
-import { Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
   useAnimatedReaction,
   useAnimatedStyle,
@@ -22,6 +22,7 @@ import { useAuth } from '@/lib/auth';
 import { FONTS } from '@/theme/fonts';
 import { PLAYER_THEME } from '@/theme/player-theme';
 import { D_RADII } from '@/theme/d-system';
+import { MASCOT } from '@/lib/mascot-images';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
@@ -145,6 +146,7 @@ export default function PlayerChallengeCard({ available, teamId, scrollY }: Prop
         onPress={() => router.push(`/challenge-cta?challengeId=${challenge.id}` as any)}
       >
         <View style={styles.headerRow}>
+          <Image source={MASCOT.ADVANCE_COACH} style={styles.challengeMascot} resizeMode="contain" />
           <Text style={styles.label}>{'\u{26A1}'} ACTIVE CHALLENGE</Text>
           {daysLeft > 0 && (
             <Text style={styles.timeLeft}>{daysLeft}d left</Text>
@@ -177,11 +179,17 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
   },
+  challengeMascot: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 8,
+    gap: 8,
   },
   label: {
     fontFamily: FONTS.bodyBold,
