@@ -4,7 +4,7 @@
  * Scroll-triggered: slides in from left when scrolled into view.
  */
 import React, { useCallback, useMemo } from 'react';
-import { Dimensions, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { Dimensions, Image, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import Animated, {
   useAnimatedReaction,
   useAnimatedStyle,
@@ -18,6 +18,7 @@ import { useRouter } from 'expo-router';
 import { FONTS } from '@/theme/fonts';
 import { PLAYER_THEME } from '@/theme/player-theme';
 import { D_RADII } from '@/theme/d-system';
+import { MASCOT } from '@/lib/mascot-images';
 import type { BestRank } from '@/hooks/usePlayerHomeData';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
@@ -37,23 +38,23 @@ function buildNudgeMessage(
   xpToNext: number,
   level: number,
   challengesAvailable: boolean,
-): { emoji: string; text: string } {
+): { emoji: string; text: string; mascot: any } {
   if (bestRank && bestRank.rank === 1) {
-    return { emoji: '\u{1F451}', text: `You're #1 in ${bestRank.stat} this season! Keep it up` };
+    return { emoji: '\u{1F451}', text: `You're #1 in ${bestRank.stat} this season! Keep it up`, mascot: MASCOT.ON_FIRE };
   }
   if (bestRank && bestRank.rank > 1 && bestRank.rank <= 10) {
-    return { emoji: '\u{1F3AF}', text: `You're #${bestRank.rank} in ${bestRank.stat} — keep climbing` };
+    return { emoji: '\u{1F3AF}', text: `You're #${bestRank.rank} in ${bestRank.stat} — keep climbing`, mascot: MASCOT.HIT_APPROACH };
   }
   if (personalBest) {
-    return { emoji: '\u{1F525}', text: `New personal best in ${personalBest}!` };
+    return { emoji: '\u{1F525}', text: `New personal best in ${personalBest}!`, mascot: MASCOT.ON_FIRE };
   }
   if (xpToNext <= 300) {
-    return { emoji: '\u{26A1}', text: `${xpToNext} XP to Level ${level + 1}. One good game could do it` };
+    return { emoji: '\u{26A1}', text: `${xpToNext} XP to Level ${level + 1}. One good game could do it`, mascot: MASCOT.ON_FIRE };
   }
   if (challengesAvailable) {
-    return { emoji: '\u{1F3AF}', text: 'You have an active challenge waiting' };
+    return { emoji: '\u{1F3AF}', text: 'You have an active challenge waiting', mascot: MASCOT.ADVANCE_COACH };
   }
-  return { emoji: '\u{1F3C6}', text: 'Check where you rank on the team' };
+  return { emoji: '\u{1F3C6}', text: 'Check where you rank on the team', mascot: MASCOT.LYNX_READY };
 }
 
 export default function CompetitiveNudge({
@@ -114,7 +115,7 @@ export default function CompetitiveNudge({
           end={{ x: 1, y: 0.5 }}
           style={styles.bar}
         >
-          <Text style={styles.emoji}>{nudge.emoji}</Text>
+          <Image source={nudge.mascot} style={styles.nudgeMascot} resizeMode="contain" />
           <Text style={styles.text} numberOfLines={1}>{nudge.text}</Text>
           <Text style={styles.arrow}>{'\u2192'}</Text>
         </LinearGradient>
@@ -139,8 +140,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     gap: 8,
   },
-  emoji: {
-    fontSize: 16,
+  nudgeMascot: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
   },
   text: {
     flex: 1,
