@@ -2,6 +2,7 @@
 // AchievementCelebrationModal — Full-screen AAA-style unlock celebration
 // =============================================================================
 
+import { getCelebrationImage } from '@/constants/mascot-images';
 import { RARITY_CONFIG } from '@/lib/achievement-types';
 import type { UnseenAchievement } from '@/lib/achievement-types';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,6 +11,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Dimensions,
+  Image,
   Modal,
   Platform,
   Share,
@@ -96,6 +98,15 @@ const RARITY_DISPLAY: Record<string, { bg: string; text: string; label: string }
   legendary: { bg: '#F59E0B20', text: '#F59E0B', label: 'Legendary' },
 };
 
+// Rarity glow ring colors (per spec)
+const RARITY_GLOW: Record<string, string> = {
+  common: '#6B7280',
+  uncommon: '#10B981',
+  rare: '#3B82F6',
+  epic: '#8B5CF6',
+  legendary: '#FFD700',
+};
+
 // =============================================================================
 // COMPONENT
 // =============================================================================
@@ -128,6 +139,9 @@ export default function AchievementCelebrationModal({
   const scaleAnim = useRef(new Animated.Value(0.3)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const headerScale = useRef(new Animated.Value(0)).current;
+  const glowRingScale = useRef(new Animated.Value(0)).current;
+  const mascotOpacity = useRef(new Animated.Value(0)).current;
+  const xpOpacity = useRef(new Animated.Value(0)).current;
   const particles = useRef(createParticles()).current;
 
   const current = unseen[currentIndex];
@@ -135,40 +149,76 @@ export default function AchievementCelebrationModal({
   const rarity = current?.achievements?.rarity || 'common';
   const rarityDisplay = RARITY_DISPLAY[rarity] || RARITY_DISPLAY.common;
   const rarityConfig = RARITY_CONFIG[rarity] || RARITY_CONFIG.common;
+  const glowColor = RARITY_GLOW[rarity] || RARITY_GLOW.common;
+  const ach = current?.achievements;
+  const celebrationImage = getCelebrationImage({
+    category: ach?.category,
+    rarity,
+    stat_key: ach?.stat_key,
+  });
 
   const playEntryAnimation = useCallback(() => {
     scaleAnim.setValue(0.3);
     opacityAnim.setValue(0);
     headerScale.setValue(0);
+    glowRingScale.setValue(0);
+    mascotOpacity.setValue(0);
+    xpOpacity.setValue(0);
 
-    Animated.sequence([
-      // Fade in overlay
-      Animated.timing(opacityAnim, {
+    // 0ms: Backdrop + mascot fade in
+    Animated.timing(opacityAnim, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+
+    Animated.timing(mascotOpacity, {
+      toValue: 0.25,
+      duration: 600,
+      useNativeDriver: true,
+    }).start();
+
+    // 200ms: Glow ring scales in
+    setTimeout(() => {
+      Animated.spring(glowRingScale, {
         toValue: 1,
-        duration: 300,
+        friction: 5,
+        tension: 50,
         useNativeDriver: true,
-      }),
-      // Spring in badge
+      }).start();
+    }, 200);
+
+    // 500ms: Badge scales in + confetti + haptic
+    setTimeout(() => {
       Animated.spring(scaleAnim, {
         toValue: 1,
         friction: 4,
         tension: 60,
         useNativeDriver: true,
-      }),
-      // Pop in header
+      }).start();
+      triggerConfetti(particles);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    }, 500);
+
+    // 800ms: Header text fades in
+    setTimeout(() => {
       Animated.spring(headerScale, {
         toValue: 1,
         friction: 5,
         tension: 80,
         useNativeDriver: true,
-      }),
-    ]).start();
+      }).start();
+    }, 800);
 
-    // Trigger confetti
-    triggerConfetti(particles);
-
-    // Haptic
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    // 1000ms: XP sparkle + light haptic
+    setTimeout(() => {
+      Animated.timing(xpOpacity, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }, 1000);
   }, []);
 
   useEffect(() => {
@@ -186,8 +236,7 @@ export default function AchievementCelebrationModal({
   };
 
   const handleShare = async () => {
-    if (!current?.achievements) return;
-    const ach = current.achievements;
+    if (!ach) return;
     const msg = `I just unlocked "${ach.name}" on Lynx! ${ach.icon || '\uD83C\uDFC6'} #Lynx #LynxSports`;
     try {
       await Share.share({ message: msg });
@@ -196,9 +245,7 @@ export default function AchievementCelebrationModal({
     }
   };
 
-  if (!current?.achievements) return null;
-
-  const ach = current.achievements;
+  if (!ach) return null;
 
   // Build "how earned" context string
   let howEarned = ach.how_to_earn || ach.description || '';
@@ -214,6 +261,14 @@ export default function AchievementCelebrationModal({
       {/* Overlay */}
       <Animated.View style={[s.overlay, { opacity: opacityAnim }]}>
         <SafeAreaView style={s.container}>
+          {/* Background mascot illustration — atmospheric, behind everything */}
+          <Animated.Image
+            source={celebrationImage}
+            accessibilityLabel="Celebration mascot"
+            resizeMode="contain"
+            style={[s.bgMascot, { opacity: mascotOpacity }]}
+          />
+
           {/* Confetti particles */}
           {particles.map((p, i) => (
             <Animated.View
@@ -258,25 +313,35 @@ export default function AchievementCelebrationModal({
               </Text>
             </Animated.View>
 
-            {/* Badge icon with rarity glow */}
-            <Animated.View style={{ transform: [{ scale: scaleAnim }], marginTop: 24, marginBottom: 20 }}>
-              <RarityGlow rarity={rarity} size={120} earned style={s.badgeGlowWrap}>
-                <View style={[s.badgeCircle, { backgroundColor: rarityConfig.glowColor + '20' }]}>
-                  <Text style={s.badgeEmoji}>{ach.icon || '\uD83C\uDFC6'}</Text>
-                </View>
-              </RarityGlow>
-            </Animated.View>
+            {/* Rarity glow ring — pulses behind badge */}
+            <View style={s.badgeArea}>
+              <Animated.View
+                style={[
+                  s.glowRing,
+                  {
+                    backgroundColor: glowColor + '30',
+                    borderColor: glowColor + '60',
+                    transform: [{ scale: glowRingScale }],
+                  },
+                ]}
+              />
+              {/* Badge icon with rarity glow */}
+              <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+                <RarityGlow rarity={rarity} size={160} earned style={s.badgeGlowWrap}>
+                  <View style={[s.badgeCircle, { backgroundColor: rarityConfig.glowColor + '20' }]}>
+                    <Text style={s.badgeEmoji}>{ach.icon || '\uD83C\uDFC6'}</Text>
+                  </View>
+                </RarityGlow>
+              </Animated.View>
+            </View>
 
             {/* Achievement name */}
             <Text style={[s.achievementName, { color: P.text }]}>{ach.name}</Text>
 
-            {/* Rarity pill */}
-            <View style={[s.rarityPill, { backgroundColor: rarityDisplay.bg }]}>
-              <View style={[s.rarityDot, { backgroundColor: rarityDisplay.text }]} />
-              <Text style={[s.rarityText, { color: rarityDisplay.text }]}>
-                {rarityDisplay.label}
-              </Text>
-            </View>
+            {/* Badge name — rarity colored */}
+            <Text style={[s.badgeName, { color: rarityDisplay.text }]}>
+              {rarityDisplay.label}
+            </Text>
 
             {/* How earned context */}
             {howEarned ? (
@@ -284,6 +349,14 @@ export default function AchievementCelebrationModal({
                 {howEarned}
               </Text>
             ) : null}
+
+            {/* XP earned — fades in at 1s */}
+            {ach.xp_reward != null && ach.xp_reward > 0 && (
+              <Animated.View style={[s.xpRow, { opacity: xpOpacity }]}>
+                <Ionicons name="sparkles" size={16} color="#FFD700" />
+                <Text style={s.xpText}>+{ach.xp_reward} XP</Text>
+              </Animated.View>
+            )}
 
             {/* Stat value */}
             {current.stat_value_at_unlock != null && ach.stat_key && (
@@ -341,12 +414,19 @@ export default function AchievementCelebrationModal({
 const s = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.85)',
+    backgroundColor: 'rgba(16,40,76,0.88)',
   },
   container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  bgMascot: {
+    position: 'absolute',
+    width: 280,
+    height: 280,
+    top: '20%',
+    alignSelf: 'center',
   },
   content: {
     alignItems: 'center',
@@ -360,59 +440,70 @@ const s = StyleSheet.create({
     marginBottom: 8,
   },
   header: {
-    fontSize: 14,
+    fontSize: 24,
     fontWeight: '900',
     letterSpacing: 4,
     textTransform: 'uppercase',
     textAlign: 'center',
   },
+  badgeArea: {
+    marginTop: 24,
+    marginBottom: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  glowRing: {
+    position: 'absolute',
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    borderWidth: 2,
+  },
   badgeGlowWrap: {
-    width: 120,
-    height: 120,
+    width: 160,
+    height: 160,
     justifyContent: 'center',
     alignItems: 'center',
   },
   badgeCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 160,
+    height: 160,
+    borderRadius: 80,
     justifyContent: 'center',
     alignItems: 'center',
   },
   badgeEmoji: {
-    fontSize: 56,
+    fontSize: 72,
   },
   achievementName: {
     fontSize: 24,
     fontWeight: '800',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 4,
   },
-  rarityPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    marginBottom: 16,
-  },
-  rarityDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  rarityText: {
-    fontSize: 12,
+  badgeName: {
+    fontSize: 14,
     fontWeight: '800',
     letterSpacing: 1,
     textTransform: 'uppercase',
+    marginBottom: 12,
   },
   howEarned: {
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
-    marginBottom: 12,
+    marginBottom: 8,
+  },
+  xpRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 16,
+  },
+  xpText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#FFD700',
   },
   statPill: {
     flexDirection: 'row',
@@ -422,7 +513,7 @@ const s = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 12,
     borderWidth: 1,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   statPillText: {
     fontSize: 13,

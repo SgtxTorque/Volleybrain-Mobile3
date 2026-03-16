@@ -65,9 +65,9 @@ export const VOLLEYBALL_IMAGES = {
 
 /** Get celebration image based on achievement context */
 export function getCelebrationImage(achievement: {
-  category?: string;
-  rarity?: string;
-  stat_key?: string;
+  category?: string | null;
+  rarity?: string | null;
+  stat_key?: string | null;
 }) {
   if (achievement.stat_key?.includes('first_place') || achievement.stat_key?.includes('1st'))
     return ACHIEVEMENT_IMAGES.FIRST_PLACE;
