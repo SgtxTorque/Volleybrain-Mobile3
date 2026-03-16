@@ -5,7 +5,7 @@
  * progress reaches the target — no manual tap-to-complete.
  */
 import React, { useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -17,6 +17,7 @@ import { FONTS } from '@/theme/fonts';
 import { PLAYER_THEME } from '@/theme/player-theme';
 import { D_COLORS, D_RADII } from '@/theme/d-system';
 import { useWeeklyQuestEngine } from '@/hooks/useWeeklyQuestEngine';
+import { getQuestMascot } from '@/lib/mascot-images';
 import type { WeeklyQuest } from '@/lib/quest-engine';
 
 /** Animated quest card with spring pop and optional progress bar */
@@ -53,6 +54,13 @@ function WeeklyQuestCard({
           <Text style={styles.checkmark}>{'\u2713'}</Text>
         ) : null}
       </View>
+
+      {/* Quest mascot */}
+      <Image
+        source={getQuestMascot(quest.quest_type)}
+        style={styles.questMascot}
+        resizeMode="contain"
+      />
 
       {/* Quest text + optional progress */}
       <View style={styles.questContent}>
@@ -194,6 +202,11 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bodyBold,
     fontSize: 12,
     color: PLAYER_THEME.bg,
+  },
+  questMascot: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
   },
   questContent: {
     flex: 1,
