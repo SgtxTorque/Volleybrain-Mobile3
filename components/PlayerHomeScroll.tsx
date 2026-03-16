@@ -57,6 +57,7 @@ import PlayerIdentityHero from './player-scroll/PlayerIdentityHero';
 import CompetitiveNudge from './player-scroll/CompetitiveNudge';
 import PlayerDailyQuests from './player-scroll/PlayerDailyQuests';
 import PlayerWeeklyQuests from './player-scroll/PlayerWeeklyQuests';
+import PlayerTeamQuests from './player-scroll/PlayerTeamQuests';
 import PlayerChallengeCard from './player-scroll/PlayerChallengeCard';
 import PlayerQuickLinks from './player-scroll/PlayerQuickLinks';
 import PlayerLeaderboardPreview from './player-scroll/PlayerLeaderboardPreview';
@@ -394,6 +395,9 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
 
         {/* ─── 4b. WEEKLY QUESTS ──────────────────────────────── */}
         <PlayerWeeklyQuests />
+
+        {/* ─── 4c. TEAM QUESTS ──────────────────────────────────── */}
+        <PlayerTeamQuests teamId={data.primaryTeam?.id} />
 
         {/* ─── 5. ACTIVE CHALLENGE (conditional) ────────────────── */}
         <PlayerChallengeCard
