@@ -4,7 +4,7 @@
  * Rows slide in from right with stagger, "You" row gets highlight glow.
  */
 import React, { useEffect } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -18,6 +18,7 @@ import { PLAYER_THEME } from '@/theme/player-theme';
 import { D_COLORS, D_RADII } from '@/theme/d-system';
 import { useLeaderboard } from '@/hooks/useLeaderboard';
 import { useAuth } from '@/lib/auth';
+import { getEmptyStateMascot } from '@/lib/mascot-images';
 import type { LeagueTier } from '@/lib/leaderboard-engine';
 
 type Props = {
@@ -172,7 +173,12 @@ export default function PlayerLeaderboardPreview({ teamId }: Props) {
         </>
       ) : (
         <View style={styles.emptyWrap}>
-          <Text style={styles.emptyText}>Earn XP to get ranked!</Text>
+          <Image
+            source={getEmptyStateMascot('no_leaderboard').image}
+            style={styles.emptyMascot}
+            resizeMode="contain"
+          />
+          <Text style={styles.emptyText}>{getEmptyStateMascot('no_leaderboard').message}</Text>
           <Text style={styles.emptyCta}>View leaderboard {'\u2192'}</Text>
         </View>
       )}
@@ -319,10 +325,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
   },
+  emptyMascot: {
+    width: 80,
+    height: 80,
+    marginBottom: 8,
+  },
   emptyText: {
     fontFamily: FONTS.bodySemiBold,
     fontSize: 13,
     color: PLAYER_THEME.textSecondary,
+    textAlign: 'center',
     marginBottom: 4,
   },
   emptyCta: {

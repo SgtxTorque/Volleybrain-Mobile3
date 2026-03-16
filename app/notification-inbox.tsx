@@ -21,6 +21,7 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { FONTS } from '@/theme/fonts';
 import { PLAYER_THEME } from '@/theme/player-theme';
 import { D_RADII } from '@/theme/d-system';
+import { getEmptyStateMascot } from '@/lib/mascot-images';
 import type { PlayerNotification } from '@/lib/notification-engine';
 
 // ─── Mascot Image Map ─────────────────────────────────────────────────────────
@@ -151,13 +152,13 @@ export default function NotificationInboxScreen() {
         ) : notifications.length === 0 ? (
           <View style={styles.emptyWrap}>
             <Image
-              source={require('@/assets/images/activitiesmascot/LYNXREADY.png')}
+              source={getEmptyStateMascot('no_notifications').image}
               style={styles.emptyMascot}
               resizeMode="contain"
             />
             <Text style={styles.emptyTitle}>No notifications yet</Text>
             <Text style={styles.emptySubtitle}>
-              Keep playing and the Lynx cub will check in.
+              {getEmptyStateMascot('no_notifications').message}
             </Text>
           </View>
         ) : (

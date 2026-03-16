@@ -3,7 +3,7 @@
  * Scroll-triggered: badges pop-in with spring + gold flash for earned badges.
  */
 import React, { useCallback } from 'react';
-import { Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, Image as RNImage, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
   useAnimatedReaction,
   useAnimatedStyle,
@@ -20,6 +20,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { FONTS } from '@/theme/fonts';
 import { PLAYER_THEME } from '@/theme/player-theme';
 import { D_RADII } from '@/theme/d-system';
+import { getEmptyStateMascot } from '@/lib/mascot-images';
 import type { PlayerBadge } from '@/hooks/usePlayerHomeData';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
@@ -216,9 +217,16 @@ export default function PlayerTrophyCase({ badges, level, xpProgress, xpCurrent,
         </View>
 
         {earnedCount === 0 && (
-          <Text style={styles.emptyText}>
-            No badges earned yet. Keep going! {'\u{1F3C5}'}
-          </Text>
+          <View style={styles.emptyWrap}>
+            <RNImage
+              source={getEmptyStateMascot('no_badges').image}
+              style={styles.emptyMascot}
+              resizeMode="contain"
+            />
+            <Text style={styles.emptyText}>
+              {getEmptyStateMascot('no_badges').message}
+            </Text>
+          </View>
         )}
       </LinearGradient>
     </TouchableOpacity>
@@ -353,11 +361,19 @@ const styles = StyleSheet.create({
     color: PLAYER_THEME.textMuted,
     marginTop: 3,
   },
+  emptyWrap: {
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  emptyMascot: {
+    width: 80,
+    height: 80,
+    marginBottom: 8,
+  },
   emptyText: {
     fontFamily: FONTS.bodySemiBold,
-    fontSize: 12,
+    fontSize: 13,
     color: PLAYER_THEME.textMuted,
     textAlign: 'center',
-    marginTop: 8,
   },
 });

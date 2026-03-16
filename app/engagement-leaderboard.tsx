@@ -22,6 +22,7 @@ import { useAuth } from '@/lib/auth';
 import { FONTS } from '@/theme/fonts';
 import { PLAYER_THEME } from '@/theme/player-theme';
 import { D_RADII } from '@/theme/d-system';
+import { getEmptyStateMascot } from '@/lib/mascot-images';
 import type { LeaderboardEntry, LeagueTier } from '@/lib/leaderboard-engine';
 
 // ─── Tier Config ──────────────────────────────────────────────────────────────
@@ -207,11 +208,11 @@ export default function EngagementLeaderboardScreen() {
             /* Empty State */
             <View style={styles.emptyWrap}>
               <Image
-                source={require('@/assets/images/activitiesmascot/LYNXREADY.png')}
+                source={getEmptyStateMascot('no_leaderboard').image}
                 style={styles.emptyMascot}
                 resizeMode="contain"
               />
-              <Text style={styles.emptyTitle}>Leaderboard starts this Monday</Text>
+              <Text style={styles.emptyTitle}>{getEmptyStateMascot('no_leaderboard').message}</Text>
               <Text style={styles.emptySubtitle}>Earn XP to claim your spot!</Text>
             </View>
           ) : (
