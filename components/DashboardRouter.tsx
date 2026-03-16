@@ -17,7 +17,7 @@ import PlayerHomeScroll from './PlayerHomeScroll';
 
 const LAST_CHILD_KEY = 'vb_player_last_child_id';
 
-type DashboardType = 'admin' | 'coach' | 'parent' | 'coach_parent' | 'player' | 'loading';
+type DashboardType = 'admin' | 'coach' | 'team_manager' | 'parent' | 'coach_parent' | 'player' | 'loading';
 
 export default function DashboardRouter() {
   const { colors } = useTheme();
@@ -28,6 +28,7 @@ export default function DashboardRouter() {
   // Extract what we need, with fallbacks
   const isAdmin = permissions.isAdmin ?? false;
   const isCoach = permissions.isCoach ?? false;
+  const isTeamManager = permissions.isTeamManager ?? false;
   const isParent = permissions.isParent ?? false;
   const isPlayer = permissions.isPlayer ?? false;
   // Check if devModeRole exists in your context (it might be named differently)
@@ -81,7 +82,7 @@ export default function DashboardRouter() {
 
   useEffect(() => {
     determineDashboard();
-  }, [user?.id, workingSeason?.id, isAdmin, isCoach, isParent, isPlayer, devModeRole]);
+  }, [user?.id, workingSeason?.id, isAdmin, isCoach, isTeamManager, isParent, isPlayer, devModeRole]);
 
   // Load children when entering player mode
   useEffect(() => {
@@ -112,6 +113,10 @@ export default function DashboardRouter() {
         setDashboardType(hasKids ? 'coach_parent' : 'coach');
         return;
       }
+      if (devModeRole === 'team_manager') {
+        setDashboardType('team_manager');
+        return;
+      }
       if (devModeRole === 'parent') {
         setDashboardType('parent');
         return;
@@ -126,6 +131,22 @@ export default function DashboardRouter() {
     if (isAdmin) {
       setDashboardType('admin');
       return;
+    }
+
+    // Team Manager (not also a coach) gets team_manager dashboard
+    if (isTeamManager && !isCoach) {
+      const { data: tmTeams } = await supabase
+        .from('team_staff')
+        .select('team_id')
+        .eq('user_id', user.id)
+        .eq('staff_role', 'team_manager')
+        .eq('is_active', true)
+        .limit(1);
+
+      if (tmTeams && tmTeams.length > 0) {
+        setDashboardType('team_manager');
+        return;
+      }
     }
 
     // Check actual coaching status and parent status (canonical resolver)
@@ -187,6 +208,8 @@ export default function DashboardRouter() {
     case 'admin':
       return <AdminHomeScroll />;
     case 'coach':
+      return <CoachHomeScroll />;
+    case 'team_manager':
       return <CoachHomeScroll />;
     case 'parent':
       return <ParentHomeScroll />;
