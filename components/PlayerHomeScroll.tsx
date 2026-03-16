@@ -49,6 +49,7 @@ import { useScrollAnimations } from '@/hooks/useScrollAnimations';
 import { usePlayerHomeData } from '@/hooks/usePlayerHomeData';
 
 import { useResponsive } from '@/lib/responsive';
+import { useNotifications } from '@/hooks/useNotifications';
 import { FONTS } from '@/theme/fonts';
 
 import NoOrgState from './empty-states/NoOrgState';
@@ -112,6 +113,7 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
   const data = usePlayerHomeData(playerId);
   const streakCount = data.engagementStreak?.currentStreak ?? data.attendanceStreak ?? 0;
   const { isTabletAny, contentMaxWidth, contentPadding } = useResponsive();
+  const { unreadCount } = useNotifications();
 
   // Signal to tab bar that this scroll is active
   useEffect(() => {
@@ -264,6 +266,20 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
             <View style={styles.levelPill}>
               <Text style={styles.levelPillText}>LVL {data.level}</Text>
             </View>
+            <TouchableOpacity
+              style={styles.bellWrap}
+              onPress={() => router.push('/notification-inbox' as any)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="notifications-outline" size={20} color="#FFFFFF" />
+              {unreadCount > 0 && (
+                <View style={styles.bellBadge}>
+                  <Text style={styles.bellBadgeText}>
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
             <View style={styles.roleSelectorWrap}>
               <RoleSelector />
             </View>
@@ -598,6 +614,30 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bodyBold,
     fontSize: 10,
     color: PLAYER_THEME.gold,
+  },
+  bellWrap: {
+    position: 'relative',
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bellBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: '#E24B4A',
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  bellBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontFamily: FONTS.bodyExtraBold,
   },
   compactAvatar: {
     width: 32,
