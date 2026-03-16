@@ -103,7 +103,7 @@ function formatTimeLabel(date: Date): string {
 export default function CoachScheduleScreen() {
   const { user, profile } = useAuth();
   const { workingSeason } = useSeason();
-  const { isCoach, isAdmin } = usePermissions();
+  const { isCoach, isAdmin, isTeamManager } = usePermissions();
   const router = useRouter();
   const { isTabletAny, contentMaxWidth, contentPadding } = useResponsive();
 
