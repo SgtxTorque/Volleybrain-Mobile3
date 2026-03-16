@@ -29,11 +29,24 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useSkillModule, type QuizQuestion } from '@/hooks/useSkillModule';
 import { getMascotImage } from '@/lib/mascot-images';
+import { getSkillImage } from '@/constants/mascot-images';
 import { FONTS } from '@/theme/fonts';
 import { PLAYER_THEME } from '@/theme/player-theme';
 import { D_RADII } from '@/theme/d-system';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+/** Derive a volleyball skill category from the module title for hero illustration. */
+function deriveCategory(title: string): string {
+  const t = title.toLowerCase();
+  if (t.includes('pass') || t.includes('bump') || t.includes('dig')) return 'passing';
+  if (t.includes('serve')) return 'serving';
+  if (t.includes('set')) return 'setting';
+  if (t.includes('block')) return 'blocking';
+  if (t.includes('hit') || t.includes('attack') || t.includes('spike')) return 'hitting';
+  if (t.includes('defense') || t.includes('ready')) return 'defense';
+  return 'passing';
+}
 
 export default function SkillModuleScreen() {
   const router = useRouter();
@@ -127,6 +140,24 @@ export default function SkillModuleScreen() {
               />
             ))}
           </View>
+        </View>
+
+        {/* Hero header */}
+        <View style={styles.heroWrap}>
+          <Image
+            source={getSkillImage(deriveCategory(decodeURIComponent(nodeTitle ?? '')), 0)}
+            style={styles.heroImage}
+            resizeMode="cover"
+            accessibilityLabel={`${decodeURIComponent(nodeTitle ?? '')} skill illustration`}
+          />
+          <LinearGradient
+            colors={['transparent', '#0B1628']}
+            style={styles.heroGradient}
+          >
+            <Text style={styles.heroTitle}>
+              {decodeURIComponent(nodeTitle ?? '')}
+            </Text>
+          </LinearGradient>
         </View>
 
         {/* Step content */}
@@ -538,6 +569,35 @@ const styles = StyleSheet.create({
   },
   dotDone: {
     backgroundColor: PLAYER_THEME.success,
+  },
+
+  // Hero header
+  heroWrap: {
+    width: SCREEN_WIDTH,
+    height: 200,
+    overflow: 'hidden',
+  },
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  },
+  heroGradient: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 80,
+    justifyContent: 'flex-end',
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+  },
+  heroTitle: {
+    fontFamily: FONTS.bodyExtraBold,
+    fontSize: 22,
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
 
   // Step container

@@ -687,9 +687,9 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   detailMascotWrap: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     backgroundColor: 'rgba(75,185,236,0.10)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -697,8 +697,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   detailMascot: {
-    width: 60,
-    height: 60,
+    width: 85,
+    height: 85,
   },
   detailTitle: {
     fontFamily: FONTS.bodyExtraBold,
