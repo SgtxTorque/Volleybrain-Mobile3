@@ -1,8 +1,11 @@
 /**
- * Journey Path Screen — Scrollable skill map showing chapters and nodes.
- * Dark navy theme matching PlayerIdentityHero.
+ * Journey Path Screen — Super Mario World-style themed world map.
+ * Each chapter renders as a themed environment zone with winding paths,
+ * ambient animations, and redesigned nodes.
+ *
+ * Data layer (useJourneyPath) is untouched — only visuals changed.
  */
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dimensions,
   Image,
@@ -13,16 +16,9 @@ import {
   View,
 } from 'react-native';
 import Animated, {
-  Easing,
-  FadeIn,
-  FadeInDown,
   useAnimatedStyle,
   useSharedValue,
-  withDelay,
-  withRepeat,
-  withSequence,
   withSpring,
-  withTiming,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -32,21 +28,31 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useJourneyPath, type JourneyChapter, type JourneyNode } from '@/hooks/useJourneyPath';
 import { useStreakEngine } from '@/hooks/useStreakEngine';
 import { getMascotImage } from '@/lib/mascot-images';
+import { getChapterTheme, type JourneyTheme } from '@/lib/journey-themes';
 import { FONTS } from '@/theme/fonts';
 import { PLAYER_THEME } from '@/theme/player-theme';
 import { D_RADII } from '@/theme/d-system';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const NODE_SIZE = 60;
-const BOSS_SIZE = 66;
-const CONNECTOR_WIDTH = 2;
+import ChapterEnvironment from '@/components/journey/ChapterEnvironment';
+import AmbientAnimations from '@/components/journey/AmbientAnimations';
+import WindingPath, { getNodeX, getNodeY } from '@/components/journey/WindingPath';
+import JourneyNodeCircle from '@/components/journey/JourneyNodeCircle';
+import PlayerPositionIndicator from '@/components/journey/PlayerPositionIndicator';
+import ChapterZoneGate from '@/components/journey/ChapterZoneGate';
 
-// Position offsets for visual interest
-const OFFSET_MAP: Record<string, number> = {
-  left: -40,
-  center: 0,
-  right: 40,
-};
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const NODE_SPACING = 110;
+const ZONE_PADDING_TOP = 80;
+const COLLAPSED_HEIGHT = 64;
+
+// ─── Zone height based on node count ─────────────────────────────────────────
+function getZoneHeight(nodeCount: number): number {
+  return ZONE_PADDING_TOP + nodeCount * NODE_SPACING + 60;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Main Screen
+// ═══════════════════════════════════════════════════════════════════════════════
 
 export default function JourneyPathScreen() {
   const router = useRouter();
@@ -66,6 +72,27 @@ export default function JourneyPathScreen() {
       setCollapsedChapters(collapsed);
     }
   }, [chapters]);
+
+  // Auto-scroll to current chapter after layout
+  useEffect(() => {
+    if (chapters.length === 0) return;
+    const timer = setTimeout(() => {
+      // Calculate scroll offset: sum of all preceding zone/gate heights
+      let offset = 0;
+      for (let i = 0; i < currentChapterIndex; i++) {
+        const ch = chapters[i];
+        if (ch.isComplete && collapsedChapters[ch.id]) {
+          offset += COLLAPSED_HEIGHT + 16; // collapsed + margin
+        } else if (ch.isUnlocked) {
+          offset += getZoneHeight(ch.nodes.length);
+        }
+        // Gate between chapters
+        offset += 100;
+      }
+      scrollRef.current?.scrollTo({ y: offset, animated: true });
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [chapters, currentChapterIndex]);
 
   // Overall progress
   const totalNodes = chapters.reduce((sum, ch) => sum + ch.nodes.length, 0);
@@ -138,29 +165,61 @@ export default function JourneyPathScreen() {
           </View>
         </View>
 
-        {/* Chapter scroll */}
+        {/* World map scroll */}
         <ScrollView
           ref={scrollRef}
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {chapters.map((chapter, chapterIdx) => (
-            <ChapterSection
-              key={chapter.id}
-              chapter={chapter}
-              chapterIdx={chapterIdx}
-              isCollapsed={!!collapsedChapters[chapter.id]}
-              onToggle={() => toggleChapter(chapter.id)}
-              onNodeTap={handleNodeTap}
-              playerLevel={playerLevel}
-            />
-          ))}
+          {chapters.map((chapter, chapterIdx) => {
+            const theme = getChapterTheme(chapter.chapter_number);
+            const isCollapsed = !!collapsedChapters[chapter.id];
+            const isCurrent = chapterIdx === currentChapterIndex;
+
+            return (
+              <React.Fragment key={chapter.id}>
+                {/* Chapter zone */}
+                {chapter.isUnlocked ? (
+                  isCollapsed ? (
+                    <CollapsedChapter
+                      chapter={chapter}
+                      theme={theme}
+                      onToggle={() => toggleChapter(chapter.id)}
+                    />
+                  ) : (
+                    <ChapterZone
+                      chapter={chapter}
+                      theme={theme}
+                      isCurrent={isCurrent}
+                      onNodeTap={handleNodeTap}
+                      onToggle={chapter.isComplete ? () => toggleChapter(chapter.id) : undefined}
+                    />
+                  )
+                ) : (
+                  // Locked: handled by gate below
+                  null
+                )}
+
+                {/* Gate between chapters */}
+                {chapterIdx < chapters.length - 1 && (
+                  <ChapterZoneGate
+                    fromTheme={theme}
+                    toTheme={getChapterTheme(chapters[chapterIdx + 1].chapter_number)}
+                    isCompleted={chapter.isComplete}
+                    isNextUnlocked={chapters[chapterIdx + 1].isUnlocked}
+                    requiredLevel={chapters[chapterIdx + 1].required_level}
+                    playerLevel={playerLevel}
+                  />
+                )}
+              </React.Fragment>
+            );
+          })}
           <View style={{ height: 120 }} />
         </ScrollView>
       </SafeAreaView>
 
-      {/* Detail card overlay */}
+      {/* Detail card overlay — unchanged */}
       {selectedNode && (
         <NodeDetailCard
           node={selectedNode}
@@ -172,209 +231,157 @@ export default function JourneyPathScreen() {
   );
 }
 
-// ─── Chapter Section ──────────────────────────────────────────
-function ChapterSection({
+// ═══════════════════════════════════════════════════════════════════════════════
+// Collapsed Chapter (completed, tappable to expand)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function CollapsedChapter({
   chapter,
-  chapterIdx,
-  isCollapsed,
+  theme,
   onToggle,
-  onNodeTap,
-  playerLevel,
 }: {
   chapter: JourneyChapter;
-  chapterIdx: number;
-  isCollapsed: boolean;
+  theme: JourneyTheme;
   onToggle: () => void;
-  onNodeTap: (node: JourneyNode) => void;
-  playerLevel: number;
 }) {
-  // Locked chapter gate
-  if (!chapter.isUnlocked) {
-    return (
-      <Animated.View entering={FadeIn.delay(chapterIdx * 100)} style={styles.lockedGate}>
-        <Ionicons name="lock-closed" size={20} color="rgba(255,215,0,0.20)" />
-        <Text style={styles.lockedText}>
-          Reach Level {chapter.required_level} to unlock
-        </Text>
-        <Text style={styles.lockedChapterTitle}>{chapter.title}</Text>
-      </Animated.View>
-    );
-  }
-
-  // Completed chapter (collapsible)
-  if (chapter.isComplete && isCollapsed) {
-    return (
-      <Pressable onPress={onToggle} style={styles.completedHeader}>
-        <View style={styles.completedHeaderLeft}>
-          <Text style={styles.chapterNumberSmall}>CHAPTER {chapter.chapter_number}</Text>
-          <Text style={styles.completedTitle}>{chapter.title}</Text>
-        </View>
-        <View style={styles.completedBadge}>
-          <Ionicons name="checkmark-circle" size={20} color={PLAYER_THEME.success} />
-        </View>
-      </Pressable>
-    );
-  }
-
-  // Active/expanded chapter
   return (
-    <View style={styles.chapterSection}>
-      <Pressable onPress={chapter.isComplete ? onToggle : undefined}>
-        <Text style={styles.chapterNumber}>CHAPTER {chapter.chapter_number}</Text>
-        <Text style={styles.chapterTitle}>{chapter.title}</Text>
+    <Pressable onPress={onToggle} style={[styles.collapsedChapter, { borderColor: `${theme.pathDoneColor}20` }]}>
+      <LinearGradient
+        colors={[`${theme.groundColor}40`, `${theme.groundColor}20`]}
+        style={styles.collapsedGradient}
+      >
+        <View style={styles.collapsedLeft}>
+          <Text style={[styles.collapsedNumber, { color: theme.pathDoneColor }]}>
+            CHAPTER {chapter.chapter_number}
+          </Text>
+          <Text style={styles.collapsedTitle}>{chapter.title}</Text>
+          <Text style={styles.collapsedMeta}>
+            {chapter.completedNodes}/{chapter.nodes.length} nodes · {theme.name}
+          </Text>
+        </View>
+        <View style={[styles.collapsedBadge, { backgroundColor: `${theme.pathDoneColor}20` }]}>
+          <Ionicons name="checkmark-circle" size={20} color={theme.pathDoneColor} />
+        </View>
+      </LinearGradient>
+    </Pressable>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Chapter Zone (full themed environment with nodes)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function ChapterZone({
+  chapter,
+  theme,
+  isCurrent,
+  onNodeTap,
+  onToggle,
+}: {
+  chapter: JourneyChapter;
+  theme: JourneyTheme;
+  isCurrent: boolean;
+  onNodeTap: (node: JourneyNode) => void;
+  onToggle?: () => void;
+}) {
+  const zoneHeight = getZoneHeight(chapter.nodes.length);
+
+  // Build node positions for SVG path
+  const nodePositions = useMemo(
+    () =>
+      chapter.nodes.map((node, idx) => ({
+        x: getNodeX(node.position_offset as 'left' | 'center' | 'right'),
+        y: getNodeY(idx),
+        status: node.progress.status,
+      })),
+    [chapter.nodes],
+  );
+
+  // Find current (first available) node
+  const currentNodeIdx = chapter.nodes.findIndex(
+    n => n.progress.status === 'available' || n.progress.status === 'in_progress',
+  );
+
+  return (
+    <View style={{ height: zoneHeight, overflow: 'hidden' }}>
+      {/* Background environment */}
+      <ChapterEnvironment theme={theme} height={zoneHeight} />
+
+      {/* Ambient animations (only for current chapter to save perf) */}
+      {isCurrent && (
+        <AmbientAnimations elements={theme.ambientElements} height={zoneHeight} />
+      )}
+
+      {/* Winding SVG path */}
+      <WindingPath
+        nodePositions={nodePositions}
+        theme={theme}
+        zoneHeight={zoneHeight}
+      />
+
+      {/* Chapter header */}
+      <Pressable
+        onPress={onToggle}
+        style={styles.zoneHeader}
+        disabled={!onToggle}
+      >
+        <Text style={[styles.zoneChapterNum, { color: theme.currentNodeGlow }]}>
+          CHAPTER {chapter.chapter_number}
+        </Text>
+        <Text style={styles.zoneChapterTitle}>{chapter.title}</Text>
         {chapter.description && (
-          <Text style={styles.chapterDescription}>{chapter.description}</Text>
+          <Text style={styles.zoneChapterDesc}>{chapter.description}</Text>
         )}
       </Pressable>
 
-      {/* Node path */}
-      <View style={styles.nodePath}>
-        {chapter.nodes.map((node, nodeIdx) => (
-          <React.Fragment key={node.id}>
-            {nodeIdx > 0 && (
-              <ConnectorLine
-                isDone={
-                  chapter.nodes[nodeIdx - 1].progress.status === 'completed'
-                }
-              />
-            )}
-            <NodeCircle
+      {/* Nodes */}
+      {chapter.nodes.map((node, nodeIdx) => {
+        const x = getNodeX(node.position_offset as 'left' | 'center' | 'right');
+        const y = getNodeY(nodeIdx);
+
+        return (
+          <View
+            key={node.id}
+            style={[
+              styles.nodeAbsolute,
+              { left: x - 50, top: y - 28 }, // center the 100px-wide node wrapper
+            ]}
+          >
+            <JourneyNodeCircle
               node={node}
               nodeIdx={nodeIdx}
+              theme={theme}
               onTap={() => onNodeTap(node)}
             />
-          </React.Fragment>
-        ))}
-      </View>
+          </View>
+        );
+      })}
+
+      {/* Player position indicator at current node */}
+      {isCurrent && currentNodeIdx >= 0 && (
+        <View
+          style={[
+            styles.nodeAbsolute,
+            {
+              left: getNodeX(chapter.nodes[currentNodeIdx].position_offset as 'left' | 'center' | 'right') - 50,
+              top: getNodeY(currentNodeIdx) - 28,
+            },
+          ]}
+        >
+          <PlayerPositionIndicator
+            nodeSide={chapter.nodes[currentNodeIdx].position_offset as 'left' | 'center' | 'right'}
+            glowColor={theme.currentNodeGlow}
+          />
+        </View>
+      )}
     </View>
   );
 }
 
-// ─── Connector Line ──────────────────────────────────────────
-function ConnectorLine({ isDone }: { isDone: boolean }) {
-  return (
-    <View
-      style={[
-        styles.connector,
-        { backgroundColor: isDone ? 'rgba(75,185,236,0.35)' : 'rgba(255,255,255,0.06)' },
-      ]}
-    />
-  );
-}
+// ═══════════════════════════════════════════════════════════════════════════════
+// Node Detail Card (Bottom Sheet Overlay) — unchanged from original
+// ═══════════════════════════════════════════════════════════════════════════════
 
-// ─── Node Circle ──────────────────────────────────────────────
-function NodeCircle({
-  node,
-  nodeIdx,
-  onTap,
-}: {
-  node: JourneyNode;
-  nodeIdx: number;
-  onTap: () => void;
-}) {
-  const isAvailable = node.progress.status === 'available' || node.progress.status === 'in_progress';
-  const isCompleted = node.progress.status === 'completed';
-  const isLocked = node.progress.status === 'locked';
-  const isBoss = node.is_boss;
-  const size = isBoss ? BOSS_SIZE : NODE_SIZE;
-  const offset = OFFSET_MAP[node.position_offset] ?? 0;
-
-  // Pulsing glow for available node
-  const pulseScale = useSharedValue(1);
-  useEffect(() => {
-    if (isAvailable) {
-      pulseScale.value = withRepeat(
-        withSequence(
-          withTiming(1.12, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
-          withTiming(1, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
-        ),
-        -1,
-        false,
-      );
-    }
-  }, [isAvailable]);
-
-  const glowStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pulseScale.value }],
-  }));
-
-  // Resolve mascot image from tip_image_url
-  const mascotSource = getMascotImage(node.skillContent?.tip_image_url ?? node.icon_emoji);
-
-  const circleColors = isCompleted
-    ? ['#22C55E', '#0ea371'] as const
-    : isAvailable
-      ? (isBoss ? ['#FFD700', '#e6a800'] as const : ['#4BB9EC', '#2980b9'] as const)
-      : ['rgba(255,255,255,0.04)', 'rgba(255,255,255,0.02)'] as const;
-
-  return (
-    <Animated.View
-      entering={FadeInDown.delay(nodeIdx * 60).springify().damping(14)}
-      style={[styles.nodeRow, { transform: [{ translateX: offset }] }]}
-    >
-      <Pressable onPress={onTap} disabled={isLocked}>
-        {isAvailable && (
-          <Animated.View
-            style={[
-              styles.pulseGlow,
-              { width: size + 16, height: size + 16, borderRadius: isBoss ? 20 : (size + 16) / 2 },
-              glowStyle,
-            ]}
-          />
-        )}
-        <LinearGradient
-          colors={circleColors as any}
-          style={[
-            styles.nodeCircle,
-            {
-              width: size,
-              height: size,
-              borderRadius: isBoss ? 16 : size / 2,
-              opacity: isLocked ? 0.3 : 1,
-            },
-          ]}
-        >
-          <Image
-            source={mascotSource}
-            style={[
-              styles.nodeImage,
-              { width: size - 16, height: size - 16 },
-              isLocked && { opacity: 0.2 },
-            ]}
-            resizeMode="contain"
-          />
-          {isCompleted && (
-            <View style={styles.completedCheck}>
-              <Ionicons name="checkmark" size={12} color="#FFFFFF" />
-            </View>
-          )}
-        </LinearGradient>
-      </Pressable>
-      <Text
-        style={[
-          styles.nodeLabel,
-          isCompleted && styles.nodeLabelDone,
-          isLocked && styles.nodeLabelLocked,
-        ]}
-        numberOfLines={2}
-      >
-        {node.title}
-      </Text>
-      <Text
-        style={[
-          styles.nodeXp,
-          isAvailable && styles.nodeXpActive,
-          isCompleted && styles.nodeXpDone,
-          isLocked && styles.nodeXpLocked,
-        ]}
-      >
-        +{node.xp_reward} XP
-      </Text>
-    </Animated.View>
-  );
-}
-
-// ─── Node Detail Card (Bottom Sheet Overlay) ──────────────────
 function NodeDetailCard({
   node,
   onClose,
@@ -423,28 +430,23 @@ function NodeDetailCard({
             colors={[PLAYER_THEME.cardBg, PLAYER_THEME.cardBgHover, PLAYER_THEME.cardBg]}
             style={styles.detailGradient}
           >
-            {/* Close button */}
             <Pressable onPress={onClose} style={styles.closeBtn} hitSlop={12}>
               <Ionicons name="close" size={20} color="rgba(255,255,255,0.5)" />
             </Pressable>
 
-            {/* Mascot */}
             <View style={styles.detailMascotWrap}>
               <Image source={mascotSource} style={styles.detailMascot} resizeMode="contain" />
             </View>
 
-            {/* Title */}
             <Text style={styles.detailTitle}>{node.title}</Text>
             {node.description && (
               <Text style={styles.detailDescription}>{node.description}</Text>
             )}
 
-            {/* XP badge */}
             <View style={styles.xpBadge}>
               <Text style={styles.xpBadgeText}>+{node.xp_reward} XP</Text>
             </View>
 
-            {/* Steps preview */}
             <View style={styles.stepsPreview}>
               <StepRow icon="bulb-outline" label="Tip" />
               <StepRow icon="barbell-outline" label="Drill" />
@@ -453,7 +455,6 @@ function NodeDetailCard({
               )}
             </View>
 
-            {/* Action button */}
             <Pressable
               onPress={isLocked ? undefined : onStart}
               disabled={isLocked}
@@ -485,7 +486,10 @@ function StepRow({ icon, label }: { icon: string; label: string }) {
   );
 }
 
-// ─── Styles ──────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// Styles
+// ═══════════════════════════════════════════════════════════════════════════════
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -518,6 +522,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 12,
+    zIndex: 20,
   },
   headerTitle: {
     flex: 1,
@@ -548,6 +553,7 @@ const styles = StyleSheet.create({
   progressSection: {
     paddingHorizontal: 20,
     marginBottom: 8,
+    zIndex: 20,
   },
   progressLabels: {
     flexDirection: 'row',
@@ -575,164 +581,90 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingBottom: 0,
   },
 
-  // Locked chapter gate
-  lockedGate: {
+  // Collapsed chapter
+  collapsedChapter: {
+    marginHorizontal: 16,
+    marginBottom: 8,
+    borderRadius: D_RADII.cardSmall,
+    overflow: 'hidden',
     borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: 'rgba(255,215,0,0.15)',
-    backgroundColor: 'rgba(255,215,0,0.06)',
-    borderRadius: D_RADII.card,
-    padding: 20,
-    alignItems: 'center',
-    marginBottom: 24,
-    gap: 6,
   },
-  lockedText: {
-    fontFamily: FONTS.bodyMedium,
-    fontSize: 12,
-    color: 'rgba(255,215,0,0.20)',
-  },
-  lockedChapterTitle: {
-    fontFamily: FONTS.bodyBold,
-    fontSize: 14,
-    color: 'rgba(255,215,0,0.15)',
-  },
-
-  // Completed chapter (collapsed)
-  completedHeader: {
+  collapsedGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: 'rgba(34,197,94,0.06)',
-    borderRadius: D_RADII.cardSmall,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(34,197,94,0.15)',
+    padding: 14,
   },
-  completedHeaderLeft: {
+  collapsedLeft: {
     flex: 1,
   },
-  chapterNumberSmall: {
+  collapsedNumber: {
     fontFamily: FONTS.bodySemiBold,
     fontSize: 9,
-    color: PLAYER_THEME.textMuted,
     letterSpacing: 1.5,
     marginBottom: 2,
   },
-  completedTitle: {
+  collapsedTitle: {
     fontFamily: FONTS.bodyBold,
-    fontSize: 15,
+    fontSize: 14,
     color: PLAYER_THEME.textSecondary,
   },
-  completedBadge: {
-    marginLeft: 12,
-  },
-
-  // Chapter section (expanded)
-  chapterSection: {
-    marginBottom: 32,
-  },
-  chapterNumber: {
-    fontFamily: FONTS.bodySemiBold,
-    fontSize: 10,
-    color: PLAYER_THEME.accent,
-    letterSpacing: 2,
-    marginBottom: 4,
-  },
-  chapterTitle: {
-    fontFamily: FONTS.bodyExtraBold,
-    fontSize: 20,
-    color: '#FFFFFF',
-    marginBottom: 4,
-  },
-  chapterDescription: {
-    fontFamily: FONTS.bodyMedium,
-    fontSize: 12,
-    color: PLAYER_THEME.textMuted,
-    marginBottom: 20,
-  },
-
-  // Node path
-  nodePath: {
-    alignItems: 'center',
-    paddingTop: 8,
-  },
-  nodeRow: {
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  pulseGlow: {
-    position: 'absolute',
-    backgroundColor: 'rgba(75,185,236,0.15)',
-    top: -8,
-    left: -8,
-    zIndex: -1,
-  },
-  nodeCircle: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  nodeImage: {
-    borderRadius: 4,
-  },
-  completedCheck: {
-    position: 'absolute',
-    bottom: -2,
-    right: -2,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: PLAYER_THEME.success,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#0B1628',
-  },
-  nodeLabel: {
-    fontFamily: FONTS.bodySemiBold,
-    fontSize: 12,
-    color: '#FFFFFF',
-    marginTop: 6,
-    textAlign: 'center',
-    maxWidth: 120,
-  },
-  nodeLabelDone: {
-    color: PLAYER_THEME.textMuted,
-  },
-  nodeLabelLocked: {
-    color: PLAYER_THEME.textFaint,
-  },
-  nodeXp: {
+  collapsedMeta: {
     fontFamily: FONTS.bodyMedium,
     fontSize: 10,
     color: PLAYER_THEME.textMuted,
     marginTop: 2,
   },
-  nodeXpActive: {
-    color: PLAYER_THEME.xpGold,
-  },
-  nodeXpDone: {
-    color: PLAYER_THEME.textFaint,
-  },
-  nodeXpLocked: {
-    color: PLAYER_THEME.textFaint,
-    opacity: 0.5,
+  collapsedBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 12,
   },
 
-  // Connector
-  connector: {
-    width: CONNECTOR_WIDTH,
-    height: 28,
-    borderRadius: 1,
+  // Zone header
+  zoneHeader: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    zIndex: 5,
+  },
+  zoneChapterNum: {
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 10,
+    letterSpacing: 2,
+    marginBottom: 2,
+  },
+  zoneChapterTitle: {
+    fontFamily: FONTS.bodyExtraBold,
+    fontSize: 18,
+    color: '#FFFFFF',
+    marginBottom: 2,
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  zoneChapterDesc: {
+    fontFamily: FONTS.bodyMedium,
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.5)',
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
 
-  // Overlay
+  // Node absolute positioning within zone
+  nodeAbsolute: {
+    position: 'absolute',
+    width: 100,
+    alignItems: 'center',
+    zIndex: 5,
+  },
+
+  // Overlay (detail card)
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.75)',
