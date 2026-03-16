@@ -190,3 +190,190 @@ INSERT INTO skill_content (category_id, sport, difficulty, title, slug, tip_text
 )
 
 ON CONFLICT (sport, slug) DO NOTHING;
+
+-- =============================================================================
+-- QUIZ QUESTIONS — Chapter 1: First Touch
+-- =============================================================================
+
+-- Platform Basics quiz
+INSERT INTO skill_quizzes (skill_content_id, question_text, options, correct_option_index, explanation, sort_order) VALUES
+(
+  (SELECT id FROM skill_content WHERE slug = 'vb-passing-platform-basics'),
+  'Where should the ball contact your arms when passing?',
+  '["Wrists", "Hands", "Forearms (meaty part)", "Elbows"]',
+  2,
+  'The ball should contact the flat, meaty part of your forearms. Wrists and hands cause unpredictable bounces.',
+  1
+),
+(
+  (SELECT id FROM skill_content WHERE slug = 'vb-passing-platform-basics'),
+  'What should your thumbs do when forming a platform?',
+  '["Point up", "Point down and together", "Wrap around the ball", "Stay apart"]',
+  1,
+  'Thumbs together and pointing down creates a flat, stable platform surface.',
+  2
+),
+(
+  (SELECT id FROM skill_content WHERE slug = 'vb-passing-platform-basics'),
+  'When should you angle your platform toward your target?',
+  '["After the ball hits your arms", "Before the ball arrives", "It does not matter", "Only on hard serves"]',
+  1,
+  'Set your platform angle before the ball arrives. Reacting after contact is too late.',
+  3
+);
+
+-- Wall Passing Mastery quiz
+INSERT INTO skill_quizzes (skill_content_id, question_text, options, correct_option_index, explanation, sort_order) VALUES
+(
+  (SELECT id FROM skill_content WHERE slug = 'vb-passing-wall-mastery'),
+  'Why is wall passing a great solo drill?',
+  '["The wall is soft", "It builds arm strength", "The wall gives honest feedback on platform angle", "It is the only drill you can do alone"]',
+  2,
+  'The wall never lies. If your platform is off angle, the ball goes off target. Instant feedback.',
+  1
+),
+(
+  (SELECT id FROM skill_content WHERE slug = 'vb-passing-wall-mastery'),
+  'If the ball keeps going too far right, what should you adjust?',
+  '["Hit harder", "Angle your platform slightly left", "Move closer to the wall", "Use your hands instead"]',
+  1,
+  'Adjust your platform angle toward your target. The ball goes where your platform faces.',
+  2
+);
+
+-- Shuffle Step quiz
+INSERT INTO skill_quizzes (skill_content_id, question_text, options, correct_option_index, explanation, sort_order) VALUES
+(
+  (SELECT id FROM skill_content WHERE slug = 'vb-passing-shuffle-step'),
+  'Why should you avoid crossing your feet when shuffling?',
+  '["It is against the rules", "It makes you slow and off-balance", "It looks bad", "Coaches do not like it"]',
+  1,
+  'Crossing your feet makes you slow to change direction and puts you off balance for the pass.',
+  1
+),
+(
+  (SELECT id FROM skill_content WHERE slug = 'vb-passing-shuffle-step'),
+  'Where should your weight be when in ready position?',
+  '["On your heels", "On the balls of your feet", "Evenly distributed", "On your toes"]',
+  1,
+  'Balls of your feet. This lets you push off quickly in any direction.',
+  2
+);
+
+-- Buddy Passing quiz
+INSERT INTO skill_quizzes (skill_content_id, question_text, options, correct_option_index, explanation, sort_order) VALUES
+(
+  (SELECT id FROM skill_content WHERE slug = 'vb-passing-buddy-passing'),
+  'How far apart should beginners start when partner passing?',
+  '["5 feet", "10 feet", "20 feet", "As far as possible"]',
+  1,
+  '10 feet is the sweet spot. Close enough to control the ball, far enough to practice real passing angles.',
+  1
+),
+(
+  (SELECT id FROM skill_content WHERE slug = 'vb-passing-buddy-passing'),
+  'What should you call before every pass, even in a two-person drill?',
+  '["Help", "Ball", "Mine", "Ready"]',
+  2,
+  'Always call "mine" before every pass. Build the communication habit now so it is automatic in games.',
+  2
+);
+
+-- Call the Ball quiz
+INSERT INTO skill_quizzes (skill_content_id, question_text, options, correct_option_index, explanation, sort_order) VALUES
+(
+  (SELECT id FROM skill_content WHERE slug = 'vb-passing-call-the-ball'),
+  'What happens when nobody calls the ball?',
+  '["Someone else gets it", "The ball drops", "The ref calls a foul", "Nothing bad"]',
+  1,
+  'If nobody calls it, nobody takes it, and the ball hits the floor. Communication prevents easy errors.',
+  1
+),
+(
+  (SELECT id FROM skill_content WHERE slug = 'vb-passing-call-the-ball'),
+  'When should you call the ball?',
+  '["After you pass it", "Before it arrives", "Only in games", "Only when the coach tells you"]',
+  1,
+  'Call the ball BEFORE it arrives. This gives your teammates time to clear out.',
+  2
+);
+
+-- =============================================================================
+-- QUIZ QUESTIONS — Chapter 2: Serve It Up
+-- =============================================================================
+
+-- Underhand Serve Form quiz
+INSERT INTO skill_quizzes (skill_content_id, question_text, options, correct_option_index, explanation, sort_order) VALUES
+(
+  (SELECT id FROM skill_content WHERE slug = 'vb-serving-underhand-form'),
+  'What part of your hand contacts the ball on an underhand serve?',
+  '["Fingertips", "Fist", "Heel of your open hand", "Back of your hand"]',
+  2,
+  'Contact with the heel of your open hand gives you the most control and a clean, flat trajectory.',
+  1
+),
+(
+  (SELECT id FROM skill_content WHERE slug = 'vb-serving-underhand-form'),
+  'Which foot should be forward when serving underhand?',
+  '["Hitting-side foot", "Non-hitting-side foot", "Both feet even", "It does not matter"]',
+  1,
+  'Non-hitting-side foot forward. This opens your body and lets your hitting arm swing freely.',
+  2
+);
+
+-- Toss Consistency quiz
+INSERT INTO skill_quizzes (skill_content_id, question_text, options, correct_option_index, explanation, sort_order) VALUES
+(
+  (SELECT id FROM skill_content WHERE slug = 'vb-serving-toss-consistency'),
+  'How high should you toss the ball for an overhand serve?',
+  '["As high as possible", "2-3 feet above your hitting shoulder", "Just above your head", "Behind you"]',
+  1,
+  '2-3 feet above your hitting shoulder, slightly in front. Higher tosses add variables and inconsistency.',
+  1
+),
+(
+  (SELECT id FROM skill_content WHERE slug = 'vb-serving-toss-consistency'),
+  'What percentage of a good serve comes from a consistent toss?',
+  '["20%", "50%", "80%", "100%"]',
+  2,
+  'A consistent toss is roughly 80% of a consistent serve. Fix the toss, fix the serve.',
+  2
+);
+
+-- Target Zones quiz
+INSERT INTO skill_quizzes (skill_content_id, question_text, options, correct_option_index, explanation, sort_order) VALUES
+(
+  (SELECT id FROM skill_content WHERE slug = 'vb-serving-target-zones'),
+  'Which court zones are hardest to pass from a serve?',
+  '["Zones 2 and 3 (front row)", "Zones 1 and 5 (deep corners)", "Zone 4 only", "All zones are equal"]',
+  1,
+  'Deep corners (zones 1 and 5) force passers to move far and pass at tough angles. Smart servers target these.',
+  1
+),
+(
+  (SELECT id FROM skill_content WHERE slug = 'vb-serving-target-zones'),
+  'Is a hard serve always better than a placed serve?',
+  '["Yes, power wins", "No, placement beats power", "Only in advanced play", "Only for jump serves"]',
+  1,
+  'A well-placed serve that lands in a tough zone is more effective than a hard serve that goes to a comfortable passer.',
+  2
+);
+
+-- Overhand Serve Intro quiz
+INSERT INTO skill_quizzes (skill_content_id, question_text, options, correct_option_index, explanation, sort_order) VALUES
+(
+  (SELECT id FROM skill_content WHERE slug = 'vb-serving-overhand-intro'),
+  'Where should you contact the ball on an overhand serve?',
+  '["Below your waist", "At the highest point you can reach", "At shoulder height", "Behind your head"]',
+  1,
+  'Contact at the highest point. A high contact point gives you the best angle to clear the net and drive the ball down.',
+  1
+),
+(
+  (SELECT id FROM skill_content WHERE slug = 'vb-serving-overhand-intro'),
+  'What is a good way to learn the overhand serve?',
+  '["Start from the back line and hit hard", "Start close to the net and gradually move back", "Only practice with a team", "Watch videos and skip practice"]',
+  1,
+  'Start close (10-foot line) to build the motion and confidence, then gradually move back to the service line.',
+  2
+);
