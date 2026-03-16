@@ -45,6 +45,40 @@
 | ENCOURAGINGTEAMMATE.png | Leadership on the court | 8: Championship Road |
 | VISUALIZE.png | Mental toughness | 8: Championship Road |
 
+## Bonus Nodes (Optional Side Content)
+
+| Image | Bonus Node | Chapter |
+|-------|-----------|---------|
+| BACKYARDPRACTICE.png | Backyard pepper | 1: First Touch |
+| RUSSIANTWIST.png | Core strength for passers | 1: First Touch |
+| GETACTIVE.png | Serve and chase | 2: Serve It Up |
+| VISUALIZE.png | Visualization for serving | 2: Serve It Up |
+| GETACTIVE.png | Jump training | 3: Net Game |
+| WALLSETS.png | Solo wall setting | 3: Net Game |
+| defenseready.png | Reaction speed training | 4: Defense Wins |
+| PANCAKE.png | Sprawl and recovery | 4: Defense Wins |
+| watchingfilm.png | Film study basics | 5: Court Commander |
+| TEAMHUDDLE.png | Hand signals | 5: Court Commander |
+| EXERCISESTREAK.png | Arm conditioning | 6: Advanced Arsenal |
+| AREYOUREADY.png | Receive under pressure | 6: Advanced Arsenal |
+| SPORTSMANSHIP.png | Celebration rituals | 7: Team Synergy |
+| HELPINGNERVOUSETEAMMATE.png | Helping a nervous teammate | 7: Team Synergy |
+| VISUALIZE.png | Pre-game visualization | 8: Championship Road |
+| FOOLINGAROUNDWITHDAD.png | Play for fun | 8: Championship Road |
+
+## Bonus Node Demo Frames (secondary images)
+
+| Image | Used In |
+|-------|---------|
+| FOOLINGAROUNDWITHDAD.png | Backyard pepper (drill demo) |
+| PUSHUP.png | Core strength for passers (drill demo) |
+| DIVEPASS.png | Sprawl and recovery (drill demo) |
+| SURPRISED.png | Receive under pressure (drill demo) |
+| TEAMACHIEVEMENT.png | Celebration rituals (drill demo) |
+| ENCOURAGINGTEAMMATE.png | Helping a nervous teammate (drill demo) |
+| LYNXREADY.png | Pre-game visualization (drill demo) |
+| BACKYARDPRACTICE.png | Play for fun (drill demo) |
+
 ## Drill Demo Frames (secondary images in modules)
 
 | Image | Used In |
@@ -101,8 +135,8 @@
 | BACKYARDPRACTICE.png | Home drill context |
 | FOOLINGAROUNDWITHDAD.png | Parent-child engagement moments |
 | ADVANCECOACH.png | Coach challenge cards |
-| RUSSIANTWIST.png | Conditioning drills (future) |
-| PUSHUP.png | Conditioning drills (future) |
+| RUSSIANTWIST.png | Conditioning drills, Bonus: Core strength for passers |
+| PUSHUP.png | Conditioning drills, Bonus: Core strength (drill demo) |
 
 ## Unmapped (available for future use)
 
