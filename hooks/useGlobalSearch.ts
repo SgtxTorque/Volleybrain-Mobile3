@@ -199,7 +199,7 @@ async function searchPreview(query: string, orgId: string): Promise<SearchResult
     .select('id, full_name, email')
     .eq('current_organization_id', orgId)
     .ilike('full_name', searchPattern)
-    .in('primary_role', ['head_coach', 'assistant_coach', 'league_admin'])
+    .in('primary_role', ['head_coach', 'assistant_coach', 'league_admin', 'team_manager'])
     .limit(1);
 
   (staff || []).forEach((s: any) => {
@@ -287,7 +287,7 @@ async function searchAll(query: string, orgId: string): Promise<SearchResults> {
     .select('id, full_name, email, primary_role')
     .eq('current_organization_id', orgId)
     .ilike('full_name', searchPattern)
-    .in('primary_role', ['head_coach', 'assistant_coach', 'league_admin'])
+    .in('primary_role', ['head_coach', 'assistant_coach', 'league_admin', 'team_manager'])
     .limit(10);
 
   results.staff = (staff || []).map((s: any) => ({

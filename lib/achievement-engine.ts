@@ -12,6 +12,7 @@ const LAST_SEEN_KEY = 'vb_achievement_last_seen_';
 /** Map simplified role names to user_roles.role values */
 const ROLE_DB_MAP: Record<string, string[]> = {
   coach: ['head_coach', 'assistant_coach'],
+  team_manager: ['team_manager'],
   parent: ['parent'],
   admin: ['league_admin'],
   player: ['player'],

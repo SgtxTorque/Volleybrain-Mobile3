@@ -31,6 +31,7 @@ const ROLE_COLORS: Record<UserRole, string> = {
   league_admin: BRAND.coral,
   head_coach: BRAND.teal,
   assistant_coach: BRAND.teal,
+  team_manager: '#E76F51',
   parent: BRAND.skyBlue,
   player: BRAND.goldBrand,
 };
@@ -43,6 +44,7 @@ const ROLE_DISPLAY: Record<UserRole, string> = {
   league_admin: 'Admin',
   head_coach: 'Head Coach',
   assistant_coach: 'Asst. Coach',
+  team_manager: 'Team Mgr',
   parent: 'Parent',
   player: 'Player',
 };

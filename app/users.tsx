@@ -23,7 +23,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-type UserRole = 'league_admin' | 'head_coach' | 'assistant_coach' | 'parent' | 'player';
+type UserRole = 'league_admin' | 'head_coach' | 'assistant_coach' | 'team_manager' | 'parent' | 'player';
 
 type UserWithRole = {
   id: string;
@@ -360,6 +360,7 @@ export default function UsersScreen() {
       case 'league_admin': return 'shield';
       case 'head_coach': return 'clipboard';
       case 'assistant_coach': return 'clipboard-outline';
+      case 'team_manager': return 'build';
       case 'parent': return 'people';
       case 'player': return 'person';
       default: return 'person';
@@ -371,6 +372,7 @@ export default function UsersScreen() {
       case 'league_admin': return colors.danger;
       case 'head_coach': return colors.info;
       case 'assistant_coach': return colors.info;
+      case 'team_manager': return '#E76F51';
       case 'parent': return colors.success;
       case 'player': return colors.warning;
       default: return colors.textMuted;
@@ -382,6 +384,7 @@ export default function UsersScreen() {
       case 'league_admin': return 'Admin';
       case 'head_coach': return 'Head Coach';
       case 'assistant_coach': return 'Asst Coach';
+      case 'team_manager': return 'Team Mgr';
       case 'parent': return 'Parent';
       case 'player': return 'Player';
       default: return role;
@@ -393,7 +396,7 @@ export default function UsersScreen() {
     if (activeRoles.length === 0) return null;
     
     // Priority: admin > coach > parent > player
-    const priority: UserRole[] = ['league_admin', 'head_coach', 'assistant_coach', 'parent', 'player'];
+    const priority: UserRole[] = ['league_admin', 'head_coach', 'assistant_coach', 'team_manager', 'parent', 'player'];
     for (const role of priority) {
       if (activeRoles.some(r => r.role === role)) return role;
     }
@@ -428,7 +431,7 @@ export default function UsersScreen() {
     if (filter === 'all') return true;
     if (filter === 'pending') return user.pending_approval;
     if (filter === 'admin') return user.roles.some(r => r.role === 'league_admin' && r.is_active);
-    if (filter === 'coach') return user.roles.some(r => (r.role === 'head_coach' || r.role === 'assistant_coach') && r.is_active);
+    if (filter === 'coach') return user.roles.some(r => (r.role === 'head_coach' || r.role === 'assistant_coach' || r.role === 'team_manager') && r.is_active);
     if (filter === 'parent') return user.roles.some(r => r.role === 'parent' && r.is_active);
     
     return true;
@@ -673,7 +676,7 @@ export default function UsersScreen() {
                   <>
                     <Text style={s.modalSectionTitle}>Add Role</Text>
                     <View style={s.addRoleGrid}>
-                      {(['parent', 'head_coach', 'assistant_coach', 'league_admin'] as UserRole[]).map(role => {
+                      {(['parent', 'head_coach', 'assistant_coach', 'team_manager', 'league_admin'] as UserRole[]).map(role => {
                         const hasRole = selectedUser.roles.some(r => r.role === role);
                         return (
                           <TouchableOpacity

@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 
-export type UserRole = 'league_admin' | 'head_coach' | 'assistant_coach' | 'parent' | 'player';
+export type UserRole = 'league_admin' | 'head_coach' | 'assistant_coach' | 'team_manager' | 'parent' | 'player';
 
 export type PermissionContext = {
   userId: string;
@@ -145,7 +145,7 @@ export const can = {
 
 // Get highest role for display purposes
 export const getPrimaryRole = (roles: UserRole[]): UserRole => {
-  const priority: UserRole[] = ['league_admin', 'head_coach', 'assistant_coach', 'parent', 'player'];
+  const priority: UserRole[] = ['league_admin', 'head_coach', 'assistant_coach', 'team_manager', 'parent', 'player'];
   for (const role of priority) {
     if (roles.includes(role)) return role;
   }
@@ -157,6 +157,7 @@ export const roleDisplayName: Record<UserRole, string> = {
   league_admin: 'League Admin',
   head_coach: 'Head Coach',
   assistant_coach: 'Assistant Coach',
+  team_manager: 'Team Manager',
   parent: 'Parent',
   player: 'Player',
 };

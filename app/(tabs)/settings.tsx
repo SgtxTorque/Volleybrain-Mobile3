@@ -145,6 +145,7 @@ export default function SettingsScreen() {
     league_admin: 'League Admin',
     head_coach: 'Head Coach',
     assistant_coach: 'Assistant Coach',
+    team_manager: 'Team Manager',
     parent: 'Parent',
     player: 'Player',
   };
@@ -153,6 +154,7 @@ export default function SettingsScreen() {
     league_admin: colors.danger,
     head_coach: colors.primary,
     assistant_coach: colors.info,
+    team_manager: '#E76F51',
     parent: colors.success,
     player: colors.warning,
   };
@@ -162,6 +164,7 @@ export default function SettingsScreen() {
     { role: 'league_admin', label: 'View as Admin', icon: 'shield' },
     { role: 'head_coach', label: 'View as Coach', icon: 'clipboard' },
     { role: 'assistant_coach', label: 'View as Assistant', icon: 'people' },
+    { role: 'team_manager', label: 'View as Team Mgr', icon: 'build' },
     { role: 'parent', label: 'View as Parent', icon: 'heart' },
     { role: 'player', label: 'View as Player', icon: 'basketball' },
   ];
