@@ -377,3 +377,114 @@ INSERT INTO skill_quizzes (skill_content_id, question_text, options, correct_opt
   'Start close (10-foot line) to build the motion and confidence, then gradually move back to the service line.',
   2
 );
+
+-- =============================================================================
+-- JOURNEY NODES — Chapter 1: First Touch (6 nodes)
+-- =============================================================================
+
+INSERT INTO journey_nodes (chapter_id, node_type, title, description, skill_content_id, challenge_config, xp_reward, sort_order, is_boss, is_bonus, position_offset, icon_emoji) VALUES
+
+-- Node 1: Platform Basics (skill)
+(
+  (SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 1),
+  'skill', 'Platform basics', 'Learn the foundation of every pass',
+  (SELECT id FROM skill_content WHERE slug = 'vb-passing-platform-basics'),
+  NULL, 20, 1, false, false, 'right', NULL
+),
+-- Node 2: Wall Passing (skill)
+(
+  (SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 1),
+  'skill', 'Wall passing', 'Build consistency with wall drills',
+  (SELECT id FROM skill_content WHERE slug = 'vb-passing-wall-mastery'),
+  NULL, 20, 2, false, false, 'left', NULL
+),
+-- Node 3: Shuffle Step (skill)
+(
+  (SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 1),
+  'skill', 'Shuffle step', 'Move your feet before the ball',
+  (SELECT id FROM skill_content WHERE slug = 'vb-passing-shuffle-step'),
+  NULL, 25, 3, false, false, 'right', NULL
+),
+-- Node 4: Buddy Passing (skill)
+(
+  (SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 1),
+  'skill', 'Buddy passing', 'Partner passing builds rhythm',
+  (SELECT id FROM skill_content WHERE slug = 'vb-passing-buddy-passing'),
+  NULL, 25, 4, false, false, 'left', NULL
+),
+-- Node 5: Call the Ball (skill)
+(
+  (SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 1),
+  'skill', 'Call the ball', 'Communication wins rallies',
+  (SELECT id FROM skill_content WHERE slug = 'vb-passing-call-the-ball'),
+  NULL, 30, 5, false, false, 'center', NULL
+),
+-- Node 6: BOSS — First Touch Master
+(
+  (SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 1),
+  'boss', 'First touch master', 'Prove your passing mastery',
+  NULL,
+  '{"type": "timed_reps", "target": 20, "time_limit_seconds": 120, "description": "Pass 20 balls against the wall without dropping. 2 minute time limit.", "mascot_image": "assets/images/activitiesmascot/EXCITEDACHIEVEMENT.png"}',
+  50, 6, true, false, 'center', NULL
+)
+
+ON CONFLICT (chapter_id, sort_order) DO NOTHING;
+
+-- =============================================================================
+-- JOURNEY NODES — Chapter 2: Serve It Up (7 nodes)
+-- =============================================================================
+
+INSERT INTO journey_nodes (chapter_id, node_type, title, description, skill_content_id, challenge_config, xp_reward, sort_order, is_boss, is_bonus, position_offset, icon_emoji) VALUES
+
+-- Node 1: Underhand Form (skill)
+(
+  (SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 2),
+  'skill', 'Underhand form', 'Start with the fundamentals',
+  (SELECT id FROM skill_content WHERE slug = 'vb-serving-underhand-form'),
+  NULL, 20, 1, false, false, 'left', NULL
+),
+-- Node 2: Toss Consistency (skill)
+(
+  (SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 2),
+  'skill', 'Toss consistency', 'A good toss makes a good serve',
+  (SELECT id FROM skill_content WHERE slug = 'vb-serving-toss-consistency'),
+  NULL, 20, 2, false, false, 'right', NULL
+),
+-- Node 3: Target Zones (skill)
+(
+  (SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 2),
+  'skill', 'Target zones', 'Aim with purpose',
+  (SELECT id FROM skill_content WHERE slug = 'vb-serving-target-zones'),
+  NULL, 25, 3, false, false, 'left', NULL
+),
+-- Node 4: Overhand Intro (skill)
+(
+  (SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 2),
+  'skill', 'Overhand serve', 'Level up your serve game',
+  (SELECT id FROM skill_content WHERE slug = 'vb-serving-overhand-intro'),
+  NULL, 25, 4, false, false, 'right', NULL
+),
+-- Node 5: Serve Receive Awareness (skill)
+(
+  (SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 2),
+  'skill', 'Serve receive IQ', 'Think like a server',
+  (SELECT id FROM skill_content WHERE slug = 'vb-serving-receive-awareness'),
+  NULL, 25, 5, false, false, 'center', NULL
+),
+-- Node 6: Serving Under Pressure (skill)
+(
+  (SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 2),
+  'skill', 'Pressure serves', 'Routine beats nerves',
+  (SELECT id FROM skill_content WHERE slug = 'vb-serving-pressure'),
+  NULL, 30, 6, false, false, 'left', NULL
+),
+-- Node 7: BOSS — Serve Certified
+(
+  (SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 2),
+  'boss', 'Serve certified', 'Earn your serve badge',
+  NULL,
+  '{"type": "accuracy_challenge", "target": 10, "zones": [1, 5, 6], "description": "Land 10 serves in target zones. Mix underhand and overhand.", "mascot_image": "assets/images/activitiesmascot/EXCITEDACHIEVEMENT.png"}',
+  50, 7, true, false, 'center', NULL
+)
+
+ON CONFLICT (chapter_id, sort_order) DO NOTHING;
