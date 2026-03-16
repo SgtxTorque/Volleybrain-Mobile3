@@ -5,6 +5,7 @@ import {
   DailyQuest,
 } from '@/lib/quest-engine';
 import { supabase } from '@/lib/supabase';
+import { onRefresh } from '@/lib/refresh-bus';
 
 export function useQuestEngine() {
   const [quests, setQuests] = useState<DailyQuest[]>([]);
@@ -44,6 +45,12 @@ export function useQuestEngine() {
 
   useEffect(() => {
     loadQuests();
+  }, [loadQuests]);
+
+  // Subscribe to refresh bus
+  useEffect(() => {
+    const unsub = onRefresh('quests', loadQuests);
+    return unsub;
   }, [loadQuests]);
 
   const handleCompleteQuest = useCallback(async (questId: string) => {

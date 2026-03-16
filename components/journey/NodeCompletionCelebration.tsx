@@ -18,6 +18,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { getMascotImage } from '@/lib/mascot-images';
 import { calculateLevel } from '@/lib/quest-engine';
+import { emitRefresh } from '@/lib/refresh-bus';
 import { FONTS } from '@/theme/fonts';
 import { PLAYER_THEME } from '@/theme/player-theme';
 import { D_RADII } from '@/theme/d-system';
@@ -29,6 +30,13 @@ type Props = {
   streakCount: number | null;
   onContinue: () => void;
 };
+
+function handleContinueWithRefresh(onContinue: () => void) {
+  emitRefresh('journey');
+  emitRefresh('xp');
+  emitRefresh('quests');
+  onContinue();
+}
 
 export default function NodeCompletionCelebration({
   xpEarned,
@@ -133,7 +141,7 @@ export default function NodeCompletionCelebration({
 
       {/* Continue button */}
       <Animated.View entering={FadeIn.delay(1800)} style={styles.continueWrap}>
-        <Pressable onPress={onContinue}>
+        <Pressable onPress={() => handleContinueWithRefresh(onContinue)}>
           <LinearGradient
             colors={['#4BB9EC', '#22C55E']}
             start={{ x: 0, y: 0 }}

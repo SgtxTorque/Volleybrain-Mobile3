@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { onRefresh } from '@/lib/refresh-bus';
 
 export interface JourneyChapter {
   id: string;
@@ -190,6 +191,12 @@ export function useJourneyPath() {
 
   useEffect(() => {
     loadJourney();
+  }, [loadJourney]);
+
+  // Subscribe to refresh bus
+  useEffect(() => {
+    const unsub = onRefresh('journey', loadJourney);
+    return unsub;
   }, [loadJourney]);
 
   return {

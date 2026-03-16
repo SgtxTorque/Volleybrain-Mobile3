@@ -4,6 +4,7 @@ import {
   WeeklyQuest,
 } from '@/lib/quest-engine';
 import { supabase } from '@/lib/supabase';
+import { onRefresh } from '@/lib/refresh-bus';
 
 export function useWeeklyQuestEngine() {
   const [quests, setQuests] = useState<WeeklyQuest[]>([]);
@@ -41,6 +42,12 @@ export function useWeeklyQuestEngine() {
 
   useEffect(() => {
     loadQuests();
+  }, [loadQuests]);
+
+  // Subscribe to refresh bus
+  useEffect(() => {
+    const unsub = onRefresh('quests', loadQuests);
+    return unsub;
   }, [loadQuests]);
 
   return {

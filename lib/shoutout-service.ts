@@ -7,6 +7,7 @@ import { XP_BY_SOURCE } from './engagement-constants';
 import { getLevelFromXP } from './engagement-constants';
 import type { ShoutoutCategory } from './engagement-types';
 import { checkAndCompleteQuests } from './quest-engine';
+import { emitRefresh } from './refresh-bus';
 
 // =============================================================================
 // Types
@@ -109,6 +110,9 @@ export async function giveShoutout(params: GiveShoutoutParams): Promise<Shoutout
 
     // 5. Auto-complete shoutout quest (fire-and-forget)
     checkAndCompleteQuests(giverId, 'shoutout_sent', { teamId }).catch(() => {});
+
+    // 6. Emit refresh events
+    emitRefresh('quests');
 
     return {
       success: true,

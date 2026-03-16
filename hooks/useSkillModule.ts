@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { calculateLevel, checkAndCompleteQuests } from '@/lib/quest-engine';
 import { recordQualifyingAction } from '@/lib/streak-engine';
+import { emitRefresh } from '@/lib/refresh-bus';
 
 export interface SkillModuleData {
   id: string;
@@ -183,6 +184,11 @@ export function useSkillModule(nodeId: string, skillContentId: string) {
 
     // Auto-complete skill module quest (fire-and-forget)
     checkAndCompleteQuests(userId, 'skill_module_completed').catch(() => {});
+
+    // Emit refresh events
+    emitRefresh('journey');
+    emitRefresh('quests');
+    emitRefresh('xp');
   };
 
   return {

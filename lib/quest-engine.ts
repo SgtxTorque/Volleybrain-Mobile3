@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { recordQualifyingAction } from '@/lib/streak-engine';
+import { emitRefresh } from '@/lib/refresh-bus';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -564,6 +565,11 @@ export async function completeQuest(questId: string, profileId: string): Promise
     }
   }
 
+  // Emit refresh events
+  emitRefresh('quests');
+  emitRefresh('xp');
+  emitRefresh('streak');
+
   return {
     success: true,
     xpAwarded: quest.xp_reward,
@@ -1038,6 +1044,11 @@ export async function checkAndCompleteQuests(
         questsCompleted.push(result.questId);
       }
     }
+  }
+
+  if (questsCompleted.length > 0) {
+    emitRefresh('quests');
+    emitRefresh('xp');
   }
 
   return { questsCompleted, totalXpAwarded };

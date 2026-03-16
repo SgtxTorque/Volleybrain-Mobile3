@@ -11,6 +11,7 @@ import { calculateStreakWithFreeze, checkStreakState, StreakState } from '@/lib/
 import { calculateLevel } from '@/lib/quest-engine';
 import { checkEarlyBird, checkAndCreateAutoBoosts } from '@/lib/xp-boost-engine';
 import { supabase } from '@/lib/supabase';
+import { onRefresh } from '@/lib/refresh-bus';
 
 /** Local date string (YYYY-MM-DD) to avoid UTC timezone shift issues */
 function localToday(): string {
@@ -522,6 +523,13 @@ export function usePlayerHomeData(playerId: string | null) {
 
   useEffect(() => {
     fetchAll();
+  }, [fetchAll]);
+
+  // Subscribe to refresh bus — re-fetch on XP or streak changes
+  useEffect(() => {
+    const unsubXp = onRefresh('xp', fetchAll);
+    const unsubStreak = onRefresh('streak', fetchAll);
+    return () => { unsubXp(); unsubStreak(); };
   }, [fetchAll]);
 
   const refresh = useCallback(async () => {
