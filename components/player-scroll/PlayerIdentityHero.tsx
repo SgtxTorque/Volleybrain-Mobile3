@@ -26,6 +26,7 @@ import { FONTS } from '@/theme/fonts';
 import { PLAYER_THEME } from '@/theme/player-theme';
 import { D_RADII } from '@/theme/d-system';
 import { getPlayerGreeting, type PlayerGreetingContext } from './PlayerLynxGreetings';
+import { getGreetingMascot } from '@/lib/mascot-images';
 import type { LastGameStats, RecentShoutout, PlayerBadge } from '@/hooks/usePlayerHomeData';
 
 type Props = {
@@ -255,7 +256,7 @@ export default function PlayerIdentityHero({
         {/* Mascot: breathing animation, right side */}
         <Animated.View style={[styles.mascotWrap, mascotAnimStyle]}>
           <Image
-            source={require('@/assets/images/lynx-mascot.png')}
+            source={getGreetingMascot()}
             style={styles.mascotImage}
             resizeMode="contain"
           />
