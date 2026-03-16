@@ -290,3 +290,109 @@ INSERT INTO journey_nodes (chapter_id, node_type, title, description, skill_cont
 ((SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 5), 'challenge', 'Rotation quiz blitz', 'Prove your IQ', NULL, '{"type": "timed_quiz", "description": "Answer 10 rotation and position questions in 3 minutes. Must get 8 or more correct.", "target": 10, "pass_threshold": 8, "time_limit_seconds": 180, "mascot_image": "assets/images/activitiesmascot/VISUALIZE.png"}', 40, 7, false, false, 'right', NULL),
 ((SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 5), 'boss', 'Court IQ', 'Command the court', NULL, '{"type": "combined_challenge", "description": "Full rotation walk-through quiz + dig-transition-attack drill. Must complete both. Quiz: 6/8 correct. Drill: 7/10 successful attacks.", "mascot_image": "assets/images/activitiesmascot/EXCITEDACHIEVEMENT.png"}', 60, 8, true, false, 'center', NULL)
 ON CONFLICT (chapter_id, sort_order) DO NOTHING;
+
+-- ─── CHAPTER 6: ADVANCED ARSENAL — SKILL CONTENT ────────────────────────────
+
+INSERT INTO skill_content (category_id, sport, difficulty, title, slug, tip_text, tip_image_url, drill_title, drill_instructions, drill_reps, drill_location, mascot_demo_frames, has_quiz, xp_tip, xp_drill, xp_quiz, sort_order) VALUES
+
+-- 6.1 Float Serve
+(
+  (SELECT id FROM skill_categories WHERE sport = 'volleyball' AND name = 'serving'),
+  'volleyball', 'advanced',
+  'Float serve',
+  'vb-serving-float',
+  'A float serve has zero spin, which makes it move unpredictably in the air, like a knuckleball in baseball. The key: contact the ball with a stiff wrist and STOP your hand at contact. Do not follow through. Hit the center back of the ball with the heel of your hand. A short, sharp pop. The less spin, the more the ball moves. Float serves are harder to pass than power serves because passers cannot predict the path.',
+  'assets/images/activitiesmascot/OVERHANDSERVE.png',
+  'Float serve drill',
+  'Serve 20 balls with a focus on zero spin. Watch the ball after you hit it. If it wobbles and moves, that is a float. If it spins, you followed through too much. Aim for 10 out of 20 with visible float movement. Stand at the back line.',
+  '20 serves, track float count',
+  'court',
+  '["assets/images/activitiesmascot/OVERHANDSERVE.png"]',
+  true, 10, 25, 15, 1
+),
+
+-- 6.2 Jump Serve Intro
+(
+  (SELECT id FROM skill_categories WHERE sport = 'volleyball' AND name = 'serving'),
+  'volleyball', 'advanced',
+  'Jump serve intro',
+  'vb-serving-jump-intro',
+  'The jump serve combines your approach with a serve for maximum power. Toss the ball high (8-10 feet) and slightly in front of you. Use your hitting approach (left-right-left for righties) timed to the toss. Contact the ball at the peak of your jump with an open hand and full arm swing. This is the most powerful serve in volleyball but also the hardest to control. Master the toss first.',
+  'assets/images/activitiesmascot/BEGINNERJUMPSERVE.png',
+  'Jump serve progression',
+  'Step 1: Stand at the back line. Toss and hit without jumping. Get 7/10 in. Step 2: Add a one-step approach. Toss, one step, jump, hit. Get 5/10 in. Step 3: Full approach. Toss, left-right-left, jump, hit. Control first, power second.',
+  'Step 1: 10 reps. Step 2: 10 reps. Step 3: 10 reps.',
+  'court',
+  '["assets/images/activitiesmascot/BEGINNERJUMPSERVE.png", "assets/images/activitiesmascot/ADVANCEJUMPSERVE.png"]',
+  true, 10, 25, 15, 2
+),
+
+-- 6.3 Off-Speed Shots
+(
+  (SELECT id FROM skill_categories WHERE sport = 'volleyball' AND name = 'hitting'),
+  'volleyball', 'advanced',
+  'Off-speed shots',
+  'vb-hitting-offspeed',
+  'The best hitters are not the hardest hitters. They are the ones who keep blockers guessing. Off-speed shots include the tip (push the ball with your fingertips over the block), the roll shot (a slow topspin shot that drops behind the block), and the cut shot (a sharp angle cross-body). Use the same approach as a hard hit so the blockers commit, then change at the last second.',
+  'assets/images/activitiesmascot/HITAPPROACH.png',
+  'Tip and roll drill',
+  'Run your normal approach. Alternate between: (1) a full swing, (2) a tip over the block (fingertips), and (3) a roll shot (slow topspin). A partner or coach calls "swing", "tip", or "roll" right before you jump. You must change your shot mid-air. 5 of each, 15 total.',
+  '15 attacks: 5 full swings, 5 tips, 5 roll shots',
+  'court',
+  '["assets/images/activitiesmascot/HITAPPROACH.png"]',
+  true, 10, 25, 15, 3
+),
+
+-- 6.4 Line vs Cross Shot Selection
+(
+  (SELECT id FROM skill_categories WHERE sport = 'volleyball' AND name = 'hitting'),
+  'volleyball', 'advanced',
+  'Shot selection',
+  'vb-hitting-shot-selection',
+  'Where you hit depends on where the block is. One blocker? Hit around them. Double block with a seam? Hit through the seam. Block taking the line? Go cross. Block taking cross? Go line. Read the block while you are in the air. Your eyes should move from the set to the block to your target in a split second. Do not decide before you jump. Decide in the air.',
+  'assets/images/activitiesmascot/BACKROWATTACK.png',
+  'Block reading drill',
+  'A coach or blocker stands at the net with their arms in different positions: blocking line, blocking cross, split block. You approach and hit to the open area. The blocker does not tell you their position. You must read it mid-air. 20 attacks, track how many you hit to the correct open zone.',
+  '20 attacks with live block reading',
+  'court',
+  '["assets/images/activitiesmascot/BACKROWATTACK.png"]',
+  true, 10, 25, 15, 4
+),
+
+-- 6.5 Back Row Attack
+(
+  (SELECT id FROM skill_categories WHERE sport = 'volleyball' AND name = 'hitting'),
+  'volleyball', 'advanced',
+  'Back row attack',
+  'vb-hitting-back-row',
+  'Back row players CAN attack, but they must jump from behind the 10-foot line (attack line). The approach is the same, but you take off earlier and farther from the net. Back row attacks are valuable because the other team is not expecting them. The setter back-sets to a back row hitter who takes a big approach and crushes the ball from behind the line.',
+  'assets/images/activitiesmascot/BACKROWATTACK.png',
+  'Back row approach drill',
+  'Mark the attack line with tape. Practice your approach starting well behind the line. Your last step must be behind the line. Jump and swing. If you land on or past the line, it does not count. 10 approaches. Then add a setter tossing a high set behind the line. Hit 10 more.',
+  '10 dry approaches + 10 with sets',
+  'court',
+  '["assets/images/activitiesmascot/BACKROWATTACK.png"]',
+  false, 10, 25, 0, 5
+)
+
+ON CONFLICT (sport, slug) DO NOTHING;
+
+-- Chapter 6 Quizzes
+INSERT INTO skill_quizzes (skill_content_id, question_text, options, correct_option_index, explanation, sort_order) VALUES
+((SELECT id FROM skill_content WHERE slug = 'vb-serving-float'), 'What makes a float serve move unpredictably?', '["Heavy topspin", "Zero spin", "Sidespin", "Hitting it hard"]', 1, 'Zero spin causes the ball to move unpredictably in the air, like a knuckleball.', 1),
+((SELECT id FROM skill_content WHERE slug = 'vb-serving-float'), 'What should your wrist do at contact on a float serve?', '["Snap forward", "Stay stiff and stop", "Go limp", "Rotate"]', 1, 'Stiff wrist, stop at contact. No follow-through. That is what creates zero spin.', 2),
+((SELECT id FROM skill_content WHERE slug = 'vb-serving-jump-intro'), 'How high should the toss be for a jump serve?', '["2-3 feet", "5 feet", "8-10 feet", "As high as possible"]', 2, '8-10 feet gives you time to run your approach and meet the ball at the peak of your jump.', 1),
+((SELECT id FROM skill_content WHERE slug = 'vb-hitting-offspeed'), 'Why should you use the same approach for off-speed shots?', '["It is easier", "So blockers commit to a hard hit, then you change", "There is only one approach", "Coaches require it"]', 1, 'Same approach sells the hard hit. Changing your shot at the last second catches the defense off guard.', 1),
+((SELECT id FROM skill_content WHERE slug = 'vb-hitting-shot-selection'), 'When should you decide where to hit?', '["Before your approach", "During your approach", "In the air after reading the block", "After you hit"]', 2, 'Decide in the air. Read the block and hit to the open area. Deciding early makes you predictable.', 1),
+((SELECT id FROM skill_content WHERE slug = 'vb-hitting-shot-selection'), 'If the block is taking the line, where should you hit?', '["Line", "Cross", "Straight down", "Over the block"]', 1, 'Hit cross. Go to the open area that the block is not covering.', 2);
+
+-- Chapter 6 Journey Nodes
+INSERT INTO journey_nodes (chapter_id, node_type, title, description, skill_content_id, challenge_config, xp_reward, sort_order, is_boss, is_bonus, position_offset, icon_emoji) VALUES
+((SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 6), 'skill', 'Float serve', 'The knuckleball', (SELECT id FROM skill_content WHERE slug = 'vb-serving-float'), NULL, 30, 1, false, false, 'right', NULL),
+((SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 6), 'skill', 'Jump serve intro', 'Maximum power', (SELECT id FROM skill_content WHERE slug = 'vb-serving-jump-intro'), NULL, 35, 2, false, false, 'left', NULL),
+((SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 6), 'skill', 'Off-speed shots', 'Keep them guessing', (SELECT id FROM skill_content WHERE slug = 'vb-hitting-offspeed'), NULL, 30, 3, false, false, 'right', NULL),
+((SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 6), 'skill', 'Shot selection', 'Read and react', (SELECT id FROM skill_content WHERE slug = 'vb-hitting-shot-selection'), NULL, 35, 4, false, false, 'left', NULL),
+((SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 6), 'skill', 'Back row attack', 'Attack from anywhere', (SELECT id FROM skill_content WHERE slug = 'vb-hitting-back-row'), NULL, 35, 5, false, false, 'center', NULL),
+((SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 6), 'challenge', 'Serve variety test', 'Float, jump, or place', NULL, '{"type": "variety_challenge", "description": "Serve 15 balls: 5 float, 5 overhand placed, 5 jump attempts. Must get 10 total in.", "target": 15, "pass_threshold": 10, "mascot_image": "assets/images/activitiesmascot/ADVANCEJUMPSERVE.png"}', 40, 6, false, false, 'right', NULL),
+((SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 6), 'boss', 'Elite player', 'Arsenal unleashed', NULL, '{"type": "combined_challenge", "description": "Advanced serve + hit under timer. 5 float serves in, then 5 attacks with shot selection (read the block). 3 minute time limit.", "target": 10, "time_limit_seconds": 180, "mascot_image": "assets/images/activitiesmascot/EXCITEDACHIEVEMENT.png"}', 60, 7, true, false, 'center', NULL)
+ON CONFLICT (chapter_id, sort_order) DO NOTHING;
