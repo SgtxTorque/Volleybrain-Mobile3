@@ -6,7 +6,7 @@
  *   1. PlayerIdentityHero (greeting, identity, streak pill, level/XP, mascot)
  *   2. CompetitiveNudge ("3 more aces to take #7" — dynamic action bar)
  *   3. PlayerQuickLinks (My Card, Teammates, My Stats pills)
- *   4. PlayerDailyQuests (3 quests with XP rewards)
+ *   4. PlayerQuestEntryCard (compact quest summary — navigates to QuestsScreen)
  *   5. PlayerChallengeCard (active challenge with progress — conditional)
  *   6. PlayerLeaderboardPreview (team rankings)
  *   7. PlayerPropsSection — Shoutouts / Props from the Team
@@ -47,6 +47,9 @@ import { useAuth } from '@/lib/auth';
 import { useParentScroll } from '@/lib/parent-scroll-context';
 import { useScrollAnimations } from '@/hooks/useScrollAnimations';
 import { usePlayerHomeData } from '@/hooks/usePlayerHomeData';
+import { useQuestEngine } from '@/hooks/useQuestEngine';
+import { useWeeklyQuestEngine } from '@/hooks/useWeeklyQuestEngine';
+import { useTeamQuests } from '@/hooks/useTeamQuests';
 
 import { useResponsive } from '@/lib/responsive';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -56,9 +59,7 @@ import NoOrgState from './empty-states/NoOrgState';
 import NoTeamState from './empty-states/NoTeamState';
 import PlayerIdentityHero from './player-scroll/PlayerIdentityHero';
 import CompetitiveNudge from './player-scroll/CompetitiveNudge';
-import PlayerDailyQuests from './player-scroll/PlayerDailyQuests';
-import PlayerWeeklyQuests from './player-scroll/PlayerWeeklyQuests';
-import PlayerTeamQuests from './player-scroll/PlayerTeamQuests';
+import PlayerQuestEntryCard from './player-scroll/PlayerQuestEntryCard';
 import PlayerChallengeCard from './player-scroll/PlayerChallengeCard';
 import PlayerQuickLinks from './player-scroll/PlayerQuickLinks';
 import PlayerLeaderboardPreview from './player-scroll/PlayerLeaderboardPreview';
@@ -112,6 +113,18 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
   });
   const data = usePlayerHomeData(playerId);
   const streakCount = data.engagementStreak?.currentStreak ?? data.attendanceStreak ?? 0;
+
+  // Quest hooks — kept active for quest generation on app open, summary data passed to entry card
+  const questEngine = useQuestEngine();
+  const weeklyEngine = useWeeklyQuestEngine();
+  const teamQuestHook = useTeamQuests(data.primaryTeam?.id ?? null);
+  const questXpToday = useMemo(() => {
+    const dailyXp = questEngine.quests
+      .filter(q => q.is_completed)
+      .reduce((sum, q) => sum + q.xp_reward, 0);
+    const bonusXp = questEngine.bonusEarned ? 25 : 0;
+    return dailyXp + bonusXp;
+  }, [questEngine.quests, questEngine.bonusEarned]);
   const { isTabletAny, contentMaxWidth, contentPadding } = useResponsive();
   const { unreadCount } = useNotifications();
 
@@ -399,21 +412,16 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           teamId={data.primaryTeam?.id}
         />
 
-        {/* ─── 4. DAILY QUESTS ─────────────────────────────────── */}
-        <PlayerDailyQuests
-          nextEvent={data.nextEvent}
-          rsvpStatus={data.rsvpStatus}
-          challengesAvailable={data.challengesAvailable}
-          recentShoutouts={data.recentShoutouts}
-          badges={data.badges}
-          onOpenShoutout={() => setShowShoutoutModal(true)}
+        {/* ─── 4. QUEST ENTRY CARD (replaces Daily + Weekly + Team) ── */}
+        <PlayerQuestEntryCard
+          dailyComplete={questEngine.quests.filter(q => q.is_completed).length}
+          dailyTotal={questEngine.quests.length}
+          weeklyComplete={weeklyEngine.quests.filter(q => q.is_completed).length}
+          weeklyTotal={weeklyEngine.quests.length}
+          teamComplete={teamQuestHook.quests.filter(q => q.is_completed).length}
+          teamTotal={teamQuestHook.quests.length}
+          xpEarnedToday={questXpToday}
         />
-
-        {/* ─── 4b. WEEKLY QUESTS ──────────────────────────────── */}
-        <PlayerWeeklyQuests />
-
-        {/* ─── 4c. TEAM QUESTS ──────────────────────────────────── */}
-        <PlayerTeamQuests teamId={data.primaryTeam?.id} />
 
         {/* ─── 5. ACTIVE CHALLENGE (conditional) ────────────────── */}
         <PlayerChallengeCard
