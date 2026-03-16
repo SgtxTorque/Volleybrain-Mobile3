@@ -6,7 +6,7 @@
  * Visual pattern matches PlayerWeeklyQuests exactly.
  */
 import React, { useEffect, useState, useCallback } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -20,7 +20,18 @@ import { PLAYER_THEME } from '@/theme/player-theme';
 import { D_COLORS, D_RADII } from '@/theme/d-system';
 import { useTeamQuests } from '@/hooks/useTeamQuests';
 import { useAuth } from '@/lib/auth';
+import { MASCOT } from '@/lib/mascot-images';
 import { getTeamQuestContributions, type TeamQuest, type TeamQuestContribution } from '@/lib/team-quest-engine';
+
+function getTeamQuestMascot(questType: string) {
+  switch (questType) {
+    case 'team_attendance': return MASCOT.TEAM_HUDDLE;
+    case 'team_shoutouts': return MASCOT.ENCOURAGING_TEAMMATE;
+    case 'team_practice_streak': return MASCOT.SPORTSMANSHIP;
+    case 'team_quests_completed': return MASCOT.TEAM_ACHIEVEMENT;
+    default: return MASCOT.TEAM_HUDDLE;
+  }
+}
 
 type Props = {
   teamId?: string | null;
@@ -108,6 +119,13 @@ function TeamQuestCard({
           <Text style={styles.checkmark}>{'\u2713'}</Text>
         ) : null}
       </View>
+
+      {/* Team quest mascot */}
+      <Image
+        source={getTeamQuestMascot(quest.quest_type)}
+        style={styles.questMascot}
+        resizeMode="contain"
+      />
 
       {/* Quest text + progress */}
       <View style={styles.questContent}>
@@ -254,6 +272,11 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bodyBold,
     fontSize: 12,
     color: PLAYER_THEME.bg,
+  },
+  questMascot: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
   },
   questContent: {
     flex: 1,
