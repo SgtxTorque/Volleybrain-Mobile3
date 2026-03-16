@@ -396,3 +396,89 @@ INSERT INTO journey_nodes (chapter_id, node_type, title, description, skill_cont
 ((SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 6), 'challenge', 'Serve variety test', 'Float, jump, or place', NULL, '{"type": "variety_challenge", "description": "Serve 15 balls: 5 float, 5 overhand placed, 5 jump attempts. Must get 10 total in.", "target": 15, "pass_threshold": 10, "mascot_image": "assets/images/activitiesmascot/ADVANCEJUMPSERVE.png"}', 40, 6, false, false, 'right', NULL),
 ((SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 6), 'boss', 'Elite player', 'Arsenal unleashed', NULL, '{"type": "combined_challenge", "description": "Advanced serve + hit under timer. 5 float serves in, then 5 attacks with shot selection (read the block). 3 minute time limit.", "target": 10, "time_limit_seconds": 180, "mascot_image": "assets/images/activitiesmascot/EXCITEDACHIEVEMENT.png"}', 60, 7, true, false, 'center', NULL)
 ON CONFLICT (chapter_id, sort_order) DO NOTHING;
+
+-- ─── CHAPTER 7: TEAM SYNERGY — SKILL CONTENT ────────────────────────────────
+
+INSERT INTO skill_content (category_id, sport, difficulty, title, slug, tip_text, tip_image_url, drill_title, drill_instructions, drill_reps, drill_location, mascot_demo_frames, has_quiz, xp_tip, xp_drill, xp_quiz, sort_order) VALUES
+
+-- 7.1 Communication Systems
+(
+  (SELECT id FROM skill_categories WHERE sport = 'volleyball' AND name = 'court_iq'),
+  'volleyball', 'advanced',
+  'Communication systems',
+  'vb-team-communication',
+  'Great teams talk constantly. Before the serve: the setter calls the play. During the rally: players call "mine", "out", "free", "tip", "line", "cross." After the play: positive reinforcement. Every ball needs a voice on it. The best communicator is not always the best player, but they make everyone around them better. Be that person.',
+  'assets/images/activitiesmascot/CALLBALL.png',
+  'Talk drill',
+  'Play a 6v6 rally game with one rule: if a ball drops and nobody called it, the offending team loses 2 points (normal loss is 1 point). This forces every player to call every ball. Play 3 sets to 15. Track how many "silence drops" each team has.',
+  '3 sets to 15 with silence penalty',
+  'court',
+  '["assets/images/activitiesmascot/CALLBALL.png", "assets/images/activitiesmascot/TEAMHUDDLE.png"]',
+  true, 10, 25, 15, 1
+),
+
+-- 7.2 Setter-Hitter Connection
+(
+  (SELECT id FROM skill_categories WHERE sport = 'volleyball' AND name = 'setting'),
+  'volleyball', 'advanced',
+  'Setter-hitter connection',
+  'vb-team-setter-hitter',
+  'The setter-hitter connection is volleyball''s most important relationship. Great setters learn what each hitter likes: high or low sets, inside or outside, fast or slow tempo. And great hitters adjust their approach to the setter''s tendencies. This connection is built in practice through thousands of reps. Talk to your setter. Tell them what works. Ask what they see.',
+  'assets/images/activitiesmascot/ENCOURAGINGTEAMMATE.png',
+  'Setter-hitter reps',
+  'Setter and hitter pair up. Hitter takes 20 approaches. After each one, the hitter gives the setter feedback: "a little higher", "more inside", "perfect." After 20, switch roles so the setter understands what it feels like. Then do 20 more with the feedback applied. Track kills vs errors.',
+  '20 reps with feedback, then 20 adjusted reps',
+  'court',
+  '["assets/images/activitiesmascot/ENCOURAGINGTEAMMATE.png"]',
+  true, 10, 25, 15, 2
+),
+
+-- 7.3 Defensive Schemes
+(
+  (SELECT id FROM skill_categories WHERE sport = 'volleyball' AND name = 'defense'),
+  'volleyball', 'advanced',
+  'Defensive schemes',
+  'vb-team-defensive-schemes',
+  'Teams use defensive schemes to position players based on where the attack is coming from. The two most common: perimeter defense (back row players stay near the sidelines and endline) and rotation defense (back row players rotate toward the angle of attack). Your coach picks the scheme, but you need to understand WHY you are standing where you are. It is not random. Every position covers a specific zone.',
+  'assets/images/activitiesmascot/defenseready.png',
+  'Scheme walk-through',
+  'Coach sets up an attack from different positions (outside, middle, right side). The defense shifts into position for each scenario. Walk through it slowly first, then at game speed. Each player must be able to explain what zone they are covering and why.',
+  'Walk-through from 3 attack positions, then game speed',
+  'court',
+  '["assets/images/activitiesmascot/defenseready.png"]',
+  true, 10, 25, 15, 3
+),
+
+-- 7.4 Team Serve Receive Adjustments
+(
+  (SELECT id FROM skill_categories WHERE sport = 'volleyball' AND name = 'court_iq'),
+  'volleyball', 'advanced',
+  'Serve receive adjustments',
+  'vb-team-sr-adjustments',
+  'Smart teams adjust their serve receive formation based on the opponent''s server. Tough server? Tighten the formation and give your best passer more court. Weak server? Spread out and be aggressive. Short serve coming? Move a player to the 10-foot line. You should also track where each server likes to serve and shade your formation that direction. Preparation beats reaction.',
+  'assets/images/activitiesmascot/watchingfilm.png',
+  'Scouting report drill',
+  'Before your next match, chart the opponent''s serves during warmups. Where does each server aim? Are they short or deep? Use that data to adjust your serve receive. During the game, track whether your adjustments worked. This is real game IQ.',
+  'Chart opponent serves during warmups, adjust formation',
+  'court',
+  '["assets/images/activitiesmascot/watchingfilm.png"]',
+  false, 10, 25, 0, 4
+)
+
+ON CONFLICT (sport, slug) DO NOTHING;
+
+-- Chapter 7 Quizzes
+INSERT INTO skill_quizzes (skill_content_id, question_text, options, correct_option_index, explanation, sort_order) VALUES
+((SELECT id FROM skill_content WHERE slug = 'vb-team-communication'), 'What should happen if a ball drops and nobody called it?', '["Nothing, it happens", "It is always the closest player''s fault", "The team needs to communicate better — every ball needs a voice", "The setter should have called it"]', 2, 'Every ball needs a voice. If nobody calls it, the whole team failed to communicate, not just one player.', 1),
+((SELECT id FROM skill_content WHERE slug = 'vb-team-setter-hitter'), 'How is the setter-hitter connection built?', '["Natural talent", "Thousands of practice reps with feedback", "Watching videos", "Just playing games"]', 1, 'Reps and communication. Tell your setter what works and ask what they see. The connection is built in practice.', 1),
+((SELECT id FROM skill_content WHERE slug = 'vb-team-defensive-schemes'), 'What determines where you stand in a defensive scheme?', '["Random assignment", "Where the attack is coming from", "Your coach''s preference only", "Wherever you want"]', 1, 'Defensive positioning is based on the angle of attack. Every position covers a specific zone based on where the ball is coming from.', 1);
+
+-- Chapter 7 Journey Nodes
+INSERT INTO journey_nodes (chapter_id, node_type, title, description, skill_content_id, challenge_config, xp_reward, sort_order, is_boss, is_bonus, position_offset, icon_emoji) VALUES
+((SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 7), 'skill', 'Communication', 'Every ball needs a voice', (SELECT id FROM skill_content WHERE slug = 'vb-team-communication'), NULL, 30, 1, false, false, 'left', NULL),
+((SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 7), 'skill', 'Setter-hitter connection', 'Build the bond', (SELECT id FROM skill_content WHERE slug = 'vb-team-setter-hitter'), NULL, 35, 2, false, false, 'right', NULL),
+((SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 7), 'skill', 'Defensive schemes', 'Know your zone', (SELECT id FROM skill_content WHERE slug = 'vb-team-defensive-schemes'), NULL, 35, 3, false, false, 'left', NULL),
+((SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 7), 'skill', 'SR adjustments', 'Scout and adapt', (SELECT id FROM skill_content WHERE slug = 'vb-team-sr-adjustments'), NULL, 35, 4, false, false, 'right', NULL),
+((SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 7), 'challenge', 'Team drill day', 'Complete 3 team drills', NULL, '{"type": "team_activity", "description": "Complete 3 team-based drills in one practice: talk drill, setter-hitter reps, and coverage drill. Self-report after practice.", "target": 3, "mascot_image": "assets/images/activitiesmascot/TEAMHUDDLE.png"}', 40, 5, false, false, 'center', NULL),
+((SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 7), 'boss', 'Team spirit', 'United we win', NULL, '{"type": "team_challenge", "description": "Complete 3 team quests in one week. Coordinate with teammates to accomplish shared goals.", "target": 3, "time_limit_days": 7, "mascot_image": "assets/images/activitiesmascot/TEAMACHIEVEMENT.png"}', 75, 6, true, false, 'center', NULL)
+ON CONFLICT (chapter_id, sort_order) DO NOTHING;
