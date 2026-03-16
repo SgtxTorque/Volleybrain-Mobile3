@@ -16,6 +16,7 @@ const roleOptions: RoleOption[] = [
   { key: 'league_admin', label: 'Admin', shortLabel: 'Admin', icon: 'shield', color: '#2C5F7C' },
   { key: 'head_coach', label: 'Head Coach', shortLabel: 'Coach', icon: 'clipboard', color: '#14B8A6' },
   { key: 'assistant_coach', label: 'Asst Coach', shortLabel: 'Asst', icon: 'people', color: '#0EA5E9' },
+  { key: 'team_manager', label: 'Team Mgr', shortLabel: 'Mgr', icon: 'build-outline', color: '#E76F51' },
   { key: 'parent', label: 'Parent', shortLabel: 'Parent', icon: 'heart', color: '#E8913A' },
   { key: 'player', label: 'Player', shortLabel: 'Player', icon: 'basketball', color: '#AF52DE' },
 ];
@@ -37,7 +38,7 @@ export default function RoleSelector() {
     if (devViewAs) {
       return roleOptions.find(r => r.key === devViewAs) || availableRoles[0];
     }
-    const priorityOrder = ['league_admin', 'head_coach', 'assistant_coach', 'parent', 'player'];
+    const priorityOrder = ['league_admin', 'head_coach', 'assistant_coach', 'team_manager', 'parent', 'player'];
     for (const role of priorityOrder) {
       if (actualRoles.includes(role as any)) {
         return roleOptions.find(r => r.key === role) || availableRoles[0];

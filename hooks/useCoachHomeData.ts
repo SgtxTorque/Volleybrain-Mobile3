@@ -19,7 +19,7 @@ function localToday(): string {
 export type CoachTeam = {
   id: string;
   name: string;
-  role: 'head_coach' | 'assistant_coach';
+  role: 'head_coach' | 'assistant_coach' | 'team_manager';
   player_count: number;
   wins: number;
   losses: number;
@@ -178,7 +178,7 @@ export function useCoachHomeData() {
         return {
           id: team.id,
           name: team.name,
-          role: (t.staff_role || 'assistant_coach') as 'head_coach' | 'assistant_coach',
+          role: (t.staff_role || 'assistant_coach') as 'head_coach' | 'assistant_coach' | 'team_manager',
           player_count: playerCountMap.get(team.id) || 0,
           wins: winsMap.get(team.id) || 0,
           losses: lossesMap.get(team.id) || 0,
