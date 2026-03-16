@@ -482,3 +482,126 @@ INSERT INTO journey_nodes (chapter_id, node_type, title, description, skill_cont
 ((SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 7), 'challenge', 'Team drill day', 'Complete 3 team drills', NULL, '{"type": "team_activity", "description": "Complete 3 team-based drills in one practice: talk drill, setter-hitter reps, and coverage drill. Self-report after practice.", "target": 3, "mascot_image": "assets/images/activitiesmascot/TEAMHUDDLE.png"}', 40, 5, false, false, 'center', NULL),
 ((SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 7), 'boss', 'Team spirit', 'United we win', NULL, '{"type": "team_challenge", "description": "Complete 3 team quests in one week. Coordinate with teammates to accomplish shared goals.", "target": 3, "time_limit_days": 7, "mascot_image": "assets/images/activitiesmascot/TEAMACHIEVEMENT.png"}', 75, 6, true, false, 'center', NULL)
 ON CONFLICT (chapter_id, sort_order) DO NOTHING;
+
+-- ─── CHAPTER 8: CHAMPIONSHIP ROAD — SKILL CONTENT ───────────────────────────
+
+INSERT INTO skill_content (category_id, sport, difficulty, title, slug, tip_text, tip_image_url, drill_title, drill_instructions, drill_reps, drill_location, mascot_demo_frames, has_quiz, xp_tip, xp_drill, xp_quiz, sort_order) VALUES
+
+-- 8.1 Game Day Preparation
+(
+  (SELECT id FROM skill_categories WHERE sport = 'volleyball' AND name = 'court_iq'),
+  'volleyball', 'advanced',
+  'Game day preparation',
+  'vb-champ-game-prep',
+  'Champions prepare before the first whistle. Game day prep includes: physical warmup (dynamic stretching, light hitting), mental warmup (visualize your best plays), scouting (what did you learn about the opponent?), and team energy (huddle, music, hype each other up). Have a routine. Do the same thing before every game so your body knows it is time to compete. Routines reduce nerves.',
+  'assets/images/activitiesmascot/LYNXREADY.png',
+  'Build your game day routine',
+  'Write down your personal game day routine from waking up to the first serve. Include: what you eat, what music you listen to, your warmup sequence, your visualization (picture yourself making 3 great plays). Follow this routine before your next 3 games. Adjust what does not work.',
+  'Create and follow routine for 3 games',
+  'home',
+  '["assets/images/activitiesmascot/LYNXREADY.png", "assets/images/activitiesmascot/AREYOUREADY.png"]',
+  true, 10, 25, 15, 1
+),
+
+-- 8.2 Situational Serving
+(
+  (SELECT id FROM skill_categories WHERE sport = 'volleyball' AND name = 'serving'),
+  'volleyball', 'advanced',
+  'Situational serving',
+  'vb-champ-situational-serve',
+  'Smart servers change their serve based on the situation. Score is close? Go for a safe, placed serve to a weak passer. Up by 5? Take a risk with a jump serve. Their best hitter is in the front row? Serve to their side to force a bad pass and take away the quick set. Game point? Serve to the player who looks most nervous. Serving is not just getting the ball over. It is the first attack.',
+  'assets/images/activitiesmascot/ADVANCEJUMPSERVE.png',
+  'Situation serve game',
+  'A coach calls a game situation before each serve: "Up by 3, their best passer is in zone 5", "Game point, tie score", "Down by 2, need a safe serve." The server must choose their serve type and target based on the situation. 15 serves. After each, explain your decision. Coach rates each choice.',
+  '15 situational serves with decision explanations',
+  'court',
+  '["assets/images/activitiesmascot/ADVANCEJUMPSERVE.png"]',
+  true, 10, 25, 15, 2
+),
+
+-- 8.3 Clutch Hitting
+(
+  (SELECT id FROM skill_categories WHERE sport = 'volleyball' AND name = 'hitting'),
+  'volleyball', 'advanced',
+  'Clutch hitting',
+  'vb-champ-clutch-hitting',
+  'The best hitters want the ball when the game is on the line. Clutch hitting is not about hitting harder. It is about making the smart shot when everyone is watching. Tip when they expect a swing. Go line when they expect cross. Take a deep breath, trust your approach, and do what you have done in practice a thousand times. Pressure is a privilege. It means you are in a moment that matters.',
+  'assets/images/activitiesmascot/HITAPPROACH.png',
+  'Pressure hitting drill',
+  'Play a hitting game: first to 5 kills wins. But you start at 4-4 every time. Every swing is a "game point." Rotate through all hitters. Track who performs best under this simulated pressure. After 5 rounds, talk about what you did differently when it was 4-4.',
+  '5 rounds of 4-4 pressure hitting',
+  'court',
+  '["assets/images/activitiesmascot/HITAPPROACH.png"]',
+  true, 10, 25, 15, 3
+),
+
+-- 8.4 Reading the Opponent
+(
+  (SELECT id FROM skill_categories WHERE sport = 'volleyball' AND name = 'court_iq'),
+  'volleyball', 'advanced',
+  'Reading the opponent',
+  'vb-champ-reading-opponent',
+  'Great players watch the other team between plays. Where does their setter like to set when they are losing? Which hitter gets the ball in crunch time? Does their libero cheat toward one side? Do they have a weak passer you can target? This is volleyball intelligence. It is not about being the most athletic. It is about seeing things others miss and using that information to win.',
+  'assets/images/activitiesmascot/watchingfilm.png',
+  'Opponent scouting challenge',
+  'Watch a full set of a volleyball match (live or video). Track: (1) who gets set the most, (2) which hitter has the highest error rate, (3) where the setter goes under pressure, (4) which passer struggles the most. Write a one-paragraph scouting report. Share with your team.',
+  'Watch one full set, write scouting report',
+  'home',
+  '["assets/images/activitiesmascot/watchingfilm.png"]',
+  false, 10, 25, 0, 4
+),
+
+-- 8.5 Leadership on the Court
+(
+  (SELECT id FROM skill_categories WHERE sport = 'volleyball' AND name = 'court_iq'),
+  'volleyball', 'advanced',
+  'Leadership on the court',
+  'vb-champ-leadership',
+  'Leadership is not about being the loudest or the best. It is about making the players around you better. Encourage a teammate after an error. Call the play before the serve. Clap after a great dig even if you were not involved. Stay positive when you are losing. The team takes on the energy of its leaders. If you are calm and confident, your team will be calm and confident.',
+  'assets/images/activitiesmascot/ENCOURAGINGTEAMMATE.png',
+  'Leadership challenge',
+  'For your next 3 practices, set a personal goal: give 10 positive verbal comments to teammates (not just "nice" — specific: "great dig", "smart serve", "good call"). Track your count. Notice how your teammates respond. Leadership is a skill, and it can be practiced just like serving.',
+  '10 specific positive comments per practice, 3 practices',
+  'home',
+  '["assets/images/activitiesmascot/ENCOURAGINGTEAMMATE.png", "assets/images/activitiesmascot/SPORTSMANSHIP.png"]',
+  true, 10, 25, 15, 5
+),
+
+-- 8.6 Mental Toughness
+(
+  (SELECT id FROM skill_categories WHERE sport = 'volleyball' AND name = 'court_iq'),
+  'volleyball', 'advanced',
+  'Mental toughness',
+  'vb-champ-mental-toughness',
+  'Every player makes errors. The difference between good and great is what happens AFTER the error. Great players have a reset routine: take a breath, shake it off, focus on the next play. They do not replay the mistake in their head during the game. They do not get angry at themselves in front of the team. The ball does not know what happened last point. Each rally is a clean slate. Train your mind like you train your body.',
+  'assets/images/activitiesmascot/VISUALIZE.png',
+  'Reset routine practice',
+  'Create a personal reset routine (example: take one deep breath, clap your hands, say "next play" out loud). Practice it after EVERY error in your next practice, even in drills. The goal is to make the reset automatic so you do not have to think about it in a game. Track: how many errors did you reset from immediately?',
+  'Use reset routine after every error in 3 practices',
+  'home',
+  '["assets/images/activitiesmascot/VISUALIZE.png"]',
+  true, 10, 25, 15, 6
+)
+
+ON CONFLICT (sport, slug) DO NOTHING;
+
+-- Chapter 8 Quizzes
+INSERT INTO skill_quizzes (skill_content_id, question_text, options, correct_option_index, explanation, sort_order) VALUES
+((SELECT id FROM skill_content WHERE slug = 'vb-champ-game-prep'), 'Why should you have a game day routine?', '["Coaches require it", "It looks professional", "Routines reduce nerves and signal your body it is time to compete", "It wastes time"]', 2, 'Routines reduce anxiety by making the pre-game process automatic. Your body knows what comes next.', 1),
+((SELECT id FROM skill_content WHERE slug = 'vb-champ-situational-serve'), 'When the score is tied at game point, what kind of serve should you choose?', '["Hardest serve possible", "A smart, placed serve to a weak passer", "Underhand serve", "Close your eyes and hope"]', 1, 'Game point tie: serve smart. Target a weak passer with a placed serve. Errors hurt more than aces help.', 1),
+((SELECT id FROM skill_content WHERE slug = 'vb-champ-situational-serve'), 'Who should you serve to when the opponent''s best hitter is in the front row?', '["Their best hitter", "Their best passer", "The player on their best hitter''s side to disrupt the set", "Random"]', 2, 'Serve to the passer on their best hitter''s side. A bad pass makes it hard for the setter to get the ball to that hitter.', 2),
+((SELECT id FROM skill_content WHERE slug = 'vb-champ-clutch-hitting'), 'What is clutch hitting more about?', '["Hitting as hard as possible", "Making the smart shot under pressure", "Always going for the kill", "Showing off"]', 1, 'Clutch hitting is about making the right shot, not the hardest shot. Smart beats strong when the game is on the line.', 1),
+((SELECT id FROM skill_content WHERE slug = 'vb-champ-leadership'), 'What makes a great volleyball leader?', '["Being the best player", "Being the loudest", "Making the players around you better", "Being team captain"]', 2, 'Leadership is about making others better through encouragement, communication, and positive energy. It is a skill you can practice.', 1),
+((SELECT id FROM skill_content WHERE slug = 'vb-champ-mental-toughness'), 'What should you do immediately after making an error?', '["Get angry and try harder", "Apologize to your team", "Execute your reset routine and focus on the next play", "Think about what went wrong"]', 2, 'Reset immediately. Breath, clap, "next play." Do not replay the error during the game. Each rally is a clean slate.', 1);
+
+-- Chapter 8 Journey Nodes
+INSERT INTO journey_nodes (chapter_id, node_type, title, description, skill_content_id, challenge_config, xp_reward, sort_order, is_boss, is_bonus, position_offset, icon_emoji) VALUES
+((SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 8), 'skill', 'Game day prep', 'Build your routine', (SELECT id FROM skill_content WHERE slug = 'vb-champ-game-prep'), NULL, 30, 1, false, false, 'right', NULL),
+((SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 8), 'skill', 'Situational serving', 'Serve with purpose', (SELECT id FROM skill_content WHERE slug = 'vb-champ-situational-serve'), NULL, 35, 2, false, false, 'left', NULL),
+((SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 8), 'skill', 'Clutch hitting', 'Pressure is a privilege', (SELECT id FROM skill_content WHERE slug = 'vb-champ-clutch-hitting'), NULL, 35, 3, false, false, 'right', NULL),
+((SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 8), 'skill', 'Reading opponents', 'See what others miss', (SELECT id FROM skill_content WHERE slug = 'vb-champ-reading-opponent'), NULL, 35, 4, false, false, 'left', NULL),
+((SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 8), 'skill', 'Leadership', 'Make everyone better', (SELECT id FROM skill_content WHERE slug = 'vb-champ-leadership'), NULL, 35, 5, false, false, 'right', NULL),
+((SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 8), 'skill', 'Mental toughness', 'Next play mentality', (SELECT id FROM skill_content WHERE slug = 'vb-champ-mental-toughness'), NULL, 35, 6, false, false, 'left', NULL),
+((SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 8), 'challenge', 'Full game simulation', 'Play a real set', NULL, '{"type": "game_simulation", "description": "Play a full competitive set (to 25). Track your personal stats: kills, errors, digs, aces, assists. Self-report your performance.", "target": 1, "mascot_image": "assets/images/activitiesmascot/AREYOUREADY.png"}', 50, 7, false, false, 'center', NULL),
+((SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 8), 'boss', 'Champion', 'The journey complete', NULL, '{"type": "championship_challenge", "description": "Complete the championship series: 1 scouting report, 1 full game with stat tracking, and leadership challenge (30 positive comments across 3 practices). The ultimate test of a complete player.", "mascot_image": "assets/images/activitiesmascot/100DAYSTREAKLEGENDARY.png"}', 100, 8, true, false, 'center', NULL)
+ON CONFLICT (chapter_id, sort_order) DO NOTHING;
