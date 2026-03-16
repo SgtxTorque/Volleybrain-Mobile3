@@ -5,6 +5,7 @@ import { useAuth } from '@/lib/auth';
 import { radii } from '@/lib/design-tokens';
 import { usePermissions } from '@/lib/permissions-context';
 import { supabase } from '@/lib/supabase';
+import { FAMILY_IMAGES } from '@/constants/mascot-images';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
@@ -224,7 +225,7 @@ export default function TeamGalleryScreen() {
     if (loading) return null;
     return (
       <View style={s.emptyContainer}>
-        <Image source={require('@/assets/images/mascot/SleepLynx.png')} style={{ width: 120, height: 120, marginBottom: 16 }} resizeMode="contain" />
+        <Image source={FAMILY_IMAGES.LITTLE_BROTHER} style={{ width: 160, height: 160, marginBottom: 16 }} resizeMode="contain" accessibilityLabel="No photos yet" />
         <Text style={s.emptyTitle}>No photos yet</Text>
         <Text style={s.emptySubtitle}>
           Post to the team wall to start building your gallery!

@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { FAMILY_IMAGES } from '@/constants/mascot-images';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
 import { BRAND } from '@/theme/colors';
@@ -75,9 +76,10 @@ export default function NoOrgState() {
     <SafeAreaView style={s.safe} edges={['top']}>
       <ScrollView contentContainerStyle={s.content}>
         <Image
-          source={require('@/assets/images/mascot/HiLynx.png')}
+          source={FAMILY_IMAGES.MEET_LYNX}
           style={s.mascot}
           resizeMode="contain"
+          accessibilityLabel="Lynx mascot greeting"
         />
 
         <Text style={s.title}>You're not connected to an organization yet</Text>
@@ -151,7 +153,7 @@ const s = StyleSheet.create({
     padding: 32, gap: 16,
   },
   mascot: {
-    width: 120, height: 120, alignSelf: 'center',
+    width: 160, height: 160, alignSelf: 'center',
     marginBottom: 8,
   },
   title: {

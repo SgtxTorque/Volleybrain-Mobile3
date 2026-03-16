@@ -1,5 +1,6 @@
 import React from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
+import { FAMILY_IMAGES } from '@/constants/mascot-images';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 
@@ -31,9 +32,10 @@ export default function NoTeamState({ role }: Props) {
   return (
     <View style={s.container}>
       <Image
-        source={require('@/assets/images/mascot/SleepLynx.png')}
+        source={FAMILY_IMAGES.MEET_LYNX}
         style={s.mascot}
         resizeMode="contain"
+        accessibilityLabel="Lynx mascot waving"
       />
 
       <Text style={s.title}>No Team Yet</Text>
@@ -48,7 +50,7 @@ const s = StyleSheet.create({
     padding: 32, backgroundColor: BRAND.offWhite,
   },
   mascot: {
-    width: 120, height: 120, alignSelf: 'center',
+    width: 160, height: 160, alignSelf: 'center',
     marginBottom: 24,
   },
   title: {

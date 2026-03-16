@@ -3,6 +3,7 @@ import { radii, shadows, spacing } from '@/lib/design-tokens';
 import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
+import { FAMILY_IMAGES } from '@/constants/mascot-images';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 import AppHeaderBar from '@/components/ui/AppHeaderBar';
@@ -699,7 +700,7 @@ export default function ChatsScreen() {
   // =========================================================================
   const EmptyState = () => (
     <View style={s.emptyState}>
-      <Image source={require('@/assets/images/mascot/SleepLynx.png')} style={{ width: 120, height: 120, marginBottom: 16 }} resizeMode="contain" />
+      <Image source={FAMILY_IMAGES.MEET_LYNX} style={{ width: 160, height: 160, marginBottom: 16 }} resizeMode="contain" accessibilityLabel="No conversations" />
       <Text style={s.emptyTitle}>No conversations yet</Text>
       <Text style={s.emptySubtitle}>
         {canManageChannels

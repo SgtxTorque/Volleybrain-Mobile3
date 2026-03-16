@@ -2,12 +2,14 @@
 // LevelUpCelebrationModal — Full-screen level-up celebration
 // =============================================================================
 
+import { ACHIEVEMENT_IMAGES } from '@/constants/mascot-images';
 import { getLevelTier } from '@/lib/engagement-constants';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Dimensions,
+  Image,
   Modal,
   Platform,
   StyleSheet,
@@ -164,11 +166,22 @@ export default function LevelUpCelebrationModal({ visible, newLevel, totalXp, on
 
           {/* Content */}
           <View style={styles.content}>
+            {/* Hero mascot with golden glow */}
+            <View style={styles.heroWrap}>
+              <Animated.View style={[styles.goldenGlow, { opacity: glowPulse }]} />
+              <Image
+                source={ACHIEVEMENT_IMAGES.POWER_UP}
+                style={styles.heroMascot}
+                resizeMode="contain"
+                accessibilityLabel="Power up level celebration"
+              />
+            </View>
+
             {/* LEVEL UP header */}
             <Animated.Text
               style={[
                 styles.levelUpText,
-                { color: tier.color, opacity: textOpacity },
+                { color: '#FFD700', opacity: textOpacity },
               ]}
             >
               LEVEL UP!
@@ -233,7 +246,7 @@ export default function LevelUpCelebrationModal({ visible, newLevel, totalXp, on
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.9)',
+    backgroundColor: '#10284C',
   },
   container: {
     flex: 1,
@@ -244,8 +257,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 32,
   },
+  heroWrap: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  goldenGlow: {
+    position: 'absolute',
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: '#FFD700',
+  },
+  heroMascot: {
+    width: 280,
+    height: 280,
+  },
   levelUpText: {
-    fontSize: 18,
+    fontSize: 36,
     fontWeight: '900',
     letterSpacing: 6,
     textTransform: 'uppercase',
