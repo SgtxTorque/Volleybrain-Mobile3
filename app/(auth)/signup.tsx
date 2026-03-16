@@ -22,7 +22,7 @@ import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 
 const { width: SCREEN_W } = Dimensions.get('window');
-type SelectedRole = 'coach' | 'parent' | 'player' | null;
+type SelectedRole = 'coach' | 'parent' | 'player' | 'team_manager' | null;
 
 // ─── Password strength helper ──────────────────────────
 function getPasswordStrength(pw: string): { level: 'weak' | 'medium' | 'strong'; color: string; width: string } {
@@ -39,6 +39,7 @@ function getPasswordStrength(pw: string): { level: 'weak' | 'medium' | 'strong';
 // ─── Role card config ──────────────────────────────────
 const ROLE_CARDS: { role: SelectedRole; icon: string; title: string; subtitle: string; color: string }[] = [
   { role: 'coach', icon: 'clipboard', title: 'Coach', subtitle: 'I coach a team', color: BRAND.teal },
+  { role: 'team_manager', icon: 'build-outline', title: 'Team Manager', subtitle: 'I manage team operations', color: '#E76F51' },
   { role: 'parent', icon: 'people', title: 'Parent', subtitle: 'My child plays', color: BRAND.skyBlue },
   { role: 'player', icon: 'football', title: 'Player', subtitle: "I'm a player", color: BRAND.goldBrand },
 ];
@@ -236,6 +237,7 @@ export default function SignupScreen() {
       // Map role
       const roleMap: Record<string, string> = {
         coach: 'head_coach',
+        team_manager: 'team_manager',
         parent: 'parent',
         player: 'player',
       };
@@ -510,9 +512,11 @@ export default function SignupScreen() {
               <View>
                 <Text style={s.stepTitle}>Connect</Text>
                 <Text style={s.stepSubtitle}>
-                  {selectedRole === 'player'
-                    ? 'Your coach may have given you a code'
-                    : 'Have an invite code?'}
+                  {selectedRole === 'team_manager'
+                    ? 'Have an invite code from your organization?'
+                    : selectedRole === 'player'
+                      ? 'Your coach may have given you a code'
+                      : 'Have an invite code?'}
                 </Text>
 
                 <View style={[s.inputWrap, codeError ? { borderColor: BRAND.coral } : {}]}>

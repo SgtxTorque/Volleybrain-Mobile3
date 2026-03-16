@@ -4,7 +4,7 @@ import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 
 type Props = {
-  role: 'admin' | 'coach' | 'parent' | 'player';
+  role: 'admin' | 'coach' | 'parent' | 'player' | 'team_manager';
 };
 
 const MESSAGES: Record<Props['role'], { body: string }> = {
@@ -19,6 +19,9 @@ const MESSAGES: Record<Props['role'], { body: string }> = {
   },
   player: {
     body: 'Waiting for your coach to add you to a team. Hang tight!',
+  },
+  team_manager: {
+    body: 'Your admin will assign you to a team. Once assigned, your team dashboard will appear here.',
   },
 };
 
