@@ -50,7 +50,7 @@ export interface JourneyNode {
   };
 }
 
-export function useJourneyPath() {
+export function useJourneyPath(overrideProfileId?: string) {
   const [chapters, setChapters] = useState<JourneyChapter[]>([]);
   const [loading, setLoading] = useState(true);
   const [playerLevel, setPlayerLevel] = useState(1);
@@ -60,13 +60,14 @@ export function useJourneyPath() {
     try {
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const profileId = overrideProfileId || user?.id;
+      if (!profileId) return;
 
       // Get player level
       const { data: profile } = await supabase
         .from('profiles')
         .select('player_level')
-        .eq('id', user.id)
+        .eq('id', profileId)
         .maybeSingle();
 
       const level = profile?.player_level ?? 1;
@@ -101,7 +102,7 @@ export function useJourneyPath() {
         const { data: progressData } = await supabase
           .from('journey_progress')
           .select('*')
-          .eq('player_id', user.id)
+          .eq('player_id', profileId)
           .in('node_id', nodeIds);
 
         if (progressData) {
@@ -191,7 +192,7 @@ export function useJourneyPath() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [overrideProfileId]);
 
   useEffect(() => {
     loadJourney();

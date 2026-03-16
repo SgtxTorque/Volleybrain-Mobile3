@@ -8,7 +8,7 @@ import {
 } from '@/lib/notification-engine';
 import { supabase } from '@/lib/supabase';
 
-export function useNotifications() {
+export function useNotifications(overrideProfileId?: string) {
   const [notifications, setNotifications] = useState<PlayerNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -17,11 +17,12 @@ export function useNotifications() {
     try {
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const profileId = overrideProfileId || user?.id;
+      if (!profileId) return;
 
       const [notifs, count] = await Promise.all([
-        getPlayerNotifications(user.id),
-        getUnreadNotificationCount(user.id),
+        getPlayerNotifications(profileId),
+        getUnreadNotificationCount(profileId),
       ]);
 
       setNotifications(notifs);
@@ -31,7 +32,7 @@ export function useNotifications() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [overrideProfileId]);
 
   useEffect(() => {
     loadNotifications();
@@ -45,11 +46,12 @@ export function useNotifications() {
 
   const markAllRead = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    await markAllNotificationsRead(user.id);
+    const profileId = overrideProfileId || user?.id;
+    if (!profileId) return;
+    await markAllNotificationsRead(profileId);
     setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
     setUnreadCount(0);
-  }, []);
+  }, [overrideProfileId]);
 
   return { notifications, unreadCount, loading, refreshNotifications: loadNotifications, markRead, markAllRead };
 }

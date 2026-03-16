@@ -6,7 +6,7 @@ import {
 import { supabase } from '@/lib/supabase';
 import { onRefresh } from '@/lib/refresh-bus';
 
-export function useWeeklyQuestEngine() {
+export function useWeeklyQuestEngine(overrideProfileId?: string) {
   const [quests, setQuests] = useState<WeeklyQuest[]>([]);
   const [loading, setLoading] = useState(true);
   const [allComplete, setAllComplete] = useState(false);
@@ -16,9 +16,10 @@ export function useWeeklyQuestEngine() {
     try {
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const profileId = overrideProfileId || user?.id;
+      if (!profileId) return;
 
-      const weeklyQuests = await getOrCreateWeeklyQuests(user.id);
+      const weeklyQuests = await getOrCreateWeeklyQuests(profileId);
       setQuests(weeklyQuests);
       setAllComplete(weeklyQuests.length > 0 && weeklyQuests.every(q => q.is_completed));
 
@@ -27,7 +28,7 @@ export function useWeeklyQuestEngine() {
       const { data: bonus } = await supabase
         .from('quest_bonus_tracking')
         .select('id')
-        .eq('player_id', user.id)
+        .eq('player_id', profileId)
         .eq('bonus_type', 'weekly_all_complete')
         .eq('period_date', monday)
         .maybeSingle();
@@ -38,7 +39,7 @@ export function useWeeklyQuestEngine() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [overrideProfileId]);
 
   useEffect(() => {
     loadQuests();

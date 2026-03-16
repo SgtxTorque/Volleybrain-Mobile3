@@ -23,6 +23,8 @@ import type { LeagueTier } from '@/lib/leaderboard-engine';
 
 type Props = {
   teamId?: string | null;
+  /** Profile ID override for parent-viewing-child context */
+  overrideProfileId?: string;
   /** @deprecated kept for backwards compat — ignored when teamId is provided */
   bestRank?: any;
   xp?: number;
@@ -117,10 +119,11 @@ function LeaderboardRow({
   );
 }
 
-export default function PlayerLeaderboardPreview({ teamId }: Props) {
+export default function PlayerLeaderboardPreview({ teamId, overrideProfileId }: Props) {
   const router = useRouter();
   const { user } = useAuth();
-  const { standings, myRank, myTier, loading } = useLeaderboard(teamId ?? null);
+  const { standings, myRank, myTier, loading } = useLeaderboard(teamId ?? null, overrideProfileId);
+  const activeProfileId = overrideProfileId || user?.id;
 
   const top5 = standings
     .sort((a, b) => a.rank - b.rank)
@@ -160,7 +163,7 @@ export default function PlayerLeaderboardPreview({ teamId }: Props) {
               rank={entry.rank}
               name={entry.playerName}
               value={entry.weekly_xp}
-              isYou={entry.player_id === user?.id}
+              isYou={entry.player_id === activeProfileId}
               index={index}
               tier={entry.league_tier}
             />

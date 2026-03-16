@@ -7,7 +7,7 @@ import {
 } from '@/lib/leaderboard-engine';
 import { supabase } from '@/lib/supabase';
 
-export function useLeaderboard(teamId: string | null) {
+export function useLeaderboard(teamId: string | null, overrideProfileId?: string) {
   const [standings, setStandings] = useState<LeaderboardEntry[]>([]);
   const [myRank, setMyRank] = useState(0);
   const [myTier, setMyTier] = useState<LeagueTier>('Bronze');
@@ -19,12 +19,13 @@ export function useLeaderboard(teamId: string | null) {
     try {
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const profileId = overrideProfileId || user?.id;
+      if (!profileId) return;
 
       // Process weekly reset if needed (handles promotion/demotion from last week)
       await processWeeklyLeaderboardReset(teamId);
 
-      const result = await getOrCreateWeeklyStandings(user.id, teamId);
+      const result = await getOrCreateWeeklyStandings(profileId, teamId);
       setStandings(result.standings);
       setMyRank(result.myRank);
       setMyTier(result.myTier);
@@ -34,7 +35,7 @@ export function useLeaderboard(teamId: string | null) {
     } finally {
       setLoading(false);
     }
-  }, [teamId]);
+  }, [teamId, overrideProfileId]);
 
   useEffect(() => {
     loadLeaderboard();

@@ -7,7 +7,7 @@ import {
 import { supabase } from '@/lib/supabase';
 import { onRefresh } from '@/lib/refresh-bus';
 
-export function useQuestEngine() {
+export function useQuestEngine(overrideProfileId?: string) {
   const [quests, setQuests] = useState<DailyQuest[]>([]);
   const [loading, setLoading] = useState(true);
   const [completing, setCompleting] = useState<string | null>(null); // quest ID being completed
@@ -18,9 +18,10 @@ export function useQuestEngine() {
     try {
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const profileId = overrideProfileId || user?.id;
+      if (!profileId) return;
 
-      const dailyQuests = await getOrCreateDailyQuests(user.id);
+      const dailyQuests = await getOrCreateDailyQuests(profileId);
       setQuests(dailyQuests);
       setAllComplete(dailyQuests.every(q => q.is_completed));
 
@@ -30,7 +31,7 @@ export function useQuestEngine() {
       const { data: bonus } = await supabase
         .from('quest_bonus_tracking')
         .select('id')
-        .eq('player_id', user.id)
+        .eq('player_id', profileId)
         .eq('bonus_type', 'daily_all_complete')
         .eq('period_date', todayStr)
         .maybeSingle();
@@ -41,7 +42,7 @@ export function useQuestEngine() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [overrideProfileId]);
 
   useEffect(() => {
     loadQuests();
@@ -55,11 +56,12 @@ export function useQuestEngine() {
 
   const handleCompleteQuest = useCallback(async (questId: string) => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    const profileId = overrideProfileId || user?.id;
+    if (!profileId) return;
 
     setCompleting(questId);
     try {
-      const result = await completeQuest(questId, user.id);
+      const result = await completeQuest(questId, profileId);
 
       if (result.success) {
         // Update local state immediately for responsive UI

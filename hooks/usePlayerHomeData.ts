@@ -173,6 +173,7 @@ export function usePlayerHomeData(playerId: string | null) {
   const [dbTier, setDbTier] = useState('Rookie');
   const [dbXpToNext, setDbXpToNext] = useState(100);
   const [engagementStreak, setEngagementStreak] = useState<StreakState | null>(null);
+  const [engagementProfileId, setEngagementProfileId] = useState<string | undefined>(undefined);
 
   // ─── Fetch all data ──
   const fetchAll = useCallback(async () => {
@@ -489,6 +490,7 @@ export function usePlayerHomeData(playerId: string | null) {
 
       // 14. Engagement system — DB XP + streak
       const engProfileId = playerData.parent_account_id;
+      setEngagementProfileId(engProfileId || undefined);
       if (engProfileId) {
         try {
           const { data: engData } = await supabase
@@ -608,6 +610,7 @@ export function usePlayerHomeData(playerId: string | null) {
     streakFreezeUsed,
     // Engagement
     engagementStreak,
+    engagementProfileId,
     // Social
     recentPhotos,
     recentShoutouts,

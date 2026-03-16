@@ -115,8 +115,9 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
   const streakCount = data.engagementStreak?.currentStreak ?? data.attendanceStreak ?? 0;
 
   // Quest hooks — kept active for quest generation on app open, summary data passed to entry card
-  const questEngine = useQuestEngine();
-  const weeklyEngine = useWeeklyQuestEngine();
+  // When parent views child, use the child's engagement profile ID instead of auth user
+  const questEngine = useQuestEngine(data.engagementProfileId);
+  const weeklyEngine = useWeeklyQuestEngine(data.engagementProfileId);
   const teamQuestHook = useTeamQuests(data.primaryTeam?.id ?? null);
   const questXpToday = useMemo(() => {
     const dailyXp = questEngine.quests
@@ -126,7 +127,7 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
     return dailyXp + bonusXp;
   }, [questEngine.quests, questEngine.bonusEarned]);
   const { isTabletAny, contentMaxWidth, contentPadding } = useResponsive();
-  const { unreadCount } = useNotifications();
+  const { unreadCount } = useNotifications(data.engagementProfileId);
 
   // Signal to tab bar that this scroll is active
   useEffect(() => {
@@ -433,6 +434,7 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
         {/* ─── 6. LEADERBOARD PREVIEW ─────────────────────────── */}
         <PlayerLeaderboardPreview
           teamId={data.primaryTeam?.id}
+          overrideProfileId={data.engagementProfileId}
         />
 
         {/* ─── 7. PROPS FROM THE TEAM (shoutouts) ────────────── */}
