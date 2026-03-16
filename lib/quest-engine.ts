@@ -963,3 +963,82 @@ export async function updateWeeklyQuestProgress(
 
   return { questCompleted: nowComplete, questId: quest.id };
 }
+
+// ─── Auto-Completion System ─────────────────────────────────────────────────
+// Called after a player performs an action. Checks if any active quest
+// matches that action and completes it if so.
+
+function shouldAutoComplete(questType: string, actionType: string): boolean {
+  const map: Record<string, string[]> = {
+    'app_checkin': ['app_open'],
+    'stats_check': ['view_stats', 'view_leaderboard', 'view_badges'],
+    'social_action': ['shoutout_sent'],
+    'attendance': ['attendance_marked'],
+    'drill_completion': ['drill_completed', 'skill_module_completed'],
+    'skill_tip': ['tip_viewed', 'skill_module_completed'],
+    'skill_module': ['skill_module_completed'],
+    'quiz': ['quiz_completed', 'skill_module_completed'],
+  };
+  return (map[questType] || []).includes(actionType);
+}
+
+function shouldUpdateWeeklyProgress(questType: string, actionType: string): boolean {
+  const map: Record<string, string[]> = {
+    'community': ['shoutout_sent'],
+    'attendance': ['attendance_marked'],
+    'game_performance': ['game_played'],
+    'skill_module': ['skill_module_completed'],
+  };
+  return (map[questType] || []).includes(actionType);
+}
+
+export async function checkAndCompleteQuests(
+  profileId: string,
+  actionType: string,
+  _actionData?: { teamId?: string; eventId?: string }
+): Promise<{
+  questsCompleted: string[];
+  totalXpAwarded: number;
+}> {
+  const today = localToday();
+  const questsCompleted: string[] = [];
+  let totalXpAwarded = 0;
+
+  // Check daily quests
+  const { data: dailyQuests } = await supabase
+    .from('daily_quests')
+    .select('*')
+    .eq('player_id', profileId)
+    .eq('quest_date', today)
+    .eq('is_completed', false);
+
+  for (const quest of (dailyQuests || [])) {
+    if (shouldAutoComplete(quest.quest_type, actionType)) {
+      const result = await completeQuest(quest.id, profileId);
+      if (result.success) {
+        questsCompleted.push(quest.id);
+        totalXpAwarded += result.xpAwarded;
+      }
+    }
+  }
+
+  // Check weekly quests for progress
+  const weekStart = localMondayOfWeek();
+  const { data: weeklyQuests } = await supabase
+    .from('weekly_quests')
+    .select('*')
+    .eq('player_id', profileId)
+    .eq('week_start', weekStart)
+    .eq('is_completed', false);
+
+  for (const quest of (weeklyQuests || [])) {
+    if (shouldUpdateWeeklyProgress(quest.quest_type, actionType)) {
+      const result = await updateWeeklyQuestProgress(profileId, quest.quest_type as WeeklyQuestType, 1);
+      if (result.questCompleted && result.questId) {
+        questsCompleted.push(result.questId);
+      }
+    }
+  }
+
+  return { questsCompleted, totalXpAwarded };
+}
