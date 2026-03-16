@@ -26,7 +26,7 @@ import { FONTS } from '@/theme/fonts';
 import { PLAYER_THEME } from '@/theme/player-theme';
 import { D_RADII } from '@/theme/d-system';
 import { getPlayerGreeting, type PlayerGreetingContext } from './PlayerLynxGreetings';
-import { getGreetingMascot } from '@/lib/mascot-images';
+import { getGreetingMascot, getStreakMascot } from '@/lib/mascot-images';
 import type { LastGameStats, RecentShoutout, PlayerBadge } from '@/hooks/usePlayerHomeData';
 
 type Props = {
@@ -208,6 +208,11 @@ export default function PlayerIdentityHero({
 
           {attendanceStreak >= 2 && (
             <Animated.View style={[styles.streakPill, streakAnimStyle]}>
+              <Image
+                source={getStreakMascot(attendanceStreak)}
+                style={styles.streakMascot}
+                resizeMode="contain"
+              />
               <Text style={styles.streakText}>{'\u{1F525}'} {attendanceStreak}</Text>
             </Animated.View>
           )}
@@ -302,6 +307,11 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  streakMascot: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
   },
   streakText: {
     fontFamily: FONTS.bodyBold,
