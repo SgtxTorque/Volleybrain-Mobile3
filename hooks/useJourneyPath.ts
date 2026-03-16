@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { onRefresh } from '@/lib/refresh-bus';
+import { getChapterTheme } from '@/lib/journey-themes';
 
 export interface JourneyChapter {
   id: string;
   sport: string;
   chapter_number: number;
   title: string;
-  theme: string | null;
+  theme: string;
   description: string | null;
   required_level: number;
   badge_id: string | null;
@@ -172,8 +173,11 @@ export function useJourneyPath() {
           foundCurrentChapter = true;
         }
 
+        const resolvedTheme = getChapterTheme(chapter.chapter_number);
+
         return {
           ...chapter,
+          theme: resolvedTheme.id,
           nodes: chapterNodes,
           isUnlocked,
           isComplete,
