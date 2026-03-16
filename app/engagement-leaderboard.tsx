@@ -2,7 +2,7 @@
  * Engagement Leaderboard — Weekly XP leaderboard with podium, tier badges,
  * and full rankings list. Dark navy theme matching PlayerIdentityHero.
  */
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useLeaderboard } from '@/hooks/useLeaderboard';
 import { useAuth } from '@/lib/auth';
+import { checkAndCompleteQuests } from '@/lib/quest-engine';
 import { FONTS } from '@/theme/fonts';
 import { PLAYER_THEME } from '@/theme/player-theme';
 import { D_RADII } from '@/theme/d-system';
@@ -153,6 +154,12 @@ export default function EngagementLeaderboardScreen() {
 
   const tierConfig = TIER_CONFIG[myTier] || TIER_CONFIG.Bronze;
   const weekOf = useMemo(() => getWeekOfLabel(), []);
+
+  // Auto-complete leaderboard quest on view
+  useEffect(() => {
+    if (!user?.id) return;
+    checkAndCompleteQuests(user.id, 'view_leaderboard').catch(() => {});
+  }, [user?.id]);
 
   const podiumEntries = useMemo(() => {
     const sorted = [...standings].sort((a, b) => a.rank - b.rank);

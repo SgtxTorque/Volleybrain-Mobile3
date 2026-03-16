@@ -6,6 +6,7 @@ import { supabase } from './supabase';
 import { XP_BY_SOURCE } from './engagement-constants';
 import { getLevelFromXP } from './engagement-constants';
 import type { ShoutoutCategory } from './engagement-types';
+import { checkAndCompleteQuests } from './quest-engine';
 
 // =============================================================================
 // Types
@@ -105,6 +106,9 @@ export async function giveShoutout(params: GiveShoutoutParams): Promise<Shoutout
 
     // 4. Check shoutout achievements (fire-and-forget)
     checkShoutoutAchievements(giverId, receiverId).catch(() => {});
+
+    // 5. Auto-complete shoutout quest (fire-and-forget)
+    checkAndCompleteQuests(giverId, 'shoutout_sent', { teamId }).catch(() => {});
 
     return {
       success: true,

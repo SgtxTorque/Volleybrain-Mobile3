@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { calculateLevel } from '@/lib/quest-engine';
+import { calculateLevel, checkAndCompleteQuests } from '@/lib/quest-engine';
 import { recordQualifyingAction } from '@/lib/streak-engine';
 
 export interface SkillModuleData {
@@ -180,6 +180,9 @@ export function useSkillModule(nodeId: string, skillContentId: string) {
 
     // Record qualifying action for streak
     await recordQualifyingAction(userId);
+
+    // Auto-complete skill module quest (fire-and-forget)
+    checkAndCompleteQuests(userId, 'skill_module_completed').catch(() => {});
   };
 
   return {
