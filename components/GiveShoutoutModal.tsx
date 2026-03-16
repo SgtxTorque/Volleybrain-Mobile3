@@ -2,6 +2,7 @@
 // GiveShoutoutModal — Full shoutout creation flow
 // =============================================================================
 
+import { getShoutoutImage } from '@/constants/mascot-images';
 import { useAuth } from '@/lib/auth';
 import { usePermissions } from '@/lib/permissions-context';
 import { fetchShoutoutCategories, giveShoutout } from '@/lib/shoutout-service';
@@ -14,9 +15,11 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -45,6 +48,11 @@ type Props = {
 };
 
 type Step = 'recipient' | 'category' | 'message' | 'preview';
+
+/** Convert "Great Effort" → "great_effort" for image lookup */
+function categorySlug(name: string): string {
+  return name.toLowerCase().replace(/\s+/g, '_');
+}
 
 // =============================================================================
 // Component
@@ -278,7 +286,7 @@ export default function GiveShoutoutModal({ visible, teamId, onClose, onSuccess,
         For {selectedRecipient?.full_name}
       </Text>
 
-      <View style={s.categoryGrid}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.categoryGrid}>
         {categories.length === 0 && !loading && (
           <Text style={[s.emptyText, { color: colors.textMuted, paddingVertical: 20, textAlign: 'center', width: '100%' }]}>
             No shoutout categories available yet.
@@ -286,13 +294,17 @@ export default function GiveShoutoutModal({ visible, teamId, onClose, onSuccess,
         )}
         {categories.map((cat) => {
           const isSelected = selectedCategory?.id === cat.id;
+          const illustrationSource = getShoutoutImage(categorySlug(cat.name));
           return (
             <TouchableOpacity
               key={cat.id}
               style={[
-                s.categoryChip,
-                { borderColor: isSelected ? cat.color || colors.primary : colors.glassBorder },
-                isSelected && { backgroundColor: (cat.color || colors.primary) + '20' },
+                s.categoryCard,
+                {
+                  borderColor: isSelected ? cat.color || colors.primary : '#E5E7EB',
+                  backgroundColor: isSelected ? (cat.color || colors.primary) + '10' : '#FFFFFF',
+                },
+                isSelected && { transform: [{ scale: 1.03 }] },
               ]}
               onPress={() => {
                 setSelectedCategory(cat);
@@ -300,20 +312,25 @@ export default function GiveShoutoutModal({ visible, teamId, onClose, onSuccess,
               }}
               activeOpacity={0.7}
             >
-              <Text style={s.categoryEmoji}>{cat.emoji}</Text>
+              <Image
+                source={illustrationSource}
+                accessibilityLabel={`${cat.name} shoutout illustration`}
+                resizeMode="contain"
+                style={s.categoryIllustration}
+              />
               <Text
                 style={[
                   s.categoryName,
                   { color: isSelected ? cat.color || colors.primary : colors.text },
                 ]}
-                numberOfLines={1}
+                numberOfLines={2}
               >
                 {cat.name}
               </Text>
             </TouchableOpacity>
           );
         })}
-      </View>
+      </ScrollView>
     </View>
   );
 
@@ -540,29 +557,29 @@ const createStyles = (colors: any) =>
       fontSize: 15,
     },
 
-    // Category step
+    // Category step — visual illustration grid
     categoryGrid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 10,
+      paddingBottom: 24,
     },
-    categoryChip: {
+    categoryCard: {
       width: '47%' as any,
-      flexDirection: 'row',
       alignItems: 'center',
-      gap: 10,
-      paddingVertical: 16,
-      paddingHorizontal: 14,
+      padding: 12,
       borderRadius: 14,
-      borderWidth: 1.5,
+      borderWidth: 1,
     },
-    categoryEmoji: {
-      fontSize: 28,
+    categoryIllustration: {
+      width: 100,
+      height: 100,
     },
     categoryName: {
       fontSize: 14,
-      fontWeight: '600',
-      flex: 1,
+      fontWeight: '700',
+      textAlign: 'center',
+      marginTop: 6,
     },
 
     // Message step

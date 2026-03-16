@@ -2,10 +2,11 @@
 // ShoutoutCard — Special team wall card for shoutout posts
 // =============================================================================
 
+import { getShoutoutImage } from '@/constants/mascot-images';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 
 // =============================================================================
 // Types
@@ -59,45 +60,53 @@ export default function ShoutoutCard({ metadataJson, giverName, createdAt }: Pro
 
   const borderColor = data.categoryColor || colors.primary;
   const timeAgo = getTimeAgo(createdAt);
+  const slug = data.categoryName.toLowerCase().replace(/\s+/g, '_');
+  const illustrationSource = getShoutoutImage(slug);
 
   return (
-    <View style={[s.card, { borderColor, backgroundColor: borderColor + '08' }]}>
-      {/* Category accent stripe */}
+    <View style={[s.card, { backgroundColor: colors.card }]}>
+      {/* Left accent stripe */}
       <View style={[s.accentStripe, { backgroundColor: borderColor }]} />
 
-      <View style={s.content}>
-        {/* Header row */}
-        <View style={s.headerRow}>
-          <View style={[s.typeBadge, { backgroundColor: borderColor + '20' }]}>
-            <Ionicons name="heart" size={10} color={borderColor} />
-            <Text style={[s.typeBadgeText, { color: borderColor }]}>Shoutout</Text>
-          </View>
-          <Text style={[s.timestamp, { color: colors.textMuted }]}>{timeAgo}</Text>
-        </View>
+      <View style={s.body}>
+        {/* Illustration thumbnail */}
+        <Image
+          source={illustrationSource}
+          accessibilityLabel={`${data.categoryName} shoutout illustration`}
+          resizeMode="contain"
+          style={s.illustration}
+        />
 
-        {/* Large emoji */}
-        <Text style={s.emoji}>{data.categoryEmoji}</Text>
+        {/* Right content */}
+        <View style={s.content}>
+          {/* Main text */}
+          <Text style={[s.mainText, { color: colors.text }]}>
+            <Text style={s.nameText}>{giverName}</Text> gave{' '}
+            <Text style={s.nameText}>{data.receiverName}</Text> a shoutout!
+          </Text>
 
-        {/* Main text */}
-        <Text style={[s.mainText, { color: colors.text }]}>
-          <Text style={s.nameText}>{giverName}</Text> gave{' '}
-          <Text style={s.nameText}>{data.receiverName}</Text> a{' '}
-          <Text style={[s.categoryText, { color: borderColor }]}>{data.categoryName}</Text> shoutout!
-        </Text>
-
-        {/* Optional message */}
-        {data.message ? (
-          <View style={[s.messageBubble, { backgroundColor: borderColor + '12' }]}>
-            <Text style={[s.messageText, { color: colors.textSecondary }]}>
-              "{data.message}"
+          {/* Category pill */}
+          <View style={[s.categoryPill, { backgroundColor: borderColor }]}>
+            <Text style={s.categoryPillText}>
+              {data.categoryEmoji} {data.categoryName}
             </Text>
           </View>
-        ) : null}
 
-        {/* XP pill */}
-        <View style={s.xpRow}>
-          <Ionicons name="star" size={12} color="#FFD700" />
-          <Text style={[s.xpText, { color: colors.textMuted }]}>+15 XP</Text>
+          {/* Optional message */}
+          {data.message ? (
+            <Text style={[s.messageText, { color: colors.textSecondary }]} numberOfLines={2}>
+              "{data.message}"
+            </Text>
+          ) : null}
+
+          {/* Bottom row: XP + timestamp */}
+          <View style={s.bottomRow}>
+            <View style={s.xpRow}>
+              <Ionicons name="star" size={11} color="#FFD700" />
+              <Text style={[s.xpText, { color: colors.textMuted }]}>+15 XP</Text>
+            </View>
+            <Text style={[s.timestamp, { color: colors.textMuted }]}>{timeAgo}</Text>
+          </View>
         </View>
       </View>
     </View>
@@ -129,78 +138,76 @@ function getTimeAgo(dateStr: string): string {
 const createStyles = (colors: any) =>
   StyleSheet.create({
     card: {
-      borderWidth: 1.5,
-      borderRadius: 16,
+      borderRadius: 14,
       overflow: 'hidden',
       marginBottom: 12,
+      borderWidth: 1,
+      borderColor: colors.glassBorder || 'rgba(0,0,0,0.06)',
     },
     accentStripe: {
-      height: 4,
+      position: 'absolute',
+      left: 0,
+      top: 0,
+      bottom: 0,
+      width: 3,
+      borderTopLeftRadius: 14,
+      borderBottomLeftRadius: 14,
+    },
+    body: {
+      flexDirection: 'row',
+      padding: 12,
+      paddingLeft: 14,
+      gap: 12,
+    },
+    illustration: {
+      width: 80,
+      height: 80,
+      borderRadius: 10,
     },
     content: {
-      padding: 16,
-      alignItems: 'center',
-      gap: 8,
-    },
-    headerRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      width: '100%',
-    },
-    typeBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flex: 1,
       gap: 4,
-      paddingHorizontal: 10,
-      paddingVertical: 4,
-      borderRadius: 12,
-    },
-    typeBadgeText: {
-      fontSize: 11,
-      fontWeight: '700',
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
-    },
-    timestamp: {
-      fontSize: 12,
-    },
-    emoji: {
-      fontSize: 48,
-      marginVertical: 4,
     },
     mainText: {
-      fontSize: 15,
+      fontSize: 14,
       fontWeight: '500',
-      textAlign: 'center',
-      lineHeight: 22,
+      lineHeight: 20,
     },
     nameText: {
       fontWeight: '700',
     },
-    categoryText: {
-      fontWeight: '700',
+    categoryPill: {
+      alignSelf: 'flex-start',
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: 10,
     },
-    messageBubble: {
-      paddingHorizontal: 16,
-      paddingVertical: 10,
-      borderRadius: 12,
-      marginTop: 4,
+    categoryPillText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: '#FFFFFF',
     },
     messageText: {
-      fontSize: 14,
+      fontSize: 13,
       fontStyle: 'italic',
-      textAlign: 'center',
-      lineHeight: 20,
+      lineHeight: 18,
+    },
+    bottomRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginTop: 2,
     },
     xpRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 4,
-      marginTop: 4,
+      gap: 3,
     },
     xpText: {
-      fontSize: 12,
+      fontSize: 11,
       fontWeight: '600',
+    },
+    timestamp: {
+      fontSize: 11,
     },
   });
