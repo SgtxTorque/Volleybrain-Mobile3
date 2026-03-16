@@ -166,3 +166,127 @@ INSERT INTO journey_nodes (chapter_id, node_type, title, description, skill_cont
 ((SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 4), 'challenge', 'Dig gauntlet', 'Survive the barrage', NULL, '{"type": "timed_reps", "description": "Dig 10 balls in a row from a rapid-fire tosser without missing. If you miss, start the count over.", "target": 10, "time_limit_seconds": 120, "mascot_image": "assets/images/activitiesmascot/defenseready.png"}', 35, 4, false, false, 'center', NULL),
 ((SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 4), 'boss', 'Wall of steel', 'Nothing hits the floor', NULL, '{"type": "endurance_challenge", "description": "React to 15 rapid-fire digs from a hitter. Must keep 12 or more alive. Under 2 minutes.", "target": 15, "pass_threshold": 12, "time_limit_seconds": 120, "mascot_image": "assets/images/activitiesmascot/EXCITEDACHIEVEMENT.png"}', 50, 5, true, false, 'center', NULL)
 ON CONFLICT (chapter_id, sort_order) DO NOTHING;
+
+-- ─── CHAPTER 5: COURT COMMANDER — SKILL CONTENT ─────────────────────────────
+
+INSERT INTO skill_content (category_id, sport, difficulty, title, slug, tip_text, tip_image_url, drill_title, drill_instructions, drill_reps, drill_location, mascot_demo_frames, has_quiz, xp_tip, xp_drill, xp_quiz, sort_order) VALUES
+
+-- 5.1 Court Positions 1-6
+(
+  (SELECT id FROM skill_categories WHERE sport = 'volleyball' AND name = 'court_iq'),
+  'volleyball', 'intermediate',
+  'Court positions 1-6',
+  'vb-courtiq-positions',
+  'The volleyball court has 6 positions numbered 1 through 6. Standing at the net facing the opponent: position 4 is front left, 3 is front middle, 2 is front right. Position 5 is back left, 6 is back middle, 1 is back right (the serving position). Players rotate clockwise after winning a side-out. Every player passes through every position. Know where you are at all times.',
+  'assets/images/activitiesmascot/VISUALIZE.png',
+  'Position walk-through',
+  'Walk through all 6 positions on a court (or draw a court with tape at home). Start in position 1. Call out your position number at each spot. Rotate clockwise through all 6. Do 3 full rotations. Then have a partner call a random position number. Sprint to that spot. 10 random call-outs.',
+  '3 full rotations + 10 random position sprints',
+  'court',
+  '["assets/images/activitiesmascot/VISUALIZE.png"]',
+  true, 10, 20, 15, 1
+),
+
+-- 5.2 Rotation Basics
+(
+  (SELECT id FROM skill_categories WHERE sport = 'volleyball' AND name = 'court_iq'),
+  'volleyball', 'intermediate',
+  'Rotation basics',
+  'vb-courtiq-rotations',
+  'Your team rotates clockwise one position every time you win a side-out (you were receiving and now you serve). You MUST be in your correct rotational position when the server contacts the ball. After the serve, you can move anywhere. Front row players must stay in front of their matching back row player. Left side must stay left of middle. Overlap violations give the other team a point.',
+  'assets/images/activitiesmascot/MOVEMENTDRILL.png',
+  'Rotation simulation',
+  'With 6 players (or markers), walk through 6 rotations. At each rotation: everyone freezes in their base position, then the "server" serves, and everyone transitions to their defensive assignments. Do each rotation twice. Focus on: who am I in front of? Who am I beside? Where do I go after the serve?',
+  '6 rotations, each practiced twice',
+  'court',
+  '["assets/images/activitiesmascot/MOVEMENTDRILL.png"]',
+  true, 10, 20, 15, 2
+),
+
+-- 5.3 Serve Receive Formations
+(
+  (SELECT id FROM skill_categories WHERE sport = 'volleyball' AND name = 'court_iq'),
+  'volleyball', 'intermediate',
+  'Serve receive formations',
+  'vb-courtiq-serve-receive',
+  'Serve receive is how your team lines up to pass the opponent''s serve. The most common youth formation is a W (5 players receiving in a W shape). Your best passers take the most court. Weaker passers take less space. The setter hides at the net. Communication is everything: call "mine", call "out", call "short." Every ball must have a name on it.',
+  'assets/images/activitiesmascot/TEAMHUDDLE.png',
+  'Serve receive walk-through',
+  'Set up a W formation with 5 players. A server serves 10 balls. After each serve, the receiver calls "mine" and passes to the setter at position 2/3. Rotate receivers every 10 serves so everyone practices each spot. Focus on spacing (nobody too close, nobody too far) and verbal calls.',
+  '10 serves per rotation, each player practices 2 spots',
+  'court',
+  '["assets/images/activitiesmascot/TEAMHUDDLE.png", "assets/images/activitiesmascot/CALLBALL.png"]',
+  true, 10, 20, 15, 3
+),
+
+-- 5.4 Transition Offense
+(
+  (SELECT id FROM skill_categories WHERE sport = 'volleyball' AND name = 'court_iq'),
+  'volleyball', 'intermediate',
+  'Transition offense',
+  'vb-courtiq-transition',
+  'Transition is what happens after your team digs the ball. The dig goes to the setter, and front row hitters need to pull off the net, get in their approach position, and attack. This happens in 2-3 seconds. The key: do not stand and watch the dig. The moment your team digs, MOVE to your approach spot. Every second you waste standing means one less option for the setter.',
+  'assets/images/activitiesmascot/GETACTIVE.png',
+  'Dig-transition drill',
+  'Start in defensive position. A coach hits a ball at your side. Someone digs it. The moment the ball is dug, sprint to your approach spot and call for the set. The setter sets you. Hit. Reset and repeat. The focus is on the speed of your transition, not the quality of the hit. 10 reps.',
+  '10 dig-transition-attack reps',
+  'court',
+  '["assets/images/activitiesmascot/GETACTIVE.png"]',
+  true, 10, 20, 15, 4
+),
+
+-- 5.5 Free Ball Plays
+(
+  (SELECT id FROM skill_categories WHERE sport = 'volleyball' AND name = 'court_iq'),
+  'volleyball', 'intermediate',
+  'Free ball plays',
+  'vb-courtiq-free-ball',
+  'A free ball is a gift. When the other team cannot attack and just sends an easy ball over, your team should pounce. Someone calls "FREE!" and everyone shifts: back row moves up to pass, front row pulls off the net for approaches, and the setter gets to the net. A free ball should ALWAYS result in a good set and a strong attack. If your team wastes free balls, you are giving away points.',
+  'assets/images/activitiesmascot/AREYOUREADY.png',
+  'Free ball recognition drill',
+  'A coach alternates between hitting hard-driven balls and sending easy free balls over the net. When the team recognizes a free ball, they must call "FREE!" and transition. Score: +2 for a kill off a free ball, +1 for a good attack, 0 for a wasted free ball. Play to 15 points.',
+  'Play to 15 points',
+  'court',
+  '["assets/images/activitiesmascot/AREYOUREADY.png"]',
+  true, 10, 20, 15, 5
+),
+
+-- 5.6 Coverage
+(
+  (SELECT id FROM skill_categories WHERE sport = 'volleyball' AND name = 'court_iq'),
+  'volleyball', 'intermediate',
+  'Hitter coverage',
+  'vb-courtiq-coverage',
+  'When your teammate attacks, the other team might block the ball back onto your side. Coverage means your team surrounds the hitter in a low semicircle so those blocked balls do not hit the floor. The rule: if you are not setting and not hitting, you should be covering. Get low, get close, and be ready for the ball to come straight down off the block.',
+  'assets/images/activitiesmascot/ENCOURAGINGTEAMMATE.png',
+  'Coverage positions drill',
+  'Run a hitting drill. After the set goes up, all non-hitters sprint to coverage positions (semicircle around the hitter, 6-8 feet away, LOW). A coach on the other side randomly blocks balls back. Coverage players must dig the blocked ball. 10 reps per hitter.',
+  '10 coverage reps per rotation',
+  'court',
+  '["assets/images/activitiesmascot/ENCOURAGINGTEAMMATE.png"]',
+  false, 10, 20, 0, 6
+)
+
+ON CONFLICT (sport, slug) DO NOTHING;
+
+-- Chapter 5 Quizzes
+INSERT INTO skill_quizzes (skill_content_id, question_text, options, correct_option_index, explanation, sort_order) VALUES
+((SELECT id FROM skill_content WHERE slug = 'vb-courtiq-positions'), 'Which position is the serving position?', '["Position 3", "Position 1", "Position 6", "Position 4"]', 1, 'Position 1 (back right) is the serving position.', 1),
+((SELECT id FROM skill_content WHERE slug = 'vb-courtiq-positions'), 'Which direction do teams rotate?', '["Counter-clockwise", "Clockwise", "Front to back", "It varies"]', 1, 'Teams always rotate clockwise.', 2),
+((SELECT id FROM skill_content WHERE slug = 'vb-courtiq-rotations'), 'What is an overlap violation?', '["Hitting the net", "Being in the wrong rotational order when the serve is contacted", "Stepping on the line", "Touching the ball twice"]', 1, 'Players must be in correct rotational order at the moment of serve contact. Out of order = point for the other team.', 1),
+((SELECT id FROM skill_content WHERE slug = 'vb-courtiq-rotations'), 'When can players move to their preferred positions?', '["Before the serve", "After the server contacts the ball", "Only during timeouts", "Never"]', 1, 'After the serve is contacted, players can move anywhere on their side. Before that, they must hold rotational order.', 2),
+((SELECT id FROM skill_content WHERE slug = 'vb-courtiq-serve-receive'), 'What does the W formation look like?', '["5 players in a straight line", "5 players in a W shape with best passers taking most court", "3 players in front, 2 in back", "All 6 players receive"]', 1, 'The W shape distributes 5 passers with the best ones covering the most area. The setter hides at the net.', 1),
+((SELECT id FROM skill_content WHERE slug = 'vb-courtiq-transition'), 'When should you start moving to your approach spot?', '["After the set", "After the dig", "The moment your team digs the ball", "When the coach tells you"]', 2, 'The moment the ball is dug, move. Every second standing still is a wasted option for your setter.', 1),
+((SELECT id FROM skill_content WHERE slug = 'vb-courtiq-free-ball'), 'What should your team call when the opponent sends an easy ball over?', '["Ball!", "Help!", "Free!", "Mine!"]', 2, 'Call "FREE!" so everyone shifts into attack mode. Free balls are opportunities, not just plays.', 1);
+
+-- Chapter 5 Journey Nodes
+INSERT INTO journey_nodes (chapter_id, node_type, title, description, skill_content_id, challenge_config, xp_reward, sort_order, is_boss, is_bonus, position_offset, icon_emoji) VALUES
+((SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 5), 'skill', 'Positions 1-6', 'Know your court', (SELECT id FROM skill_content WHERE slug = 'vb-courtiq-positions'), NULL, 25, 1, false, false, 'left', NULL),
+((SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 5), 'skill', 'Rotation basics', 'Spin to win', (SELECT id FROM skill_content WHERE slug = 'vb-courtiq-rotations'), NULL, 25, 2, false, false, 'right', NULL),
+((SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 5), 'skill', 'Serve receive', 'Own the W', (SELECT id FROM skill_content WHERE slug = 'vb-courtiq-serve-receive'), NULL, 30, 3, false, false, 'left', NULL),
+((SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 5), 'skill', 'Transition offense', 'Dig and attack', (SELECT id FROM skill_content WHERE slug = 'vb-courtiq-transition'), NULL, 30, 4, false, false, 'right', NULL),
+((SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 5), 'skill', 'Free ball plays', 'Punish the gift', (SELECT id FROM skill_content WHERE slug = 'vb-courtiq-free-ball'), NULL, 30, 5, false, false, 'center', NULL),
+((SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 5), 'skill', 'Hitter coverage', 'Nothing drops', (SELECT id FROM skill_content WHERE slug = 'vb-courtiq-coverage'), NULL, 30, 6, false, false, 'left', NULL),
+((SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 5), 'challenge', 'Rotation quiz blitz', 'Prove your IQ', NULL, '{"type": "timed_quiz", "description": "Answer 10 rotation and position questions in 3 minutes. Must get 8 or more correct.", "target": 10, "pass_threshold": 8, "time_limit_seconds": 180, "mascot_image": "assets/images/activitiesmascot/VISUALIZE.png"}', 40, 7, false, false, 'right', NULL),
+((SELECT id FROM journey_chapters WHERE sport = 'volleyball' AND chapter_number = 5), 'boss', 'Court IQ', 'Command the court', NULL, '{"type": "combined_challenge", "description": "Full rotation walk-through quiz + dig-transition-attack drill. Must complete both. Quiz: 6/8 correct. Drill: 7/10 successful attacks.", "mascot_image": "assets/images/activitiesmascot/EXCITEDACHIEVEMENT.png"}', 60, 8, true, false, 'center', NULL)
+ON CONFLICT (chapter_id, sort_order) DO NOTHING;
