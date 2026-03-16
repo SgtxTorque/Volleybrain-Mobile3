@@ -269,6 +269,22 @@ export default function TabLayout() {
         }}
       />
 
+      {/* ====== TAB 2d: JOURNEY (Player only — not admin, not coach, not parent-only) ====== */}
+      <Tabs.Screen
+        name="journey"
+        options={{
+          href: isPlayerMode ? undefined : null,
+          title: 'Journey',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'map' : 'map-outline'}
+              size={24}
+              color={color}
+            />
+          ),
+        }}
+      />
+
       {/* ====== TAB 3: CHAT (all roles) ====== */}
       <Tabs.Screen
         name="chats"

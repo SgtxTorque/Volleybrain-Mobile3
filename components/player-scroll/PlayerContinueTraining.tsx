@@ -6,7 +6,8 @@
  * Bold animations: shimmer sweep, press scale spring, arrow nudge loop.
  */
 import React, { useEffect } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import Animated, {
   cancelAnimation,
   useAnimatedStyle,
@@ -21,6 +22,7 @@ import { FONTS } from '@/theme/fonts';
 import { D_COLORS, D_RADII } from '@/theme/d-system';
 
 export default function PlayerContinueTraining() {
+  const router = useRouter();
   // Shimmer sweep — every 5 seconds
   const shimmerX = useSharedValue(-200);
   // Press scale
@@ -65,7 +67,7 @@ export default function PlayerContinueTraining() {
   }));
 
   const handlePress = () => {
-    Alert.alert('Coming Soon!', 'Training modules are on their way. Stay tuned!');
+    router.push('/(tabs)/journey' as any);
   };
 
   return (
@@ -92,7 +94,7 @@ export default function PlayerContinueTraining() {
           <View style={styles.textWrap}>
             <Text style={styles.title}>Continue Training</Text>
             <Text style={styles.subtitle}>
-              Skill drills, tips & challenges — coming soon
+              Skill drills, tips & challenges
             </Text>
           </View>
 
