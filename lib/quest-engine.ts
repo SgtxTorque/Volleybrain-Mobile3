@@ -490,6 +490,44 @@ export async function completeQuest(questId: string, profileId: string): Promise
   // Step 2.5: Record qualifying action for streak
   const streakResult = await recordQualifyingAction(profileId);
 
+  // Step 2.7: Update weekly consistency quest progress
+  // Count how many unique days this week the player completed at least 1 daily quest
+  const weekStart = localMondayOfWeek();
+  const { data: completedDays } = await supabase
+    .from('daily_quests')
+    .select('quest_date')
+    .eq('player_id', profileId)
+    .gte('quest_date', weekStart)
+    .eq('is_completed', true);
+
+  if (completedDays) {
+    const uniqueDays = new Set(completedDays.map((d: { quest_date: string }) => d.quest_date)).size;
+    // Directly update the consistency quest's current_value
+    await supabase
+      .from('weekly_quests')
+      .update({ current_value: uniqueDays })
+      .eq('player_id', profileId)
+      .eq('week_start', weekStart)
+      .eq('quest_type', 'consistency')
+      .eq('is_completed', false);
+
+    // Check if consistency quest is now complete
+    if (uniqueDays >= 5) {
+      const { data: consistencyQuest } = await supabase
+        .from('weekly_quests')
+        .select('id')
+        .eq('player_id', profileId)
+        .eq('week_start', weekStart)
+        .eq('quest_type', 'consistency')
+        .eq('is_completed', false)
+        .maybeSingle();
+
+      if (consistencyQuest) {
+        await completeWeeklyQuest(consistencyQuest.id, profileId);
+      }
+    }
+  }
+
   // Step 3: Check if all 3 daily quests are now complete
   const today = localToday();
   const { data: allQuests } = await supabase
