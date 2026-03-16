@@ -77,6 +77,11 @@ export default function UsersScreen() {
   const [showUserModal, setShowUserModal] = useState(false);
   const [updatingUser, setUpdatingUser] = useState(false);
 
+  // Team Manager assignment — team picker
+  const [showTeamPicker, setShowTeamPicker] = useState(false);
+  const [tmAssignUser, setTmAssignUser] = useState<UserWithRole | null>(null);
+  const [orgTeams, setOrgTeams] = useState<{ id: string; name: string }[]>([]);
+
   const fetchUsers = useCallback(async () => {
     try {
       const orgId = profile?.current_organization_id;
@@ -130,6 +135,19 @@ export default function UsersScreen() {
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
+
+  // Fetch teams for the team picker (used when assigning team_manager)
+  useEffect(() => {
+    (async () => {
+      const orgId = profile?.current_organization_id;
+      if (!orgId) return;
+      const { data: teams } = await supabase
+        .from('teams')
+        .select('id, name')
+        .order('name');
+      setOrgTeams(teams || []);
+    })();
+  }, [profile?.current_organization_id]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -236,6 +254,13 @@ export default function UsersScreen() {
   };
 
   const updateUserRole = async (user: UserWithRole, newRole: UserRole) => {
+    // For team_manager, show team picker first
+    if (newRole === 'team_manager' && !user.roles.some(r => r.role === 'team_manager')) {
+      setTmAssignUser(user);
+      setShowTeamPicker(true);
+      return;
+    }
+
     setUpdatingUser(true);
     try {
       const orgId = profile?.current_organization_id;
@@ -243,7 +268,7 @@ export default function UsersScreen() {
 
       // Check if user already has this role
       const existingRole = user.roles.find(r => r.role === newRole);
-      
+
       if (existingRole) {
         // Toggle active status
         await supabase
@@ -267,6 +292,44 @@ export default function UsersScreen() {
     } catch (error) {
       if (__DEV__) console.error('Update role error:', error);
       Alert.alert('Error', 'Failed to update role');
+    } finally {
+      setUpdatingUser(false);
+    }
+  };
+
+  const assignTeamManager = async (teamId: string) => {
+    if (!tmAssignUser) return;
+    setUpdatingUser(true);
+    try {
+      const orgId = profile?.current_organization_id;
+      if (!orgId) throw new Error('Organization not found');
+
+      // Insert user_roles row
+      await supabase.from('user_roles').insert({
+        organization_id: orgId,
+        user_id: tmAssignUser.id,
+        role: 'team_manager',
+        is_active: true,
+      });
+
+      // Insert team_staff row
+      await supabase.from('team_staff').insert({
+        team_id: teamId,
+        user_id: tmAssignUser.id,
+        staff_role: 'team_manager',
+        is_active: true,
+        assigned_by: profile?.id,
+      });
+
+      Alert.alert('Assigned', `${tmAssignUser.full_name} is now Team Manager.`);
+      setShowTeamPicker(false);
+      setTmAssignUser(null);
+      fetchUsers();
+      setShowUserModal(false);
+      setSelectedUser(null);
+    } catch (error) {
+      if (__DEV__) console.error('Assign TM error:', error);
+      Alert.alert('Error', 'Failed to assign Team Manager');
     } finally {
       setUpdatingUser(false);
     }
@@ -760,6 +823,56 @@ export default function UsersScreen() {
                 </View>
               </ScrollView>
             )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Team Picker Modal — shown when assigning team_manager */}
+      <Modal visible={showTeamPicker} animationType="fade" transparent>
+        <View style={s.modalOverlay}>
+          <View style={[s.modalContent, { maxHeight: '60%' }]}>
+            <View style={s.modalHeader}>
+              <Text style={s.modalTitle}>Select Team</Text>
+              <TouchableOpacity onPress={() => { setShowTeamPicker(false); setTmAssignUser(null); }}>
+                <Ionicons name="close" size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+            {tmAssignUser && (
+              <Text style={{ paddingHorizontal: 20, paddingBottom: 12, fontSize: 14, fontFamily: FONTS.bodyMedium, color: colors.textMuted }}>
+                Assign {tmAssignUser.full_name} as Team Manager for:
+              </Text>
+            )}
+            <ScrollView style={{ paddingHorizontal: 20, paddingBottom: 20 }}>
+              {orgTeams.length === 0 ? (
+                <Text style={{ fontSize: 14, fontFamily: FONTS.bodyMedium, color: colors.textMuted, textAlign: 'center', padding: 20 }}>
+                  No teams found
+                </Text>
+              ) : (
+                orgTeams.map(team => (
+                  <TouchableOpacity
+                    key={team.id}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      padding: 14,
+                      backgroundColor: colors.background,
+                      borderRadius: 12,
+                      marginBottom: 8,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                    }}
+                    onPress={() => assignTeamManager(team.id)}
+                    disabled={updatingUser}
+                  >
+                    <Ionicons name="people" size={20} color={colors.info} style={{ marginRight: 10 }} />
+                    <Text style={{ flex: 1, fontSize: 15, fontFamily: FONTS.bodySemiBold, color: colors.text }}>
+                      {team.name}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                  </TouchableOpacity>
+                ))
+              )}
+            </ScrollView>
           </View>
         </View>
       </Modal>
