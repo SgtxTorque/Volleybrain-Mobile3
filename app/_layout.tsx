@@ -27,7 +27,18 @@ import { useEffect, useMemo, useRef } from 'react';
 import { Dimensions, KeyboardAvoidingView, Platform } from 'react-native';
 import { lockPortrait, unlockOrientation } from '@/lib/orientation';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import * as Sentry from '@sentry/react-native';
 import { determineOnboardingPath, getOnboardingRoute } from '@/lib/onboarding-router';
+
+Sentry.init({
+  dsn: 'https://4763807d47d1b126ad6816b08bc0b248@o4511061021884416.ingest.us.sentry.io/4511061069070337',
+  tracesSampleRate: 0.2,
+  _experiments: {
+    profilesSampleRate: 0.1,
+  },
+  enabled: !__DEV__,
+  debug: false,
+});
 
 SplashScreen.preventAutoHideAsync();
 
@@ -191,7 +202,7 @@ function RootLayoutNav() {
   );
 }
 
-export default function RootLayout() {
+function RootLayout() {
   const [fontsLoaded] = useFonts({
     'Oswald-Bold': require('../assets/fonts/Oswald-Bold.ttf'),
     BebasNeue_400Regular,
@@ -240,3 +251,5 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
+export default Sentry.wrap(RootLayout);
