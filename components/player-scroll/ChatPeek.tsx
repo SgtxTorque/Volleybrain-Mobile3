@@ -57,7 +57,7 @@ export default function ChatPeek({ teamId }: Props) {
           .from('profiles')
           .select('full_name')
           .eq('id', msg.sender_id)
-          .single();
+          .maybeSingle();
         setSenderName(profile?.full_name?.split(' ')[0] || null);
 
         // Time ago
