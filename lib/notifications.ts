@@ -387,8 +387,8 @@ export async function runAutoBlastCheck(daysAhead: number = 2): Promise<number> 
         .from('schedule_events')
         .select('team_id, event_date')
         .eq('id', game.eventId)
-        .single();
-      
+        .maybeSingle();
+
       if (!gameData) continue;
       
       // Determine role to blast for
@@ -482,8 +482,8 @@ export async function promoteBackupVolunteer(
       .from('schedule_events')
       .select('title, event_date')
       .eq('id', eventId)
-      .single();
-    
+      .maybeSingle();
+
     if (event) {
       const roleText = role === 'line_judge' ? 'Line Judge' : 'Scorekeeper';
       const formattedDate = new Date(event.event_date + 'T00:00:00').toLocaleDateString('en-US', {

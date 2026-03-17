@@ -239,7 +239,7 @@ export async function updateChallengeProgress(
       .select('completed')
       .eq('challenge_id', challengeId)
       .eq('player_id', playerId)
-      .single();
+      .maybeSingle();
 
     const wasAlreadyCompleted = existing?.completed;
 
@@ -512,7 +512,7 @@ export async function completeChallenge(challengeId: string): Promise<{
           .from('profiles')
           .select('total_xp')
           .eq('id', pid)
-          .single();
+          .maybeSingle();
 
         const currentXP = profile?.total_xp || 0;
         const newXP = currentXP + totalXpForPlayer;
@@ -653,7 +653,7 @@ export async function updateStatBasedChallenges(params: {
           .from('profiles')
           .select('full_name')
           .eq('id', participant.player_id)
-          .single();
+          .maybeSingle();
 
         await updateChallengeProgress(
           participant.challenge_id,

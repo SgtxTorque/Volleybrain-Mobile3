@@ -174,7 +174,7 @@ async function awardShoutoutXP(
       .from('profiles')
       .select('total_xp')
       .eq('id', profId)
-      .single();
+      .maybeSingle();
 
     const currentXP = prof?.total_xp || 0;
     const newXP = currentXP + xp_amount;

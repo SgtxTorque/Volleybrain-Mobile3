@@ -412,7 +412,7 @@ async function awardAchievementXP(playerId: string, achievement: AchievementFull
     .from('profiles')
     .select('total_xp')
     .eq('id', profileId)
-    .single();
+    .maybeSingle();
 
   const currentXP = profile?.total_xp || 0;
   const newXP = currentXP + xp;
@@ -1166,7 +1166,7 @@ async function awardRoleXP(userId: string, achievement: AchievementFull): Promis
     .from('profiles')
     .select('total_xp')
     .eq('id', userId)
-    .single();
+    .maybeSingle();
 
   const currentXP = profile?.total_xp || 0;
   const newXP = currentXP + xp;
