@@ -129,7 +129,7 @@ export default function PlayerCardExpanded({ player, visible, onClose, onUpdate 
       .from('player_stats')
       .select('*')
       .eq('player_id', player.id)
-      .single();
+      .maybeSingle();
 
     if (statsData) {
       setStats(statsData);
@@ -140,7 +140,7 @@ export default function PlayerCardExpanded({ player, visible, onClose, onUpdate 
       .from('player_skills')
       .select('*')
       .eq('player_id', player.id)
-      .single();
+      .maybeSingle();
 
     if (skillsData) {
       setSkills(skillsData);
@@ -155,7 +155,7 @@ export default function PlayerCardExpanded({ player, visible, onClose, onUpdate 
       .eq('player_id', player.id)
       .order('rated_at', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (evalData) {
       setEvalRatings(evalData as Record<string, number>);
