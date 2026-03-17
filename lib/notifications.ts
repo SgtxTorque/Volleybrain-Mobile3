@@ -98,7 +98,7 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
 
     return tokenData.data;
   } catch (error) {
-    console.error('Error registering for push notifications:', error);
+    if (__DEV__) console.error('Error registering for push notifications:', error);
     return null;
   }
 }
@@ -162,7 +162,7 @@ export async function sendVolunteerBlast(params: {
       .rpc('get_team_parent_ids', { p_team_id: teamId });
 
     if (parentError) {
-      console.error('Error getting team parents:', parentError);
+      if (__DEV__) console.error('Error getting team parents:', parentError);
       // Fallback: get parents directly from player_parents joined with team_players
       const { data: fallbackParents } = await supabase
         .from('player_guardians')
@@ -190,7 +190,7 @@ export async function sendVolunteerBlast(params: {
     const parentIds = teamParents.map((p: { parent_id: string }) => p.parent_id);
     return await createNotifications(parentIds, eventId, teamId, role, eventTitle, eventDate, sentBy);
   } catch (error) {
-    console.error('Error sending volunteer blast:', error);
+    if (__DEV__) console.error('Error sending volunteer blast:', error);
     return { success: false, recipientCount: 0, error: 'Failed to send notifications' };
   }
 }
@@ -236,7 +236,7 @@ async function createNotifications(
     .insert(notifications);
 
   if (notifError) {
-    console.error('Error creating notifications:', notifError);
+    if (__DEV__) console.error('Error creating notifications:', notifError);
     return { success: false, recipientCount: 0, error: 'Failed to create notifications' };
   }
 
@@ -272,7 +272,7 @@ export async function fetchNotifications(userId: string, limit = 50): Promise<Ap
     .limit(limit);
 
   if (error) {
-    console.error('Error fetching notifications:', error);
+    if (__DEV__) console.error('Error fetching notifications:', error);
     return [];
   }
 
@@ -311,7 +311,7 @@ export async function getUnreadCount(userId: string): Promise<number> {
     .eq('read', false);
 
   if (error) {
-    console.error('Error getting unread count:', error);
+    if (__DEV__) console.error('Error getting unread count:', error);
     return 0;
   }
 
@@ -420,7 +420,7 @@ export async function runAutoBlastCheck(daysAhead: number = 2): Promise<number> 
       if (result.success) blastsSent++;
     }
   } catch (error) {
-    console.error('Auto-blast check error:', error);
+    if (__DEV__) console.error('Auto-blast check error:', error);
   }
   
   return blastsSent;
@@ -507,7 +507,7 @@ export async function promoteBackupVolunteer(
     
     return { promoted: true, promotedUserId: backup1.profile_id };
   } catch (error) {
-    console.error('Promote backup error:', error);
+    if (__DEV__) console.error('Promote backup error:', error);
     return { promoted: false, error: 'Failed to promote backup' };
   }
 }
@@ -613,7 +613,7 @@ export async function sendRSVPReminders(daysAhead: number = 3): Promise<number> 
       }
     }
   } catch (error) {
-    console.error('RSVP reminder error:', error);
+    if (__DEV__) console.error('RSVP reminder error:', error);
   }
   
   return remindersSent;

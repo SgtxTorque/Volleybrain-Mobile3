@@ -71,7 +71,7 @@ export function useSkillModule(nodeId: string, skillContentId: string) {
       setModuleData({ ...content, quizzes });
       setQuizTotal(quizzes.length);
     } catch (err) {
-      console.error('[useSkillModule] Error loading module:', err);
+      if (__DEV__) console.error('[useSkillModule] Error loading module:', err);
     } finally {
       setLoading(false);
     }

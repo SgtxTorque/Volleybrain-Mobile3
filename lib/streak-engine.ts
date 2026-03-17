@@ -219,7 +219,7 @@ async function getOrInitStreak(profileId: string): Promise<{
     .maybeSingle();
 
   if (fetchError) {
-    console.error('[streak-engine] Error fetching streak:', fetchError);
+    if (__DEV__) console.error('[streak-engine] Error fetching streak:', fetchError);
     return null;
   }
 
@@ -239,7 +239,7 @@ async function getOrInitStreak(profileId: string): Promise<{
     .single();
 
   if (createError) {
-    console.error('[streak-engine] Error creating streak:', createError);
+    if (__DEV__) console.error('[streak-engine] Error creating streak:', createError);
     return null;
   }
 

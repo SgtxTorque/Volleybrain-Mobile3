@@ -38,7 +38,7 @@ export function useQuestEngine(overrideProfileId?: string) {
 
       setBonusEarned(!!bonus);
     } catch (err) {
-      console.error('[useQuestEngine] Error loading quests:', err);
+      if (__DEV__) console.error('[useQuestEngine] Error loading quests:', err);
     } finally {
       setLoading(false);
     }

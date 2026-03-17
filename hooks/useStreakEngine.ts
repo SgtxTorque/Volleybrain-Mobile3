@@ -15,7 +15,7 @@ export function useStreakEngine() {
       const state = await checkStreakState(user.id);
       setStreak(state);
     } catch (err) {
-      console.error('[useStreakEngine] Error loading streak:', err);
+      if (__DEV__) console.error('[useStreakEngine] Error loading streak:', err);
     } finally {
       setLoading(false);
     }

@@ -22,7 +22,7 @@ export const useTeamContext = () => {
         setLoaded(true);
       })
       .catch(err => {
-        console.error('[TeamContext] Error loading team selection:', err);
+        if (__DEV__) console.error('[TeamContext] Error loading team selection:', err);
         setLoaded(true);
       });
   }, []);
@@ -38,7 +38,7 @@ export const useTeamContext = () => {
         if (__DEV__) console.log('[TeamContext] Cleared team selection');
       }
     } catch (err) {
-      console.error('[TeamContext] Error saving team selection:', err);
+      if (__DEV__) console.error('[TeamContext] Error saving team selection:', err);
     }
   };
 

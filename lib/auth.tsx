@@ -166,7 +166,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (!profData && profError) {
         // Query failed (network timeout, RLS issue, Supabase hiccup) — retry once
-        console.warn('[Auth] Profile query failed, retrying in 1s:', profError.message);
+        if (__DEV__) console.warn('[Auth] Profile query failed, retrying in 1s:', profError.message);
         await new Promise(r => setTimeout(r, 1000));
         const { data: retryData, error: retryError } = await supabase
           .from('profiles')
@@ -177,7 +177,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           prof = retryData;
         } else {
           // Both attempts failed — bail gracefully, do NOT create/upsert anything
-          console.error('[Auth] Profile query failed after retry:', retryError?.message);
+          if (__DEV__) console.error('[Auth] Profile query failed after retry:', retryError?.message);
           setLoading(false);
           return;
         }
@@ -205,7 +205,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (reFetched) {
             prof = reFetched;
           } else {
-            console.error('[Auth] Profile insert failed and re-fetch failed:', insertError.message);
+            if (__DEV__) console.error('[Auth] Profile insert failed and re-fetch failed:', insertError.message);
             setLoading(false);
             return;
           }
@@ -264,7 +264,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await savePushToken(session.user.id, token);
         }
       } catch (pushErr) {
-        console.error('Push token registration error:', pushErr);
+        if (__DEV__) console.error('Push token registration error:', pushErr);
       }
 
       // Check for orphan records (web registrations without account link)
@@ -287,7 +287,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Non-critical — skip orphan check
       }
     } catch (err) {
-      console.error('Auth init error:', err);
+      if (__DEV__) console.error('Auth init error:', err);
     }
     setLoading(false);
   }

@@ -188,7 +188,7 @@ export function useJourneyPath(overrideProfileId?: string) {
 
       setChapters(assembled);
     } catch (err) {
-      console.error('[useJourneyPath] Error loading journey:', err);
+      if (__DEV__) console.error('[useJourneyPath] Error loading journey:', err);
     } finally {
       setLoading(false);
     }

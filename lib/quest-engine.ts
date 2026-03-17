@@ -421,7 +421,7 @@ export async function getOrCreateDailyQuests(profileId: string): Promise<DailyQu
     .order('sort_order', { ascending: true });
 
   if (fetchError) {
-    console.error('[quest-engine] Error fetching daily quests:', fetchError);
+    if (__DEV__) console.error('[quest-engine] Error fetching daily quests:', fetchError);
     return [];
   }
 
@@ -441,7 +441,7 @@ export async function getOrCreateDailyQuests(profileId: string): Promise<DailyQu
     .select('*');
 
   if (insertError) {
-    console.error('[quest-engine] Error inserting daily quests:', insertError);
+    if (__DEV__) console.error('[quest-engine] Error inserting daily quests:', insertError);
     // Return the definitions as fallback (display-only, no DB persistence)
     return questDefs.map((q, i) => ({
       ...q,
@@ -481,7 +481,7 @@ export async function completeQuest(questId: string, profileId: string): Promise
     .single();
 
   if (updateError || !quest) {
-    console.error('[quest-engine] Error completing quest:', updateError);
+    if (__DEV__) console.error('[quest-engine] Error completing quest:', updateError);
     return { success: false, xpAwarded: 0, allComplete: false, bonusAwarded: false, newTotalXp: 0, newLevel: 1, newTier: 'Rookie', newStreak: 0, streakMilestone: null, streakFreezeAwarded: false };
   }
 
@@ -836,7 +836,7 @@ export async function getOrCreateWeeklyQuests(profileId: string): Promise<Weekly
     .order('sort_order', { ascending: true });
 
   if (fetchError) {
-    console.error('[quest-engine] Error fetching weekly quests:', fetchError);
+    if (__DEV__) console.error('[quest-engine] Error fetching weekly quests:', fetchError);
     return [];
   }
 
@@ -854,7 +854,7 @@ export async function getOrCreateWeeklyQuests(profileId: string): Promise<Weekly
     .select('*');
 
   if (insertError) {
-    console.error('[quest-engine] Error inserting weekly quests:', insertError);
+    if (__DEV__) console.error('[quest-engine] Error inserting weekly quests:', insertError);
     return questDefs.map((q, i) => ({
       ...q,
       id: `temp-weekly-${i}`,
@@ -886,7 +886,7 @@ export async function completeWeeklyQuest(questId: string, profileId: string): P
     .single();
 
   if (updateError || !quest) {
-    console.error('[quest-engine] Error completing weekly quest:', updateError);
+    if (__DEV__) console.error('[quest-engine] Error completing weekly quest:', updateError);
     return { success: false, xpAwarded: 0, allComplete: false, bonusAwarded: false, newTotalXp: 0, newLevel: 1, newTier: 'Rookie' };
   }
 

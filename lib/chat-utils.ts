@@ -75,7 +75,7 @@ export const createTeamChats = async (options: CreateChatOptions): Promise<{ tea
       .single();
 
     if (teamError) {
-      console.error('Error creating team chat:', teamError);
+      if (__DEV__) console.error('Error creating team chat:', teamError);
       return null;
     }
     teamChatId = teamChat.id;
@@ -96,7 +96,7 @@ export const createTeamChats = async (options: CreateChatOptions): Promise<{ tea
       .single();
 
     if (playerError) {
-      console.error('Error creating player chat:', playerError);
+      if (__DEV__) console.error('Error creating player chat:', playerError);
       return null;
     }
     playerChatId = playerChat.id;
@@ -403,7 +403,7 @@ export const createLeagueAnnouncementChannel = async (seasonId: string, seasonNa
     .single();
 
   if (error) {
-    console.error('Error creating announcement channel:', error);
+    if (__DEV__) console.error('Error creating announcement channel:', error);
     return null;
   }
 

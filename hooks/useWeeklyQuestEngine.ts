@@ -35,7 +35,7 @@ export function useWeeklyQuestEngine(overrideProfileId?: string) {
 
       setBonusEarned(!!bonus);
     } catch (err) {
-      console.error('[useWeeklyQuestEngine] Error loading weekly quests:', err);
+      if (__DEV__) console.error('[useWeeklyQuestEngine] Error loading weekly quests:', err);
     } finally {
       setLoading(false);
     }
