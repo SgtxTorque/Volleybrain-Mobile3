@@ -90,7 +90,7 @@ export default function TeamScreen() {
         }
       } else if (isParent) {
         // Parent: player_guardians + parent_account_id + parent_email
-        const profile = (await supabase.from('profiles').select('email').eq('id', user.id).single()).data;
+        const profile = (await supabase.from('profiles').select('email').eq('id', user.id).maybeSingle()).data;
         let playerIds: string[] = [];
 
         const { data: guardianLinks } = await supabase.from('player_guardians').select('player_id').eq('guardian_id', user.id);

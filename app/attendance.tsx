@@ -128,7 +128,7 @@ export default function AttendanceScreen() {
       .from('schedule_events')
       .select('*, teams!schedule_events_team_id_fkey(id, name, color)')
       .eq('id', eventId)
-      .single();
+      .maybeSingle();
 
     if (data) {
       selectEvent(data as any);

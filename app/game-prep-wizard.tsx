@@ -190,7 +190,7 @@ export default function GamePrepWizardScreen() {
       .from('schedule_events')
       .select('id, title, opponent_name, event_date, start_time, team_id, location')
       .eq('id', eventId)
-      .single();
+      .maybeSingle();
 
     if (!eventData) {
       setLoading(false);

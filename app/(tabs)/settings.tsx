@@ -54,7 +54,7 @@ export default function SettingsScreen() {
       .from('organizations')
       .select('*')
       .eq('id', context.organizationId)
-      .single();
+      .maybeSingle();
     setOrganization(data);
   };
 

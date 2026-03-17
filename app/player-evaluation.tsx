@@ -161,7 +161,7 @@ export default function PlayerEvaluationScreen() {
       .eq('team_id', tid)
       .order('rated_at', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (data) {
       const prev: Partial<Ratings> = {};

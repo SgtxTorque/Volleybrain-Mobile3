@@ -223,7 +223,7 @@ export default function MyStatsScreen() {
         .from('seasons')
         .select('sport')
         .eq('id', effectiveSeasonId)
-        .single();
+        .maybeSingle();
       const sport = (seasonData as any)?.sport || 'volleyball';
       setDetectedSport(sport);
 

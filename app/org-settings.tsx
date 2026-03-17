@@ -52,7 +52,7 @@ export default function OrgSettingsScreen() {
       .from('organizations')
       .select('name, contact_email, contact_phone, description')
       .eq('id', profile.current_organization_id)
-      .single();
+      .maybeSingle();
 
     if (data) {
       setOrgName(data.name || '');

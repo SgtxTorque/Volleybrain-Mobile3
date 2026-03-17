@@ -65,7 +65,7 @@ export default function ProfileScreen() {
       .from('profiles')
       .select('avatar_url, emergency_contact_name, emergency_contact_phone, emergency_contact_relation')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
 
     if (data) {
       setAvatarUrl(data.avatar_url);

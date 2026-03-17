@@ -119,7 +119,7 @@ export default function PlayerGoalsScreen() {
           .select('teams(name)')
           .eq('player_id', playerId)
           .limit(1)
-          .single();
+          .maybeSingle();
 
         setPlayer({
           ...playerData,

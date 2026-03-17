@@ -125,7 +125,7 @@ export default function ChatScreen() {
 
   const fetchChannel = async () => {
     if (!id) return;
-    const { data } = await supabase.from('chat_channels').select('id, name, channel_type, avatar_url, season_id').eq('id', id).single();
+    const { data } = await supabase.from('chat_channels').select('id, name, channel_type, avatar_url, season_id').eq('id', id).maybeSingle();
     setChannel(data);
   };
 
@@ -215,7 +215,7 @@ export default function ChatScreen() {
       .from('chat_messages')
       .select('*, sender:profiles!sender_id (id, full_name, avatar_url)')
       .eq('id', messageId)
-      .single();
+      .maybeSingle();
     if (!data || data.is_deleted) return;
 
     const { data: attachments } = await supabase

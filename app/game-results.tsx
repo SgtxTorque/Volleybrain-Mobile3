@@ -203,7 +203,7 @@ export default function GameResultsScreen() {
         .from('schedule_events')
         .select('*, teams!schedule_events_team_id_fkey(name, color, season_id)')
         .eq('id', eventId)
-        .single();
+        .maybeSingle();
 
       if (gameError) {
         if (__DEV__) console.error('Error fetching game:', gameError);
@@ -221,7 +221,7 @@ export default function GameResultsScreen() {
           .from('seasons')
           .select('sport')
           .eq('id', seasonId)
-          .single();
+          .maybeSingle();
         setSportName((seasonData as any)?.sport || null);
       }
 
