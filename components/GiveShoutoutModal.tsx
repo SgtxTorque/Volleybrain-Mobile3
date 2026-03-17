@@ -2,7 +2,6 @@
 // GiveShoutoutModal — Full shoutout creation flow
 // =============================================================================
 
-import { getShoutoutImage } from '@/constants/mascot-images';
 import { useAuth } from '@/lib/auth';
 import { usePermissions } from '@/lib/permissions-context';
 import { fetchShoutoutCategories, giveShoutout } from '@/lib/shoutout-service';
@@ -15,7 +14,6 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -48,11 +46,6 @@ type Props = {
 };
 
 type Step = 'recipient' | 'category' | 'message' | 'preview';
-
-/** Convert "Great Effort" → "great_effort" for image lookup */
-function categorySlug(name: string): string {
-  return name.toLowerCase().replace(/\s+/g, '_');
-}
 
 // =============================================================================
 // Component
@@ -294,7 +287,6 @@ export default function GiveShoutoutModal({ visible, teamId, onClose, onSuccess,
         )}
         {categories.map((cat) => {
           const isSelected = selectedCategory?.id === cat.id;
-          const illustrationSource = getShoutoutImage(categorySlug(cat.name));
           return (
             <TouchableOpacity
               key={cat.id}
@@ -312,12 +304,7 @@ export default function GiveShoutoutModal({ visible, teamId, onClose, onSuccess,
               }}
               activeOpacity={0.7}
             >
-              <Image
-                source={illustrationSource}
-                accessibilityLabel={`${cat.name} shoutout illustration`}
-                resizeMode="contain"
-                style={s.categoryIllustration}
-              />
+              <Text style={s.categoryEmoji}>{cat.emoji}</Text>
               <Text
                 style={[
                   s.categoryName,
@@ -557,7 +544,7 @@ const createStyles = (colors: any) =>
       fontSize: 15,
     },
 
-    // Category step — visual illustration grid
+    // Category step — emoji grid
     categoryGrid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
@@ -571,9 +558,10 @@ const createStyles = (colors: any) =>
       borderRadius: 14,
       borderWidth: 1,
     },
-    categoryIllustration: {
-      width: 100,
-      height: 100,
+    categoryEmoji: {
+      fontSize: 44,
+      lineHeight: 56,
+      textAlign: 'center' as const,
     },
     categoryName: {
       fontSize: 14,
