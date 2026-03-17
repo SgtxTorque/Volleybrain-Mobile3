@@ -61,6 +61,7 @@ export default function SignupScreen() {
 
   // Step 2
   const [selectedRole, setSelectedRole] = useState<SelectedRole>(null);
+  const [coppaConsent, setCoppaConsent] = useState(false);
 
   // Step 3
   const [orgCode, setOrgCode] = useState('');
@@ -102,7 +103,10 @@ export default function SignupScreen() {
   // ── Step 2: role select ──────────────────────────────
   const handleRoleSelect = (role: SelectedRole) => {
     setSelectedRole(role);
-    setTimeout(() => animateToStep(3), 500);
+    setCoppaConsent(false);
+    if (role !== 'parent') {
+      setTimeout(() => animateToStep(3), 500);
+    }
   };
 
   // ── Step 3: validate code ────────────────────────────
@@ -255,11 +259,15 @@ export default function SignupScreen() {
         await supabase.from('profiles').update({
           current_organization_id: organizationId,
           onboarding_completed: true,
+          coppa_consent_given: selectedRole === 'parent' ? true : null,
+          coppa_consent_date: selectedRole === 'parent' ? new Date().toISOString() : null,
         }).eq('id', user.id);
       } else {
         // No org — mark onboarding complete, empty states will guide
         await supabase.from('profiles').update({
           onboarding_completed: true,
+          coppa_consent_given: selectedRole === 'parent' ? true : null,
+          coppa_consent_date: selectedRole === 'parent' ? new Date().toISOString() : null,
         }).eq('id', user.id);
       }
 
@@ -464,6 +472,42 @@ export default function SignupScreen() {
                 );
               })}
             </View>
+
+            {selectedRole === 'parent' && (
+              <View style={{ marginTop: 16, padding: 16, backgroundColor: '#F6F8FB', borderRadius: 14 }}>
+                <Text style={{ fontFamily: FONTS.bodySemiBold, fontSize: 14, color: BRAND.navy, marginBottom: 8 }}>
+                  Parent/Guardian Consent
+                </Text>
+                <Text style={{ fontFamily: FONTS.body, fontSize: 13, color: BRAND.textMuted, marginBottom: 12, lineHeight: 18 }}>
+                  Lynx collects information about minor children (names, dates of birth, photos, sports performance data) to provide youth sports management services. By checking this box, you consent to the collection and use of your child's information as described in our Privacy Policy.
+                </Text>
+                <TouchableOpacity
+                  style={{ flexDirection: 'row', alignItems: 'center' }}
+                  onPress={() => setCoppaConsent(!coppaConsent)}
+                >
+                  <Ionicons
+                    name={coppaConsent ? 'checkbox' : 'square-outline'}
+                    size={24}
+                    color={coppaConsent ? BRAND.skyBlue : BRAND.textMuted}
+                  />
+                  <Text style={{ fontFamily: FONTS.body, fontSize: 13, color: BRAND.navy, marginLeft: 8, flex: 1 }}>
+                    I am the parent or legal guardian and I consent to the collection of my child's information.
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {selectedRole === 'parent' && (
+              <TouchableOpacity
+                style={[s.primaryBtn, !coppaConsent && s.btnDisabled]}
+                onPress={goNext}
+                disabled={!coppaConsent}
+                activeOpacity={0.85}
+              >
+                <Text style={s.primaryBtnText}>Next</Text>
+                <Ionicons name="arrow-forward" size={18} color="#fff" />
+              </TouchableOpacity>
+            )}
           </ScrollView>
 
           {/* ── STEP 3: Connect ── */}
