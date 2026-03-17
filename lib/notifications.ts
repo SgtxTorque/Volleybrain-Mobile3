@@ -112,11 +112,21 @@ export async function registerForPushNotifications(userId: string): Promise<stri
 // SAVE PUSH TOKEN TO SUPABASE
 // =====================================================
 export async function savePushToken(userId: string, token: string) {
+  // Clear old tokens for this user, then insert fresh
+  await supabase
+    .from('push_tokens')
+    .delete()
+    .eq('user_id', userId);
+
   const { error } = await supabase
-    .from('profiles')
-    .update({ push_token: token })
-    .eq('id', userId);
-  if (error) console.error('Error saving push token:', error);
+    .from('push_tokens')
+    .insert({
+      user_id: userId,
+      token,
+      device_type: Platform.OS,
+      updated_at: new Date().toISOString(),
+    });
+  if (__DEV__ && error) console.error('Error saving push token:', error);
 }
 
 // =====================================================
