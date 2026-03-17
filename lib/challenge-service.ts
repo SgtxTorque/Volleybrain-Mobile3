@@ -455,7 +455,7 @@ export async function completeChallenge(challengeId: string): Promise<{
 
     // Auto-post winner/completion to team wall
     const winnerProfile = winnerId
-      ? (await supabase.from('profiles').select('full_name').eq('id', winnerId).single()).data
+      ? (await supabase.from('profiles').select('full_name').eq('id', winnerId).maybeSingle()).data
       : null;
 
     postChallengeWinnerToWall({

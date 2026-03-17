@@ -42,7 +42,7 @@ export const getProfileByEmail = async (email: string): Promise<{ id: string; fu
     .from('profiles')
     .select('id, full_name')
     .eq('email', email.toLowerCase())
-    .single();
+    .maybeSingle();
 
   return existing || null;
 };
@@ -386,7 +386,7 @@ export const createLeagueAnnouncementChannel = async (seasonId: string, seasonNa
     .select('id')
     .eq('season_id', seasonId)
     .eq('channel_type', 'league_announcement')
-    .single();
+    .maybeSingle();
 
   if (existing) return existing.id;
 

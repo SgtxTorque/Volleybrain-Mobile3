@@ -517,7 +517,7 @@ export default function ChatScreen() {
       .eq('message_id', messageId)
       .eq('user_id', profile.id)
       .eq('reaction_type', reactionType)
-      .single();
+      .maybeSingle();
 
     if (existing) await supabase.from('message_reactions').delete().eq('id', existing.id);
     else await supabase.from('message_reactions').insert({ message_id: messageId, user_id: profile.id, reaction_type: reactionType });

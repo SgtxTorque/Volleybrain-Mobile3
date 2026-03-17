@@ -80,7 +80,7 @@ export async function checkProfileCompleteness(
     .from('players')
     .select('*')
     .eq('id', playerId)
-    .single();
+    .maybeSingle();
 
   if (!player) {
     return {
@@ -100,7 +100,7 @@ export async function checkProfileCompleteness(
     .from('seasons')
     .select('registration_config')
     .eq('id', seasonId)
-    .single();
+    .maybeSingle();
 
   const config: RegistrationConfig = season?.registration_config
     ? mergeWithDefaults(season.registration_config)

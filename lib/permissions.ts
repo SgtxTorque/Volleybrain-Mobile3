@@ -17,7 +17,7 @@ export const getPermissionContext = async (userId: string): Promise<PermissionCo
     .from('profiles')
     .select('id, current_organization_id')
     .eq('id', userId)
-    .single();
+    .maybeSingle();
 
   if (!profile || !profile.current_organization_id) return null;
 
