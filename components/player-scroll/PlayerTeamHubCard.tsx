@@ -61,7 +61,7 @@ export default function PlayerTeamHubCard({ teamName, teamColor, teamId }: Props
     <TouchableOpacity
       style={styles.card}
       activeOpacity={0.85}
-      onPress={() => router.push(`/team-hub?teamId=${teamId}` as any)}
+      onPress={() => router.push('/(tabs)/connect' as any)}
     >
       {/* Left accent glow */}
       <LinearGradient
