@@ -49,7 +49,14 @@
       ],
       "@react-native-community/datetimepicker",
       "expo-audio",
-      "expo-calendar"
+      "expo-calendar",
+      [
+        "@sentry/react-native/expo",
+        {
+          "organization": "lynx-mn",
+          "project": "react-native"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
