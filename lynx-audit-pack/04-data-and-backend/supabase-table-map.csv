@@ -1,0 +1,40 @@
+table,domain,seen_in,status,notes
+profiles,identity,"lib/auth.tsx; app/users.tsx; hooks/useGlobalSearch.ts",CONFIRMED,Primary account profile row
+user_roles,identity,"lib/auth.tsx; app/team-manager-setup.tsx; app/(auth)/signup.tsx",CONFIRMED,Role assignment table
+organizations,identity,"lib/auth.tsx; app/org-settings.tsx; app/(tabs)/settings.tsx",CONFIRMED,Org scoping table
+players,identity,"many screens and hooks",CONFIRMED,Player record is heavily reused
+player_guardians,identity,"components/ChildPickerScreen.tsx; parent/team screens",CONFIRMED,Guardian linkage path
+coaches,identity,"coach and admin screens",CONFIRMED,Coach roster directory path
+teams,teams,"many screens and hooks",CONFIRMED,Primary team entity
+team_players,teams,"many screens and hooks",CONFIRMED,Team-player join
+team_coaches,teams,"team and coach screens",CONFIRMED,Team-coach join
+team_staff,teams,"coach/team manager flows",CONFIRMED,Team-staff join
+seasons,season,"season screens and hooks",CONFIRMED,Working season dependency
+sports,season,"my-teams and payments",CONFIRMED,Sport context source
+schedule_events,schedule,"coach schedule; game day; home data",CONFIRMED,Primary event table
+event_rsvps,schedule,"parent and coach schedule",CONFIRMED,Attendance/RSVP table
+event_volunteers,schedule,"coach schedule; achievement engine",CONFIRMED,Volunteer support
+payments,payments,"payments screens; drawer badges; search",CONFIRMED,Core payment entity
+payment_installments,payments,"family and admin payment screens",CONFIRMED,Installment support
+season_fees,payments,"payments screens",CONFIRMED,Fee schedule support
+registrations,registration,"manage; registration hubs; achievements",CONFIRMED,Registration workflow entity
+invitations,registration,"signup; redeem-code",CONFIRMED,Invite path table
+team_invite_codes,registration,"signup; redeem-code; team-manager-setup",CONFIRMED,Team invite path table
+chat_channels,chat,"chat-utils; team management; coach home data",CONFIRMED,Channel entity
+channel_members,chat,"tabs layout unread counts; chat-utils",CONFIRMED,Membership and last-read state
+chat_messages,chat,"tabs layout unread counts; chat route",CONFIRMED,Message rows
+messages,messaging,"app/(tabs)/messages.tsx",CONFIRMED,Broadcast/message feature
+message_recipients,messaging,"tabs layout unread alerts",CONFIRMED,Alert acknowledgment
+notification_preferences,notifications,"notification preferences; email queue",CONFIRMED,Preference control
+email_notifications,notifications,"lib/email-queue.ts",CONFIRMED,Email queue table
+coach_challenges,engagement,"challenge service; hooks",CONFIRMED,Coach challenge entity
+challenge_participants,engagement,"challenge service; hooks",CONFIRMED,Participation join
+team_posts,engagement,"team wall/gallery; engagement events",CONFIRMED,Social feed
+achievements,engagement,"achievement engine; achievements screen",CONFIRMED,Achievement definitions
+player_achievements,engagement,"achievement engine",CONFIRMED,Player achievement rows
+user_achievements,engagement,"achievement engine",CONFIRMED,Role/user achievement rows
+xp_ledger,engagement,"challenge and achievement engines",CONFIRMED,Progression ledger
+league_standings,engagement,"leaderboard hooks and engine",CONFIRMED,Leaderboard table
+journey_chapters,journey,"useJourneyPath",CONFIRMED,Journey content
+journey_nodes,journey,"useJourneyPath",CONFIRMED,Journey node content
+journey_progress,journey,"useJourneyPath; coach engagement",CONFIRMED,Player progress

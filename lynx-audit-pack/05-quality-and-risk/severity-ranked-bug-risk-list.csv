@@ -1,0 +1,11 @@
+rank,severity,classification,risk,evidence,probable_effect
+1,critical,CONFIRMED,Broken /team-hub navigation,components/player-scroll/PlayerTeamHubCard.tsx,Hard navigation failure
+2,high,CONFIRMED,Notification product split,app/notification.tsx and app/notification-inbox.tsx,Inconsistent inbox behavior
+3,high,CONFIRMED,Duplicate team management paths,app/team-management.tsx and app/(tabs)/teams.tsx,Operational drift and user confusion
+4,high,PARTIAL,Generic entry to param-sensitive game screens,drawer and multiple route callers,Empty or wrong game context
+5,high,PARTIAL,Parent linkage inconsistency,parent screens and connect/my-teams flows,Missing or wrong child/team data
+6,medium,CONFIRMED,Drawer label mismatch for notifications,components/GestureDrawer.tsx,Users land in unexpected inbox
+7,medium,CONFIRMED,Non-route markdown inside app tree,app/CC-COACH-HOME-D-REDESIGN.md,Project hygiene confusion
+8,medium,PARTIAL,Role access logic distributed across layers,root layout plus tabs plus drawer,Hard-to-predict access behavior
+9,medium,PARTIAL,Client-heavy unread badge counting,app/(tabs)/_layout.tsx,Performance/noise risk
+10,medium,UNVERIFIED,Backend RLS gaps on shared tables,client code only,Potential overexposure cannot be proven here

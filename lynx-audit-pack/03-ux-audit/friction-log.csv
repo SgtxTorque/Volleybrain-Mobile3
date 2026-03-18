@@ -1,0 +1,11 @@
+id,classification,area,source,evidence,likely_user_effect
+UX-001,CONFIRMED,Navigation,components/player-scroll/PlayerTeamHubCard.tsx,Pushes /team-hub with no matching route,Tapping card likely fails
+UX-002,CONFIRMED,Navigation,components/GestureDrawer.tsx,Placeholder admin tools route to /web-features,Users reach non-native placeholder instead of working tool
+UX-003,CONFIRMED,Notifications,app/notification.tsx and app/notification-inbox.tsx,Two inbox products exist,Users can receive inconsistent notification experiences
+UX-004,PARTIAL,Game day,drawer and schedule callers,Some game routes are param-light while others pass event/team ids,Users may land on empty or under-scoped screens
+UX-005,PARTIAL,Parent data,app/(tabs)/connect.tsx and parent screens,Child resolution uses guardian links plus direct account plus email matching,Parent sees inconsistent child/team state
+UX-006,CONFIRMED,Recovery,Many root screens rely on router.back(),Deep-linked entry may lack intuitive home recovery,User confusion after notification/search entry
+UX-007,CONFIRMED,IA,Duplicate team surfaces,/team-management and /(tabs)/teams,Same task can exist in two places
+UX-008,CONFIRMED,IA,Notification label mismatch,components/GestureDrawer.tsx,Users land in unexpected inbox
+UX-009,PARTIAL,Access model,tab and drawer gating,Role access is spread across shell/menu/screen logic,Users may infer permissions incorrectly
+UX-010,CONFIRMED,State continuity,lib/auth.tsx and AsyncStorage keys,Some storage keys are cleared on logout but many screens still depend on local storage,Context persistence remains a UX dependency

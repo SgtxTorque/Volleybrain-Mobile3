@@ -1,0 +1,13 @@
+feature,primary_screens,secondary_surfaces,status,notes
+Auth and onboarding,"/(auth)/welcome; /(auth)/login; /(auth)/signup; /(auth)/pending-approval; /claim-account","app/_layout.tsx; lib/onboarding-router.ts",CONFIRMED,Entry routing is centralized at root layout
+Registration,"/registration-hub; /parent-registration-hub; /registration-start; /register/[seasonId]","/(auth)/redeem-code; /(auth)/signup",CONFIRMED,Multiple entry paths and role-specific hubs
+Teams and roster,"/(tabs)/teams; /team-management; /(tabs)/players; /roster; /team-roster","/(tabs)/my-teams; /(tabs)/coach-team-hub",CONFIRMED,Duplicate admin/team management surfaces exist
+Schedule and game day,"/(tabs)/coach-schedule; /(tabs)/parent-schedule; /(tabs)/gameday; /game-day-command; /game-prep; /game-prep-wizard","/attendance; /lineup-builder; /game-results; /game-recap",CONFIRMED,Coach/admin and parent flows differ
+Chat and messaging,"/(tabs)/chats; /chat/[id]; /(tabs)/messages","/(tabs)/coach-chat; /(tabs)/admin-chat; /(tabs)/parent-chat",CONFIRMED,Several overlapping chat/message surfaces
+Payments,"/(tabs)/payments; /family-payments; /payment-reminders","/(tabs)/manage",CONFIRMED,Admin and family payment experiences split
+Notifications,"/notification; /notification-inbox; /notification-preferences","app/_layout.tsx notification tap handler",CONFIRMED,Two inbox patterns coexist
+Evaluations,"/evaluation-session; /player-evaluation; /player-evaluations; /my-stats","/achievements",CONFIRMED,Role-specific views and player-linked views overlap
+Challenges and engagement,"/coach-challenge-dashboard; /challenge-library; /create-challenge; /challenges; /challenge-cta; /challenge-detail","/challenge-celebration; /engagement-leaderboard; /coach-engagement",CONFIRMED,Both coach and player challenge systems are present
+Journey and training,"/(tabs)/journey; /quests; /skill-module","player-scroll components",CONFIRMED,Newer player engagement subsystem
+Organization admin,"/users; /org-settings; /org-directory; /season-settings; /season-setup-wizard; /season-archives","/admin-search; /admin-search-results",CONFIRMED,Admin toolchain is broad
+Legal and account utilities,"/profile; /(tabs)/settings; /privacy-policy; /terms-of-service; /data-rights; /help","notification preferences",CONFIRMED,Common utility cluster

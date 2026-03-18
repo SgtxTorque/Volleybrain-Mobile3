@@ -1,0 +1,24 @@
+{
+  "features": [
+    {"name": "authentication", "roles": ["guest", "all"], "status": "CONFIRMED", "surfaces": ["/(auth)/welcome", "/(auth)/login", "/(auth)/signup"]},
+    {"name": "onboarding_and_claim", "roles": ["all"], "status": "CONFIRMED", "surfaces": ["/claim-account", "/parent-registration-hub", "/register/[seasonId]"]},
+    {"name": "registration_admin", "roles": ["admin"], "status": "CONFIRMED", "surfaces": ["/registration-hub"]},
+    {"name": "registration_parent", "roles": ["parent"], "status": "CONFIRMED", "surfaces": ["/parent-registration-hub", "/registration-start"]},
+    {"name": "team_management", "roles": ["admin"], "status": "CONFIRMED", "surfaces": ["/team-management", "/(tabs)/teams"]},
+    {"name": "roster_management", "roles": ["coach", "team_manager", "admin"], "status": "CONFIRMED", "surfaces": ["/(tabs)/players", "/roster", "/team-roster"]},
+    {"name": "schedule_management", "roles": ["coach", "admin", "team_manager"], "status": "CONFIRMED", "surfaces": ["/(tabs)/coach-schedule", "/game-prep-wizard", "/attendance"]},
+    {"name": "parent_schedule", "roles": ["parent"], "status": "CONFIRMED", "surfaces": ["/(tabs)/parent-schedule"]},
+    {"name": "chat", "roles": ["all"], "status": "CONFIRMED", "surfaces": ["/(tabs)/chats", "/chat/[id]"]},
+    {"name": "messaging", "roles": ["admin"], "status": "CONFIRMED", "surfaces": ["/(tabs)/messages", "/blast-composer", "/blast-history"]},
+    {"name": "payments_admin", "roles": ["admin", "team_manager"], "status": "CONFIRMED", "surfaces": ["/(tabs)/payments", "/payment-reminders"]},
+    {"name": "payments_family", "roles": ["parent"], "status": "CONFIRMED", "surfaces": ["/family-payments"]},
+    {"name": "notifications_general", "roles": ["all"], "status": "CONFIRMED", "surfaces": ["/notification", "/notification-preferences"]},
+    {"name": "notifications_player_engagement", "roles": ["player"], "status": "CONFIRMED", "surfaces": ["/notification-inbox"]},
+    {"name": "evaluations", "roles": ["coach", "admin", "parent", "player"], "status": "CONFIRMED", "surfaces": ["/evaluation-session", "/player-evaluation", "/player-evaluations", "/my-stats"]},
+    {"name": "challenges", "roles": ["coach", "player"], "status": "CONFIRMED", "surfaces": ["/coach-challenge-dashboard", "/challenge-library", "/challenges", "/challenge-cta"]},
+    {"name": "journey", "roles": ["player"], "status": "CONFIRMED", "surfaces": ["/(tabs)/journey", "/quests", "/skill-module"]},
+    {"name": "admin_search", "roles": ["admin"], "status": "CONFIRMED", "surfaces": ["/admin-search", "/admin-search-results"]},
+    {"name": "org_and_season_admin", "roles": ["admin"], "status": "CONFIRMED", "surfaces": ["/org-settings", "/season-settings", "/season-setup-wizard", "/season-archives"]},
+    {"name": "web_placeholders", "roles": ["admin"], "status": "CONFIRMED", "surfaces": ["/web-features"]}
+  ]
+}
