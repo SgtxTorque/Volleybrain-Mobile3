@@ -30,6 +30,7 @@ type Props = {
   level: number;
   xpProgress: number;
   xpCurrent: number;
+  xpNextLevel: number;
   scrollY: SharedValue<number>;
 };
 
@@ -112,7 +113,7 @@ function PopBadge({
   );
 }
 
-export default function PlayerTrophyCase({ badges, level, xpProgress, xpCurrent, scrollY }: Props) {
+export default function PlayerTrophyCase({ badges, level, xpProgress, xpCurrent, xpNextLevel, scrollY }: Props) {
   const router = useRouter();
 
   // Scroll entrance
@@ -211,7 +212,7 @@ export default function PlayerTrophyCase({ badges, level, xpProgress, xpCurrent,
               </Animated.View>
             </View>
             <Text style={styles.xpLabel}>
-              {(xpCurrent % 1000).toLocaleString()} / 1,000 XP
+              {xpCurrent.toLocaleString()} / {xpNextLevel.toLocaleString()} XP
             </Text>
           </View>
         </View>

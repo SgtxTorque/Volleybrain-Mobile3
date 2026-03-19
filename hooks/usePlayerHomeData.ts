@@ -9,6 +9,7 @@ import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { calculateStreakWithFreeze, checkStreakState, StreakState } from '@/lib/streak-engine';
 import { calculateLevel } from '@/lib/quest-engine';
+import { getLevelFromXP, getLevelTier } from '@/lib/engagement-constants';
 import { checkEarlyBird, checkAndCreateAutoBoosts } from '@/lib/xp-boost-engine';
 import { supabase } from '@/lib/supabase';
 import { onRefresh } from '@/lib/refresh-bus';
@@ -576,10 +577,15 @@ export function usePlayerHomeData(playerId: string | null) {
   // Computed values — use DB XP if available, else fall back to formula
   const computedXp = useMemo(() => computeXP(seasonStats, badges.length), [seasonStats, badges.length]);
   const xp = dbXp > 0 ? dbXp : computedXp;
-  const level = dbXp > 0 ? dbLevel : Math.floor(computedXp / 1000) + 1;
-  const tier = dbTier;
-  const xpProgress = xp > 0 ? ((xp % 1000) / 1000) * 100 : 0;
-  const xpToNext = dbXp > 0 ? dbXpToNext : 1000 - (computedXp % 1000);
+
+  // Use the real exponential XP_LEVELS thresholds instead of flat modulo
+  const levelInfo = useMemo(() => getLevelFromXP(xp), [xp]);
+  const level = levelInfo.level;
+  const levelTier = getLevelTier(level);
+  const tier = levelTier.name;
+  const xpProgress = levelInfo.progress;
+  const xpToNext = levelInfo.nextLevelXp - xp;
+  const xpNextLevel = levelInfo.nextLevelXp;
   const ovr = useMemo(() => computeOVR(seasonStats), [seasonStats]);
 
   const primaryTeam = teams[0] || null;
@@ -609,6 +615,7 @@ export function usePlayerHomeData(playerId: string | null) {
     tier,
     xpProgress,
     xpToNext,
+    xpNextLevel,
     ovr,
     bestRank,
     // Events

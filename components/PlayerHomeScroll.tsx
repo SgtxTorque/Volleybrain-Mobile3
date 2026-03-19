@@ -517,6 +517,7 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           level={data.level}
           xpProgress={data.xpProgress}
           xpCurrent={data.xp}
+          xpNextLevel={data.xpNextLevel}
           scrollY={scrollY}
         />
 
