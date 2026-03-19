@@ -143,20 +143,21 @@ export default function TeamManagerHomeScroll() {
 
   useEffect(() => {
     if (!data.selectedTeamId) return;
-    supabase
-      .from('team_invite_codes')
-      .select('code')
-      .eq('team_id', data.selectedTeamId)
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-      .then(({ data: row }) => {
+    (async () => {
+      try {
+        const { data: row } = await supabase
+          .from('team_invite_codes')
+          .select('code')
+          .eq('team_id', data.selectedTeamId)
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
         if (row?.code) setInviteCode(row.code);
-      })
-      .catch((e) => {
+      } catch (e) {
         if (__DEV__) console.log('Failed to fetch invite code:', e);
-      });
+      }
+    })();
   }, [data.selectedTeamId]);
 
   // Signal to tab bar that this scroll is active
