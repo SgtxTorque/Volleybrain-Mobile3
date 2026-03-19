@@ -148,11 +148,12 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
   const [showReceivedShoutout, setShowReceivedShoutout] = useState(false);
 
   useEffect(() => {
-    if (data.loading || !data.engagementProfileId) return;
+    if (data.loading || !playerId) return;
     let cancelled = false;
     const timer = setTimeout(async () => {
       try {
-        const unseen = await getUnseenShoutouts(data.engagementProfileId!);
+        const ids = [playerId, data.engagementProfileId].filter(Boolean) as string[];
+        const unseen = await getUnseenShoutouts(ids);
         if (cancelled || unseen.length === 0) return;
         setUnseenShoutouts(unseen);
         setShowReceivedShoutout(true);
@@ -161,14 +162,14 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
       }
     }, 2000); // 2s delay so level-up/streak celebrations go first
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [data.loading, data.engagementProfileId]);
+  }, [data.loading, playerId, data.engagementProfileId]);
 
   const handleShoutoutDismiss = async () => {
     if (currentShoutoutIndex < unseenShoutouts.length - 1) {
       setCurrentShoutoutIndex(prev => prev + 1);
     } else {
       setShowReceivedShoutout(false);
-      await markShoutoutsSeen();
+      await markShoutoutsSeen(playerId || data.engagementProfileId || '');
       setUnseenShoutouts([]);
       setCurrentShoutoutIndex(0);
     }

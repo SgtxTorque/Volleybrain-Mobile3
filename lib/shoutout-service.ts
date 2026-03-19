@@ -10,7 +10,7 @@ import type { ShoutoutCategory } from './engagement-types';
 import { checkAndCompleteQuests } from './quest-engine';
 import { emitRefresh } from './refresh-bus';
 
-const LAST_SEEN_SHOUTOUT_KEY = 'LYNX_LAST_SEEN_SHOUTOUT';
+const LAST_SEEN_SHOUTOUT_PREFIX = 'LYNX_LAST_SEEN_SHOUTOUT_';
 
 // =============================================================================
 // Types
@@ -408,10 +408,12 @@ export type UnseenShoutout = {
   category_info: { name: string; emoji: string; color: string | null } | null;
 };
 
-/** Get shoutouts received since the player last dismissed the celebration modal */
-export async function getUnseenShoutouts(receiverId: string): Promise<UnseenShoutout[]> {
+/** Get shoutouts received since the player last dismissed the celebration modal.
+ *  Accepts an array of IDs to match against receiver_id (supports both players.id and profiles.id). */
+export async function getUnseenShoutouts(receiverIds: string[]): Promise<UnseenShoutout[]> {
   try {
-    const lastSeen = await AsyncStorage.getItem(LAST_SEEN_SHOUTOUT_KEY);
+    if (receiverIds.length === 0) return [];
+    const lastSeen = await AsyncStorage.getItem(`${LAST_SEEN_SHOUTOUT_PREFIX}${receiverIds[0]}`);
     const lastSeenDate = lastSeen ? new Date(lastSeen) : new Date(0);
 
     const { data, error } = await supabase
@@ -421,7 +423,7 @@ export async function getUnseenShoutouts(receiverId: string): Promise<UnseenShou
         giver:profiles!giver_id(full_name, avatar_url),
         category_info:shoutout_categories!category_id(name, emoji, color)
       `)
-      .eq('receiver_id', receiverId)
+      .in('receiver_id', receiverIds)
       .gt('created_at', lastSeenDate.toISOString())
       .order('created_at', { ascending: false });
 
@@ -446,9 +448,9 @@ export async function getUnseenShoutouts(receiverId: string): Promise<UnseenShou
 }
 
 /** Mark all shoutouts as seen — call after the celebration modal is dismissed */
-export async function markShoutoutsSeen(): Promise<void> {
+export async function markShoutoutsSeen(userId: string): Promise<void> {
   try {
-    await AsyncStorage.setItem(LAST_SEEN_SHOUTOUT_KEY, new Date().toISOString());
+    await AsyncStorage.setItem(`${LAST_SEEN_SHOUTOUT_PREFIX}${userId}`, new Date().toISOString());
   } catch (e) {
     if (__DEV__) console.error('[ShoutoutService] markShoutoutsSeen error:', e);
   }
