@@ -19,9 +19,13 @@ export default function InviteCodeModal({ visible, onClose, teamName, inviteCode
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
-    await Clipboard.setStringAsync(inviteCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await Clipboard.setStringAsync(inviteCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (e) {
+      if (__DEV__) console.log('Clipboard failed:', e);
+    }
   };
 
   const handleShare = async () => {

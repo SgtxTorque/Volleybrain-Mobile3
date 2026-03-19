@@ -153,6 +153,9 @@ export default function TeamManagerHomeScroll() {
       .maybeSingle()
       .then(({ data: row }) => {
         if (row?.code) setInviteCode(row.code);
+      })
+      .catch((e) => {
+        if (__DEV__) console.log('Failed to fetch invite code:', e);
       });
   }, [data.selectedTeamId]);
 

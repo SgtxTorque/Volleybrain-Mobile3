@@ -38,37 +38,45 @@ export default function InviteParentsScreen() {
     if (!user?.id) return;
 
     (async () => {
-      // Find the user's team via team_staff
-      const { data: staffRow } = await supabase
-        .from('team_staff')
-        .select('team_id, teams ( name )')
-        .eq('user_id', user.id)
-        .eq('is_active', true)
-        .limit(1)
-        .maybeSingle();
+      try {
+        // Find the user's team via team_staff
+        const { data: staffRow } = await supabase
+          .from('team_staff')
+          .select('team_id, teams ( name )')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .limit(1)
+          .maybeSingle();
 
-      if (!staffRow?.team_id) return;
-      setTeamName((staffRow as any).teams?.name || 'My Team');
+        if (!staffRow?.team_id) return;
+        setTeamName((staffRow as any).teams?.name || 'My Team');
 
-      // Fetch active invite code
-      const { data: codeRow } = await supabase
-        .from('team_invite_codes')
-        .select('code')
-        .eq('team_id', staffRow.team_id)
-        .eq('is_active', true)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        // Fetch active invite code
+        const { data: codeRow } = await supabase
+          .from('team_invite_codes')
+          .select('code')
+          .eq('team_id', staffRow.team_id)
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-      if (codeRow?.code) setInviteCode(codeRow.code);
+        if (codeRow?.code) setInviteCode(codeRow.code);
+      } catch (e) {
+        if (__DEV__) console.log('Failed to fetch invite data:', e);
+      }
     })();
   }, [user?.id]);
 
   const handleCopy = async () => {
     if (!inviteCode) return;
-    await Clipboard.setStringAsync(inviteCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await Clipboard.setStringAsync(inviteCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (e) {
+      if (__DEV__) console.log('Clipboard failed:', e);
+    }
   };
 
   const handleShare = async () => {

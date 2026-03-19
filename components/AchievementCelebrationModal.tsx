@@ -3,8 +3,7 @@
 // =============================================================================
 
 import { getCelebrationImage } from '@/constants/mascot-images';
-import { RARITY_CONFIG } from '@/lib/achievement-types';
-import type { UnseenAchievement } from '@/lib/achievement-types';
+import { RARITY_CONFIG, type UnseenAchievement } from '@/lib/achievement-types';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import React, { useCallback, useEffect, useRef, useState } from 'react';

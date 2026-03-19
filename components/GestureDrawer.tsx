@@ -18,8 +18,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { UserRole } from '@/lib/permissions';
-import { useDrawerBadges } from '@/hooks/useDrawerBadges';
-import type { DrawerBadges } from '@/hooks/useDrawerBadges';
+import { useDrawerBadges, type DrawerBadges } from '@/hooks/useDrawerBadges';
 import { resolveLinkedPlayerIds } from '@/lib/resolve-linked-players';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';

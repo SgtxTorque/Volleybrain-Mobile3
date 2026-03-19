@@ -89,8 +89,7 @@ import TeamPulse from './TeamPulse';
 import TrophyCaseWidget from './TrophyCaseWidget';
 import RoleSelector from './RoleSelector';
 import { fetchActiveChallenges, optInToChallenge, type ChallengeWithParticipants } from '@/lib/challenge-service';
-import { checkMilestoneReached, awardStreakMilestoneXP } from '@/lib/streak-engine';
-import type { StreakTier } from '@/lib/streak-engine';
+import { checkMilestoneReached, awardStreakMilestoneXP, type StreakTier } from '@/lib/streak-engine';
 
 // ─── Player Dark Theme ──────────────────────────────────────────
 import { PLAYER_THEME } from '@/theme/player-theme';
