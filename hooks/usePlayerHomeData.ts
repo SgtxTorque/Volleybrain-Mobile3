@@ -452,21 +452,29 @@ export function usePlayerHomeData(playerId: string | null) {
         if (profileId) {
           const { data: shoutouts } = await supabase
             .from('shoutouts')
-            .select('id, message, created_at, category')
+            .select(`
+              id, message, created_at, category,
+              giver:profiles!giver_id(full_name, avatar_url),
+              category_info:shoutout_categories!category_id(name, emoji)
+            `)
             .eq('receiver_id', profileId)
             .gte('created_at', weekAgo.toISOString())
             .order('created_at', { ascending: false })
             .limit(3);
 
           if (shoutouts && shoutouts.length > 0) {
-            setRecentShoutouts(shoutouts.map((s: any) => ({
-              id: s.id,
-              giverName: 'Coach',
-              categoryName: s.category || 'Shoutout',
-              categoryEmoji: '\u{1F31F}',
-              message: s.message,
-              created_at: s.created_at,
-            })));
+            setRecentShoutouts(shoutouts.map((s: any) => {
+              const giver = Array.isArray(s.giver) ? s.giver[0] : s.giver;
+              const catInfo = Array.isArray(s.category_info) ? s.category_info[0] : s.category_info;
+              return {
+                id: s.id,
+                giverName: giver?.full_name || 'A teammate',
+                categoryName: catInfo?.name || s.category || 'Shoutout',
+                categoryEmoji: catInfo?.emoji || '\u{2B50}',
+                message: s.message,
+                created_at: s.created_at,
+              };
+            }));
           } else {
             setRecentShoutouts([]);
           }

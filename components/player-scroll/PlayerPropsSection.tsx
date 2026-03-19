@@ -3,10 +3,11 @@
  * received by this player, styled for the D+ player scroll.
  */
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { FONTS } from '@/theme/fonts';
 import { PLAYER_THEME } from '@/theme/player-theme';
 import { D_RADII } from '@/theme/d-system';
+import { getShoutoutImage } from '@/constants/mascot-images';
 import type { RecentShoutout } from '@/hooks/usePlayerHomeData';
 
 type Props = {
@@ -45,11 +46,11 @@ export default function PlayerPropsSection({ shoutouts, onGiveShoutout }: Props)
       <Text style={styles.headerTitle}>PROPS FROM THE TEAM</Text>
       {shoutouts.slice(0, 3).map((shoutout) => (
         <View key={shoutout.id} style={styles.shoutoutRow}>
-          <View style={styles.shoutoutAvatar}>
-            <Text style={styles.shoutoutAvatarText}>
-              {shoutout.giverName[0]?.toUpperCase() || '?'}
-            </Text>
-          </View>
+          <Image
+            source={getShoutoutImage(shoutout.categoryName.toLowerCase().replace(/\s+/g, '_'))}
+            style={styles.shoutoutThumb}
+            resizeMode="contain"
+          />
           <View style={styles.shoutoutContent}>
             <Text style={styles.shoutoutText} numberOfLines={1}>
               {shoutout.giverName} gave you {shoutout.categoryEmoji} {shoutout.categoryName}
@@ -97,18 +98,10 @@ const styles = StyleSheet.create({
     borderColor: PLAYER_THEME.border,
     marginBottom: 6,
   },
-  shoutoutAvatar: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: 'rgba(75,185,236,0.12)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  shoutoutAvatarText: {
-    fontFamily: FONTS.bodyBold,
-    fontSize: 12,
-    color: PLAYER_THEME.accent,
+  shoutoutThumb: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
   },
   shoutoutContent: {
     flex: 1,
