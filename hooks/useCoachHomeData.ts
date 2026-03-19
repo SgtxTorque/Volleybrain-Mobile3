@@ -385,7 +385,10 @@ export function useCoachHomeData() {
 
           if (prev) {
             const resultStr = prev.game_result === 'win' ? 'Won' : prev.game_result === 'loss' ? 'Lost' : 'Tied';
-            setPreviousMatchup(`Last matchup vs ${nextEvt.opponent_name}: ${resultStr} ${prev.our_score}-${prev.opponent_score}`);
+            const prevScore = prev.our_score != null && prev.opponent_score != null
+              ? ` ${prev.our_score}-${prev.opponent_score}`
+              : '';
+            setPreviousMatchup(`Last matchup vs ${nextEvt.opponent_name}: ${resultStr}${prevScore}`);
           } else {
             setPreviousMatchup(`First meeting with ${nextEvt.opponent_name} this season.`);
           }

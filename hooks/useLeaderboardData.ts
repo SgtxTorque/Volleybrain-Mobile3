@@ -227,7 +227,8 @@ export function useLeaderboardData(seasonId: string | null, sport?: string | nul
         const top = leaderboardData[catId]?.[0];
         if (!top) return null;
         const cat = categories.find((c) => c.id === catId);
-        return { category: cat!, player: top };
+        if (!cat) return null;
+        return { category: cat, player: top };
       })
       .filter(Boolean) as { category: LeaderboardCategory; player: LeaderboardEntry }[];
   }, [leaderboardData, categories]);

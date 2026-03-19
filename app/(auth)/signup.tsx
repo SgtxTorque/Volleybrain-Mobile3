@@ -475,10 +475,10 @@ export default function SignupScreen() {
 
             {selectedRole === 'parent' && (
               <View style={{ marginTop: 16, padding: 16, backgroundColor: '#F6F8FB', borderRadius: 14 }}>
-                <Text style={{ fontFamily: FONTS.bodySemiBold, fontSize: 14, color: BRAND.navy, marginBottom: 8 }}>
+                <Text style={{ fontFamily: FONTS.bodyMediumSemiBold, fontSize: 14, color: BRAND.navy, marginBottom: 8 }}>
                   Parent/Guardian Consent
                 </Text>
-                <Text style={{ fontFamily: FONTS.body, fontSize: 13, color: BRAND.textMuted, marginBottom: 12, lineHeight: 18 }}>
+                <Text style={{ fontFamily: FONTS.bodyMedium, fontSize: 13, color: BRAND.textMuted, marginBottom: 12, lineHeight: 18 }}>
                   Lynx collects information about minor children (names, dates of birth, photos, sports performance data) to provide youth sports management services. By checking this box, you consent to the collection and use of your child's information as described in our Privacy Policy.
                 </Text>
                 <TouchableOpacity
@@ -490,7 +490,7 @@ export default function SignupScreen() {
                     size={24}
                     color={coppaConsent ? BRAND.skyBlue : BRAND.textMuted}
                   />
-                  <Text style={{ fontFamily: FONTS.body, fontSize: 13, color: BRAND.navy, marginLeft: 8, flex: 1 }}>
+                  <Text style={{ fontFamily: FONTS.bodyMedium, fontSize: 13, color: BRAND.navy, marginLeft: 8, flex: 1 }}>
                     I am the parent or legal guardian and I consent to the collection of my child's information.
                   </Text>
                 </TouchableOpacity>
@@ -610,12 +610,12 @@ export default function SignupScreen() {
                       {submitting ? (
                         <ActivityIndicator color="#fff" />
                       ) : (
-                        <Text style={{ fontFamily: FONTS.bodyBold, fontSize: 16, color: '#fff' }}>
+                        <Text style={{ fontFamily: FONTS.bodyMediumBold, fontSize: 16, color: '#fff' }}>
                           Set Up My Team
                         </Text>
                       )}
                     </TouchableOpacity>
-                    <Text style={{ fontFamily: FONTS.bodyMedium, fontSize: 13, color: BRAND.textMuted, textAlign: 'center' }}>
+                    <Text style={{ fontFamily: FONTS.bodyMediumMedium, fontSize: 13, color: BRAND.textMuted, textAlign: 'center' }}>
                       or enter an invite code below to join an existing team
                     </Text>
                   </View>
@@ -672,7 +672,7 @@ export default function SignupScreen() {
                     style={s.textBtn}
                   >
                     <Text style={s.textBtnLabel}>
-                      Or, <Text style={{ fontFamily: FONTS.bodyBold }}>create a new organization</Text>
+                      Or, <Text style={{ fontFamily: FONTS.bodyMediumBold }}>create a new organization</Text>
                     </Text>
                   </TouchableOpacity>
                 )}
@@ -706,7 +706,7 @@ const s = StyleSheet.create({
   },
   stepDotActive: { borderColor: BRAND.teal, backgroundColor: BRAND.teal },
   stepDotDone: { borderColor: BRAND.teal, backgroundColor: BRAND.teal },
-  stepNum: { fontFamily: FONTS.bodySemiBold, fontSize: 12, color: BRAND.textMuted },
+  stepNum: { fontFamily: FONTS.bodyMediumSemiBold, fontSize: 12, color: BRAND.textMuted },
   stepNumActive: { color: '#fff' },
   stepLine: { width: 32, height: 2, backgroundColor: BRAND.border },
   stepLineDone: { backgroundColor: BRAND.teal },
@@ -722,13 +722,13 @@ const s = StyleSheet.create({
     paddingBottom: 40,
   },
   stepTitle: {
-    fontFamily: FONTS.bodyBold,
+    fontFamily: FONTS.bodyMediumBold,
     fontSize: 24,
     color: BRAND.navy,
     marginBottom: 4,
   },
   stepSubtitle: {
-    fontFamily: FONTS.bodyMedium,
+    fontFamily: FONTS.bodyMediumMedium,
     fontSize: 14,
     color: BRAND.textMuted,
     marginBottom: 24,
@@ -747,13 +747,13 @@ const s = StyleSheet.create({
   },
   input: {
     flex: 1,
-    fontFamily: FONTS.bodyMedium,
+    fontFamily: FONTS.bodyMediumMedium,
     fontSize: 16,
     color: BRAND.textPrimary,
     paddingVertical: 14,
   },
   codeInput: {
-    fontFamily: FONTS.bodyBold,
+    fontFamily: FONTS.bodyMediumBold,
     letterSpacing: 3,
     fontSize: 18,
     textAlign: 'center',
@@ -766,7 +766,7 @@ const s = StyleSheet.create({
   },
   strengthFill: { height: 4, borderRadius: 2 },
   strengthLabel: {
-    fontFamily: FONTS.bodySemiBold,
+    fontFamily: FONTS.bodyMediumSemiBold,
     fontSize: 11,
     textTransform: 'capitalize',
   },
@@ -782,7 +782,7 @@ const s = StyleSheet.create({
     marginTop: 8,
   },
   primaryBtnText: {
-    fontFamily: FONTS.bodyBold,
+    fontFamily: FONTS.bodyMediumBold,
     fontSize: 16,
     color: '#fff',
   },
@@ -792,13 +792,13 @@ const s = StyleSheet.create({
     padding: 12,
   },
   skipText: {
-    fontFamily: FONTS.bodyMedium,
+    fontFamily: FONTS.bodyMediumMedium,
     fontSize: 14,
     color: BRAND.textMuted,
   },
   textBtn: { alignItems: 'center', paddingVertical: 16 },
   textBtnLabel: {
-    fontFamily: FONTS.bodyMedium,
+    fontFamily: FONTS.bodyMediumMedium,
     fontSize: 14,
     color: BRAND.teal,
   },
@@ -825,12 +825,12 @@ const s = StyleSheet.create({
   },
   roleTextWrap: { flex: 1 },
   roleTitle: {
-    fontFamily: FONTS.bodyBold,
+    fontFamily: FONTS.bodyMediumBold,
     fontSize: 18,
     color: BRAND.navy,
   },
   roleSubtitle: {
-    fontFamily: FONTS.bodyMedium,
+    fontFamily: FONTS.bodyMediumMedium,
     fontSize: 13,
     color: BRAND.textMuted,
     marginTop: 2,
@@ -847,14 +847,14 @@ const s = StyleSheet.create({
   },
   divLine: { flex: 1, height: 1, backgroundColor: BRAND.border },
   divText: {
-    fontFamily: FONTS.bodyMedium,
+    fontFamily: FONTS.bodyMediumMedium,
     fontSize: 13,
     color: BRAND.textMuted,
     marginHorizontal: 12,
   },
   // Error
   errorText: {
-    fontFamily: FONTS.bodyMedium,
+    fontFamily: FONTS.bodyMediumMedium,
     fontSize: 12,
     color: BRAND.coral,
     marginBottom: 8,
@@ -867,7 +867,7 @@ const s = StyleSheet.create({
     gap: 16,
   },
   confirmTitle: {
-    fontFamily: FONTS.bodyBold,
+    fontFamily: FONTS.bodyMediumBold,
     fontSize: 22,
     color: BRAND.navy,
   },
@@ -879,19 +879,19 @@ const s = StyleSheet.create({
     alignItems: 'center',
   },
   codeLabel: {
-    fontFamily: FONTS.bodyMedium,
+    fontFamily: FONTS.bodyMediumMedium,
     fontSize: 11,
     color: 'rgba(255,255,255,0.5)',
     marginBottom: 4,
   },
   codeValue: {
-    fontFamily: FONTS.bodyExtraBold,
+    fontFamily: FONTS.bodyMediumExtraBold,
     fontSize: 24,
     color: '#fff',
     letterSpacing: 3,
   },
   confirmHint: {
-    fontFamily: FONTS.bodyMedium,
+    fontFamily: FONTS.bodyMediumMedium,
     fontSize: 13,
     color: BRAND.textMuted,
     textAlign: 'center',
