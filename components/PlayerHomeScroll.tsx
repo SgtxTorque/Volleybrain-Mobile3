@@ -85,6 +85,8 @@ import ChallengeArrivalModal from './ChallengeArrivalModal';
 import LevelUpCelebrationModal from './LevelUpCelebrationModal';
 import StreakMilestoneCelebrationModal from './StreakMilestoneCelebrationModal';
 import GiveShoutoutModal from './GiveShoutoutModal';
+import ShoutoutReceivedModal from './ShoutoutReceivedModal';
+import { getUnseenShoutouts, markShoutoutsSeen, type UnseenShoutout } from '@/lib/shoutout-service';
 import TeamPulse from './TeamPulse';
 import TrophyCaseWidget from './TrophyCaseWidget';
 import RoleSelector from './RoleSelector';
@@ -137,8 +139,40 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
     };
   }, []);
 
-  // ─── Shoutout modal ──
+  // ─── Shoutout modal (give) ──
   const [showShoutoutModal, setShowShoutoutModal] = useState(false);
+
+  // ─── Shoutout received celebration ──
+  const [unseenShoutouts, setUnseenShoutouts] = useState<UnseenShoutout[]>([]);
+  const [currentShoutoutIndex, setCurrentShoutoutIndex] = useState(0);
+  const [showReceivedShoutout, setShowReceivedShoutout] = useState(false);
+
+  useEffect(() => {
+    if (data.loading || !data.engagementProfileId) return;
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const unseen = await getUnseenShoutouts(data.engagementProfileId!);
+        if (cancelled || unseen.length === 0) return;
+        setUnseenShoutouts(unseen);
+        setShowReceivedShoutout(true);
+      } catch (e) {
+        if (__DEV__) console.error('[PlayerHome] unseen shoutout check failed:', e);
+      }
+    }, 2000); // 2s delay so level-up/streak celebrations go first
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [data.loading, data.engagementProfileId]);
+
+  const handleShoutoutDismiss = async () => {
+    if (currentShoutoutIndex < unseenShoutouts.length - 1) {
+      setCurrentShoutoutIndex(prev => prev + 1);
+    } else {
+      setShowReceivedShoutout(false);
+      await markShoutoutsSeen();
+      setUnseenShoutouts([]);
+      setCurrentShoutoutIndex(0);
+    }
+  };
 
   // ─── Level-up celebration ──
   const LEVEL_KEY = `lynx_player_level_${playerId}`;
@@ -548,6 +582,24 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           onDismiss={handleDismissChallenge}
         />
       )}
+
+      {/* ─── SHOUTOUT RECEIVED CELEBRATION ────────────────────────── */}
+      {showReceivedShoutout && unseenShoutouts.length > 0 && (() => {
+        const s = unseenShoutouts[currentShoutoutIndex];
+        return (
+          <ShoutoutReceivedModal
+            visible={showReceivedShoutout}
+            categoryName={s.category_info?.name || s.category || 'Shoutout'}
+            categoryEmoji={s.category_info?.emoji || '⭐'}
+            giverName={s.giver?.full_name || 'A teammate'}
+            giverAvatarUrl={s.giver?.avatar_url}
+            message={s.message}
+            totalCount={unseenShoutouts.length}
+            currentIndex={currentShoutoutIndex}
+            onDismiss={handleShoutoutDismiss}
+          />
+        );
+      })()}
     </View>
   );
 }

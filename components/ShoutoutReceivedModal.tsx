@@ -25,6 +25,8 @@ type Props = {
   giverAvatarUrl?: string | null;
   message?: string | null;
   xpEarned?: number;
+  totalCount?: number;
+  currentIndex?: number;
   onDismiss: () => void;
 };
 
@@ -35,6 +37,8 @@ export default function ShoutoutReceivedModal({
   giverName,
   message,
   xpEarned = 15,
+  totalCount = 1,
+  currentIndex = 0,
   onDismiss,
 }: Props) {
   const { colors } = useTheme();
@@ -90,6 +94,13 @@ export default function ShoutoutReceivedModal({
             style={[s.illustration, { transform: [{ scale: imageScale }] }]}
           />
 
+          {/* Multi-shoutout indicator */}
+          {totalCount > 1 && (
+            <Text style={[s.countIndicator, { color: colors.textMuted }]}>
+              {currentIndex + 1} of {totalCount}
+            </Text>
+          )}
+
           {/* Header */}
           <Text style={[s.header, { color: colors.text }]}>SHOUTOUT!</Text>
 
@@ -129,7 +140,9 @@ export default function ShoutoutReceivedModal({
             onPress={onDismiss}
             activeOpacity={0.8}
           >
-            <Text style={s.dismissBtnText}>Awesome!</Text>
+            <Text style={s.dismissBtnText}>
+              {currentIndex < totalCount - 1 ? 'Next' : 'Awesome!'}
+            </Text>
           </TouchableOpacity>
         </Animated.View>
       </View>
@@ -155,6 +168,11 @@ const s = StyleSheet.create({
     width: 220,
     height: 220,
     marginBottom: 12,
+  },
+  countIndicator: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 4,
   },
   header: {
     fontSize: 28,
