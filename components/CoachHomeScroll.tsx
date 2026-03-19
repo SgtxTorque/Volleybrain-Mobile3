@@ -126,7 +126,7 @@ function buildBriefingMessage(
     return `${team.name} is ${team.wins}-${team.losses} this season.`;
   }
 
-  return 'Welcome to your coaching hub.';
+  return 'Welcome to your team hub.';
 }
 
 function formatTime(timeStr: string | null): string {
@@ -465,7 +465,7 @@ export default function CoachHomeScroll() {
 
             {/* Greeting text */}
             <View style={styles.greetingText}>
-              <Text style={styles.greetingLine1}>Hey Coach! {'\u{1F525}'}</Text>
+              <Text style={styles.greetingLine1}>{isTeamManager ? `Hey Team Manager! ${'\u{1F525}'}` : `Hey Coach! ${'\u{1F525}'}`}</Text>
               <Text style={styles.greetingLine2} numberOfLines={1}>{briefingMessage}</Text>
             </View>
 
