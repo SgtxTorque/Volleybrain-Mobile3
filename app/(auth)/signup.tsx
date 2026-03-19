@@ -39,7 +39,7 @@ function getPasswordStrength(pw: string): { level: 'weak' | 'medium' | 'strong';
 // ─── Role card config ──────────────────────────────────
 const ROLE_CARDS: { role: SelectedRole; icon: string; title: string; subtitle: string; color: string }[] = [
   { role: 'coach', icon: 'clipboard', title: 'Coach', subtitle: 'I coach a team', color: BRAND.teal },
-  { role: 'team_manager', icon: 'build-outline', title: 'Team Manager', subtitle: 'I manage team operations', color: '#E76F51' },
+  { role: 'team_manager', icon: 'rocket-outline', title: 'I Run a Team', subtitle: 'Set up and manage my own team', color: '#E76F51' },
   { role: 'parent', icon: 'people', title: 'Parent', subtitle: 'My child plays', color: BRAND.skyBlue },
   { role: 'player', icon: 'football', title: 'Player', subtitle: "I'm a player", color: BRAND.goldBrand },
 ];
@@ -586,11 +586,40 @@ export default function SignupScreen() {
                 <Text style={s.stepTitle}>Connect</Text>
                 <Text style={s.stepSubtitle}>
                   {selectedRole === 'team_manager'
-                    ? 'Have an invite code from your organization?'
+                    ? 'Get started with your own team'
                     : selectedRole === 'player'
                       ? 'Your coach may have given you a code'
                       : 'Have an invite code?'}
                 </Text>
+
+                {/* Primary "Set Up My Team" CTA for team managers */}
+                {selectedRole === 'team_manager' && (
+                  <View style={{ marginBottom: 20 }}>
+                    <TouchableOpacity
+                      onPress={handleStartMyOwnTeam}
+                      style={{
+                        backgroundColor: '#E76F51',
+                        borderRadius: 14,
+                        paddingVertical: 16,
+                        alignItems: 'center',
+                        marginBottom: 12,
+                      }}
+                      disabled={submitting}
+                      activeOpacity={0.85}
+                    >
+                      {submitting ? (
+                        <ActivityIndicator color="#fff" />
+                      ) : (
+                        <Text style={{ fontFamily: FONTS.bodyBold, fontSize: 16, color: '#fff' }}>
+                          Set Up My Team
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                    <Text style={{ fontFamily: FONTS.bodyMedium, fontSize: 13, color: BRAND.textMuted, textAlign: 'center' }}>
+                      or enter an invite code below to join an existing team
+                    </Text>
+                  </View>
+                )}
 
                 <View style={[s.inputWrap, codeError ? { borderColor: BRAND.coral } : {}]}>
                   <TextInput
@@ -644,19 +673,6 @@ export default function SignupScreen() {
                   >
                     <Text style={s.textBtnLabel}>
                       Or, <Text style={{ fontFamily: FONTS.bodyBold }}>create a new organization</Text>
-                    </Text>
-                  </TouchableOpacity>
-                )}
-
-                {/* Start own team (team managers only) */}
-                {selectedRole === 'team_manager' && (
-                  <TouchableOpacity
-                    onPress={handleStartMyOwnTeam}
-                    style={s.textBtn}
-                    disabled={submitting}
-                  >
-                    <Text style={s.textBtnLabel}>
-                      Or, <Text style={{ fontFamily: FONTS.bodyBold }}>start my own team</Text>
                     </Text>
                   </TouchableOpacity>
                 )}
