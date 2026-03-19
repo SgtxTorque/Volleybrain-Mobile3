@@ -174,7 +174,7 @@ export default function PlayerTrophyCase({ badges, level, xpProgress, xpCurrent,
       >
         <View style={styles.headerRow}>
           <Text style={styles.headerTitle}>{'\u{1F3C6}'} TROPHY CASE</Text>
-          <Text style={styles.headerCount}>{earnedCount} / {allBadges.length} Unlocked</Text>
+          <Text style={styles.headerCount}>{earnedCount} Earned</Text>
         </View>
 
         <View style={styles.badgeGrid}>

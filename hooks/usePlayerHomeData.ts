@@ -328,14 +328,15 @@ export function usePlayerHomeData(playerId: string | null) {
         setPersonalBest(null);
       }
 
-      // 4. Badges
+      // 4. Badges — filter to only keep records with a valid joined achievement
       try {
         const { data: badgeData } = await supabase
           .from('player_achievements')
           .select('id, earned_at, achievement:achievement_id(id, name, icon, rarity, color_primary, description)')
           .eq('player_id', playerId)
           .order('earned_at', { ascending: false });
-        setBadges((badgeData as any) || []);
+        const validBadges = (badgeData || []).filter((b: any) => b.achievement && b.achievement.id);
+        setBadges(validBadges as any);
       } catch {
         setBadges([]);
       }
