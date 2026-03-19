@@ -1,5 +1,6 @@
 import { getFormationsForSport, getCourtRows, type FormationConfig } from '@/constants/formations';
 import { useAuth } from '@/lib/auth';
+import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { useSport } from '@/lib/sport';
 import { supabase } from '@/lib/supabase';
@@ -22,6 +23,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTheme } from '@/lib/theme';
 
 // ============================================================================
 // TYPES
@@ -86,7 +89,28 @@ export default function LineupBuilderScreen() {
   const { workingSeason } = useSeason();
   const { activeSport } = useSport();
   const router = useRouter();
+  const { colors } = useTheme();
   const params = useLocalSearchParams<{ eventId?: string; teamId?: string }>();
+  // ─── Role Guard ────────────────────────────────
+  const { isAdmin, isCoach, loading: permLoading } = usePermissions();
+
+  if (permLoading) return null;
+
+  if (!isAdmin && !isCoach) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors?.background || '#F6F8FB', justifyContent: 'center', alignItems: 'center', gap: 12, padding: 20 }}>
+        <Ionicons name="lock-closed-outline" size={48} color={colors?.textMuted || '#999'} />
+        <Text style={{ fontFamily: FONTS.bodyBold, fontSize: 18, color: colors?.text || '#10284C' }}>Access Restricted</Text>
+        <Text style={{ fontFamily: FONTS.bodyMedium, fontSize: 14, color: colors?.textMuted || '#999', textAlign: 'center' }}>
+          Coach or admin permissions required.
+        </Text>
+        <TouchableOpacity onPress={() => router.replace('/(tabs)')} style={{ marginTop: 8 }}>
+          <Text style={{ fontFamily: FONTS.bodySemiBold, color: '#4BB9EC', fontSize: 15 }}>Go Home</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
+  // ─── End Role Guard ────────────────────────────
 
   // Sport-aware formations
   const sportName = activeSport?.name || 'volleyball';

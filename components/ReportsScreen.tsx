@@ -1,8 +1,10 @@
 import AdminContextBar from '@/components/AdminContextBar';
 import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
+import { usePermissions } from '@/lib/permissions-context';
 import { REPORTS, REPORT_CATEGORIES, ReportCategory, ReportDefinition, getReportsByCategory } from '@/lib/reports';
 import { useSeason } from '@/lib/season';
 import { useTheme } from '@/lib/theme';
+import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
@@ -13,11 +15,32 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function ReportsScreen() {
   const { colors } = useTheme();
   const { workingSeason } = useSeason();
   const router = useRouter();
+  // ─── Role Guard ────────────────────────────────
+  const { isAdmin, loading } = usePermissions();
+
+  if (loading) return null;
+
+  if (!isAdmin) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors?.background || '#F6F8FB', justifyContent: 'center', alignItems: 'center', gap: 12, padding: 20 }}>
+        <Ionicons name="lock-closed-outline" size={48} color={colors?.textMuted || '#999'} />
+        <Text style={{ fontFamily: FONTS.bodyBold, fontSize: 18, color: colors?.text || '#10284C' }}>Access Restricted</Text>
+        <Text style={{ fontFamily: FONTS.bodyMedium, fontSize: 14, color: colors?.textMuted || '#999', textAlign: 'center' }}>
+          Admin permissions required.
+        </Text>
+        <TouchableOpacity onPress={() => router.replace('/(tabs)')} style={{ marginTop: 8 }}>
+          <Text style={{ fontFamily: FONTS.bodySemiBold, color: '#4BB9EC', fontSize: 15 }}>Go Home</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
+  // ─── End Role Guard ────────────────────────────
 
   const [selectedCategory, setSelectedCategory] = useState<ReportCategory | null>(null);
 

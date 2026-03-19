@@ -19,8 +19,10 @@ import {
   View,
 } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { usePermissions } from '@/lib/permissions-context';
+import { useTheme } from '@/lib/theme';
 import { MatchProvider, useMatch } from '@/lib/gameday/use-match';
 import GamePrepPage from '@/components/gameday/GamePrepPage';
 import LiveMatchPage from '@/components/gameday/LiveMatchPage';
@@ -127,6 +129,28 @@ export default function GameDayCommandScreen() {
     opponent?: string;
     matchId?: string;
   }>();
+  const { colors } = useTheme();
+  const router = useRouter();
+  // ─── Role Guard ────────────────────────────────
+  const { isAdmin, isCoach, loading } = usePermissions();
+
+  if (loading) return null;
+
+  if (!isAdmin && !isCoach) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors?.background || '#F6F8FB', justifyContent: 'center', alignItems: 'center', gap: 12, padding: 20 }}>
+        <Ionicons name="lock-closed-outline" size={48} color={colors?.textMuted || '#999'} />
+        <Text style={{ fontFamily: FONTS.bodyBold, fontSize: 18, color: colors?.text || '#10284C' }}>Access Restricted</Text>
+        <Text style={{ fontFamily: FONTS.bodyMedium, fontSize: 14, color: colors?.textMuted || '#999', textAlign: 'center' }}>
+          Coach or admin permissions required.
+        </Text>
+        <TouchableOpacity onPress={() => router.replace('/(tabs)')} style={{ marginTop: 8 }}>
+          <Text style={{ fontFamily: FONTS.bodySemiBold, color: '#4BB9EC', fontSize: 15 }}>Go Home</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
+  // ─── End Role Guard ────────────────────────────
 
   return (
     <MatchProvider

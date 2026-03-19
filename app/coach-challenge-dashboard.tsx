@@ -16,7 +16,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import {
   useCoachChallengeStats,
@@ -25,6 +25,8 @@ import {
   type PendingVerification,
 } from '@/hooks/useChallenges';
 import { useAuth } from '@/lib/auth';
+import { usePermissions } from '@/lib/permissions-context';
+import { useTheme } from '@/lib/theme';
 import type { ChallengeWithParticipants } from '@/lib/challenge-service';
 import type { CoachChallenge } from '@/lib/engagement-types';
 import { useCoachTeam } from '@/hooks/useCoachTeam';
@@ -58,6 +60,27 @@ export default function CoachChallengeDashboard() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const { colors } = useTheme();
+  // ─── Role Guard ────────────────────────────────
+  const { isAdmin, isCoach, loading: permLoading } = usePermissions();
+
+  if (permLoading) return null;
+
+  if (!isAdmin && !isCoach) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors?.background || '#F6F8FB', justifyContent: 'center', alignItems: 'center', gap: 12, padding: 20 }}>
+        <Ionicons name="lock-closed-outline" size={48} color={colors?.textMuted || '#999'} />
+        <Text style={{ fontFamily: FONTS.bodyBold, fontSize: 18, color: colors?.text || '#10284C' }}>Access Restricted</Text>
+        <Text style={{ fontFamily: FONTS.bodyMedium, fontSize: 14, color: colors?.textMuted || '#999', textAlign: 'center' }}>
+          Coach or admin permissions required.
+        </Text>
+        <TouchableOpacity onPress={() => router.replace('/(tabs)')} style={{ marginTop: 8 }}>
+          <Text style={{ fontFamily: FONTS.bodySemiBold, color: '#4BB9EC', fontSize: 15 }}>Go Home</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
+  // ─── End Role Guard ────────────────────────────
 
   // Team resolution — shared 3-path fallback hook
   const { teamId, orgId } = useCoachTeam();

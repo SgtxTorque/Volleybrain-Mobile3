@@ -1,6 +1,8 @@
 import { useAuth } from '@/lib/auth';
 import { queueBlastEmail } from '@/lib/email-queue';
+import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
+import { useTheme } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
@@ -49,6 +51,27 @@ export default function BlastComposerScreen() {
   const { user, profile } = useAuth();
   const { workingSeason } = useSeason();
   const router = useRouter();
+  const { colors } = useTheme();
+  // ─── Role Guard ────────────────────────────────
+  const { isAdmin, isCoach, loading } = usePermissions();
+
+  if (loading) return null;
+
+  if (!isAdmin && !isCoach) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors?.background || '#F6F8FB', justifyContent: 'center', alignItems: 'center', gap: 12, padding: 20 }}>
+        <Ionicons name="lock-closed-outline" size={48} color={colors?.textMuted || '#999'} />
+        <Text style={{ fontFamily: FONTS.bodyBold, fontSize: 18, color: colors?.text || '#10284C' }}>Access Restricted</Text>
+        <Text style={{ fontFamily: FONTS.bodyMedium, fontSize: 14, color: colors?.textMuted || '#999', textAlign: 'center' }}>
+          Staff permissions required.
+        </Text>
+        <TouchableOpacity onPress={() => router.replace('/(tabs)')} style={{ marginTop: 8 }}>
+          <Text style={{ fontFamily: FONTS.bodySemiBold, color: '#4BB9EC', fontSize: 15 }}>Go Home</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
+  // ─── End Role Guard ────────────────────────────
 
   // Form state
   const [title, setTitle] = useState('');
