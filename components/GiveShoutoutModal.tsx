@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -24,6 +25,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { getShoutoutImage } from '../constants/mascot-images';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // =============================================================================
@@ -383,7 +385,12 @@ export default function GiveShoutoutModal({ visible, teamId, onClose, onSuccess,
           },
         ]}
       >
-        <Text style={s.previewEmoji}>{selectedCategory?.emoji}</Text>
+        <Image
+          source={getShoutoutImage(selectedCategory?.name?.toLowerCase().replace(/\s+/g, '_') || '')}
+          style={{ width: 180, height: 180 }}
+          resizeMode="contain"
+          accessibilityLabel={`${selectedCategory?.name} shoutout illustration`}
+        />
         <Text style={[s.previewTitle, { color: colors.text }]}>
           {selectedCategory?.name}
         </Text>
