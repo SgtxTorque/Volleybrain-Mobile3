@@ -2,7 +2,6 @@ import { displayTextStyle, shadows } from '@/lib/design-tokens';
 import { usePermissions } from '@/lib/permissions-context';
 import { useTheme } from '@/lib/theme';
 import { FONTS } from '@/theme/fonts';
-import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
