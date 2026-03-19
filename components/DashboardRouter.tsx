@@ -12,6 +12,7 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import AdminHomeScroll from './AdminHomeScroll';
 import ChildPickerScreen, { type ChildPlayer } from './ChildPickerScreen';
 import CoachHomeScroll from './CoachHomeScroll';
+import TeamManagerHomeScroll from './TeamManagerHomeScroll';
 import TeamManagerSetupPrompt from './empty-states/TeamManagerSetupPrompt';
 import ParentHomeScroll from './ParentHomeScroll';
 import PlayerHomeScroll from './PlayerHomeScroll';
@@ -213,7 +214,7 @@ export default function DashboardRouter() {
     case 'coach':
       return <CoachHomeScroll />;
     case 'team_manager':
-      return <CoachHomeScroll />;
+      return <TeamManagerHomeScroll />;
     case 'team_manager_setup':
       return <TeamManagerSetupPrompt />;
     case 'parent':
