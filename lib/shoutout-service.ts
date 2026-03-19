@@ -2,12 +2,15 @@
 // Shoutout Service — Give, XP, Achievement Checks
 // =============================================================================
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabase';
 import { XP_BY_SOURCE } from './engagement-constants';
 import { getLevelFromXP } from './engagement-constants';
 import type { ShoutoutCategory } from './engagement-types';
 import { checkAndCompleteQuests } from './quest-engine';
 import { emitRefresh } from './refresh-bus';
+
+const LAST_SEEN_SHOUTOUT_KEY = 'LYNX_LAST_SEEN_SHOUTOUT';
 
 // =============================================================================
 // Types
@@ -389,4 +392,64 @@ export async function fetchShoutoutStats(profileId: string): Promise<{
     given: given || 0,
     categoryBreakdown,
   };
+}
+
+// =============================================================================
+// Unseen Shoutout Tracking
+// =============================================================================
+
+/** Data shape returned by getUnseenShoutouts */
+export type UnseenShoutout = {
+  id: string;
+  category: string;
+  message: string | null;
+  created_at: string;
+  giver: { full_name: string; avatar_url: string | null } | null;
+  category_info: { name: string; emoji: string; color: string | null } | null;
+};
+
+/** Get shoutouts received since the player last dismissed the celebration modal */
+export async function getUnseenShoutouts(receiverId: string): Promise<UnseenShoutout[]> {
+  try {
+    const lastSeen = await AsyncStorage.getItem(LAST_SEEN_SHOUTOUT_KEY);
+    const lastSeenDate = lastSeen ? new Date(lastSeen) : new Date(0);
+
+    const { data, error } = await supabase
+      .from('shoutouts')
+      .select(`
+        id, category, message, created_at,
+        giver:profiles!giver_id(full_name, avatar_url),
+        category_info:shoutout_categories!category_id(name, emoji, color)
+      `)
+      .eq('receiver_id', receiverId)
+      .gt('created_at', lastSeenDate.toISOString())
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      if (__DEV__) console.error('[ShoutoutService] getUnseenShoutouts error:', error);
+      return [];
+    }
+
+    // Supabase returns FK joins as arrays; normalize to single objects
+    return (data || []).map((row: any) => ({
+      id: row.id,
+      category: row.category,
+      message: row.message,
+      created_at: row.created_at,
+      giver: Array.isArray(row.giver) ? row.giver[0] || null : row.giver || null,
+      category_info: Array.isArray(row.category_info) ? row.category_info[0] || null : row.category_info || null,
+    })) as UnseenShoutout[];
+  } catch (e) {
+    if (__DEV__) console.error('[ShoutoutService] getUnseenShoutouts exception:', e);
+    return [];
+  }
+}
+
+/** Mark all shoutouts as seen — call after the celebration modal is dismissed */
+export async function markShoutoutsSeen(): Promise<void> {
+  try {
+    await AsyncStorage.setItem(LAST_SEEN_SHOUTOUT_KEY, new Date().toISOString());
+  } catch (e) {
+    if (__DEV__) console.error('[ShoutoutService] markShoutoutsSeen error:', e);
+  }
 }
