@@ -51,6 +51,35 @@ export default function DashboardRouter() {
     // Canonical resolution → then fetch season-filtered details
     const allIds = await resolveLinkedPlayerIds(user.id);
     if (allIds.length === 0) {
+      // Fallback for admin/coach previewing as player: pick first player on their team
+      if (devModeRole === 'player') {
+        const { data: staffTeams } = await supabase
+          .from('team_staff')
+          .select('team_id')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .limit(1);
+
+        if (staffTeams && staffTeams.length > 0) {
+          const { data: firstPlayer } = await supabase
+            .from('players')
+            .select('id, first_name, last_name')
+            .eq('team_id', staffTeams[0].team_id)
+            .eq('season_id', workingSeason.id)
+            .limit(1)
+            .maybeSingle();
+
+          if (firstPlayer) {
+            const name = `${firstPlayer.first_name} ${firstPlayer.last_name}`;
+            setPlayerChildren([{ id: firstPlayer.id, name }]);
+            setSelectedChildId(firstPlayer.id);
+            setSelectedChildName(name);
+            setPlayerChildrenLoaded(true);
+            return;
+          }
+        }
+      }
+
       setPlayerChildren([]);
       setPlayerChildrenLoaded(true);
       return;
@@ -80,9 +109,15 @@ export default function DashboardRouter() {
         setSelectedChildName(null);
       }
     }
-  }, [user?.id, workingSeason?.id]);
+  }, [user?.id, workingSeason?.id, devModeRole]);
 
   useEffect(() => {
+    // Clear stale dashboard before async determination (prevents race on role switch)
+    setDashboardType('loading');
+    setPlayerChildren([]);
+    setSelectedChildId(null);
+    setSelectedChildName(null);
+    setPlayerChildrenLoaded(false);
     determineDashboard();
   }, [user?.id, workingSeason?.id, isAdmin, isCoach, isTeamManager, isParent, isPlayer, devModeRole]);
 
@@ -210,17 +245,17 @@ export default function DashboardRouter() {
 
   switch (dashboardType) {
     case 'admin':
-      return <AdminHomeScroll />;
+      return <AdminHomeScroll key="admin" />;
     case 'coach':
-      return <CoachHomeScroll />;
+      return <CoachHomeScroll key="coach" />;
     case 'team_manager':
-      return <TeamManagerHomeScroll />;
+      return <TeamManagerHomeScroll key="team_manager" />;
     case 'team_manager_setup':
-      return <TeamManagerSetupPrompt />;
+      return <TeamManagerSetupPrompt key="team_manager_setup" />;
     case 'parent':
-      return <ParentHomeScroll />;
+      return <ParentHomeScroll key="parent" />;
     case 'coach_parent':
-      return <CoachHomeScroll />;
+      return <CoachHomeScroll key="coach_parent" />;
     case 'player': {
       // Still loading children
       if (!playerChildrenLoaded) {
@@ -254,6 +289,7 @@ export default function DashboardRouter() {
 
       return (
         <PlayerHomeScroll
+          key={`player-${selectedChildId}`}
           playerId={selectedChildId}
           playerName={selectedChildName}
           onSwitchChild={handleSwitchChild}
@@ -261,7 +297,7 @@ export default function DashboardRouter() {
       );
     }
     default:
-      return <ParentHomeScroll />;
+      return <ParentHomeScroll key="default" />;
   }
 }
 

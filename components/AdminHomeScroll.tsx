@@ -100,18 +100,23 @@ export default function AdminHomeScroll() {
     return show;
   });
 
-  // Unseen achievement celebration
+  // Unseen achievement celebration (delayed to avoid overlap with FirstTimeTour)
   const [unseenBadges, setUnseenBadges] = useState<UnseenAchievement[]>([]);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [celebrationReady, setCelebrationReady] = useState(false);
   useEffect(() => {
-    if (!profile?.id) return;
+    const timer = setTimeout(() => setCelebrationReady(true), 3000);
+    return () => clearTimeout(timer);
+  }, []);
+  useEffect(() => {
+    if (!profile?.id || !celebrationReady) return;
     getUnseenRoleAchievements(profile.id).then((unseen) => {
       if (unseen.length > 0) {
         setUnseenBadges(unseen);
         setShowCelebration(true);
       }
     }).catch(() => {});
-  }, [profile?.id]);
+  }, [profile?.id, celebrationReady]);
 
   const onRefresh = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

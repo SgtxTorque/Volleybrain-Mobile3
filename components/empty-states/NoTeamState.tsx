@@ -3,6 +3,7 @@ import { Image, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { FAMILY_IMAGES } from '@/constants/mascot-images';
+import { useTheme } from '@/lib/theme';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 
@@ -30,10 +31,11 @@ const MESSAGES: Record<Props['role'], { body: string }> = {
 
 export default function NoTeamState({ role }: Props) {
   const router = useRouter();
+  const { colors } = useTheme();
   const msg = MESSAGES[role] || MESSAGES.parent;
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { backgroundColor: colors.background }]}>
       <Image
         source={FAMILY_IMAGES.MEET_LYNX}
         style={s.mascot}
@@ -41,14 +43,14 @@ export default function NoTeamState({ role }: Props) {
         accessibilityLabel="Lynx mascot waving"
       />
 
-      <Text style={s.title}>No Team Yet</Text>
-      <Text style={s.subtitle}>{msg.body}</Text>
+      <Text style={[s.title, { color: colors.text }]}>No Team Yet</Text>
+      <Text style={[s.subtitle, { color: colors.textMuted }]}>{msg.body}</Text>
 
       {/* Role-specific CTAs */}
       <View style={s.ctaWrap}>
         {role === 'admin' && (
           <>
-            <Text style={s.hintText}>
+            <Text style={[s.hintText, { color: colors.textMuted }]}>
               Set up your seasons and teams on the web for the best experience.
             </Text>
             <TouchableOpacity
@@ -60,25 +62,25 @@ export default function NoTeamState({ role }: Props) {
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => router.push('/season-setup-wizard' as any)}
-              style={s.outlineBtn}
+              style={[s.outlineBtn, { borderColor: colors.primary }]}
             >
-              <Ionicons name="add-circle-outline" size={20} color={BRAND.skyBlue} />
-              <Text style={s.outlineBtnText}>Quick Setup on Mobile</Text>
+              <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
+              <Text style={[s.outlineBtnText, { color: colors.primary }]}>Quick Setup on Mobile</Text>
             </TouchableOpacity>
           </>
         )}
 
         {role === 'coach' && (
           <>
-            <Text style={s.hintText}>
+            <Text style={[s.hintText, { color: colors.textMuted }]}>
               Your admin will assign you to a team. In the meantime, you can explore the app.
             </Text>
             <TouchableOpacity
               onPress={() => router.push('/org-directory' as any)}
-              style={s.outlineBtn}
+              style={[s.outlineBtn, { borderColor: colors.primary }]}
             >
-              <Ionicons name="people-outline" size={20} color={BRAND.skyBlue} />
-              <Text style={s.outlineBtnText}>Browse Organizations</Text>
+              <Ionicons name="people-outline" size={20} color={colors.primary} />
+              <Text style={[s.outlineBtnText, { color: colors.primary }]}>Browse Organizations</Text>
             </TouchableOpacity>
           </>
         )}
@@ -94,16 +96,16 @@ export default function NoTeamState({ role }: Props) {
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => router.push('/org-directory' as any)}
-              style={s.outlineBtn}
+              style={[s.outlineBtn, { borderColor: colors.primary }]}
             >
-              <Ionicons name="search-outline" size={20} color={BRAND.skyBlue} />
-              <Text style={s.outlineBtnText}>Browse Organizations</Text>
+              <Ionicons name="search-outline" size={20} color={colors.primary} />
+              <Text style={[s.outlineBtnText, { color: colors.primary }]}>Browse Organizations</Text>
             </TouchableOpacity>
           </>
         )}
 
         {role === 'player' && (
-          <Text style={s.hintText}>
+          <Text style={[s.hintText, { color: colors.textMuted }]}>
             Your coach will add you to a team soon. Pull down to refresh and check for updates.
           </Text>
         )}

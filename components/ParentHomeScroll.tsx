@@ -213,18 +213,23 @@ export default function ParentHomeScroll() {
     });
   }, [data.loading, data.childXp?.level, data.children]);
 
-  // Unseen achievement celebration (parent's own badges)
+  // Unseen achievement celebration (delayed to avoid overlap with FirstTimeTour)
   const [unseenBadges, setUnseenBadges] = useState<UnseenAchievement[]>([]);
   const [showBadgeCelebration, setShowBadgeCelebration] = useState(false);
+  const [celebrationReady, setCelebrationReady] = useState(false);
   useEffect(() => {
-    if (!profile?.id) return;
+    const timer = setTimeout(() => setCelebrationReady(true), 3000);
+    return () => clearTimeout(timer);
+  }, []);
+  useEffect(() => {
+    if (!profile?.id || !celebrationReady) return;
     getUnseenRoleAchievements(profile.id).then((unseen) => {
       if (unseen.length > 0) {
         setUnseenBadges(unseen);
         setShowBadgeCelebration(true);
       }
     }).catch(() => {});
-  }, [profile?.id]);
+  }, [profile?.id, celebrationReady]);
 
   // Signal to tab bar that parent scroll is active
   useEffect(() => {
