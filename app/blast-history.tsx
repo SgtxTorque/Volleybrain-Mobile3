@@ -96,11 +96,11 @@ export default function BlastHistoryScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   // ─── Role Guard ────────────────────────────────
-  const { isAdmin, isCoach, loading: permLoading } = usePermissions();
+  const { isAdmin, isCoach, isTeamManager, loading: permLoading } = usePermissions();
 
   if (permLoading) return null;
 
-  if (!isAdmin && !isCoach) {
+  if (!isAdmin && !isCoach && !isTeamManager) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors?.background || '#F6F8FB', justifyContent: 'center', alignItems: 'center', gap: 12, padding: 20 }}>
         <Ionicons name="lock-closed-outline" size={48} color={colors?.textMuted || '#999'} />
