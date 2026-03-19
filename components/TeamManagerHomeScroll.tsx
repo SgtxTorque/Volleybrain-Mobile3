@@ -38,6 +38,7 @@ import { useParentScroll } from '@/lib/parent-scroll-context';
 import { useScrollAnimations } from '@/hooks/useScrollAnimations';
 import { useCoachHomeData } from '@/hooks/useCoachHomeData';
 import { useTeamManagerData } from '@/hooks/useTeamManagerData';
+import { supabase } from '@/lib/supabase';
 import { BRAND } from '@/theme/colors';
 import { SPACING, SHADOWS } from '@/theme/spacing';
 import { FONTS } from '@/theme/fonts';
@@ -47,6 +48,7 @@ import { useResponsive } from '@/lib/responsive';
 import NoOrgState from './empty-states/NoOrgState';
 import NoTeamState from './empty-states/NoTeamState';
 import RoleSelector from './RoleSelector';
+import InviteCodeModal from './InviteCodeModal';
 
 import ManagerPaymentCard from './coach-scroll/ManagerPaymentCard';
 import ManagerAvailabilityCard from './coach-scroll/ManagerAvailabilityCard';
@@ -59,6 +61,8 @@ const TM_ACTIONS = [
   { emoji: '\u{1F4E3}', label: 'Send Blast', bg: D_COLORS.blastBg, iconBg: D_COLORS.blastIcon, route: '/blast-composer' },
   { emoji: '\u{1F91D}', label: 'Volunteers', bg: D_COLORS.shoutBg, iconBg: D_COLORS.shoutIcon, route: '/volunteer-assignment' },
   { emoji: '\u{1F4C5}', label: 'Schedule', bg: D_COLORS.challengeBg, iconBg: D_COLORS.challengeIcon, route: '/(tabs)/coach-schedule' },
+  { emoji: '\u{1F4B3}', label: 'Payments', bg: '#F0EDFF', iconBg: '#DDD6FE', route: '/(tabs)/payments' },
+  { emoji: '\u{1F465}', label: 'Invite', bg: '#E8F4FD', iconBg: '#B3DFFC', route: '__invite__' },
 ];
 
 function SpringCell({ action, onPress }: { action: typeof TM_ACTIONS[number]; onPress: () => void }) {
@@ -132,6 +136,25 @@ export default function TeamManagerHomeScroll() {
     if (parts.length === 1) return parts[0][0].toUpperCase();
     return '?';
   }, [profile?.full_name]);
+
+  // Invite code + modal state
+  const [inviteCode, setInviteCode] = useState('');
+  const [showInviteModal, setShowInviteModal] = useState(false);
+
+  useEffect(() => {
+    if (!data.selectedTeamId) return;
+    supabase
+      .from('team_invite_codes')
+      .select('code')
+      .eq('team_id', data.selectedTeamId)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data: row }) => {
+        if (row?.code) setInviteCode(row.code);
+      });
+  }, [data.selectedTeamId]);
 
   // Signal to tab bar that this scroll is active
   useEffect(() => {
@@ -381,7 +404,13 @@ export default function TeamManagerHomeScroll() {
             <SpringCell
               key={i}
               action={action}
-              onPress={() => router.push(action.route as any)}
+              onPress={() => {
+                if (action.route === '__invite__') {
+                  setShowInviteModal(true);
+                } else {
+                  router.push(action.route as any);
+                }
+              }}
             />
           ))}
         </View>
@@ -429,6 +458,14 @@ export default function TeamManagerHomeScroll() {
         </>
         )}
       </Animated.ScrollView>
+
+      {/* ─── INVITE CODE MODAL ──────────────────────────────── */}
+      <InviteCodeModal
+        visible={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+        teamName={teamName}
+        inviteCode={inviteCode}
+      />
     </View>
   );
 }

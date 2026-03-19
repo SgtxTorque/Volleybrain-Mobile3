@@ -163,6 +163,7 @@ const MENU_SECTIONS: MenuSection[] = [
     defaultOpen: true,
     roleGate: 'team_manager',
     items: [
+      { icon: 'person-add', label: 'Invite Parents', route: '/invite-parents' },
       { icon: 'people', label: 'Roster', route: '/(tabs)/players' },
       { icon: 'calendar', label: 'Schedule', route: '/(tabs)/coach-schedule' },
       { icon: 'card', label: 'Payments', route: '/(tabs)/payments' },
