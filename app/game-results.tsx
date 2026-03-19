@@ -1,6 +1,7 @@
 import { getSportDisplay } from '@/constants/sport-display';
 import { useAuth } from '@/lib/auth';
 import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
+import { usePermissions } from '@/lib/permissions-context';
 import { supabase } from '@/lib/supabase';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
@@ -158,6 +159,7 @@ const parseSetScoresStructured = (raw: any): { us: number; them: number }[] => {
 
 export default function GameResultsScreen() {
   const { user, profile } = useAuth();
+  const { isAdmin, isCoach } = usePermissions();
   const { eventId, view, playerId } = useLocalSearchParams<{
     eventId?: string;
     view?: string;
