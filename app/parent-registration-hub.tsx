@@ -439,6 +439,16 @@ export default function ParentRegistrationHub() {
               <Text style={s.emptySubtitle}>
                 When your organizations open registration for a new season, it will appear here.
               </Text>
+              <TouchableOpacity
+                onPress={() => router.push('/org-directory' as any)}
+                style={s.browseBtn}
+              >
+                <Ionicons name="search-outline" size={20} color="#fff" />
+                <Text style={s.browseBtnText}>Browse Organizations</Text>
+              </TouchableOpacity>
+              <Text style={s.browseHint}>
+                Find your child's organization and register directly
+              </Text>
             </View>
           ) : (
             openSeasons.map(season => {
@@ -691,6 +701,31 @@ const createStyles = (colors: any) =>
       fontFamily: FONTS.bodyMedium,
       textAlign: 'center',
       lineHeight: 18,
+    },
+
+    // Browse Organizations CTA
+    browseBtn: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      gap: 8,
+      backgroundColor: colors.primary,
+      borderRadius: 14,
+      paddingVertical: 14,
+      marginTop: 16,
+      width: '100%',
+    },
+    browseBtnText: {
+      fontFamily: FONTS.bodySemiBold,
+      fontSize: 15,
+      color: '#fff',
+    },
+    browseHint: {
+      fontFamily: FONTS.bodyMedium,
+      fontSize: 13,
+      color: colors.textMuted,
+      textAlign: 'center' as const,
+      marginTop: 4,
     },
 
     // Season Card (Open Registrations)

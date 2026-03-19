@@ -7,12 +7,12 @@ import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 
 type Props = {
-  role: 'admin' | 'coach' | 'parent' | 'player';
+  role: 'admin' | 'coach' | 'parent' | 'player' | 'team_manager';
 };
 
 export default function EmptySeasonState({ role }: Props) {
   const router = useRouter();
-  const canSetup = role === 'admin' || role === 'coach';
+  const canSetup = role === 'admin' || role === 'coach' || role === 'team_manager';
 
   return (
     <View style={s.container}>
