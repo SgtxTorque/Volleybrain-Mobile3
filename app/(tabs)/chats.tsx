@@ -118,11 +118,11 @@ function getChannelColor(type: string): string {
 export default function ChatsScreen() {
   const { profile } = useAuth();
   const { workingSeason } = useSeason();
-  const { isAdmin, isCoach } = usePermissions();
+  const { isAdmin, isCoach, isTeamManager } = usePermissions();
   const router = useRouter();
   const { isTabletAny, contentMaxWidth, contentPadding } = useResponsive();
 
-  const canManageChannels = isCoach || isAdmin;
+  const canManageChannels = isCoach || isAdmin || isTeamManager;
 
   // --- Channels ---
   const [channels, setChannels] = useState<Channel[]>([]);
