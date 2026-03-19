@@ -21,13 +21,14 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
 import { useSeason } from '@/lib/season';
+import { getLevelFromXP } from '@/lib/engagement-constants';
 import { getSportDisplay } from '@/constants/sport-display';
 import PlayerTradingCard, { PlayerTradingCardPlayer } from '@/components/PlayerTradingCard';
 import { PLAYER_THEME } from '@/components/PlayerHomeScroll';
 import { useResponsive } from '@/lib/responsive';
 import { FONTS } from '@/theme/fonts';
 
-// XP / OVR formulas — same as usePlayerHomeData
+// TODO: Move to shared utility
 function computeXP(ss: Record<string, number> | null, badgeCount: number): number {
   const gp = ss?.games_played || 0;
   const k = ss?.total_kills || 0;
@@ -38,6 +39,7 @@ function computeXP(ss: Record<string, number> | null, badgeCount: number): numbe
   return (gp * 100) + (k * 10) + (a * 25) + (d * 5) + (bl * 15) + (as * 10) + (badgeCount * 50);
 }
 
+// TODO: Move to shared utility
 function computeOVR(ss: Record<string, number> | null): number {
   if (!ss) return 0;
   const gp = ss.games_played || 0;
@@ -139,14 +141,14 @@ export default function PlayerCardScreen() {
         seasonStats = stats;
       }
 
-      // Badges count
+      // Badges count — filter to only valid active achievements
       let badgeCount = 0;
       try {
-        const { count } = await supabase
+        const { data: badgeData } = await supabase
           .from('player_achievements')
-          .select('id', { count: 'exact', head: true })
+          .select('id, achievement:achievement_id(id)')
           .eq('player_id', effectivePlayerId);
-        badgeCount = count || 0;
+        badgeCount = (badgeData || []).filter((b: any) => b.achievement && b.achievement.id).length;
       } catch { /* table may not exist */ }
 
       // Build stat bars from sport config
@@ -158,7 +160,10 @@ export default function PlayerCardScreen() {
       }));
 
       const xp = computeXP(seasonStats, badgeCount);
-      const level = Math.floor(xp / 1000) + 1;
+      // Use the real exponential XP_LEVELS thresholds instead of flat modulo
+      const levelInfo = getLevelFromXP(xp);
+      const level = levelInfo.level;
+      const xpToNextLevel = levelInfo.nextLevelXp - xp;
       const ovr = computeOVR(seasonStats);
 
       setPlayer({
@@ -174,7 +179,7 @@ export default function PlayerCardScreen() {
         seasonName: workingSeason?.name || undefined,
         level,
         xp,
-        xpToNextLevel: 1000 - (xp % 1000),
+        xpToNextLevel,
         overallRating: ovr,
         stats: statBars,
       });
