@@ -6,7 +6,9 @@ import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { FONTS } from '@/theme/fonts';
 
 // Import dashboard components
 import AdminHomeScroll from './AdminHomeScroll';
@@ -25,7 +27,7 @@ export default function DashboardRouter() {
   const { colors } = useTheme();
   const { user } = useAuth();
   const permissions = usePermissions();
-  const { workingSeason } = useSeason();
+  const { workingSeason, loading: seasonLoading } = useSeason();
 
   // Extract what we need, with fallbacks
   const isAdmin = permissions.isAdmin ?? false;
@@ -237,6 +239,36 @@ export default function DashboardRouter() {
   };
 
   if (dashboardType === 'loading') {
+    // Season provider finished but no season found — show recovery message
+    if (!seasonLoading && user?.id && !workingSeason?.id) {
+      return (
+        <View style={[styles.loadingContainer, { backgroundColor: 'transparent' }]}>
+          <View style={{ alignItems: 'center', padding: 32 }}>
+            <Ionicons name="calendar-outline" size={48} color={colors.textSecondary} />
+            <Text style={{
+              fontSize: 18,
+              fontFamily: FONTS.bodyBold,
+              color: colors.text,
+              marginTop: 16,
+              textAlign: 'center',
+            }}>
+              No Active Season
+            </Text>
+            <Text style={{
+              fontSize: 14,
+              color: colors.textSecondary,
+              marginTop: 8,
+              textAlign: 'center',
+              lineHeight: 20,
+            }}>
+              There's no active season available. Ask your club admin to create or activate a season.
+            </Text>
+          </View>
+        </View>
+      );
+    }
+
+    // Still loading — show spinner
     return (
       <View style={[styles.loadingContainer, { backgroundColor: 'transparent' }]}>
         <ActivityIndicator size="large" color={colors.primary} />
