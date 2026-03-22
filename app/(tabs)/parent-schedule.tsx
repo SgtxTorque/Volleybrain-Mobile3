@@ -2,6 +2,7 @@ import { useAuth } from '@/lib/auth';
 import { radii, shadows, spacing } from '@/lib/design-tokens';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
+import { FAMILY_IMAGES } from '@/constants/mascot-images';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 import EventCard, { ScheduleEvent } from '@/components/EventCard';
@@ -726,12 +727,13 @@ export default function ParentScheduleScreen() {
   };
 
   // =========================================================================
-  // Render: empty state (SleepLynx mascot)
+  // Render: empty state (Lynx mascot)
   // =========================================================================
   const EmptyState = () => (
     <View style={s.emptyState}>
       <Image
-        source={require('@/assets/images/mascot/SleepLynx.png')}
+        source={FAMILY_IMAGES.LITTLE_BROTHER}
+        accessibilityLabel="No events"
         style={s.emptyMascot}
         resizeMode="contain"
       />

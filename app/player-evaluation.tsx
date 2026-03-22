@@ -21,13 +21,15 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 
 import { checkRoleAchievements } from '@/lib/achievement-engine';
 import { useAuth } from '@/lib/auth';
+import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
+import { useTheme } from '@/lib/theme';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 import { SPACING } from '@/theme/spacing';
@@ -71,10 +73,31 @@ export default function PlayerEvaluationScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { workingSeason } = useSeason();
+  const { colors } = useTheme();
   const { playerId: preSelectedId, teamId: preSelectedTeamId } = useLocalSearchParams<{
     playerId?: string;
     teamId?: string;
   }>();
+  // ─── Role Guard ────────────────────────────────
+  const { isAdmin, isCoach, loading: permLoading } = usePermissions();
+
+  if (permLoading) return null;
+
+  if (!isAdmin && !isCoach) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors?.background || '#F6F8FB', justifyContent: 'center', alignItems: 'center', gap: 12, padding: 20 }}>
+        <Ionicons name="lock-closed-outline" size={48} color={colors?.textMuted || '#999'} />
+        <Text style={{ fontFamily: FONTS.bodyBold, fontSize: 18, color: colors?.text || '#10284C' }}>Access Restricted</Text>
+        <Text style={{ fontFamily: FONTS.bodyMedium, fontSize: 14, color: colors?.textMuted || '#999', textAlign: 'center' }}>
+          Coach or admin permissions required.
+        </Text>
+        <TouchableOpacity onPress={() => router.replace('/(tabs)')} style={{ marginTop: 8 }}>
+          <Text style={{ fontFamily: FONTS.bodySemiBold, color: '#4BB9EC', fontSize: 15 }}>Go Home</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
+  // ─── End Role Guard ────────────────────────────
 
   const pagerRef = useRef<FlatList>(null);
 
@@ -161,7 +184,7 @@ export default function PlayerEvaluationScreen() {
       .eq('team_id', tid)
       .order('rated_at', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (data) {
       const prev: Partial<Ratings> = {};

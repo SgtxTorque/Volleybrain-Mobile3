@@ -23,7 +23,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-type UserRole = 'league_admin' | 'head_coach' | 'assistant_coach' | 'parent' | 'player';
+type UserRole = 'league_admin' | 'head_coach' | 'assistant_coach' | 'team_manager' | 'parent' | 'player';
 
 type UserWithRole = {
   id: string;
@@ -76,6 +76,11 @@ export default function UsersScreen() {
   const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
   const [showUserModal, setShowUserModal] = useState(false);
   const [updatingUser, setUpdatingUser] = useState(false);
+
+  // Team Manager assignment — team picker
+  const [showTeamPicker, setShowTeamPicker] = useState(false);
+  const [tmAssignUser, setTmAssignUser] = useState<UserWithRole | null>(null);
+  const [orgTeams, setOrgTeams] = useState<{ id: string; name: string }[]>([]);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -130,6 +135,19 @@ export default function UsersScreen() {
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
+
+  // Fetch teams for the team picker (used when assigning team_manager)
+  useEffect(() => {
+    (async () => {
+      const orgId = profile?.current_organization_id;
+      if (!orgId) return;
+      const { data: teams } = await supabase
+        .from('teams')
+        .select('id, name')
+        .order('name');
+      setOrgTeams(teams || []);
+    })();
+  }, [profile?.current_organization_id]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -236,6 +254,13 @@ export default function UsersScreen() {
   };
 
   const updateUserRole = async (user: UserWithRole, newRole: UserRole) => {
+    // For team_manager, show team picker first
+    if (newRole === 'team_manager' && !user.roles.some(r => r.role === 'team_manager')) {
+      setTmAssignUser(user);
+      setShowTeamPicker(true);
+      return;
+    }
+
     setUpdatingUser(true);
     try {
       const orgId = profile?.current_organization_id;
@@ -243,7 +268,7 @@ export default function UsersScreen() {
 
       // Check if user already has this role
       const existingRole = user.roles.find(r => r.role === newRole);
-      
+
       if (existingRole) {
         // Toggle active status
         await supabase
@@ -267,6 +292,44 @@ export default function UsersScreen() {
     } catch (error) {
       if (__DEV__) console.error('Update role error:', error);
       Alert.alert('Error', 'Failed to update role');
+    } finally {
+      setUpdatingUser(false);
+    }
+  };
+
+  const assignTeamManager = async (teamId: string) => {
+    if (!tmAssignUser) return;
+    setUpdatingUser(true);
+    try {
+      const orgId = profile?.current_organization_id;
+      if (!orgId) throw new Error('Organization not found');
+
+      // Insert user_roles row
+      await supabase.from('user_roles').insert({
+        organization_id: orgId,
+        user_id: tmAssignUser.id,
+        role: 'team_manager',
+        is_active: true,
+      });
+
+      // Insert team_staff row
+      await supabase.from('team_staff').insert({
+        team_id: teamId,
+        user_id: tmAssignUser.id,
+        staff_role: 'team_manager',
+        is_active: true,
+        assigned_by: profile?.id,
+      });
+
+      Alert.alert('Assigned', `${tmAssignUser.full_name} is now Team Manager.`);
+      setShowTeamPicker(false);
+      setTmAssignUser(null);
+      fetchUsers();
+      setShowUserModal(false);
+      setSelectedUser(null);
+    } catch (error) {
+      if (__DEV__) console.error('Assign TM error:', error);
+      Alert.alert('Error', 'Failed to assign Team Manager');
     } finally {
       setUpdatingUser(false);
     }
@@ -360,6 +423,7 @@ export default function UsersScreen() {
       case 'league_admin': return 'shield';
       case 'head_coach': return 'clipboard';
       case 'assistant_coach': return 'clipboard-outline';
+      case 'team_manager': return 'build';
       case 'parent': return 'people';
       case 'player': return 'person';
       default: return 'person';
@@ -371,6 +435,7 @@ export default function UsersScreen() {
       case 'league_admin': return colors.danger;
       case 'head_coach': return colors.info;
       case 'assistant_coach': return colors.info;
+      case 'team_manager': return '#E76F51';
       case 'parent': return colors.success;
       case 'player': return colors.warning;
       default: return colors.textMuted;
@@ -382,6 +447,7 @@ export default function UsersScreen() {
       case 'league_admin': return 'Admin';
       case 'head_coach': return 'Head Coach';
       case 'assistant_coach': return 'Asst Coach';
+      case 'team_manager': return 'Team Mgr';
       case 'parent': return 'Parent';
       case 'player': return 'Player';
       default: return role;
@@ -393,7 +459,7 @@ export default function UsersScreen() {
     if (activeRoles.length === 0) return null;
     
     // Priority: admin > coach > parent > player
-    const priority: UserRole[] = ['league_admin', 'head_coach', 'assistant_coach', 'parent', 'player'];
+    const priority: UserRole[] = ['league_admin', 'head_coach', 'assistant_coach', 'team_manager', 'parent', 'player'];
     for (const role of priority) {
       if (activeRoles.some(r => r.role === role)) return role;
     }
@@ -428,7 +494,7 @@ export default function UsersScreen() {
     if (filter === 'all') return true;
     if (filter === 'pending') return user.pending_approval;
     if (filter === 'admin') return user.roles.some(r => r.role === 'league_admin' && r.is_active);
-    if (filter === 'coach') return user.roles.some(r => (r.role === 'head_coach' || r.role === 'assistant_coach') && r.is_active);
+    if (filter === 'coach') return user.roles.some(r => (r.role === 'head_coach' || r.role === 'assistant_coach' || r.role === 'team_manager') && r.is_active);
     if (filter === 'parent') return user.roles.some(r => r.role === 'parent' && r.is_active);
     
     return true;
@@ -673,7 +739,7 @@ export default function UsersScreen() {
                   <>
                     <Text style={s.modalSectionTitle}>Add Role</Text>
                     <View style={s.addRoleGrid}>
-                      {(['parent', 'head_coach', 'assistant_coach', 'league_admin'] as UserRole[]).map(role => {
+                      {(['parent', 'head_coach', 'assistant_coach', 'team_manager', 'league_admin'] as UserRole[]).map(role => {
                         const hasRole = selectedUser.roles.some(r => r.role === role);
                         return (
                           <TouchableOpacity
@@ -757,6 +823,56 @@ export default function UsersScreen() {
                 </View>
               </ScrollView>
             )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Team Picker Modal — shown when assigning team_manager */}
+      <Modal visible={showTeamPicker} animationType="fade" transparent>
+        <View style={s.modalOverlay}>
+          <View style={[s.modalContent, { maxHeight: '60%' }]}>
+            <View style={s.modalHeader}>
+              <Text style={s.modalTitle}>Select Team</Text>
+              <TouchableOpacity onPress={() => { setShowTeamPicker(false); setTmAssignUser(null); }}>
+                <Ionicons name="close" size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+            {tmAssignUser && (
+              <Text style={{ paddingHorizontal: 20, paddingBottom: 12, fontSize: 14, fontFamily: FONTS.bodyMedium, color: colors.textMuted }}>
+                Assign {tmAssignUser.full_name} as Team Manager for:
+              </Text>
+            )}
+            <ScrollView style={{ paddingHorizontal: 20, paddingBottom: 20 }}>
+              {orgTeams.length === 0 ? (
+                <Text style={{ fontSize: 14, fontFamily: FONTS.bodyMedium, color: colors.textMuted, textAlign: 'center', padding: 20 }}>
+                  No teams found
+                </Text>
+              ) : (
+                orgTeams.map(team => (
+                  <TouchableOpacity
+                    key={team.id}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      padding: 14,
+                      backgroundColor: colors.background,
+                      borderRadius: 12,
+                      marginBottom: 8,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                    }}
+                    onPress={() => assignTeamManager(team.id)}
+                    disabled={updatingUser}
+                  >
+                    <Ionicons name="people" size={20} color={colors.info} style={{ marginRight: 10 }} />
+                    <Text style={{ flex: 1, fontSize: 15, fontFamily: FONTS.bodySemiBold, color: colors.text }}>
+                      {team.name}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                  </TouchableOpacity>
+                ))
+              )}
+            </ScrollView>
           </View>
         </View>
       </Modal>

@@ -73,7 +73,7 @@ export function SportProvider({ children }: { children: React.ReactNode }) {
         setActiveSportState(data[0]);
       }
     } catch (error) {
-      console.error('Error fetching sports:', error);
+      if (__DEV__) console.error('Error fetching sports:', error);
     } finally {
       setLoading(false);
     }

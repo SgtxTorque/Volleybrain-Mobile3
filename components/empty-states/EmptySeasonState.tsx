@@ -2,23 +2,25 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { FAMILY_IMAGES } from '@/constants/mascot-images';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 
 type Props = {
-  role: 'admin' | 'coach' | 'parent' | 'player';
+  role: 'admin' | 'coach' | 'parent' | 'player' | 'team_manager';
 };
 
 export default function EmptySeasonState({ role }: Props) {
   const router = useRouter();
-  const canSetup = role === 'admin' || role === 'coach';
+  const canSetup = role === 'admin' || role === 'coach' || role === 'team_manager';
 
   return (
     <View style={s.container}>
       <Image
-        source={require('@/assets/images/mascot/SleepLynx.png')}
+        source={FAMILY_IMAGES.LITTLE_BROTHER}
         style={s.mascot}
         resizeMode="contain"
+        accessibilityLabel="Lynx little brother waiting"
       />
 
       <Text style={s.title}>Nothing Happening Yet</Text>
@@ -47,7 +49,7 @@ const s = StyleSheet.create({
     padding: 32, backgroundColor: BRAND.offWhite,
   },
   mascot: {
-    width: 120, height: 120, alignSelf: 'center',
+    width: 160, height: 160, alignSelf: 'center',
     marginBottom: 24,
   },
   title: {

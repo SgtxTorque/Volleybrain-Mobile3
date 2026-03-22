@@ -217,20 +217,26 @@ export default function ChildDetailScreen() {
         .select('id, earned_at, achievements(id, name, description, icon)')
         .eq('player_id', playerId);
 
-      const formattedAchievements: Achievement[] = ((playerAchievements as any[]) || []).map((pa: any) => ({
-        id: pa.achievements?.id || pa.id,
-        name: pa.achievements?.name || 'Unknown',
-        description: pa.achievements?.description || null,
-        icon: pa.achievements?.icon || null,
+      // Filter out orphaned/inactive achievements where the join returned null
+      const validPlayerAchievements = ((playerAchievements as any[]) || []).filter((pa: any) => {
+        const achievement = pa.achievements;
+        return achievement && achievement.id;
+      });
+      const formattedAchievements: Achievement[] = validPlayerAchievements.map((pa: any) => ({
+        id: pa.achievements.id,
+        name: pa.achievements.name || 'Unknown',
+        description: pa.achievements.description || null,
+        icon: pa.achievements.icon || null,
         earned_at: pa.earned_at,
       }));
       setAchievements(formattedAchievements);
 
-      // Count total available achievements
+      // Count total available achievements (only player-relevant ones)
       const { count: achievementCount } = await supabase
         .from('achievements')
-        .select('*', { count: 'exact', head: true })
-        .eq('is_active', true);
+        .select('id', { count: 'exact', head: true })
+        .eq('is_active', true)
+        .in('target_role', ['player', 'all']);
       setTotalAchievements(achievementCount || 0);
 
       // 5 & 6. Fetch schedule events (upcoming + recent games)

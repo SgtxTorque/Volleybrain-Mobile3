@@ -9,7 +9,7 @@ export default function HomeScreen() {
   const handleTourDismiss = useCallback(() => {}, []);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: 'transparent' }} edges={['top']}>
       <DashboardRouter />
       <FirstTimeTour onDismiss={handleTourDismiss} />
     </SafeAreaView>

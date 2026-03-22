@@ -19,7 +19,7 @@ function localToday(): string {
 export type CoachTeam = {
   id: string;
   name: string;
-  role: 'head_coach' | 'assistant_coach';
+  role: 'head_coach' | 'assistant_coach' | 'team_manager';
   player_count: number;
   wins: number;
   losses: number;
@@ -178,7 +178,7 @@ export function useCoachHomeData() {
         return {
           id: team.id,
           name: team.name,
-          role: (t.staff_role || 'assistant_coach') as 'head_coach' | 'assistant_coach',
+          role: (t.staff_role || 'assistant_coach') as 'head_coach' | 'assistant_coach' | 'team_manager',
           player_count: playerCountMap.get(team.id) || 0,
           wins: winsMap.get(team.id) || 0,
           losses: lossesMap.get(team.id) || 0,
@@ -385,7 +385,10 @@ export function useCoachHomeData() {
 
           if (prev) {
             const resultStr = prev.game_result === 'win' ? 'Won' : prev.game_result === 'loss' ? 'Lost' : 'Tied';
-            setPreviousMatchup(`Last matchup vs ${nextEvt.opponent_name}: ${resultStr} ${prev.our_score}-${prev.opponent_score}`);
+            const prevScore = prev.our_score != null && prev.opponent_score != null
+              ? ` ${prev.our_score}-${prev.opponent_score}`
+              : '';
+            setPreviousMatchup(`Last matchup vs ${nextEvt.opponent_name}: ${resultStr}${prevScore}`);
           } else {
             setPreviousMatchup(`First meeting with ${nextEvt.opponent_name} this season.`);
           }

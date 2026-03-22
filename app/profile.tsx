@@ -65,7 +65,7 @@ export default function ProfileScreen() {
       .from('profiles')
       .select('avatar_url, emergency_contact_name, emergency_contact_phone, emergency_contact_relation')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
 
     if (data) {
       setAvatarUrl(data.avatar_url);
@@ -217,7 +217,7 @@ export default function ProfileScreen() {
     }
     Alert.alert(
       'Delete Account',
-      'This action is irreversible. Your account will be flagged for deletion.',
+      'Your account and all associated data will be permanently deleted within 30 days. This action cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -234,7 +234,7 @@ export default function ProfileScreen() {
               if (error) throw error;
               Alert.alert(
                 'Account Deletion Requested',
-                'Your account has been flagged for deletion. You will be signed out.',
+                'Your account deletion has been scheduled. Your data will be permanently removed within 30 days. You will now be signed out.',
                 [{ text: 'OK', onPress: () => signOut() }]
               );
             } catch (error: any) {

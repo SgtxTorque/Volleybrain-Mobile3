@@ -10,6 +10,7 @@ type PermissionsContextType = {
   primaryRole: UserRole | null;
   isAdmin: boolean;
   isCoach: boolean;
+  isTeamManager: boolean;
   isParent: boolean;
   isPlayer: boolean;
   can: typeof can;
@@ -30,6 +31,7 @@ const PermissionsContext = createContext<PermissionsContextType>({
   primaryRole: null,
   isAdmin: false,
   isCoach: false,
+  isTeamManager: false,
   isParent: false,
   isPlayer: false,
   can,
@@ -133,16 +135,19 @@ export const PermissionsProvider = ({ children }: { children: React.ReactNode })
     actualRoles.push('head_coach');
   }
 
+  // Note: team_manager auto-detection is handled via user_roles table (staff_role = 'team_manager')
+  // which is already loaded by getPermissionContext. No extra auto-detect needed here.
+
   // Auto-add 'player' if user has a player self record
   if (hasPlayerSelf && !actualRoles.includes('player')) {
     actualRoles.push('player');
   }
 
-  // Web parity: admins and coaches can always preview the player view
+  // Web parity: admins, coaches, and team managers can always preview the player view
   // (web's getAvailableViews adds player preview for admins/coaches)
   const hasAdminRole = actualRoles.includes('league_admin');
   const hasCoachRole = actualRoles.includes('head_coach') || actualRoles.includes('assistant_coach');
-  if ((hasAdminRole || hasCoachRole) && !actualRoles.includes('player')) {
+  if ((hasAdminRole || hasCoachRole || actualRoles.includes('team_manager')) && !actualRoles.includes('player')) {
     actualRoles.push('player');
   }
 
@@ -157,6 +162,7 @@ export const PermissionsProvider = ({ children }: { children: React.ReactNode })
   const primaryRole = effectiveContext ? getPrimaryRole(effectiveContext.roles) : null;
   const isAdmin = effectiveRoles.includes('league_admin');
   const isCoach = effectiveRoles.includes('head_coach') || effectiveRoles.includes('assistant_coach');
+  const isTeamManager = effectiveRoles.includes('team_manager');
   const isParent = effectiveRoles.includes('parent');
   const isPlayer = effectiveRoles.includes('player');
 
@@ -168,6 +174,7 @@ export const PermissionsProvider = ({ children }: { children: React.ReactNode })
         primaryRole,
         isAdmin,
         isCoach,
+        isTeamManager,
         isParent,
         isPlayer,
         can,

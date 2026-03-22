@@ -7,8 +7,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/lib/auth';
 import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
-import { calculateStreakWithFreeze } from '@/lib/streak-engine';
+import { calculateStreakWithFreeze, checkStreakState, StreakState } from '@/lib/streak-engine';
+import { calculateLevel } from '@/lib/quest-engine';
+import { getLevelFromXP, getLevelTier } from '@/lib/engagement-constants';
+import { checkEarlyBird, checkAndCreateAutoBoosts } from '@/lib/xp-boost-engine';
 import { supabase } from '@/lib/supabase';
+import { onRefresh } from '@/lib/refresh-bus';
 
 /** Local date string (YYYY-MM-DD) to avoid UTC timezone shift issues */
 function localToday(): string {
@@ -164,6 +168,14 @@ export function usePlayerHomeData(playerId: string | null) {
   // Feature flags
   const [challengesAvailable, setChallengesAvailable] = useState(false);
 
+  // Engagement system
+  const [dbXp, setDbXp] = useState(0);
+  const [dbLevel, setDbLevel] = useState(1);
+  const [dbTier, setDbTier] = useState('Rookie');
+  const [dbXpToNext, setDbXpToNext] = useState(100);
+  const [engagementStreak, setEngagementStreak] = useState<StreakState | null>(null);
+  const [engagementProfileId, setEngagementProfileId] = useState<string | undefined>(undefined);
+
   // ─── Fetch all data ──
   const fetchAll = useCallback(async () => {
     if (!playerId) {
@@ -191,7 +203,7 @@ export function usePlayerHomeData(playerId: string | null) {
           const { count } = await supabase
             .from('player_guardians')
             .select('id', { count: 'exact', head: true })
-            .eq('guardian_id', user!.id)
+            .eq('guardian_id', user?.id ?? '')
             .eq('player_id', playerId);
           hasAccess = (count ?? 0) > 0;
         }
@@ -220,6 +232,11 @@ export function usePlayerHomeData(playerId: string | null) {
         .map((t: any) => ({ id: t.id, name: t.name, color: t.color }));
       setTeams(playerTeams);
       const teamIds = playerTeams.map(t => t.id);
+
+      // Auto XP boost check (Game Day / Practice Day / Weekend Warrior)
+      if (teamIds.length > 0) {
+        checkAndCreateAutoBoosts(teamIds[0]).catch(() => {});
+      }
 
       // 2. Season stats
       if (workingSeason?.id) {
@@ -312,14 +329,15 @@ export function usePlayerHomeData(playerId: string | null) {
         setPersonalBest(null);
       }
 
-      // 4. Badges
+      // 4. Badges — filter to only keep records with a valid joined achievement
       try {
         const { data: badgeData } = await supabase
           .from('player_achievements')
           .select('id, earned_at, achievement:achievement_id(id, name, icon, rarity, color_primary, description)')
           .eq('player_id', playerId)
           .order('earned_at', { ascending: false });
-        setBadges((badgeData as any) || []);
+        const validBadges = (badgeData || []).filter((b: any) => b.achievement && b.achievement.id);
+        setBadges(validBadges as any);
       } catch {
         setBadges([]);
       }
@@ -436,21 +454,29 @@ export function usePlayerHomeData(playerId: string | null) {
         if (profileId) {
           const { data: shoutouts } = await supabase
             .from('shoutouts')
-            .select('id, message, created_at, category')
+            .select(`
+              id, message, created_at, category,
+              giver:profiles!giver_id(full_name, avatar_url),
+              category_info:shoutout_categories!category_id(name, emoji)
+            `)
             .eq('receiver_id', profileId)
             .gte('created_at', weekAgo.toISOString())
             .order('created_at', { ascending: false })
             .limit(3);
 
           if (shoutouts && shoutouts.length > 0) {
-            setRecentShoutouts(shoutouts.map((s: any) => ({
-              id: s.id,
-              giverName: 'Coach',
-              categoryName: s.category || 'Shoutout',
-              categoryEmoji: '\u{1F31F}',
-              message: s.message,
-              created_at: s.created_at,
-            })));
+            setRecentShoutouts(shoutouts.map((s: any) => {
+              const giver = Array.isArray(s.giver) ? s.giver[0] : s.giver;
+              const catInfo = Array.isArray(s.category_info) ? s.category_info[0] : s.category_info;
+              return {
+                id: s.id,
+                giverName: giver?.full_name || 'A teammate',
+                categoryName: catInfo?.name || s.category || 'Shoutout',
+                categoryEmoji: catInfo?.emoji || '\u{2B50}',
+                message: s.message,
+                created_at: s.created_at,
+              };
+            }));
           } else {
             setRecentShoutouts([]);
           }
@@ -471,6 +497,35 @@ export function usePlayerHomeData(playerId: string | null) {
           setChallengesAvailable(false);
         }
       }
+
+      // 14. Engagement system — DB XP + streak
+      const engProfileId = playerData.parent_account_id;
+      setEngagementProfileId(engProfileId || undefined);
+      if (engProfileId) {
+        try {
+          const { data: engData } = await supabase
+            .from('profiles')
+            .select('total_xp, player_level, tier, xp_to_next_level')
+            .eq('id', engProfileId)
+            .maybeSingle();
+
+          if (engData) {
+            setDbXp(engData.total_xp ?? 0);
+            setDbLevel(engData.player_level ?? 1);
+            setDbTier(engData.tier ?? 'Rookie');
+            setDbXpToNext(engData.xp_to_next_level ?? 100);
+          }
+        } catch {
+          // DB engagement columns may not exist yet — fall back silently
+        }
+
+        try {
+          const streakState = await checkStreakState(engProfileId);
+          setEngagementStreak(streakState);
+        } catch {
+          // streak_data table may not exist yet — fall back silently
+        }
+      }
     } catch (err) {
       if (__DEV__) console.error('[usePlayerHomeData] Error:', err);
     } finally {
@@ -480,6 +535,13 @@ export function usePlayerHomeData(playerId: string | null) {
 
   useEffect(() => {
     fetchAll();
+  }, [fetchAll]);
+
+  // Subscribe to refresh bus — re-fetch on XP or streak changes
+  useEffect(() => {
+    const unsubXp = onRefresh('xp', fetchAll);
+    const unsubStreak = onRefresh('streak', fetchAll);
+    return () => { unsubXp(); unsubStreak(); };
   }, [fetchAll]);
 
   const refresh = useCallback(async () => {
@@ -502,16 +564,28 @@ export function usePlayerHomeData(playerId: string | null) {
         { onConflict: 'event_id,player_id' },
       );
       setRsvpStatus(status === 'yes' ? 'confirmed' : 'no');
+
+      // Early Bird check — award XP if among first 5 RSVPs
+      if (status === 'yes' && user?.id) {
+        checkEarlyBird(nextEvent.id, user.id).catch(() => {});
+      }
     } catch (err) {
       if (__DEV__) console.error('[usePlayerHomeData] RSVP error:', err);
     }
-  }, [playerId, nextEvent]);
+  }, [playerId, nextEvent, user?.id]);
 
-  // Computed values
-  const xp = useMemo(() => computeXP(seasonStats, badges.length), [seasonStats, badges.length]);
-  const level = Math.floor(xp / 1000) + 1;
-  const xpProgress = xp > 0 ? ((xp % 1000) / 1000) * 100 : 0;
-  const xpToNext = 1000 - (xp % 1000);
+  // Computed values — use DB XP if available, else fall back to formula
+  const computedXp = useMemo(() => computeXP(seasonStats, badges.length), [seasonStats, badges.length]);
+  const xp = dbXp > 0 ? dbXp : computedXp;
+
+  // Use the real exponential XP_LEVELS thresholds instead of flat modulo
+  const levelInfo = useMemo(() => getLevelFromXP(xp), [xp]);
+  const level = levelInfo.level;
+  const levelTier = getLevelTier(level);
+  const tier = levelTier.name;
+  const xpProgress = levelInfo.progress;
+  const xpToNext = levelInfo.nextLevelXp - xp;
+  const xpNextLevel = levelInfo.nextLevelXp;
   const ovr = useMemo(() => computeOVR(seasonStats), [seasonStats]);
 
   const primaryTeam = teams[0] || null;
@@ -538,8 +612,10 @@ export function usePlayerHomeData(playerId: string | null) {
     // Computed
     xp,
     level,
+    tier,
     xpProgress,
     xpToNext,
+    xpNextLevel,
     ovr,
     bestRank,
     // Events
@@ -548,6 +624,9 @@ export function usePlayerHomeData(playerId: string | null) {
     sendRsvp,
     attendanceStreak,
     streakFreezeUsed,
+    // Engagement
+    engagementStreak,
+    engagementProfileId,
     // Social
     recentPhotos,
     recentShoutouts,

@@ -145,7 +145,7 @@ export async function loadRegistrationConfig(seasonId: string): Promise<LoadedRe
       .from('registration_templates')
       .select('player_fields, parent_fields, emergency_fields, medical_fields, waivers, custom_questions')
       .eq('id', season.registration_template_id)
-      .single();
+      .maybeSingle();
 
     if (template) {
       config = mergeWithDefaults({

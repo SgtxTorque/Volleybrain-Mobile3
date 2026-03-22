@@ -18,8 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useParentHomeData } from '@/hooks/useParentHomeData';
-import type { FamilyChild, FamilyEvent } from '@/hooks/useParentHomeData';
+import { useParentHomeData, type FamilyChild, type FamilyEvent } from '@/hooks/useParentHomeData';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 

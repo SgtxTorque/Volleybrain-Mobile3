@@ -98,7 +98,7 @@ type Props = {
 export default function AdminPaymentsScreen({ hideHeader = false }: Props) {
   const { colors } = useTheme();
   const { user, profile } = useAuth();
-  const { isAdmin, isParent } = usePermissions();
+  const { isAdmin, isParent, isTeamManager } = usePermissions();
   const { workingSeason } = useSeason();
   const router = useRouter();
 

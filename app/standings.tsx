@@ -1,6 +1,7 @@
 import { useAuth } from '@/lib/auth';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
+import { FAMILY_IMAGES, VOLLEYBALL_IMAGES } from '@/constants/mascot-images';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
@@ -295,7 +296,7 @@ export default function StandingsScreen() {
     if (!workingSeason) {
       return (
         <View style={s.emptyState}>
-          <Image source={require('@/assets/images/mascot/SleepLynx.png')} style={{ width: 120, height: 120, marginBottom: 16 }} resizeMode="contain" />
+          <Image source={FAMILY_IMAGES.LITTLE_BROTHER} style={{ width: 160, height: 160, marginBottom: 16 }} resizeMode="contain" accessibilityLabel="Empty state" />
           <Text style={s.emptyTitle}>No Active Season</Text>
           <Text style={s.emptySubtitle}>Select a season to view standings.</Text>
         </View>
@@ -305,7 +306,7 @@ export default function StandingsScreen() {
     if (error) {
       return (
         <View style={s.emptyState}>
-          <Image source={require('@/assets/images/mascot/SleepLynx.png')} style={{ width: 120, height: 120, marginBottom: 16 }} resizeMode="contain" />
+          <Image source={FAMILY_IMAGES.LITTLE_BROTHER} style={{ width: 160, height: 160, marginBottom: 16 }} resizeMode="contain" accessibilityLabel="Empty state" />
           <Text style={s.emptyTitle}>Something Went Wrong</Text>
           <Text style={s.emptySubtitle}>{error}</Text>
           <TouchableOpacity onPress={loadStandings} style={{ marginTop: 12 }}>
@@ -318,7 +319,7 @@ export default function StandingsScreen() {
     if (standings.length === 0) {
       return (
         <View style={s.emptyState}>
-          <Image source={require('@/assets/images/mascot/SleepLynx.png')} style={{ width: 120, height: 120, marginBottom: 16 }} resizeMode="contain" />
+          <Image source={FAMILY_IMAGES.LITTLE_BROTHER} style={{ width: 160, height: 160, marginBottom: 16 }} resizeMode="contain" accessibilityLabel="Empty state" />
           <Text style={s.emptyTitle}>No Teams Yet</Text>
           <Text style={s.emptySubtitle}>Once teams are added, standings will appear here.</Text>
         </View>
@@ -468,7 +469,7 @@ export default function StandingsScreen() {
           />
         ) : (
           <View style={s.emptyState}>
-            <Image source={require('@/assets/images/mascot/SleepLynx.png')} style={{ width: 120, height: 120, marginBottom: 16 }} resizeMode="contain" />
+            <Image source={FAMILY_IMAGES.LITTLE_BROTHER} style={{ width: 160, height: 160, marginBottom: 16 }} resizeMode="contain" accessibilityLabel="Empty state" />
             <Text style={s.emptyTitle}>No Active Season</Text>
             <Text style={s.emptySubtitle}>Select a season to view leaderboards.</Text>
           </View>

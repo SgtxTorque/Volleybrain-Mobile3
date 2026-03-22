@@ -453,7 +453,7 @@ export default function TeamWall({ teamId: propTeamId, embedded = false, feedOnl
                 .from('profiles')
                 .select('id, full_name, avatar_url')
                 .eq('id', newPost.author_id)
-                .single();
+                .maybeSingle();
               const postWithProfile: Post = {
                 ...newPost,
                 profiles: authorProfile || null,

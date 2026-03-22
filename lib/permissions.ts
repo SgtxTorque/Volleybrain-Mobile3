@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 
-export type UserRole = 'league_admin' | 'head_coach' | 'assistant_coach' | 'parent' | 'player';
+export type UserRole = 'league_admin' | 'head_coach' | 'assistant_coach' | 'team_manager' | 'parent' | 'player';
 
 export type PermissionContext = {
   userId: string;
@@ -17,7 +17,7 @@ export const getPermissionContext = async (userId: string): Promise<PermissionCo
     .from('profiles')
     .select('id, current_organization_id')
     .eq('id', userId)
-    .single();
+    .maybeSingle();
 
   if (!profile || !profile.current_organization_id) return null;
 
@@ -79,9 +79,9 @@ export const can = {
     ctx.roles.includes('league_admin'),
 
   // Team level
-  manageTeam: (ctx: PermissionContext, teamId: string) => 
-    ctx.roles.includes('league_admin') || 
-    ctx.teamAssignments.some(t => t.teamId === teamId && t.role === 'head_coach'),
+  manageTeam: (ctx: PermissionContext, teamId: string) =>
+    ctx.roles.includes('league_admin') ||
+    ctx.teamAssignments.some(t => t.teamId === teamId && (t.role === 'head_coach' || t.role === 'team_manager')),
 
   addAssistantCoach: (ctx: PermissionContext, teamId: string) => 
     ctx.roles.includes('league_admin') || 
@@ -96,41 +96,44 @@ export const can = {
     ctx.teamAssignments.some(t => t.teamId === teamId) ||
     ctx.roles.includes('parent'), // Parents can view their child's team
 
-  viewTeamPayments: (ctx: PermissionContext, teamId: string) => 
-    ctx.roles.includes('league_admin') || 
-    ctx.teamAssignments.some(t => t.teamId === teamId && t.role === 'head_coach'),
+  viewTeamPayments: (ctx: PermissionContext, teamId: string) =>
+    ctx.roles.includes('league_admin') ||
+    ctx.teamAssignments.some(t => t.teamId === teamId && (t.role === 'head_coach' || t.role === 'team_manager')),
 
-  sendTeamBlasts: (ctx: PermissionContext, teamId: string) => 
-    ctx.roles.includes('league_admin') || 
-    ctx.teamAssignments.some(t => t.teamId === teamId && t.role === 'head_coach'),
+  sendTeamBlasts: (ctx: PermissionContext, teamId: string) =>
+    ctx.roles.includes('league_admin') ||
+    ctx.teamAssignments.some(t => t.teamId === teamId && (t.role === 'head_coach' || t.role === 'team_manager')),
 
-  createTeamInviteCodes: (ctx: PermissionContext, teamId: string) => 
-    ctx.roles.includes('league_admin') || 
-    ctx.teamAssignments.some(t => t.teamId === teamId && t.role === 'head_coach'),
+  createTeamInviteCodes: (ctx: PermissionContext, teamId: string) =>
+    ctx.roles.includes('league_admin') ||
+    ctx.teamAssignments.some(t => t.teamId === teamId && (t.role === 'head_coach' || t.role === 'team_manager')),
 
   // Chat
-  postInTeamChat: (ctx: PermissionContext) => 
+  postInTeamChat: (ctx: PermissionContext) =>
     ctx.roles.includes('league_admin') ||
     ctx.roles.includes('head_coach') ||
     ctx.roles.includes('assistant_coach') ||
+    ctx.roles.includes('team_manager') ||
     ctx.roles.includes('parent'),
 
-  postInPlayerChat: (ctx: PermissionContext) => 
+  postInPlayerChat: (ctx: PermissionContext) =>
     ctx.roles.includes('league_admin') ||
     ctx.roles.includes('head_coach') ||
     ctx.roles.includes('assistant_coach') ||
+    ctx.roles.includes('team_manager') ||
     ctx.roles.includes('player'),
 
-  viewPlayerChat: (ctx: PermissionContext) => 
+  viewPlayerChat: (ctx: PermissionContext) =>
     ctx.roles.includes('league_admin') ||
     ctx.roles.includes('head_coach') ||
     ctx.roles.includes('assistant_coach') ||
+    ctx.roles.includes('team_manager') ||
     ctx.roles.includes('parent') ||
     ctx.roles.includes('player'),
 
-  moderateChat: (ctx: PermissionContext, teamId: string) => 
-    ctx.roles.includes('league_admin') || 
-    ctx.teamAssignments.some(t => t.teamId === teamId && t.role === 'head_coach'),
+  moderateChat: (ctx: PermissionContext, teamId: string) =>
+    ctx.roles.includes('league_admin') ||
+    ctx.teamAssignments.some(t => t.teamId === teamId && (t.role === 'head_coach' || t.role === 'team_manager')),
 
   createDMs: (ctx: PermissionContext) => 
     !ctx.roles.includes('player'), // Everyone except players
@@ -145,7 +148,7 @@ export const can = {
 
 // Get highest role for display purposes
 export const getPrimaryRole = (roles: UserRole[]): UserRole => {
-  const priority: UserRole[] = ['league_admin', 'head_coach', 'assistant_coach', 'parent', 'player'];
+  const priority: UserRole[] = ['league_admin', 'head_coach', 'assistant_coach', 'team_manager', 'parent', 'player'];
   for (const role of priority) {
     if (roles.includes(role)) return role;
   }
@@ -157,6 +160,7 @@ export const roleDisplayName: Record<UserRole, string> = {
   league_admin: 'League Admin',
   head_coach: 'Head Coach',
   assistant_coach: 'Assistant Coach',
+  team_manager: 'Team Manager',
   parent: 'Parent',
   player: 'Player',
 };

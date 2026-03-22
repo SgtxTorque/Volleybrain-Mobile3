@@ -25,7 +25,7 @@ const EMPTY_BADGES: DrawerBadges = {
 
 export function useDrawerBadges(isOpen: boolean) {
   const { user, profile } = useAuth();
-  const { isAdmin, isParent } = usePermissions();
+  const { isAdmin, isParent, isTeamManager } = usePermissions();
   const [badges, setBadges] = useState<DrawerBadges>(EMPTY_BADGES);
   const [loading, setLoading] = useState(false);
 

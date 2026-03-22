@@ -31,6 +31,7 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
 .env*.local
 
 # typescript
@@ -42,3 +43,6 @@ app-example
 /ios
 /android
 NUL
+
+# mascot image originals (pre-chroma-key backup)
+assets/images/activitiesmascot/originals/

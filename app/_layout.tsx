@@ -29,6 +29,14 @@ import { lockPortrait, unlockOrientation } from '@/lib/orientation';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { determineOnboardingPath, getOnboardingRoute } from '@/lib/onboarding-router';
 
+if (!__DEV__) {
+  const Sentry = require('@sentry/react-native');
+  Sentry.init({
+    dsn: 'https://4763807d47d1b126ad6816b08bc0b248@o4511061021884416.ingest.us.sentry.io/4511061069070337',
+    tracesSampleRate: 1.0,
+  });
+}
+
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
@@ -191,7 +199,7 @@ function RootLayoutNav() {
   );
 }
 
-export default function RootLayout() {
+function RootLayout() {
   const [fontsLoaded] = useFonts({
     'Oswald-Bold': require('../assets/fonts/Oswald-Bold.ttf'),
     BebasNeue_400Regular,
@@ -240,3 +248,5 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
+export default __DEV__ ? RootLayout : require('@sentry/react-native').wrap(RootLayout);

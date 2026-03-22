@@ -42,7 +42,7 @@ export const getProfileByEmail = async (email: string): Promise<{ id: string; fu
     .from('profiles')
     .select('id, full_name')
     .eq('email', email.toLowerCase())
-    .single();
+    .maybeSingle();
 
   return existing || null;
 };
@@ -75,7 +75,7 @@ export const createTeamChats = async (options: CreateChatOptions): Promise<{ tea
       .single();
 
     if (teamError) {
-      console.error('Error creating team chat:', teamError);
+      if (__DEV__) console.error('Error creating team chat:', teamError);
       return null;
     }
     teamChatId = teamChat.id;
@@ -96,7 +96,7 @@ export const createTeamChats = async (options: CreateChatOptions): Promise<{ tea
       .single();
 
     if (playerError) {
-      console.error('Error creating player chat:', playerError);
+      if (__DEV__) console.error('Error creating player chat:', playerError);
       return null;
     }
     playerChatId = playerChat.id;
@@ -386,7 +386,7 @@ export const createLeagueAnnouncementChannel = async (seasonId: string, seasonNa
     .select('id')
     .eq('season_id', seasonId)
     .eq('channel_type', 'league_announcement')
-    .single();
+    .maybeSingle();
 
   if (existing) return existing.id;
 
@@ -403,7 +403,7 @@ export const createLeagueAnnouncementChannel = async (seasonId: string, seasonNa
     .single();
 
   if (error) {
-    console.error('Error creating announcement channel:', error);
+    if (__DEV__) console.error('Error creating announcement channel:', error);
     return null;
   }
 

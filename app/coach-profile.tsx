@@ -1,5 +1,6 @@
 import { useAuth } from '@/lib/auth';
 import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
+import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { createGlassStyle, useTheme } from '@/lib/theme';
@@ -32,6 +33,8 @@ type CoachRecord = {
   experience_level: string | null;
   status: string | null;
   background_check_status: string | null;
+  coaching_license: string | null;
+  coaching_level: string | null;
   waiver_signed: boolean | null;
   code_of_conduct_signed: boolean | null;
   team_coaches: {
@@ -46,6 +49,26 @@ export default function CoachProfileScreen() {
   const { user, profile } = useAuth();
   const { workingSeason } = useSeason();
   const router = useRouter();
+  // ─── Role Guard ────────────────────────────────
+  const { isAdmin, isCoach, loading: permLoading } = usePermissions();
+
+  if (permLoading) return null;
+
+  if (!isAdmin && !isCoach) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors?.background || '#F6F8FB', justifyContent: 'center', alignItems: 'center', gap: 12, padding: 20 }}>
+        <Ionicons name="lock-closed-outline" size={48} color={colors?.textMuted || '#999'} />
+        <Text style={{ fontFamily: FONTS.bodyBold, fontSize: 18, color: colors?.text || '#10284C' }}>Access Restricted</Text>
+        <Text style={{ fontFamily: FONTS.bodyMedium, fontSize: 14, color: colors?.textMuted || '#999', textAlign: 'center' }}>
+          Coach or admin permissions required.
+        </Text>
+        <TouchableOpacity onPress={() => router.replace('/(tabs)')} style={{ marginTop: 8 }}>
+          <Text style={{ fontFamily: FONTS.bodySemiBold, color: '#4BB9EC', fontSize: 15 }}>Go Home</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
+  // ─── End Role Guard ────────────────────────────
 
   const [coach, setCoach] = useState<CoachRecord | null>(null);
   const [loading, setLoading] = useState(true);
@@ -328,6 +351,30 @@ export default function CoachProfileScreen() {
               {coach.code_of_conduct_signed ? 'Signed' : 'Not Signed'}
             </Text>
           </View>
+          {coach.coaching_license && (
+            <>
+              <View style={s.fieldDivider} />
+              <View style={s.statusRow}>
+                <View style={s.statusInfo}>
+                  <Ionicons name="document-text" size={20} color={colors.info} />
+                  <Text style={s.statusLabel}>Coaching License</Text>
+                </View>
+                <Text style={[s.statusValue, { color: colors.info }]}>{coach.coaching_license}</Text>
+              </View>
+            </>
+          )}
+          {coach.coaching_level && (
+            <>
+              <View style={s.fieldDivider} />
+              <View style={s.statusRow}>
+                <View style={s.statusInfo}>
+                  <Ionicons name="school" size={20} color={colors.primary} />
+                  <Text style={s.statusLabel}>Coaching Level</Text>
+                </View>
+                <Text style={[s.statusValue, { color: colors.primary }]}>{coach.coaching_level}</Text>
+              </View>
+            </>
+          )}
         </View>
 
         {/* Assigned Teams */}

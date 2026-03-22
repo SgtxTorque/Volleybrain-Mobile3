@@ -30,6 +30,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import ShoutoutProfileSection from '@/components/ShoutoutProfileSection';
 import { usePlayerEvaluationHistory } from '@/hooks/useEvaluations';
 import { EVAL_SKILLS, dbToUi, calculateOVR, getOvrTierColor, getRatingBlockColor } from '@/lib/evaluations';
+import { checkAndCompleteQuests } from '@/lib/quest-engine';
 
 // =============================================================================
 // TYPES
@@ -222,7 +223,7 @@ export default function MyStatsScreen() {
         .from('seasons')
         .select('sport')
         .eq('id', effectiveSeasonId)
-        .single();
+        .maybeSingle();
       const sport = (seasonData as any)?.sport || 'volleyball';
       setDetectedSport(sport);
 
@@ -412,6 +413,12 @@ export default function MyStatsScreen() {
       setLoading(false);
     }
   }, [playerId, loadMyStats]);
+
+  // Quest auto-completion: viewing stats completes stats_check quest
+  useEffect(() => {
+    if (!user?.id) return;
+    checkAndCompleteQuests(user.id, 'view_stats').catch(() => {});
+  }, [user?.id]);
 
   // Auto-open drill-down for highlightStat param
   useEffect(() => {

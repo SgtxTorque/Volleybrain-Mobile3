@@ -14,15 +14,18 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { getShoutoutImage } from '../constants/mascot-images';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // =============================================================================
@@ -278,7 +281,7 @@ export default function GiveShoutoutModal({ visible, teamId, onClose, onSuccess,
         For {selectedRecipient?.full_name}
       </Text>
 
-      <View style={s.categoryGrid}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.categoryGrid}>
         {categories.length === 0 && !loading && (
           <Text style={[s.emptyText, { color: colors.textMuted, paddingVertical: 20, textAlign: 'center', width: '100%' }]}>
             No shoutout categories available yet.
@@ -290,9 +293,12 @@ export default function GiveShoutoutModal({ visible, teamId, onClose, onSuccess,
             <TouchableOpacity
               key={cat.id}
               style={[
-                s.categoryChip,
-                { borderColor: isSelected ? cat.color || colors.primary : colors.glassBorder },
-                isSelected && { backgroundColor: (cat.color || colors.primary) + '20' },
+                s.categoryCard,
+                {
+                  borderColor: isSelected ? cat.color || colors.primary : '#E5E7EB',
+                  backgroundColor: isSelected ? (cat.color || colors.primary) + '10' : '#FFFFFF',
+                },
+                isSelected && { transform: [{ scale: 1.03 }] },
               ]}
               onPress={() => {
                 setSelectedCategory(cat);
@@ -306,14 +312,14 @@ export default function GiveShoutoutModal({ visible, teamId, onClose, onSuccess,
                   s.categoryName,
                   { color: isSelected ? cat.color || colors.primary : colors.text },
                 ]}
-                numberOfLines={1}
+                numberOfLines={2}
               >
                 {cat.name}
               </Text>
             </TouchableOpacity>
           );
         })}
-      </View>
+      </ScrollView>
     </View>
   );
 
@@ -379,7 +385,12 @@ export default function GiveShoutoutModal({ visible, teamId, onClose, onSuccess,
           },
         ]}
       >
-        <Text style={s.previewEmoji}>{selectedCategory?.emoji}</Text>
+        <Image
+          source={getShoutoutImage(selectedCategory?.name?.toLowerCase().replace(/\s+/g, '_') || '')}
+          style={{ width: 180, height: 180 }}
+          resizeMode="contain"
+          accessibilityLabel={`${selectedCategory?.name} shoutout illustration`}
+        />
         <Text style={[s.previewTitle, { color: colors.text }]}>
           {selectedCategory?.name}
         </Text>
@@ -540,29 +551,30 @@ const createStyles = (colors: any) =>
       fontSize: 15,
     },
 
-    // Category step
+    // Category step — emoji grid
     categoryGrid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 10,
+      paddingBottom: 24,
     },
-    categoryChip: {
+    categoryCard: {
       width: '47%' as any,
-      flexDirection: 'row',
       alignItems: 'center',
-      gap: 10,
-      paddingVertical: 16,
-      paddingHorizontal: 14,
+      padding: 12,
       borderRadius: 14,
-      borderWidth: 1.5,
+      borderWidth: 1,
     },
     categoryEmoji: {
-      fontSize: 28,
+      fontSize: 44,
+      lineHeight: 56,
+      textAlign: 'center' as const,
     },
     categoryName: {
       fontSize: 14,
-      fontWeight: '600',
-      flex: 1,
+      fontWeight: '700',
+      textAlign: 'center',
+      marginTop: 6,
     },
 
     // Message step

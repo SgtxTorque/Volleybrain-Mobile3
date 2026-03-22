@@ -1,5 +1,6 @@
 import { useAuth } from '@/lib/auth';
 import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
+import { FAMILY_IMAGES } from '@/constants/mascot-images';
 import { FONTS } from '@/theme/fonts';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
@@ -113,7 +114,7 @@ export default function MessagesScreen() {
 
         {messages.length === 0 ? (
           <View style={s.empty}>
-            <Image source={require('@/assets/images/mascot/SleepLynx.png')} style={{ width: 120, height: 120, marginBottom: 16 }} resizeMode="contain" />
+            <Image source={FAMILY_IMAGES.MEET_LYNX} style={{ width: 160, height: 160, marginBottom: 16 }} resizeMode="contain" accessibilityLabel="No messages" />
             <Text style={s.emptyText}>No messages sent yet</Text>
           </View>
         ) : (

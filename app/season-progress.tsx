@@ -14,10 +14,10 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { TouchableOpacity } from 'react-native';
 
 // =============================================================================
 // Types
@@ -104,7 +104,7 @@ export default function SeasonProgressScreen() {
           .select('team_id')
           .eq('player_id', targetPlayerId)
           .limit(1)
-          .single();
+          .maybeSingle();
         teamId = tp?.team_id || null;
       }
 

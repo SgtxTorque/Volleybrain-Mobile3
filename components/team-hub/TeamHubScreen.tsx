@@ -100,7 +100,7 @@ export default function TeamHubScreen({ teamId, teamName, teamColor, role }: Tea
       .from('teams')
       .select('id, name, color, banner_url, logo_url, motto, season_id')
       .eq('id', teamId)
-      .single();
+      .maybeSingle();
 
     if (teamData) setTeam(teamData as TeamData);
 

@@ -34,7 +34,7 @@ type UserTeam = {
 
 export default function TeamScreen() {
   const { user } = useAuth();
-  const { isAdmin, isCoach, isParent } = usePermissions();
+  const { isAdmin, isCoach, isTeamManager, isParent } = usePermissions();
   const { workingSeason } = useSeason();
   const { selectedTeamId: contextTeamId } = useTeamContext();
 
@@ -43,7 +43,7 @@ export default function TeamScreen() {
   const [loading, setLoading] = useState(true);
 
   // Determine role for TeamHubScreen
-  const role = isAdmin ? 'admin' : isCoach ? 'coach' : isParent ? 'parent' : 'player';
+  const role = isAdmin ? 'admin' : (isCoach || isTeamManager) ? 'coach' : isParent ? 'parent' : 'player';
 
   // ---------------------------------------------------------------------------
   // Resolve user's teams based on role
@@ -65,8 +65,8 @@ export default function TeamScreen() {
         for (const t of data || []) {
           teamsMap.set(t.id, { teamId: t.id, teamName: t.name || 'Team', teamColor: t.color });
         }
-      } else if (isCoach) {
-        // Coach: team_staff + team_coaches
+      } else if (isCoach || isTeamManager) {
+        // Coach / Team Manager: team_staff + team_coaches
         const { data: staffLinks } = await supabase
           .from('team_staff')
           .select('teams(id, name, color, season_id)')
@@ -90,7 +90,7 @@ export default function TeamScreen() {
         }
       } else if (isParent) {
         // Parent: player_guardians + parent_account_id + parent_email
-        const profile = (await supabase.from('profiles').select('email').eq('id', user.id).single()).data;
+        const profile = (await supabase.from('profiles').select('email').eq('id', user.id).maybeSingle()).data;
         let playerIds: string[] = [];
 
         const { data: guardianLinks } = await supabase.from('player_guardians').select('player_id').eq('guardian_id', user.id);

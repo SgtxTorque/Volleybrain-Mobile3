@@ -98,7 +98,7 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
 
     return tokenData.data;
   } catch (error) {
-    console.error('Error registering for push notifications:', error);
+    if (__DEV__) console.error('Error registering for push notifications:', error);
     return null;
   }
 }
@@ -112,11 +112,21 @@ export async function registerForPushNotifications(userId: string): Promise<stri
 // SAVE PUSH TOKEN TO SUPABASE
 // =====================================================
 export async function savePushToken(userId: string, token: string) {
+  // Clear old tokens for this user, then insert fresh
+  await supabase
+    .from('push_tokens')
+    .delete()
+    .eq('user_id', userId);
+
   const { error } = await supabase
-    .from('profiles')
-    .update({ push_token: token })
-    .eq('id', userId);
-  if (error) console.error('Error saving push token:', error);
+    .from('push_tokens')
+    .insert({
+      user_id: userId,
+      token,
+      device_type: Platform.OS,
+      updated_at: new Date().toISOString(),
+    });
+  if (__DEV__ && error) console.error('Error saving push token:', error);
 }
 
 // =====================================================
@@ -152,7 +162,7 @@ export async function sendVolunteerBlast(params: {
       .rpc('get_team_parent_ids', { p_team_id: teamId });
 
     if (parentError) {
-      console.error('Error getting team parents:', parentError);
+      if (__DEV__) console.error('Error getting team parents:', parentError);
       // Fallback: get parents directly from player_parents joined with team_players
       const { data: fallbackParents } = await supabase
         .from('player_guardians')
@@ -180,7 +190,7 @@ export async function sendVolunteerBlast(params: {
     const parentIds = teamParents.map((p: { parent_id: string }) => p.parent_id);
     return await createNotifications(parentIds, eventId, teamId, role, eventTitle, eventDate, sentBy);
   } catch (error) {
-    console.error('Error sending volunteer blast:', error);
+    if (__DEV__) console.error('Error sending volunteer blast:', error);
     return { success: false, recipientCount: 0, error: 'Failed to send notifications' };
   }
 }
@@ -226,7 +236,7 @@ async function createNotifications(
     .insert(notifications);
 
   if (notifError) {
-    console.error('Error creating notifications:', notifError);
+    if (__DEV__) console.error('Error creating notifications:', notifError);
     return { success: false, recipientCount: 0, error: 'Failed to create notifications' };
   }
 
@@ -262,7 +272,7 @@ export async function fetchNotifications(userId: string, limit = 50): Promise<Ap
     .limit(limit);
 
   if (error) {
-    console.error('Error fetching notifications:', error);
+    if (__DEV__) console.error('Error fetching notifications:', error);
     return [];
   }
 
@@ -301,7 +311,7 @@ export async function getUnreadCount(userId: string): Promise<number> {
     .eq('read', false);
 
   if (error) {
-    console.error('Error getting unread count:', error);
+    if (__DEV__) console.error('Error getting unread count:', error);
     return 0;
   }
 
@@ -377,8 +387,8 @@ export async function runAutoBlastCheck(daysAhead: number = 2): Promise<number> 
         .from('schedule_events')
         .select('team_id, event_date')
         .eq('id', game.eventId)
-        .single();
-      
+        .maybeSingle();
+
       if (!gameData) continue;
       
       // Determine role to blast for
@@ -410,7 +420,7 @@ export async function runAutoBlastCheck(daysAhead: number = 2): Promise<number> 
       if (result.success) blastsSent++;
     }
   } catch (error) {
-    console.error('Auto-blast check error:', error);
+    if (__DEV__) console.error('Auto-blast check error:', error);
   }
   
   return blastsSent;
@@ -472,8 +482,8 @@ export async function promoteBackupVolunteer(
       .from('schedule_events')
       .select('title, event_date')
       .eq('id', eventId)
-      .single();
-    
+      .maybeSingle();
+
     if (event) {
       const roleText = role === 'line_judge' ? 'Line Judge' : 'Scorekeeper';
       const formattedDate = new Date(event.event_date + 'T00:00:00').toLocaleDateString('en-US', {
@@ -497,7 +507,7 @@ export async function promoteBackupVolunteer(
     
     return { promoted: true, promotedUserId: backup1.profile_id };
   } catch (error) {
-    console.error('Promote backup error:', error);
+    if (__DEV__) console.error('Promote backup error:', error);
     return { promoted: false, error: 'Failed to promote backup' };
   }
 }
@@ -603,7 +613,7 @@ export async function sendRSVPReminders(daysAhead: number = 3): Promise<number> 
       }
     }
   } catch (error) {
-    console.error('RSVP reminder error:', error);
+    if (__DEV__) console.error('RSVP reminder error:', error);
   }
   
   return remindersSent;

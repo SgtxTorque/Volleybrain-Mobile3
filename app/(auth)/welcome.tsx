@@ -1,115 +1,116 @@
+/**
+ * WelcomeScreen — 4-screen onboarding carousel with mascot illustrations.
+ * Swipeable horizontal paging with page indicator dots.
+ */
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
-  Animated,
   Dimensions,
+  FlatList,
   Image,
+  Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import type { ViewToken } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { ACHIEVEMENT_IMAGES, FAMILY_IMAGES } from '@/constants/mascot-images';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
+type OnboardingSlide = {
+  key: string;
+  image: any;
+  title: string;
+  subtitle: string;
+  accessibilityLabel: string;
+  imageWidth: number;
+};
+
+const SLIDES: OnboardingSlide[] = [
+  {
+    key: 'meet',
+    image: FAMILY_IMAGES.MEET_LYNX,
+    title: "Hey! I'm Lynx!",
+    subtitle: 'Your sports companion',
+    accessibilityLabel: 'Meet Lynx mascot',
+    imageWidth: SCREEN_W * 0.55,
+  },
+  {
+    key: 'family',
+    image: FAMILY_IMAGES.FAMILY,
+    title: 'Built for Players, Parents & Coaches',
+    subtitle: 'Everyone gets their own experience',
+    accessibilityLabel: 'Lynx family illustration',
+    imageWidth: SCREEN_W * 0.6,
+  },
+  {
+    key: 'journey',
+    image: ACHIEVEMENT_IMAGES.REACHED_GOAL,
+    title: 'Earn Badges. Level Up. Get Better.',
+    subtitle: 'Every practice, game, and achievement counts',
+    accessibilityLabel: 'Reached goal illustration',
+    imageWidth: SCREEN_W * 0.55,
+  },
+  {
+    key: 'start',
+    image: ACHIEVEMENT_IMAGES.ACHIEVEMENT_EARNED,
+    title: 'Ready to earn your first badge?',
+    subtitle: '',
+    accessibilityLabel: 'Achievement earned illustration',
+    imageWidth: SCREEN_W * 0.55,
+  },
+];
+
 export default function WelcomeScreen() {
   const router = useRouter();
+  const flatListRef = useRef<FlatList>(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
 
-  // Entrance animations
-  const logoOpacity = useRef(new Animated.Value(0)).current;
-  const mascotY = useRef(new Animated.Value(40)).current;
-  const mascotOpacity = useRef(new Animated.Value(0)).current;
-  const cta1Y = useRef(new Animated.Value(30)).current;
-  const cta1Opacity = useRef(new Animated.Value(0)).current;
-  const cta2Y = useRef(new Animated.Value(30)).current;
-  const cta2Opacity = useRef(new Animated.Value(0)).current;
+  const onViewableItemsChanged = useCallback(
+    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
+      if (viewableItems.length > 0 && viewableItems[0].index != null) {
+        setCurrentIndex(viewableItems[0].index);
+      }
+    },
+    [],
+  );
 
-  useEffect(() => {
-    // Logo fade in (300ms)
-    Animated.timing(logoOpacity, {
-      toValue: 1,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
+  const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
 
-    // Mascot spring up (400ms delay)
-    setTimeout(() => {
-      Animated.parallel([
-        Animated.spring(mascotY, {
-          toValue: 0,
-          friction: 6,
-          tension: 50,
-          useNativeDriver: true,
-        }),
-        Animated.timing(mascotOpacity, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }, 300);
+  const goNext = () => {
+    if (currentIndex < SLIDES.length - 1) {
+      flatListRef.current?.scrollToIndex({ index: currentIndex + 1, animated: true });
+    }
+  };
 
-    // CTAs stagger in
-    setTimeout(() => {
-      Animated.parallel([
-        Animated.spring(cta1Y, { toValue: 0, friction: 7, useNativeDriver: true }),
-        Animated.timing(cta1Opacity, { toValue: 1, duration: 250, useNativeDriver: true }),
-      ]).start();
-    }, 600);
+  const goToEnd = () => {
+    flatListRef.current?.scrollToIndex({ index: SLIDES.length - 1, animated: true });
+  };
 
-    setTimeout(() => {
-      Animated.parallel([
-        Animated.spring(cta2Y, { toValue: 0, friction: 7, useNativeDriver: true }),
-        Animated.timing(cta2Opacity, { toValue: 1, duration: 250, useNativeDriver: true }),
-      ]).start();
-    }, 700);
-  }, []);
+  const isFinal = currentIndex === SLIDES.length - 1;
 
-  return (
-    <LinearGradient
-      colors={[BRAND.navy, BRAND.skyBlue]}
-      style={s.gradient}
-      start={{ x: 0.2, y: 0 }}
-      end={{ x: 0.8, y: 1 }}
-    >
-      <SafeAreaView style={s.safe}>
-        {/* Logo - upper third */}
-        <Animated.View style={[s.logoWrap, { opacity: logoOpacity }]}>
-          <Image
-            source={require('@/assets/images/lynx-logo.png')}
-            style={s.logo}
-            resizeMode="contain"
-          />
-        </Animated.View>
+  const renderSlide = useCallback(
+    ({ item, index }: { item: OnboardingSlide; index: number }) => (
+      <View style={s.slide}>
+        <Image
+          source={item.image}
+          style={{ width: item.imageWidth, height: item.imageWidth }}
+          resizeMode="contain"
+          accessibilityLabel={item.accessibilityLabel}
+        />
+        <Text style={s.title}>{item.title}</Text>
+        {item.subtitle ? <Text style={s.subtitle}>{item.subtitle}</Text> : null}
 
-        {/* Mascot - center */}
-        <Animated.View
-          style={[
-            s.mascotWrap,
-            { opacity: mascotOpacity, transform: [{ translateY: mascotY }] },
-          ]}
-        >
-          <Image
-            source={require('@/assets/images/mascot/HiLynx.png')}
-            style={s.mascot}
-            resizeMode="contain"
-          />
-        </Animated.View>
-
-        {/* Tagline */}
-        <Animated.Text style={[s.tagline, { opacity: mascotOpacity }]}>
-          Youth Sports Management
-        </Animated.Text>
-
-        {/* CTAs - bottom third */}
-        <View style={s.ctaWrap}>
-          {/* Get Started (filled teal) */}
-          <Animated.View style={{ opacity: cta1Opacity, transform: [{ translateY: cta1Y }] }}>
+        {/* Final screen CTAs */}
+        {index === SLIDES.length - 1 && (
+          <View style={s.ctaWrap}>
             <TouchableOpacity
               style={s.ctaPrimary}
               onPress={() => router.push('/(auth)/signup')}
@@ -118,77 +119,137 @@ export default function WelcomeScreen() {
               <Text style={s.ctaPrimaryText}>Get Started</Text>
               <Ionicons name="arrow-forward" size={20} color="#fff" />
             </TouchableOpacity>
-          </Animated.View>
-
-          {/* I Already Have an Account (outlined) */}
-          <Animated.View style={{ opacity: cta2Opacity, transform: [{ translateY: cta2Y }] }}>
             <TouchableOpacity
-              style={s.ctaSecondary}
               onPress={() => router.push('/(auth)/login')}
               activeOpacity={0.85}
             >
               <Text style={s.ctaSecondaryText}>I Already Have an Account</Text>
             </TouchableOpacity>
-          </Animated.View>
-        </View>
+          </View>
+        )}
+      </View>
+    ),
+    [router],
+  );
 
-        {/* Legal */}
-        <Animated.Text style={[s.legal, { opacity: cta2Opacity }]}>
-          By continuing, you agree to our{' '}
-          <Text style={s.legalLink} onPress={() => router.push('/privacy-policy')}>
-            Privacy Policy
-          </Text>{' '}
-          and{' '}
-          <Text style={s.legalLink} onPress={() => router.push('/terms-of-service')}>
-            Terms of Service
-          </Text>
-        </Animated.Text>
+  return (
+    <View style={s.container}>
+      <SafeAreaView style={s.safe}>
+        {/* Skip button */}
+        {!isFinal && (
+          <Pressable onPress={goToEnd} style={s.skipBtn} hitSlop={12}>
+            <Text style={s.skipText}>Skip</Text>
+          </Pressable>
+        )}
+
+        {/* Carousel */}
+        <FlatList
+          ref={flatListRef}
+          data={SLIDES}
+          renderItem={renderSlide}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={viewabilityConfig}
+          bounces={false}
+          keyExtractor={item => item.key}
+          getItemLayout={(_, index) => ({
+            length: SCREEN_W,
+            offset: SCREEN_W * index,
+            index,
+          })}
+          style={s.carousel}
+        />
+
+        {/* Bottom section: dots + navigation */}
+        <View style={s.bottomSection}>
+          <View style={s.dotsRow}>
+            {SLIDES.map((_, i) => (
+              <View key={i} style={[s.dot, i === currentIndex && s.dotActive]} />
+            ))}
+          </View>
+
+          {!isFinal ? (
+            <TouchableOpacity style={s.nextBtn} onPress={goNext} activeOpacity={0.85}>
+              <Text style={s.nextBtnText}>Next</Text>
+              <Ionicons name="arrow-forward" size={18} color="#fff" />
+            </TouchableOpacity>
+          ) : (
+            <Text style={s.legal}>
+              By continuing, you agree to our{' '}
+              <Text style={s.legalLink} onPress={() => router.push('/privacy-policy')}>
+                Privacy Policy
+              </Text>{' '}
+              and{' '}
+              <Text style={s.legalLink} onPress={() => router.push('/terms-of-service')}>
+                Terms of Service
+              </Text>
+            </Text>
+          )}
+        </View>
       </SafeAreaView>
-    </LinearGradient>
+    </View>
   );
 }
 
 const s = StyleSheet.create({
-  gradient: {
+  container: {
     flex: 1,
+    backgroundColor: BRAND.navy,
   },
   safe: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    paddingBottom: 16,
   },
-  logoWrap: {
-    marginTop: 48,
-    alignItems: 'center',
+  skipBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 20,
+    zIndex: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
   },
-  logo: {
-    width: 180,
-    height: 74,
-  },
-  mascotWrap: {
-    alignItems: 'center',
-  },
-  mascot: {
-    width: 140,
-    height: 200,
-  },
-  tagline: {
+  skipText: {
     fontFamily: FONTS.bodySemiBold,
+    fontSize: 15,
+    color: 'rgba(255,255,255,0.6)',
+  },
+  carousel: {
+    flex: 1,
+  },
+  slide: {
+    width: SCREEN_W,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+  },
+  title: {
+    fontFamily: FONTS.bodyBold,
+    fontSize: 26,
+    color: '#FFFFFF',
+    textAlign: 'center',
+    marginTop: 32,
+    lineHeight: 34,
+  },
+  subtitle: {
+    fontFamily: FONTS.bodyMedium,
     fontSize: 16,
-    color: 'rgba(255,255,255,0.8)',
-    letterSpacing: 0.5,
-    marginTop: -8,
+    color: 'rgba(255,255,255,0.6)',
+    textAlign: 'center',
+    marginTop: 12,
+    lineHeight: 22,
   },
   ctaWrap: {
     width: '100%',
     gap: 12,
+    marginTop: 40,
+    alignItems: 'center',
   },
   ctaPrimary: {
-    backgroundColor: BRAND.teal,
-    borderRadius: 16,
-    paddingVertical: 18,
+    backgroundColor: BRAND.skyBlue,
+    borderRadius: 14,
+    paddingVertical: 16,
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -199,16 +260,43 @@ const s = StyleSheet.create({
     fontSize: 18,
     color: '#fff',
   },
-  ctaSecondary: {
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.4)',
-    paddingVertical: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   ctaSecondaryText: {
     fontFamily: FONTS.bodySemiBold,
+    fontSize: 15,
+    color: 'rgba(255,255,255,0.6)',
+    marginTop: 4,
+  },
+  bottomSection: {
+    paddingHorizontal: 24,
+    paddingBottom: 16,
+    gap: 16,
+    alignItems: 'center',
+  },
+  dotsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+  },
+  dotActive: {
+    backgroundColor: BRAND.skyBlue,
+    width: 24,
+  },
+  nextBtn: {
+    backgroundColor: BRAND.skyBlue,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  nextBtnText: {
+    fontFamily: FONTS.bodyBold,
     fontSize: 16,
     color: '#fff',
   },

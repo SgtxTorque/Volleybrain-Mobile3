@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { FAMILY_IMAGES } from '@/constants/mascot-images';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
 import { BRAND } from '@/theme/colors';
@@ -75,9 +76,10 @@ export default function NoOrgState() {
     <SafeAreaView style={s.safe} edges={['top']}>
       <ScrollView contentContainerStyle={s.content}>
         <Image
-          source={require('@/assets/images/mascot/HiLynx.png')}
+          source={FAMILY_IMAGES.MEET_LYNX}
           style={s.mascot}
           resizeMode="contain"
+          accessibilityLabel="Lynx mascot greeting"
         />
 
         <Text style={s.title}>You're not connected to an organization yet</Text>
@@ -131,12 +133,24 @@ export default function NoOrgState() {
             </View>
 
             <TouchableOpacity
+              style={s.browseBtn}
+              onPress={() => router.push('/org-directory' as any)}
+            >
+              <Ionicons name="search-outline" size={20} color={BRAND.skyBlue} />
+              <Text style={s.browseBtnText}>Browse Organizations</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
               style={s.ctaOutline}
               onPress={() => router.push({ pathname: '/(auth)/signup', params: { createOrg: 'true' } })}
             >
               <Ionicons name="add-circle-outline" size={18} color={BRAND.teal} />
               <Text style={s.ctaOutlineText}>Create an organization</Text>
             </TouchableOpacity>
+
+            <Text style={s.hintText}>
+              Looking for your child's team? Try browsing organizations or ask your coach for an invite code.
+            </Text>
           </View>
         )}
       </ScrollView>
@@ -151,7 +165,7 @@ const s = StyleSheet.create({
     padding: 32, gap: 16,
   },
   mascot: {
-    width: 120, height: 120, alignSelf: 'center',
+    width: 160, height: 160, alignSelf: 'center',
     marginBottom: 8,
   },
   title: {
@@ -188,6 +202,16 @@ const s = StyleSheet.create({
     backgroundColor: BRAND.white, borderRadius: 12, paddingVertical: 16, paddingHorizontal: 20,
     textAlign: 'center', letterSpacing: 4,
     borderWidth: 1, borderColor: BRAND.border,
+  },
+  browseBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: BRAND.white, borderWidth: 1, borderColor: BRAND.border,
+    borderRadius: 14, paddingVertical: 14,
+  },
+  browseBtnText: { fontFamily: FONTS.bodySemiBold, fontSize: 15, color: BRAND.skyBlue },
+  hintText: {
+    fontFamily: FONTS.bodyMedium, fontSize: 13, color: BRAND.textMuted,
+    textAlign: 'center', marginTop: 4, paddingHorizontal: 20,
   },
   linkText: {
     fontFamily: FONTS.bodySemiBold, fontSize: 14, color: BRAND.textMuted,

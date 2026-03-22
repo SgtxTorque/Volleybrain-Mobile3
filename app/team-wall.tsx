@@ -1,4 +1,5 @@
 import TeamWall from '@/components/TeamWall';
+import { ACHIEVEMENT_IMAGES, FAMILY_IMAGES } from '@/constants/mascot-images';
 import { supabase } from '@/lib/supabase';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
@@ -28,8 +29,8 @@ function AchievementsTab({ teamId }: { teamId: string }) {
   if (loading) return <View style={{ padding: 40, alignItems: 'center' }}><ActivityIndicator color={BRAND.teal} /></View>;
   if (badges.length === 0) return (
     <View style={{ padding: 40, alignItems: 'center' }}>
-      <Image source={require('@/assets/images/mascot/SleepLynx.png')} style={{ width: 120, height: 120, marginBottom: 8 }} resizeMode="contain" />
-      <Text style={{ fontSize: 14, color: BRAND.textMuted }}>No achievements yet</Text>
+      <Image source={FAMILY_IMAGES.BABY_SISTER} style={{ width: 160, height: 160, marginBottom: 12 }} resizeMode="contain" accessibilityLabel="No achievements yet" />
+      <Text style={{ fontSize: 14, color: BRAND.textMuted }}>Your trophy case is waiting! Complete quests to earn your first badge.</Text>
     </View>
   );
 
@@ -83,8 +84,8 @@ function StatsTab({ teamId }: { teamId: string }) {
   if (loading) return <View style={{ padding: 40, alignItems: 'center' }}><ActivityIndicator color={BRAND.teal} /></View>;
   if (stats.length === 0) return (
     <View style={{ padding: 40, alignItems: 'center' }}>
-      <Image source={require('@/assets/images/mascot/SleepLynx.png')} style={{ width: 120, height: 120, marginBottom: 8 }} resizeMode="contain" />
-      <Text style={{ fontSize: 14, color: BRAND.textMuted }}>No stats recorded yet</Text>
+      <Image source={ACHIEVEMENT_IMAGES.IMPROVE_STATS} style={{ width: 160, height: 160, marginBottom: 12 }} resizeMode="contain" accessibilityLabel="No stats recorded" />
+      <Text style={{ fontSize: 14, color: BRAND.textMuted }}>Play your first game to start tracking your stats!</Text>
     </View>
   );
 

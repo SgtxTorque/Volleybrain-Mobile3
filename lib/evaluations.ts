@@ -294,7 +294,7 @@ export async function getPlayerRatings(
     .eq('team_id', teamId)
     .order('rated_at', { ascending: false })
     .limit(1)
-    .single();
+    .maybeSingle();
 
   if (!data) return null;
 

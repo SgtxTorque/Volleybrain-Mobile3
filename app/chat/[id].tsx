@@ -125,7 +125,7 @@ export default function ChatScreen() {
 
   const fetchChannel = async () => {
     if (!id) return;
-    const { data } = await supabase.from('chat_channels').select('id, name, channel_type, avatar_url, season_id').eq('id', id).single();
+    const { data } = await supabase.from('chat_channels').select('id, name, channel_type, avatar_url, season_id').eq('id', id).maybeSingle();
     setChannel(data);
   };
 
@@ -215,7 +215,7 @@ export default function ChatScreen() {
       .from('chat_messages')
       .select('*, sender:profiles!sender_id (id, full_name, avatar_url)')
       .eq('id', messageId)
-      .single();
+      .maybeSingle();
     if (!data || data.is_deleted) return;
 
     const { data: attachments } = await supabase
@@ -517,7 +517,7 @@ export default function ChatScreen() {
       .eq('message_id', messageId)
       .eq('user_id', profile.id)
       .eq('reaction_type', reactionType)
-      .single();
+      .maybeSingle();
 
     if (existing) await supabase.from('message_reactions').delete().eq('id', existing.id);
     else await supabase.from('message_reactions').insert({ message_id: messageId, user_id: profile.id, reaction_type: reactionType });

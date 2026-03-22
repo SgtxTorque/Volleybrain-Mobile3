@@ -1,0 +1,31 @@
+role,screen_or_surface,access_path,enforcement_type,status,notes
+guest,welcome,root auth redirect,CONFIRMED,Available,Unauthenticated users are sent to /(auth)/welcome from app/_layout.tsx
+guest,login,auth route,CONFIRMED,Available,Direct auth screen
+guest,signup,auth route,CONFIRMED,Available,Direct auth screen
+guest,redeem code,auth route,CONFIRMED,Available,Optional code param
+all authenticated,tabs home,root auth redirect,CONFIRMED,Available,Default post-auth destination absent other gates
+pending approval,pending approval screen,root auth redirect,CONFIRMED,Forced,Profile.pending_approval gate in app/_layout.tsx
+user with orphan player records,claim account,root auth redirect,CONFIRMED,Forced,hasOrphanRecords gate in app/_layout.tsx
+admin,manage tab,tab href gating,CONFIRMED,Available,Only shown when isAdmin
+coach,gameday tab,tab href gating,CONFIRMED,Available,Shown when not admin and not parent-only and not TM-only
+player,gameday tab,tab href gating,CONFIRMED,Available,Player falls into non-admin non-parent-only path
+parent,parent schedule tab,tab href gating,CONFIRMED,Available,Parent-only tab branch
+team manager,coach schedule via drawer,drawer item,CONFIRMED,Available,Team manager tool set routes to coach schedule
+admin,registration hub,drawer item and notification route,CONFIRMED,Available,No centralized route guard proven
+parent,parent registration hub,drawer item and notification route,CONFIRMED,Available,Used for cold and invite onboarding targets
+admin,user management,drawer item,CONFIRMED,Available,UI gated in drawer
+admin,payment admin,drawer item and tab,CONFIRMED,Available,Payments screen reused across roles
+parent,family payments,drawer item and notification route,CONFIRMED,Available,Separate from admin payments
+coach,coach challenge dashboard,drawer item and notification route,CONFIRMED,Available,Coach or admin notification path
+player,challenges,drawer item,CONFIRMED,Available,Player-facing challenges route
+player,journey path,tab route from player components,CONFIRMED,Available,app/(tabs)/journey.tsx exists
+player,notification inbox,drawer says notification inbox but route points /notification,CONFIRMED,Inconsistent,Drawer label does not target app/notification-inbox.tsx
+all roles,settings,drawer item,CONFIRMED,Available,Common utility/legal area
+all roles,profile,drawer item,CONFIRMED,Available,Common utility area
+admin,team management,drawer item,CONFIRMED,Available,Duplicates tabs teams surface
+coach,roster,drawer item,CONFIRMED,Available,Points to /(tabs)/players
+team manager,engagement,drawer item,CONFIRMED,Available,Points to /coach-engagement
+admin,form builder,drawer item to placeholder,CONFIRMED,Partial,Routes to /web-features placeholder
+admin,waiver editor,drawer item to placeholder,CONFIRMED,Partial,Routes to /web-features placeholder
+admin,payment gateway,drawer item to placeholder,CONFIRMED,Partial,Routes to /web-features placeholder
+all authenticated,deep links to arbitrary root routes,imperative push,UNVERIFIED,Unknown,No centralized route guard proven for every root screen

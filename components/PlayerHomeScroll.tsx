@@ -1,18 +1,23 @@
 /**
- * PlayerHomeScroll — scroll-driven player home dashboard.
- * Dark mode (#0D1B3E) — game-menu feel, not admin tool.
+ * PlayerHomeScroll — D+ redesigned scroll-driven player home.
+ * Dark mode (#0D1B3E) — game-menu feel, action center not dashboard.
  *
- * Section order:
- *   1. Hero Identity Card (always)
- *   2. Streak Banner (if streak ≥ 2)
- *   3. The Drop (1-3 items or contextual message)
- *   4. Photo Strip (if photos exist)
- *   5. Next Up — event + RSVP (if event exists, otherwise ambient text)
- *   6. Chat Peek (flat row)
- *   7. Quick Props row
- *   8. Active Challenge (if exists)
- *   9. Last Game Stats (if game stats exist)
- *  10. Closing Mascot + XP callback
+ * Final scroll order (15 sections, engagement-optimized):
+ *   1. PlayerIdentityHero (greeting, identity, streak pill, level/XP, mascot)
+ *   2. CompetitiveNudge ("3 more aces to take #7" — dynamic action bar)
+ *   3. PlayerQuickLinks (My Card, Teammates, My Stats pills)
+ *   4. PlayerQuestEntryCard (compact quest summary — navigates to QuestsScreen)
+ *   5. PlayerChallengeCard (active challenge with progress — conditional)
+ *   6. PlayerLeaderboardPreview (team rankings)
+ *   7. PlayerPropsSection — Shoutouts / Props from the Team
+ *   8. PlayerTeamHubCard (team hub entry with notification pill)
+ *   9. PlayerContinueTraining (Journey Path teaser)
+ *  10. NextUpCard (next event with +XP on RSVP)
+ *  11. PlayerMomentumRow (streak, kills, level, games — gradient cards)
+ *  12. LastGameStats (restyled with stat colors + count-up)
+ *  13. PlayerTrophyCase (Fortnite-style badge grid)
+ *  14. PlayerTeamActivity (team feed)
+ *  15. PlayerAmbientCloser (mascot + data message)
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -39,14 +44,32 @@ import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useAuth } from '@/lib/auth';
+import { useParentScroll } from '@/lib/parent-scroll-context';
 import { useScrollAnimations } from '@/hooks/useScrollAnimations';
 import { usePlayerHomeData } from '@/hooks/usePlayerHomeData';
+import { useQuestEngine } from '@/hooks/useQuestEngine';
+import { useWeeklyQuestEngine } from '@/hooks/useWeeklyQuestEngine';
+import { useTeamQuests } from '@/hooks/useTeamQuests';
 
 import { useResponsive } from '@/lib/responsive';
+import { useNotifications } from '@/hooks/useNotifications';
 import { FONTS } from '@/theme/fonts';
 
 import NoOrgState from './empty-states/NoOrgState';
 import NoTeamState from './empty-states/NoTeamState';
+import PlayerIdentityHero from './player-scroll/PlayerIdentityHero';
+import CompetitiveNudge from './player-scroll/CompetitiveNudge';
+import PlayerQuestEntryCard from './player-scroll/PlayerQuestEntryCard';
+import PlayerChallengeCard from './player-scroll/PlayerChallengeCard';
+import PlayerQuickLinks from './player-scroll/PlayerQuickLinks';
+import PlayerLeaderboardPreview from './player-scroll/PlayerLeaderboardPreview';
+import PlayerPropsSection from './player-scroll/PlayerPropsSection';
+import PlayerContinueTraining from './player-scroll/PlayerContinueTraining';
+import PlayerTeamHubCard from './player-scroll/PlayerTeamHubCard';
+import PlayerMomentumRow from './player-scroll/PlayerMomentumRow';
+import PlayerTrophyCase from './player-scroll/PlayerTrophyCase';
+import PlayerTeamActivity from './player-scroll/PlayerTeamActivity';
+import PlayerAmbientCloser from './player-scroll/PlayerAmbientCloser';
 import HeroIdentityCard from './player-scroll/HeroIdentityCard';
 import StreakBanner from './player-scroll/StreakBanner';
 import TheDrop from './player-scroll/TheDrop';
@@ -62,33 +85,17 @@ import ChallengeArrivalModal from './ChallengeArrivalModal';
 import LevelUpCelebrationModal from './LevelUpCelebrationModal';
 import StreakMilestoneCelebrationModal from './StreakMilestoneCelebrationModal';
 import GiveShoutoutModal from './GiveShoutoutModal';
+import ShoutoutReceivedModal from './ShoutoutReceivedModal';
+import { getUnseenShoutouts, markShoutoutsSeen, type UnseenShoutout } from '@/lib/shoutout-service';
 import TeamPulse from './TeamPulse';
 import TrophyCaseWidget from './TrophyCaseWidget';
 import RoleSelector from './RoleSelector';
 import { fetchActiveChallenges, optInToChallenge, type ChallengeWithParticipants } from '@/lib/challenge-service';
-import { checkMilestoneReached, awardStreakMilestoneXP } from '@/lib/streak-engine';
-import type { StreakTier } from '@/lib/streak-engine';
+import { checkMilestoneReached, awardStreakMilestoneXP, type StreakTier } from '@/lib/streak-engine';
 
 // ─── Player Dark Theme ──────────────────────────────────────────
-export const PLAYER_THEME = {
-  bg: '#0D1B3E',
-  cardBg: '#10284C',
-  cardBgHover: '#162848',
-  cardBgSubtle: 'rgba(255,255,255,0.03)',
-  accent: '#4BB9EC',
-  gold: '#FFD700',
-  goldGlow: 'rgba(255,215,0,0.3)',
-  success: '#22C55E',
-  error: '#EF4444',
-  purple: '#A855F7',
-  textPrimary: '#FFFFFF',
-  textSecondary: 'rgba(255,255,255,0.60)',
-  textMuted: 'rgba(255,255,255,0.30)',
-  textFaint: 'rgba(255,255,255,0.15)',
-  border: 'rgba(255,255,255,0.06)',
-  borderAccent: 'rgba(75,185,236,0.15)',
-  borderGold: 'rgba(255,215,0,0.20)',
-} as const;
+import { PLAYER_THEME } from '@/theme/player-theme';
+export { PLAYER_THEME } from '@/theme/player-theme';
 
 // ─── Props ──────────────────────────────────────────────────────
 type Props = {
@@ -101,12 +108,72 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user, organization } = useAuth();
-  const { scrollY, scrollHandler } = useScrollAnimations();
+  const parentScroll = useParentScroll();
+  const { scrollY, scrollHandler } = useScrollAnimations({
+    onScrollJS: parentScroll.notifyScroll,
+  });
   const data = usePlayerHomeData(playerId);
-  const { isTabletAny, contentMaxWidth, contentPadding } = useResponsive();
+  const streakCount = data.engagementStreak?.currentStreak ?? data.attendanceStreak ?? 0;
 
-  // ─── Shoutout modal ──
+  // Quest hooks — kept active for quest generation on app open, summary data passed to entry card
+  // When parent views child, use the child's engagement profile ID instead of auth user
+  const questEngine = useQuestEngine(data.engagementProfileId);
+  const weeklyEngine = useWeeklyQuestEngine(data.engagementProfileId);
+  const teamQuestHook = useTeamQuests(data.primaryTeam?.id ?? null);
+  const questXpToday = useMemo(() => {
+    const dailyXp = questEngine.quests
+      .filter(q => q.is_completed)
+      .reduce((sum, q) => sum + q.xp_reward, 0);
+    const bonusXp = questEngine.bonusEarned ? 25 : 0;
+    return dailyXp + bonusXp;
+  }, [questEngine.quests, questEngine.bonusEarned]);
+  const { isTabletAny, contentMaxWidth, contentPadding } = useResponsive();
+  const { unreadCount } = useNotifications(data.engagementProfileId);
+
+  // Signal to tab bar that this scroll is active
+  useEffect(() => {
+    parentScroll.setParentScrollActive(true);
+    return () => {
+      parentScroll.setParentScrollActive(false);
+      parentScroll.setScrolling(false);
+    };
+  }, []);
+
+  // ─── Shoutout modal (give) ──
   const [showShoutoutModal, setShowShoutoutModal] = useState(false);
+
+  // ─── Shoutout received celebration ──
+  const [unseenShoutouts, setUnseenShoutouts] = useState<UnseenShoutout[]>([]);
+  const [currentShoutoutIndex, setCurrentShoutoutIndex] = useState(0);
+  const [showReceivedShoutout, setShowReceivedShoutout] = useState(false);
+
+  useEffect(() => {
+    if (data.loading || !playerId) return;
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const ids = [playerId, data.engagementProfileId].filter(Boolean) as string[];
+        const unseen = await getUnseenShoutouts(ids);
+        if (cancelled || unseen.length === 0) return;
+        setUnseenShoutouts(unseen);
+        setShowReceivedShoutout(true);
+      } catch (e) {
+        if (__DEV__) console.error('[PlayerHome] unseen shoutout check failed:', e);
+      }
+    }, 2000); // 2s delay so level-up/streak celebrations go first
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [data.loading, playerId, data.engagementProfileId]);
+
+  const handleShoutoutDismiss = async () => {
+    if (currentShoutoutIndex < unseenShoutouts.length - 1) {
+      setCurrentShoutoutIndex(prev => prev + 1);
+    } else {
+      setShowReceivedShoutout(false);
+      await markShoutoutsSeen(playerId || data.engagementProfileId || '');
+      setUnseenShoutouts([]);
+      setCurrentShoutoutIndex(0);
+    }
+  };
 
   // ─── Level-up celebration ──
   const LEVEL_KEY = `lynx_player_level_${playerId}`;
@@ -128,19 +195,19 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
   const [showStreakMilestone, setShowStreakMilestone] = useState(false);
   const [milestoneTier, setMilestoneTier] = useState<StreakTier | null>(null);
   useEffect(() => {
-    if (data.loading || !playerId || data.attendanceStreak <= 0) return;
+    if (data.loading || !playerId || streakCount <= 0) return;
     AsyncStorage.getItem(STREAK_KEY).then((stored) => {
       const prevStreak = stored ? parseInt(stored, 10) : 0;
-      const crossed = checkMilestoneReached(prevStreak, data.attendanceStreak);
+      const crossed = checkMilestoneReached(prevStreak, streakCount);
       if (crossed) {
         setMilestoneTier(crossed);
         setShowStreakMilestone(true);
         // Award XP (best-effort, fire and forget)
         awardStreakMilestoneXP(playerId, crossed);
       }
-      AsyncStorage.setItem(STREAK_KEY, String(data.attendanceStreak));
+      AsyncStorage.setItem(STREAK_KEY, String(streakCount));
     });
-  }, [data.loading, data.attendanceStreak, playerId]);
+  }, [data.loading, streakCount, playerId]);
 
   // ─── Challenge arrival modal ──
   const [showChallengeArrival, setShowChallengeArrival] = useState(false);
@@ -237,16 +304,30 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
         <View style={styles.compactInner}>
           <Text style={styles.compactBrand}>lynx</Text>
           <View style={styles.compactRight}>
-            {data.attendanceStreak >= 2 && (
+            {streakCount >= 2 && (
               <View style={styles.streakPill}>
                 <Text style={styles.streakPillText}>
-                  {'\u{1F525}'} {data.attendanceStreak}
+                  {'\u{1F525}'} {streakCount}
                 </Text>
               </View>
             )}
             <View style={styles.levelPill}>
               <Text style={styles.levelPillText}>LVL {data.level}</Text>
             </View>
+            <TouchableOpacity
+              style={styles.bellWrap}
+              onPress={() => router.push('/notification-inbox' as any)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="notifications-outline" size={20} color="#FFFFFF" />
+              {unreadCount > 0 && (
+                <View style={styles.bellBadge}>
+                  <Text style={styles.bellBadgeText}>
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
             <View style={styles.roleSelectorWrap}>
               <RoleSelector />
             </View>
@@ -263,7 +344,7 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
-          { flexGrow: 1, paddingBottom: 140 },
+          { flexGrow: 1, paddingBottom: 140, minHeight: '110%' },
           isTabletAny && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%', paddingHorizontal: contentPadding },
         ]}
         refreshControl={
@@ -296,20 +377,26 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           <View style={{ paddingTop: 80 }}><NoTeamState role="player" /></View>
         ) : (
         <>
-        {/* ─── 1. HERO IDENTITY CARD ─────────────────────────── */}
-        <HeroIdentityCard
+        {/* ─── 1. PLAYER IDENTITY HERO ─────────────────────────── */}
+        <PlayerIdentityHero
           firstName={data.firstName}
           lastName={data.lastName}
+          photoUrl={data.photoUrl}
           teamName={data.primaryTeam?.name || ''}
+          teamColor={data.primaryTeam?.color || null}
           position={data.position}
           jerseyNumber={data.jerseyNumber}
-          ovr={data.ovr}
           level={data.level}
           xpProgress={data.xpProgress}
           xpCurrent={data.xp}
-          xpMax={(data.level) * 1000}
+          xpToNext={data.xpToNext}
+          attendanceStreak={streakCount}
+          lastGame={data.lastGame}
+          nextEvent={data.nextEvent}
+          badges={data.badges}
+          challengesAvailable={data.challengesAvailable}
+          recentShoutouts={data.recentShoutouts}
           scrollY={scrollY}
-          playerId={playerId}
         />
 
         {/* ─── CHILD SWITCHER (multi-child parents only) ─── */}
@@ -344,103 +431,111 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           </TouchableOpacity>
         )}
 
-        {/* ─── 1b. MY TEAM (one-tap to roster) ─────────────────── */}
-        {data.primaryTeam && (
-          <TouchableOpacity
-            style={styles.myTeamCard}
-            activeOpacity={0.85}
-            onPress={() => router.push(`/roster?teamId=${data.primaryTeam!.id}` as any)}
-          >
-            <View style={styles.myTeamLeft}>
-              <Text style={styles.myTeamLabel}>MY TEAM</Text>
-              <Text style={styles.myTeamName}>{data.primaryTeam.name}</Text>
-              <Text style={styles.myTeamCta}>See your teammates {'\u2192'}</Text>
-            </View>
-            <View style={styles.myTeamAvatars}>
-              <Text style={{ fontSize: 22 }}>{'\u{1F465}'}</Text>
-            </View>
-          </TouchableOpacity>
-        )}
-
-        {/* ─── 2. STREAK BANNER (if streak ≥ 2) ──────────────── */}
-        <StreakBanner streak={data.attendanceStreak} freezeUsed={data.streakFreezeUsed} />
-
-        {/* ─── 3. THE DROP ─────────────────────────────────────── */}
-        <TheDrop
-          badges={data.badges}
-          lastGame={data.lastGame}
-          nextEvent={data.nextEvent}
-          attendanceStreak={data.attendanceStreak}
-          recentShoutouts={data.recentShoutouts}
+        {/* ─── 2. COMPETITIVE NUDGE ─────────────────────────────── */}
+        <CompetitiveNudge
+          bestRank={data.bestRank}
+          personalBest={data.personalBest}
+          xpToNext={data.xpToNext}
+          level={data.level}
+          challengesAvailable={data.challengesAvailable}
+          scrollY={scrollY}
         />
 
-        {/* ─── 4. PHOTO STRIP (if photos exist) ───────────────── */}
-        <PhotoStrip photos={data.recentPhotos} teamId={data.primaryTeam?.id} />
+        {/* ─── 3. QUICK LINKS (My Card, Teammates, My Stats) ───── */}
+        <PlayerQuickLinks
+          playerId={playerId}
+          teamId={data.primaryTeam?.id}
+        />
 
-        {/* ─── 5. NEXT UP — event + RSVP ──────────────────────── */}
+        {/* ─── 4. QUEST ENTRY CARD (replaces Daily + Weekly + Team) ── */}
+        <PlayerQuestEntryCard
+          dailyComplete={questEngine.quests.filter(q => q.is_completed).length}
+          dailyTotal={questEngine.quests.length}
+          weeklyComplete={weeklyEngine.quests.filter(q => q.is_completed).length}
+          weeklyTotal={weeklyEngine.quests.length}
+          teamComplete={teamQuestHook.quests.filter(q => q.is_completed).length}
+          teamTotal={teamQuestHook.quests.length}
+          xpEarnedToday={questXpToday}
+        />
+
+        {/* ─── 5. ACTIVE CHALLENGE (conditional) ────────────────── */}
+        <PlayerChallengeCard
+          available={data.challengesAvailable}
+          teamId={data.primaryTeam?.id}
+          scrollY={scrollY}
+        />
+
+        {/* ─── 6. LEADERBOARD PREVIEW ─────────────────────────── */}
+        <PlayerLeaderboardPreview
+          teamId={data.primaryTeam?.id}
+          overrideProfileId={data.engagementProfileId}
+        />
+
+        {/* ─── 7. PROPS FROM THE TEAM (shoutouts) ────────────── */}
+        <PlayerPropsSection
+          shoutouts={data.recentShoutouts}
+          onGiveShoutout={() => setShowShoutoutModal(true)}
+        />
+
+        {/* ─── 8. TEAM HUB ENTRY ──────────────────────────────── */}
+        <PlayerTeamHubCard
+          teamName={data.primaryTeam?.name || ''}
+          teamColor={data.primaryTeam?.color || null}
+          teamId={data.primaryTeam?.id}
+        />
+
+        {/* ─── 9. CONTINUE TRAINING (teaser) ───────────────────── */}
+        <PlayerContinueTraining />
+
+        {/* ─── 10. NEXT UP — event + RSVP ─────────────────────── */}
         <NextUpCard
           event={data.nextEvent}
           rsvpStatus={data.rsvpStatus}
-          attendanceStreak={data.attendanceStreak}
+          attendanceStreak={streakCount}
           onRsvp={data.sendRsvp}
         />
 
-        {/* ─── 6. CHAT PEEK ───────────────────────────────────── */}
-        <ChatPeek teamId={data.primaryTeam?.id} />
+        {/* ─── 11. MOMENTUM CARDS ───────────────────────────── */}
+        <PlayerMomentumRow
+          seasonStats={data.seasonStats}
+          attendanceStreak={streakCount}
+          level={data.level}
+          scrollY={scrollY}
+        />
 
-        {/* ─── 7. QUICK PROPS ─────────────────────────────────── */}
-        <QuickPropsRow teamId={data.primaryTeam?.id} onGiveShoutout={() => setShowShoutoutModal(true)} />
-
-        {/* ─── 8. ACTIVE CHALLENGE (if exists) ────────────────── */}
-        <ActiveChallengeCard available={data.challengesAvailable} teamId={data.primaryTeam?.id} />
-
-        {/* ─── 8c. NEW EVALUATION CARD ──────────────────────────── */}
-        <EvaluationCard playerId={playerId} teamId={data.primaryTeam?.id || null} />
-
-        {/* ─── 8b. TEAM PULSE (social feed) ─────────────────────── */}
-        <View style={{ marginBottom: 12 }}>
-          <TeamPulse teamId={data.primaryTeam?.id} variant="dark" limit={3} />
-        </View>
-
-        {/* ─── 9. LAST GAME STATS ─────────────────────────────── */}
+        {/* ─── 12. LAST GAME STATS ────────────────────────────── */}
         <LastGameStats
           lastGame={data.lastGame}
           position={data.position}
           personalBest={data.personalBest}
+          scrollY={scrollY}
         />
 
-        {/* ─── 9b. LEADERBOARD LINK ──────────────────────────── */}
-        <TouchableOpacity
-          style={styles.leaderboardLink}
-          onPress={() => router.push('/standings' as any)}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.leaderboardLinkText}>
-            {'\u{1F3C6}'} See where you rank
-          </Text>
-        </TouchableOpacity>
+        {/* ─── 13. TROPHY CASE ─────────────────────────────── */}
+        <PlayerTrophyCase
+          badges={data.badges}
+          level={data.level}
+          xpProgress={data.xpProgress}
+          xpCurrent={data.xp}
+          xpNextLevel={data.xpNextLevel}
+          scrollY={scrollY}
+        />
 
-        {/* ─── 9c. TROPHY CASE / ACHIEVEMENTS ──────────────── */}
-        {playerId && (
-          <View style={{ marginBottom: 12 }}>
-            <TrophyCaseWidget userId={playerId} userRole="player" />
-          </View>
-        )}
-        <TouchableOpacity
-          style={styles.leaderboardLink}
-          onPress={() => router.push('/achievements' as any)}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.leaderboardLinkText}>
-            {'\u{1F3C5}'} View Trophy Case
-          </Text>
-        </TouchableOpacity>
+        {/* ─── 14. TEAM ACTIVITY ───────────────────────────── */}
+        <PlayerTeamActivity
+          recentShoutouts={data.recentShoutouts}
+          badges={data.badges}
+          lastGame={data.lastGame}
+          teamId={data.primaryTeam?.id}
+          scrollY={scrollY}
+        />
 
-        {/* ─── 10. CLOSING MASCOT + XP CALLBACK ──────────────── */}
-        <ClosingMascot
+        {/* ─── 15. AMBIENT CLOSER ────────────────────────────── */}
+        <PlayerAmbientCloser
           xpToNext={data.xpToNext}
           level={data.level}
-          nextEvent={data.nextEvent}
+          attendanceStreak={streakCount}
+          badgeCount={data.badges.length}
         />
         </>
         )}
@@ -459,7 +554,7 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
         <StreakMilestoneCelebrationModal
           visible={showStreakMilestone}
           tier={milestoneTier}
-          streak={data.attendanceStreak}
+          streak={streakCount}
           onDismiss={() => setShowStreakMilestone(false)}
         />
       )}
@@ -489,6 +584,24 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           onDismiss={handleDismissChallenge}
         />
       )}
+
+      {/* ─── SHOUTOUT RECEIVED CELEBRATION ────────────────────────── */}
+      {showReceivedShoutout && unseenShoutouts.length > 0 && (() => {
+        const s = unseenShoutouts[currentShoutoutIndex];
+        return (
+          <ShoutoutReceivedModal
+            visible={showReceivedShoutout}
+            categoryName={s.category_info?.name || s.category || 'Shoutout'}
+            categoryEmoji={s.category_info?.emoji || '⭐'}
+            giverName={s.giver?.full_name || 'A teammate'}
+            giverAvatarUrl={s.giver?.avatar_url}
+            message={s.message}
+            totalCount={unseenShoutouts.length}
+            currentIndex={currentShoutoutIndex}
+            onDismiss={handleShoutoutDismiss}
+          />
+        );
+      })()}
     </View>
   );
 }
@@ -564,6 +677,30 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bodyBold,
     fontSize: 10,
     color: PLAYER_THEME.gold,
+  },
+  bellWrap: {
+    position: 'relative',
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bellBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: '#E24B4A',
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  bellBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontFamily: FONTS.bodyExtraBold,
   },
   compactAvatar: {
     width: 32,

@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useEffect, useRef } from 'react';
 import { Animated, Image, StyleSheet, Text, View } from 'react-native';
+import { FAMILY_IMAGES } from '@/constants/mascot-images';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 
@@ -26,9 +27,10 @@ export default function PendingApprovalState({ orgName }: Props) {
     <View style={s.container}>
       <Animated.View style={[s.mascotWrap, { opacity: pulseAnim }]}>
         <Image
-          source={require('@/assets/images/mascot/SleepLynx.png')}
+          source={FAMILY_IMAGES.BABY_SISTER}
           style={s.mascot}
           resizeMode="contain"
+          accessibilityLabel="Lynx baby sister waiting"
         />
       </Animated.View>
 
@@ -56,7 +58,7 @@ const s = StyleSheet.create({
     marginBottom: 24, alignItems: 'center',
   },
   mascot: {
-    width: 120, height: 120,
+    width: 160, height: 160,
   },
   title: {
     fontFamily: FONTS.bodyBold, fontSize: 24, color: BRAND.navy,

@@ -24,6 +24,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
+import { ACHIEVEMENT_IMAGES } from '@/constants/mascot-images';
 import { useTheme } from '@/lib/theme';
 import {
   LeaderboardEntry,
@@ -144,7 +145,7 @@ export default function LeaderboardScreen({
   if (isEmpty) {
     return (
       <View style={s.emptyWrap}>
-        <Image source={require('@/assets/images/mascot/SleepLynx.png')} style={{ width: 64, height: 64, marginBottom: 8 }} resizeMode="contain" />
+        <Image source={ACHIEVEMENT_IMAGES.KING_QUEEN_STATS} style={{ width: 120, height: 120, marginBottom: 12 }} resizeMode="contain" accessibilityLabel="No rankings yet" />
         <Text style={[s.emptyTitle, { color: colors.text }]}>No Rankings Yet</Text>
         <Text style={[s.emptySubtitle, { color: colors.textMuted }]}>
           Leaderboards will appear once game stats are recorded.{'\n'}Play some games and check back!

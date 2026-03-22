@@ -18,8 +18,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { UserRole } from '@/lib/permissions';
-import { useDrawerBadges } from '@/hooks/useDrawerBadges';
-import type { DrawerBadges } from '@/hooks/useDrawerBadges';
+import { useDrawerBadges, type DrawerBadges } from '@/hooks/useDrawerBadges';
 import { resolveLinkedPlayerIds } from '@/lib/resolve-linked-players';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
@@ -31,6 +30,7 @@ const ROLE_COLORS: Record<UserRole, string> = {
   league_admin: BRAND.coral,
   head_coach: BRAND.teal,
   assistant_coach: BRAND.teal,
+  team_manager: '#E76F51',
   parent: BRAND.skyBlue,
   player: BRAND.goldBrand,
 };
@@ -43,6 +43,7 @@ const ROLE_DISPLAY: Record<UserRole, string> = {
   league_admin: 'Admin',
   head_coach: 'Head Coach',
   assistant_coach: 'Asst. Coach',
+  team_manager: 'Team Mgr',
   parent: 'Parent',
   player: 'Player',
 };
@@ -66,7 +67,7 @@ type MenuSection = {
   items: MenuItem[];
   collapsible: boolean;
   defaultOpen: boolean;
-  roleGate?: 'admin' | 'coach' | 'admin_coach' | 'parent' | 'player';
+  roleGate?: 'admin' | 'coach' | 'admin_coach' | 'admin_coach_tm' | 'team_manager' | 'parent' | 'player';
 };
 
 const MENU_SECTIONS: MenuSection[] = [
@@ -153,6 +154,25 @@ const MENU_SECTIONS: MenuSection[] = [
       { icon: 'people', label: 'Roster', route: '/(tabs)/players' },
     ],
   },
+  // ── Team Operations (team manager only) ─────────────────────────
+  {
+    id: 'team_ops',
+    title: 'Team Operations',
+    collapsible: true,
+    defaultOpen: true,
+    roleGate: 'team_manager',
+    items: [
+      { icon: 'person-add', label: 'Invite Parents', route: '/invite-parents' },
+      { icon: 'people', label: 'Roster', route: '/(tabs)/players' },
+      { icon: 'calendar', label: 'Schedule', route: '/(tabs)/coach-schedule' },
+      { icon: 'card', label: 'Payments', route: '/(tabs)/payments' },
+      { icon: 'checkmark-circle', label: 'Attendance', route: '/attendance' },
+      { icon: 'hand-left-outline', label: 'Volunteers', route: '/volunteer-assignment' },
+      { icon: 'bar-chart', label: 'Engagement', route: '/coach-engagement' },
+      { icon: 'megaphone', label: 'Blast Composer', route: '/blast-composer' },
+      { icon: 'time', label: 'Blast History', route: '/blast-history' },
+    ],
+  },
   // ── My Family (parent only) ───────────────────────────────────
   {
     id: 'family',
@@ -213,7 +233,7 @@ export default function GestureDrawer() {
   const { isOpen, closeDrawer, openDrawer } = useDrawer();
   const insets = useSafeAreaInsets();
   const { user, profile, organization, signOut } = useAuth();
-  const { actualRoles, isAdmin, isCoach, isParent, isPlayer, devViewAs, setDevViewAs } = usePermissions();
+  const { actualRoles, isAdmin, isCoach, isTeamManager, isParent, isPlayer, devViewAs, setDevViewAs } = usePermissions();
   const { allSeasons, workingSeason, setWorkingSeason } = useSeason();
   const { isDark, toggleTheme } = useTheme();
   const router = useRouter();
@@ -233,12 +253,13 @@ export default function GestureDrawer() {
     { key: 'league_admin', label: 'Admin' },
     { key: 'head_coach', label: 'Coach' },
     { key: 'assistant_coach', label: 'Asst Coach' },
+    { key: 'team_manager', label: 'Team Mgr' },
     { key: 'parent', label: 'Parent' },
     { key: 'player', label: 'Player' },
   ].filter(r => actualRoles.includes(r.key as any));
 
   const currentRoleKey = devViewAs || (() => {
-    const order = ['league_admin', 'head_coach', 'assistant_coach', 'parent', 'player'];
+    const order = ['league_admin', 'head_coach', 'assistant_coach', 'team_manager', 'parent', 'player'];
     for (const r of order) {
       if (actualRoles.includes(r as any)) return r;
     }
@@ -400,12 +421,15 @@ export default function GestureDrawer() {
 
     const viewingAsAdmin = currentRoleKey === 'league_admin';
     const viewingAsCoach = currentRoleKey === 'head_coach' || currentRoleKey === 'assistant_coach';
+    const viewingAsTeamManager = currentRoleKey === 'team_manager';
     const viewingAsParent = currentRoleKey === 'parent';
     const viewingAsPlayer = currentRoleKey === 'player';
 
     if (s.roleGate === 'admin') return viewingAsAdmin;
     if (s.roleGate === 'coach') return viewingAsCoach;
     if (s.roleGate === 'admin_coach') return viewingAsAdmin || viewingAsCoach;
+    if (s.roleGate === 'admin_coach_tm') return viewingAsAdmin || viewingAsCoach || viewingAsTeamManager;
+    if (s.roleGate === 'team_manager') return viewingAsTeamManager;
     if (s.roleGate === 'parent') return viewingAsParent;
     if (s.roleGate === 'player') return viewingAsPlayer;
     return false;
@@ -429,8 +453,8 @@ export default function GestureDrawer() {
 
   const resolveRoute = (route: string, label: string): string => {
     if (label === 'Schedule' && route === '/(tabs)/schedule') {
-      if (isParent && !isCoach && !isAdmin) return '/(tabs)/parent-schedule';
-      if (isCoach || isAdmin) return '/(tabs)/coach-schedule';
+      if (isParent && !isCoach && !isAdmin && !isTeamManager) return '/(tabs)/parent-schedule';
+      if (isCoach || isAdmin || isTeamManager) return '/(tabs)/coach-schedule';
       return '/(tabs)/schedule';
     }
     return route;

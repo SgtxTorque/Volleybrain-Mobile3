@@ -1,6 +1,7 @@
 import { getSportDisplay } from '@/constants/sport-display';
 import { useAuth } from '@/lib/auth';
 import { displayTextStyle, radii, shadows, spacing } from '@/lib/design-tokens';
+import { usePermissions } from '@/lib/permissions-context';
 import { supabase } from '@/lib/supabase';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
@@ -158,6 +159,7 @@ const parseSetScoresStructured = (raw: any): { us: number; them: number }[] => {
 
 export default function GameResultsScreen() {
   const { user, profile } = useAuth();
+  const { isAdmin, isCoach } = usePermissions();
   const { eventId, view, playerId } = useLocalSearchParams<{
     eventId?: string;
     view?: string;
@@ -203,7 +205,7 @@ export default function GameResultsScreen() {
         .from('schedule_events')
         .select('*, teams!schedule_events_team_id_fkey(name, color, season_id)')
         .eq('id', eventId)
-        .single();
+        .maybeSingle();
 
       if (gameError) {
         if (__DEV__) console.error('Error fetching game:', gameError);
@@ -221,7 +223,7 @@ export default function GameResultsScreen() {
           .from('seasons')
           .select('sport')
           .eq('id', seasonId)
-          .single();
+          .maybeSingle();
         setSportName((seasonData as any)?.sport || null);
       }
 

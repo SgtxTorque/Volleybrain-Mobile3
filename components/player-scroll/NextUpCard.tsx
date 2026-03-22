@@ -79,7 +79,7 @@ export default function NextUpCard({ event, rsvpStatus, attendanceStreak, onRsvp
     return (
       <View style={styles.ambientWrap}>
         <Text style={styles.ambientIcon}>{'\u{1F60E}'}</Text>
-        <Text style={styles.ambientText}>No events scheduled. Enjoy the off day.</Text>
+        <Text style={styles.ambientText}>No events coming up. Enjoy the break! {'\u{1F431}'}</Text>
       </View>
     );
   }
@@ -118,6 +118,11 @@ export default function NextUpCard({ event, rsvpStatus, attendanceStreak, onRsvp
           ]}>
             {isConfirmed ? '\u2713 GOING' : isDeclined ? "CAN'T MAKE IT" : "I'M READY"}
           </Text>
+          {!isConfirmed && !isDeclined && (
+            <View style={styles.xpChip}>
+              <Text style={styles.xpChipText}>+20 XP</Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -179,6 +184,8 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   rsvpBtnConfirmed: {
     backgroundColor: PT.success,
@@ -199,6 +206,18 @@ const styles = StyleSheet.create({
   },
   rsvpBtnTextDeclined: {
     color: PT.textMuted,
+  },
+  xpChip: {
+    backgroundColor: 'rgba(255,215,0,0.20)',
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginLeft: 4,
+  },
+  xpChipText: {
+    fontFamily: FONTS.bodyBold,
+    fontSize: 9,
+    color: PT.gold,
   },
   eventTitle: {
     fontFamily: FONTS.bodyExtraBold,

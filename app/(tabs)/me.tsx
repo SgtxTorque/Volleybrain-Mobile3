@@ -126,6 +126,7 @@ export default function MeScreen() {
     league_admin: 'Admin',
     head_coach: 'Head Coach',
     assistant_coach: 'Asst Coach',
+    team_manager: 'Team Mgr',
     parent: 'Parent',
     player: 'Player',
   };
@@ -134,6 +135,7 @@ export default function MeScreen() {
     league_admin: colors.danger,
     head_coach: colors.primary,
     assistant_coach: colors.info,
+    team_manager: '#E76F51',
     parent: colors.success,
     player: colors.warning,
   };

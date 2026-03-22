@@ -161,7 +161,7 @@ export default function HeroIdentityCard({
         <TouchableOpacity
           style={styles.viewCardBtn}
           activeOpacity={0.7}
-          onPress={() => router.push('/player-card' as any)}
+          onPress={() => router.push(playerId ? `/player-card?playerId=${playerId}` as any : '/player-card' as any)}
         >
           <Ionicons name="id-card-outline" size={14} color={PT.gold} />
           <Text style={styles.viewCardText}>View My Card</Text>

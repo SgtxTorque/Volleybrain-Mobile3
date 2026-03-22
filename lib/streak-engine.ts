@@ -160,3 +160,300 @@ export function getStreakGradient(tier: StreakTier | null): [string, string] {
       return ['rgba(255,215,0,0.08)', 'rgba(255,215,0,0.02)'];
   }
 }
+
+// =============================================================================
+// ENGAGEMENT STREAK ENGINE (Phase 1C)
+// Database-backed streak tracking via streak_data / streak_milestones tables.
+// =============================================================================
+
+// ─── Engagement Streak Types ─────────────────────────────────────────────────
+
+export interface StreakState {
+  currentStreak: number;
+  longestStreak: number;
+  lastActiveDate: string | null;
+  freezesAvailable: number;
+  freezeUsedDate: string | null;
+  isAlive: boolean;        // true if streak is currently active (not broken)
+  needsAction: boolean;    // true if player hasn't done a qualifying action today
+  justBroke: boolean;      // true if streak broke since last check (for messaging)
+  milestoneReached: number | null; // if a milestone was just hit, which one
+}
+
+const ENGAGEMENT_STREAK_MILESTONES = [7, 14, 30, 60, 100];
+const ENGAGEMENT_MAX_FREEZES = 3;
+
+// ─── Engagement Date Helpers ─────────────────────────────────────────────────
+
+function engLocalToday(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function engDaysBetween(dateStr1: string, dateStr2: string): number {
+  const d1 = new Date(dateStr1 + 'T00:00:00');
+  const d2 = new Date(dateStr2 + 'T00:00:00');
+  return Math.floor(Math.abs(d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function engYesterday(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// ─── Core: Get or Initialize Streak ──────────────────────────────────────────
+
+async function getOrInitStreak(profileId: string): Promise<{
+  id: string;
+  current_streak: number;
+  longest_streak: number;
+  last_active_date: string | null;
+  streak_freezes_available: number;
+  streak_freeze_used_date: string | null;
+} | null> {
+  const { data: existing, error: fetchError } = await supabase
+    .from('streak_data')
+    .select('*')
+    .eq('player_id', profileId)
+    .maybeSingle();
+
+  if (fetchError) {
+    if (__DEV__) console.error('[streak-engine] Error fetching streak:', fetchError);
+    return null;
+  }
+
+  if (existing) return existing;
+
+  const { data: created, error: createError } = await supabase
+    .from('streak_data')
+    .insert({
+      player_id: profileId,
+      current_streak: 0,
+      longest_streak: 0,
+      last_active_date: null,
+      streak_freezes_available: 0,
+      streak_freeze_used_date: null,
+    })
+    .select('*')
+    .single();
+
+  if (createError) {
+    if (__DEV__) console.error('[streak-engine] Error creating streak:', createError);
+    return null;
+  }
+
+  return created;
+}
+
+// ─── Core: Check Streak State ────────────────────────────────────────────────
+// Called on app open. Evaluates whether the streak is alive, broken, or frozen.
+
+export async function checkStreakState(profileId: string): Promise<StreakState> {
+  const streak = await getOrInitStreak(profileId);
+
+  if (!streak) {
+    return {
+      currentStreak: 0,
+      longestStreak: 0,
+      lastActiveDate: null,
+      freezesAvailable: 0,
+      freezeUsedDate: null,
+      isAlive: false,
+      needsAction: true,
+      justBroke: false,
+      milestoneReached: null,
+    };
+  }
+
+  const today = engLocalToday();
+  const lastActive = streak.last_active_date;
+
+  // Case 1: Never been active (new player)
+  if (!lastActive) {
+    return {
+      currentStreak: 0,
+      longestStreak: streak.longest_streak,
+      lastActiveDate: null,
+      freezesAvailable: streak.streak_freezes_available,
+      freezeUsedDate: streak.streak_freeze_used_date,
+      isAlive: false,
+      needsAction: true,
+      justBroke: false,
+      milestoneReached: null,
+    };
+  }
+
+  // Case 2: Already active today
+  if (lastActive === today) {
+    return {
+      currentStreak: streak.current_streak,
+      longestStreak: streak.longest_streak,
+      lastActiveDate: lastActive,
+      freezesAvailable: streak.streak_freezes_available,
+      freezeUsedDate: streak.streak_freeze_used_date,
+      isAlive: true,
+      needsAction: false,
+      justBroke: false,
+      milestoneReached: null,
+    };
+  }
+
+  // Case 3: Last active was yesterday — streak alive, needs action today
+  if (lastActive === engYesterday()) {
+    return {
+      currentStreak: streak.current_streak,
+      longestStreak: streak.longest_streak,
+      lastActiveDate: lastActive,
+      freezesAvailable: streak.streak_freezes_available,
+      freezeUsedDate: streak.streak_freeze_used_date,
+      isAlive: true,
+      needsAction: true,
+      justBroke: false,
+      milestoneReached: null,
+    };
+  }
+
+  // Case 4: Gap > 1 day — check for freeze
+  const gap = engDaysBetween(lastActive, today);
+
+  if (gap === 2 && streak.streak_freezes_available > 0 && streak.streak_freeze_used_date !== engYesterday()) {
+    const newFreezes = streak.streak_freezes_available - 1;
+
+    await supabase
+      .from('streak_data')
+      .update({
+        streak_freezes_available: newFreezes,
+        streak_freeze_used_date: engYesterday(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('player_id', profileId);
+
+    return {
+      currentStreak: streak.current_streak,
+      longestStreak: streak.longest_streak,
+      lastActiveDate: lastActive,
+      freezesAvailable: newFreezes,
+      freezeUsedDate: engYesterday(),
+      isAlive: true,
+      needsAction: true,
+      justBroke: false,
+      milestoneReached: null,
+    };
+  }
+
+  // Case 5: Streak is broken
+  const oldStreak = streak.current_streak;
+
+  await supabase
+    .from('streak_data')
+    .update({
+      current_streak: 0,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('player_id', profileId);
+
+  return {
+    currentStreak: 0,
+    longestStreak: streak.longest_streak,
+    lastActiveDate: lastActive,
+    freezesAvailable: streak.streak_freezes_available,
+    freezeUsedDate: streak.streak_freeze_used_date,
+    isAlive: false,
+    needsAction: true,
+    justBroke: oldStreak > 0,
+    milestoneReached: null,
+  };
+}
+
+// ─── Core: Record Qualifying Action ──────────────────────────────────────────
+// Called when a player completes a qualifying action (quest, attendance, etc).
+
+export async function recordQualifyingAction(profileId: string): Promise<{
+  newStreak: number;
+  milestoneReached: number | null;
+  freezeAwarded: boolean;
+}> {
+  const streak = await getOrInitStreak(profileId);
+  if (!streak) {
+    return { newStreak: 0, milestoneReached: null, freezeAwarded: false };
+  }
+
+  const today = engLocalToday();
+
+  // If already active today, no change needed
+  if (streak.last_active_date === today) {
+    return {
+      newStreak: streak.current_streak,
+      milestoneReached: null,
+      freezeAwarded: false,
+    };
+  }
+
+  // Calculate new streak
+  let newStreak: number;
+  const lastActive = streak.last_active_date;
+
+  if (!lastActive) {
+    newStreak = 1;
+  } else if (lastActive === engYesterday()) {
+    newStreak = streak.current_streak + 1;
+  } else if (
+    engDaysBetween(lastActive, today) === 2 &&
+    streak.streak_freeze_used_date === engYesterday()
+  ) {
+    newStreak = streak.current_streak + 1;
+  } else {
+    newStreak = 1;
+  }
+
+  const newLongest = Math.max(streak.longest_streak, newStreak);
+
+  await supabase
+    .from('streak_data')
+    .update({
+      current_streak: newStreak,
+      longest_streak: newLongest,
+      last_active_date: today,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('player_id', profileId);
+
+  // Check for milestone
+  let milestoneReached: number | null = null;
+  let freezeAwarded = false;
+
+  if (ENGAGEMENT_STREAK_MILESTONES.includes(newStreak)) {
+    const { data: existingMilestone } = await supabase
+      .from('streak_milestones')
+      .select('id')
+      .eq('player_id', profileId)
+      .eq('milestone_days', newStreak)
+      .maybeSingle();
+
+    if (!existingMilestone) {
+      milestoneReached = newStreak;
+
+      const shouldAwardFreeze = streak.streak_freezes_available < ENGAGEMENT_MAX_FREEZES;
+
+      await supabase.from('streak_milestones').insert({
+        player_id: profileId,
+        milestone_days: newStreak,
+        freeze_awarded: shouldAwardFreeze,
+        badge_id: null,
+      });
+
+      if (shouldAwardFreeze) {
+        freezeAwarded = true;
+        await supabase
+          .from('streak_data')
+          .update({
+            streak_freezes_available: streak.streak_freezes_available + 1,
+          })
+          .eq('player_id', profileId);
+      }
+    }
+  }
+
+  return { newStreak, milestoneReached, freezeAwarded };
+}

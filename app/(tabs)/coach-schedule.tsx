@@ -2,6 +2,7 @@ import { useAuth } from '@/lib/auth';
 import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
+import { FAMILY_IMAGES } from '@/constants/mascot-images';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 import { useResponsive } from '@/lib/responsive';
@@ -103,7 +104,7 @@ function formatTimeLabel(date: Date): string {
 export default function CoachScheduleScreen() {
   const { user, profile } = useAuth();
   const { workingSeason } = useSeason();
-  const { isCoach, isAdmin } = usePermissions();
+  const { isCoach, isAdmin, isTeamManager } = usePermissions();
   const router = useRouter();
   const { isTabletAny, contentMaxWidth, contentPadding } = useResponsive();
 
@@ -778,12 +779,13 @@ export default function CoachScheduleScreen() {
   };
 
   // =========================================================================
-  // Render: empty state (SleepLynx mascot)
+  // Render: empty state (Lynx mascot)
   // =========================================================================
   const EmptyState = () => (
     <View style={s.emptyState}>
       <Image
-        source={require('@/assets/images/mascot/SleepLynx.png')}
+        source={FAMILY_IMAGES.LITTLE_BROTHER}
+        accessibilityLabel="No events"
         style={s.emptyMascot}
         resizeMode="contain"
       />

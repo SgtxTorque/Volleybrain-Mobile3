@@ -1,0 +1,13 @@
+feature,status,evidence_level,primary_files,summary
+authentication,Healthy core with edge-case risk,CONFIRMED,"app/_layout.tsx; lib/auth.tsx",Auth gating exists and is active
+onboarding,Functional but branched,CONFIRMED,"lib/onboarding-router.ts; app/_layout.tsx",Cold download and claim flows exist but are distributed
+registration,Functional with schema drift risk,PARTIAL,"app/parent-registration-hub.tsx; app/register/[seasonId].tsx; app/(auth)/redeem-code.tsx",Multiple entry paths and code formats
+team management,Duplicate surfaces,CONFIRMED,"app/team-management.tsx; app/(tabs)/teams.tsx",Overlap likely causes drift
+chat,Functional with scaling risk,PARTIAL,"app/chat/[id].tsx; app/(tabs)/_layout.tsx",Unread counting is client-heavy
+payments,Functional with role split,CONFIRMED,"app/(tabs)/payments.tsx; app/family-payments.tsx",Admin and family views diverge
+notifications,Conflicting implementations,CONFIRMED,"app/notification.tsx; app/notification-inbox.tsx; app/_layout.tsx",Two inbox models coexist
+evaluations,Functional with param sensitivity,PARTIAL,"app/evaluation-session.tsx; app/player-evaluation.tsx; app/my-stats.tsx",Depends on player/team context
+challenges,Active dual-mode system,CONFIRMED,"app/coach-challenge-dashboard.tsx; app/challenges.tsx; lib/challenge-service.ts",Coach and player routes both present
+journey,New and player-facing,CONFIRMED,"app/(tabs)/journey.tsx; app/quests.tsx; app/skill-module.tsx",Modern subsystem appears wired
+search,Admin-only and meaningful,CONFIRMED,"app/admin-search-results.tsx; hooks/useGlobalSearch.ts",Search can route into multiple feature areas
+placeholders,Visible to users,CONFIRMED,"components/GestureDrawer.tsx; app/web-features.tsx",Web-only placeholders remain in menu

@@ -34,6 +34,12 @@ achievements,created_at,timestamp with time zone
 achievements,frame_url,text
 achievements,glow_url,text
 achievements,unlock_effect_url,text
+achievements,xp_reward,integer
+achievements,target_role,text
+achievements,min_level,integer
+achievements,stacks_into,text
+achievements,flavor_text,text
+achievements,cadence,text
 admin_notifications,id,uuid
 admin_notifications,organization_id,uuid
 admin_notifications,type,text
@@ -77,6 +83,14 @@ announcements,published_at,timestamp with time zone
 announcements,expires_at,timestamp with time zone
 announcements,created_at,timestamp with time zone
 announcements,updated_at,timestamp with time zone
+challenge_participants,id,uuid
+challenge_participants,challenge_id,uuid
+challenge_participants,player_id,uuid
+challenge_participants,current_value,integer
+challenge_participants,completed,boolean
+challenge_participants,completed_at,timestamp with time zone
+challenge_participants,contribution,integer
+challenge_participants,opted_in_at,timestamp with time zone
 channel_members,id,uuid
 channel_members,channel_id,uuid
 channel_members,user_id,uuid
@@ -115,6 +129,24 @@ chat_messages,edited_at,timestamp with time zone
 chat_messages,deleted_at,timestamp with time zone
 chat_messages,reactions,jsonb
 chat_messages,metadata,jsonb
+coach_challenges,id,uuid
+coach_challenges,coach_id,uuid
+coach_challenges,team_id,uuid
+coach_challenges,organization_id,uuid
+coach_challenges,title,text
+coach_challenges,description,text
+coach_challenges,challenge_type,text
+coach_challenges,metric_type,text
+coach_challenges,stat_key,text
+coach_challenges,target_value,integer
+coach_challenges,xp_reward,integer
+coach_challenges,badge_id,uuid
+coach_challenges,custom_reward_text,text
+coach_challenges,starts_at,timestamp with time zone
+coach_challenges,ends_at,timestamp with time zone
+coach_challenges,status,text
+coach_challenges,post_id,uuid
+coach_challenges,created_at,timestamp with time zone
 coach_sports,id,uuid
 coach_sports,coach_id,uuid
 coach_sports,sport_id,uuid
@@ -410,6 +442,23 @@ game_results,notes,text
 game_results,recorded_by,uuid
 game_results,recorded_at,timestamp with time zone
 game_results,created_at,timestamp with time zone
+games,id,uuid
+games,schedule_event_id,uuid
+games,team_id,uuid
+games,season_id,uuid
+games,home_team_id,uuid
+games,away_team_id,uuid
+games,home_score,integer
+games,away_score,integer
+games,team_score,integer
+games,opponent_score,integer
+games,opponent_name,text
+games,date,date
+games,status,text
+games,result,text
+games,notes,text
+games,completed_at,timestamp with time zone
+games,created_at,timestamp with time zone
 games_needing_stats,id,uuid
 games_needing_stats,team_id,uuid
 games_needing_stats,season_id,uuid
@@ -611,6 +660,31 @@ organizations,payment_venmo,text
 organizations,payment_zelle,text
 organizations,payment_cashapp,text
 organizations,payment_instructions,text
+organizations,banner_url,text
+payment_installments,id,uuid
+payment_installments,payment_plan_id,uuid
+payment_installments,player_id,uuid
+payment_installments,parent_id,uuid
+payment_installments,installment_number,integer
+payment_installments,amount,numeric
+payment_installments,due_date,date
+payment_installments,paid,boolean
+payment_installments,paid_at,timestamp with time zone
+payment_installments,payment_method,text
+payment_installments,notes,text
+payment_installments,created_at,timestamp with time zone
+payment_plans,id,uuid
+payment_plans,season_id,uuid
+payment_plans,organization_id,uuid
+payment_plans,name,text
+payment_plans,description,text
+payment_plans,total_amount,numeric
+payment_plans,installment_count,integer
+payment_plans,installment_amount,numeric
+payment_plans,frequency,text
+payment_plans,is_default,boolean
+payment_plans,created_at,timestamp with time zone
+payment_plans,updated_at,timestamp with time zone
 payment_sessions,id,uuid
 payment_sessions,organization_id,uuid
 payment_sessions,user_id,uuid
@@ -714,6 +788,7 @@ player_achievements,season_id,uuid
 player_achievements,stat_value_at_unlock,integer
 player_achievements,verified_by,uuid
 player_achievements,verified_at,timestamp with time zone
+player_achievements,created_at,timestamp with time zone
 player_badges,id,uuid
 player_badges,player_id,uuid
 player_badges,badge_type,text
@@ -1043,6 +1118,11 @@ players,zip,text
 players,parent2_name,text
 players,parent2_email,text
 players,parent2_phone,text
+post_reactions,id,uuid
+post_reactions,post_id,uuid
+post_reactions,user_id,uuid
+post_reactions,reaction_type,text
+post_reactions,created_at,timestamp with time zone
 profiles,id,uuid
 profiles,email,text
 profiles,full_name,text
@@ -1065,6 +1145,8 @@ profiles,parent_tutorial_data,jsonb
 profiles,is_platform_admin,boolean
 profiles,is_suspended,boolean
 profiles,deletion_requested,boolean
+profiles,total_xp,integer
+profiles,player_level,integer
 push_tokens,id,uuid
 push_tokens,user_id,uuid
 push_tokens,token,text
@@ -1210,6 +1292,30 @@ seasons,sibling_discount_apply_to,text
 seasons,sport,text
 seasons,registration_config,jsonb
 seasons,registration_template_id,uuid
+seasons,billing_day_of_month,integer
+shoutout_categories,id,uuid
+shoutout_categories,name,text
+shoutout_categories,emoji,text
+shoutout_categories,description,text
+shoutout_categories,color,text
+shoutout_categories,is_default,boolean
+shoutout_categories,organization_id,uuid
+shoutout_categories,created_by,uuid
+shoutout_categories,is_active,boolean
+shoutout_categories,created_at,timestamp with time zone
+shoutouts,id,uuid
+shoutouts,giver_id,uuid
+shoutouts,giver_role,text
+shoutouts,receiver_id,uuid
+shoutouts,receiver_role,text
+shoutouts,team_id,uuid
+shoutouts,organization_id,uuid
+shoutouts,category_id,uuid
+shoutouts,category,text
+shoutouts,message,text
+shoutouts,show_on_team_wall,boolean
+shoutouts,post_id,uuid
+shoutouts,created_at,timestamp with time zone
 sport_positions,id,uuid
 sport_positions,sport_id,uuid
 sport_positions,position_code,character varying
@@ -1240,6 +1346,24 @@ sports,is_active,boolean
 sports,sort_order,integer
 sports,created_at,timestamp with time zone
 sports,updated_at,timestamp with time zone
+staff_members,id,uuid
+staff_members,organization_id,uuid
+staff_members,season_id,uuid
+staff_members,first_name,text
+staff_members,last_name,text
+staff_members,email,text
+staff_members,phone,text
+staff_members,role,text
+staff_members,custom_role,text
+staff_members,status,text
+staff_members,team_id,uuid
+staff_members,background_check_status,text
+staff_members,background_check_date,date
+staff_members,notes,text
+staff_members,photo_url,text
+staff_members,user_account_id,uuid
+staff_members,created_at,timestamp with time zone
+staff_members,updated_at,timestamp with time zone
 stripe_customers,id,uuid
 stripe_customers,organization_id,uuid
 stripe_customers,email,text
@@ -1352,6 +1476,7 @@ team_posts,reaction_count,integer
 team_posts,comment_count,integer
 team_posts,created_at,timestamp with time zone
 team_posts,updated_at,timestamp with time zone
+team_posts,share_count,integer
 team_staff,id,uuid
 team_staff,team_id,uuid
 team_staff,user_id,uuid
@@ -1404,9 +1529,16 @@ teams,roster_open,boolean
 teams,description,text
 teams,internal_notes,text
 teams,is_independent,boolean
+teams,cover_image_url,text
 typing_indicators,channel_id,uuid
 typing_indicators,user_id,uuid
 typing_indicators,started_at,timestamp with time zone
+user_achievements,id,uuid
+user_achievements,user_id,uuid
+user_achievements,achievement_id,uuid
+user_achievements,earned_at,timestamp with time zone
+user_achievements,stat_value_at_unlock,integer
+user_achievements,season_id,uuid
 user_active_contexts,user_id,uuid
 user_active_contexts,active_organization_id,uuid
 user_active_contexts,active_team_id,uuid
@@ -1417,6 +1549,13 @@ user_blocks,id,uuid
 user_blocks,blocker_id,uuid
 user_blocks,blocked_id,uuid
 user_blocks,created_at,timestamp with time zone
+user_dashboard_layouts,id,uuid
+user_dashboard_layouts,user_id,uuid
+user_dashboard_layouts,role,text
+user_dashboard_layouts,layout,jsonb
+user_dashboard_layouts,active_widgets,jsonb
+user_dashboard_layouts,created_at,timestamp with time zone
+user_dashboard_layouts,updated_at,timestamp with time zone
 user_roles,id,uuid
 user_roles,organization_id,uuid
 user_roles,user_id,uuid
@@ -1581,3 +1720,11 @@ waivers,is_active,boolean
 waivers,sort_order,integer
 waivers,created_at,timestamp with time zone
 waivers,updated_at,timestamp with time zone
+xp_ledger,id,uuid
+xp_ledger,player_id,uuid
+xp_ledger,organization_id,uuid
+xp_ledger,xp_amount,integer
+xp_ledger,source_type,text
+xp_ledger,source_id,uuid
+xp_ledger,description,text
+xp_ledger,created_at,timestamp with time zone

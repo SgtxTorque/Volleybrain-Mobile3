@@ -47,7 +47,7 @@ export const pickImage = async (): Promise<MediaResult | null> => {
       fileName: `image_${Date.now()}.jpg`,
     };
   } catch (err) {
-    console.error('[pickImage] compressImage failed (possibly HEIC):', err);
+    if (__DEV__) console.error('[pickImage] compressImage failed (possibly HEIC):', err);
     // Fallback: return original asset without compression
     return {
       uri: asset.uri,
@@ -105,7 +105,7 @@ export const takePhoto = async (): Promise<MediaResult | null> => {
       fileName: `photo_${Date.now()}.jpg`,
     };
   } catch (err) {
-    console.error('[takePhoto] compressImage failed (possibly HEIC):', err);
+    if (__DEV__) console.error('[takePhoto] compressImage failed (possibly HEIC):', err);
     return {
       uri: asset.uri,
       type: 'image',
@@ -173,7 +173,7 @@ export const uploadMedia = async (
   bucket: string = 'chat-media'
 ): Promise<string | null> => {
   try {
-    console.log('[uploadMedia] Starting:', { uri: media.uri?.substring(0, 50), type: media.type, bucket, folderPath });
+    if (__DEV__) console.log('[uploadMedia] Starting:', { uri: media.uri?.substring(0, 50), type: media.type, bucket, folderPath });
 
     const fileExt = media.type === 'image' ? 'jpg' : media.type === 'audio' ? 'm4a' : 'mp4';
     const filePath = `${folderPath}/${Date.now()}.${fileExt}`;
@@ -181,15 +181,15 @@ export const uploadMedia = async (
     // Fetch the file as a blob
     const response = await fetch(media.uri);
     if (!response.ok) {
-      console.error('[uploadMedia] fetch failed:', response.status, response.statusText);
+      if (__DEV__) console.error('[uploadMedia] fetch failed:', response.status, response.statusText);
       return null;
     }
     const blob = await response.blob();
-    console.log('[uploadMedia] blob size:', blob.size);
+    if (__DEV__) console.log('[uploadMedia] blob size:', blob.size);
 
     // Convert blob to ArrayBuffer
     const arrayBuffer = await new Response(blob).arrayBuffer();
-    console.log('[uploadMedia] arrayBuffer size:', arrayBuffer.byteLength);
+    if (__DEV__) console.log('[uploadMedia] arrayBuffer size:', arrayBuffer.byteLength);
 
     const { error } = await supabase.storage
       .from(bucket)
@@ -199,15 +199,15 @@ export const uploadMedia = async (
       });
 
     if (error) {
-      console.error('[uploadMedia] Supabase upload error:', JSON.stringify(error));
+      if (__DEV__) console.error('[uploadMedia] Supabase upload error:', JSON.stringify(error));
       return null;
     }
 
     const { data } = supabase.storage.from(bucket).getPublicUrl(filePath);
-    console.log('[uploadMedia] Success:', data.publicUrl?.substring(0, 80));
+    if (__DEV__) console.log('[uploadMedia] Success:', data.publicUrl?.substring(0, 80));
     return data.publicUrl;
   } catch (error) {
-    console.error('[uploadMedia] Exception:', error);
+    if (__DEV__) console.error('[uploadMedia] Exception:', error);
     return null;
   }
 };

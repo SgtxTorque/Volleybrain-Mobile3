@@ -12,12 +12,14 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import AdminHomeScroll from './AdminHomeScroll';
 import ChildPickerScreen, { type ChildPlayer } from './ChildPickerScreen';
 import CoachHomeScroll from './CoachHomeScroll';
+import TeamManagerHomeScroll from './TeamManagerHomeScroll';
+import TeamManagerSetupPrompt from './empty-states/TeamManagerSetupPrompt';
 import ParentHomeScroll from './ParentHomeScroll';
 import PlayerHomeScroll from './PlayerHomeScroll';
 
 const LAST_CHILD_KEY = 'vb_player_last_child_id';
 
-type DashboardType = 'admin' | 'coach' | 'parent' | 'coach_parent' | 'player' | 'loading';
+type DashboardType = 'admin' | 'coach' | 'team_manager' | 'team_manager_setup' | 'parent' | 'coach_parent' | 'player' | 'loading';
 
 export default function DashboardRouter() {
   const { colors } = useTheme();
@@ -28,6 +30,7 @@ export default function DashboardRouter() {
   // Extract what we need, with fallbacks
   const isAdmin = permissions.isAdmin ?? false;
   const isCoach = permissions.isCoach ?? false;
+  const isTeamManager = permissions.isTeamManager ?? false;
   const isParent = permissions.isParent ?? false;
   const isPlayer = permissions.isPlayer ?? false;
   // Check if devModeRole exists in your context (it might be named differently)
@@ -48,6 +51,35 @@ export default function DashboardRouter() {
     // Canonical resolution → then fetch season-filtered details
     const allIds = await resolveLinkedPlayerIds(user.id);
     if (allIds.length === 0) {
+      // Fallback for admin/coach previewing as player: pick first player on their team
+      if (devModeRole === 'player') {
+        const { data: staffTeams } = await supabase
+          .from('team_staff')
+          .select('team_id')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .limit(1);
+
+        if (staffTeams && staffTeams.length > 0) {
+          const { data: firstPlayer } = await supabase
+            .from('players')
+            .select('id, first_name, last_name')
+            .eq('team_id', staffTeams[0].team_id)
+            .eq('season_id', workingSeason.id)
+            .limit(1)
+            .maybeSingle();
+
+          if (firstPlayer) {
+            const name = `${firstPlayer.first_name} ${firstPlayer.last_name}`;
+            setPlayerChildren([{ id: firstPlayer.id, name }]);
+            setSelectedChildId(firstPlayer.id);
+            setSelectedChildName(name);
+            setPlayerChildrenLoaded(true);
+            return;
+          }
+        }
+      }
+
       setPlayerChildren([]);
       setPlayerChildrenLoaded(true);
       return;
@@ -77,11 +109,17 @@ export default function DashboardRouter() {
         setSelectedChildName(null);
       }
     }
-  }, [user?.id, workingSeason?.id]);
+  }, [user?.id, workingSeason?.id, devModeRole]);
 
   useEffect(() => {
+    // Clear stale dashboard before async determination (prevents race on role switch)
+    setDashboardType('loading');
+    setPlayerChildren([]);
+    setSelectedChildId(null);
+    setSelectedChildName(null);
+    setPlayerChildrenLoaded(false);
     determineDashboard();
-  }, [user?.id, workingSeason?.id, isAdmin, isCoach, isParent, isPlayer, devModeRole]);
+  }, [user?.id, workingSeason?.id, isAdmin, isCoach, isTeamManager, isParent, isPlayer, devModeRole]);
 
   // Load children when entering player mode
   useEffect(() => {
@@ -112,6 +150,10 @@ export default function DashboardRouter() {
         setDashboardType(hasKids ? 'coach_parent' : 'coach');
         return;
       }
+      if (devModeRole === 'team_manager') {
+        setDashboardType('team_manager');
+        return;
+      }
       if (devModeRole === 'parent') {
         setDashboardType('parent');
         return;
@@ -125,6 +167,24 @@ export default function DashboardRouter() {
     // Admin gets admin dashboard always
     if (isAdmin) {
       setDashboardType('admin');
+      return;
+    }
+
+    // Team Manager (not also a coach) gets team_manager dashboard
+    if (isTeamManager && !isCoach) {
+      const { data: tmTeams } = await supabase
+        .from('team_staff')
+        .select('team_id')
+        .eq('user_id', user.id)
+        .eq('staff_role', 'team_manager')
+        .eq('is_active', true)
+        .limit(1);
+
+      if (tmTeams && tmTeams.length > 0) {
+        setDashboardType('team_manager');
+      } else {
+        setDashboardType('team_manager_setup');
+      }
       return;
     }
 
@@ -185,13 +245,17 @@ export default function DashboardRouter() {
 
   switch (dashboardType) {
     case 'admin':
-      return <AdminHomeScroll />;
+      return <AdminHomeScroll key="admin" />;
     case 'coach':
-      return <CoachHomeScroll />;
+      return <CoachHomeScroll key="coach" />;
+    case 'team_manager':
+      return <TeamManagerHomeScroll key="team_manager" />;
+    case 'team_manager_setup':
+      return <TeamManagerSetupPrompt key="team_manager_setup" />;
     case 'parent':
-      return <ParentHomeScroll />;
+      return <ParentHomeScroll key="parent" />;
     case 'coach_parent':
-      return <CoachHomeScroll />;
+      return <CoachHomeScroll key="coach_parent" />;
     case 'player': {
       // Still loading children
       if (!playerChildrenLoaded) {
@@ -225,6 +289,7 @@ export default function DashboardRouter() {
 
       return (
         <PlayerHomeScroll
+          key={`player-${selectedChildId}`}
           playerId={selectedChildId}
           playerName={selectedChildName}
           onSwitchChild={handleSwitchChild}
@@ -232,7 +297,7 @@ export default function DashboardRouter() {
       );
     }
     default:
-      return <ParentHomeScroll />;
+      return <ParentHomeScroll key="default" />;
   }
 }
 

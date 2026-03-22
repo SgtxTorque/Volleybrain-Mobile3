@@ -1,0 +1,14 @@
+capability,present_in_code,maturity,notes
+multi-role auth,yes,high,Admin coach team manager parent player modes exist
+onboarding routing,yes,medium,Several onboarding branches exist
+registration management,yes,medium,Admin and parent hubs both exist
+team and roster ops,yes,medium,Feature breadth is high but duplicated
+schedule and game day,yes,medium,Strong breadth with context inconsistency risk
+chat and alerts,yes,medium,Core chat exists with unread logic
+payments,yes,medium,Admin and family flows both present
+notifications,yes,medium-low,Two product models coexist
+player engagement journey,yes,medium-high,Journey quests and skill module are present
+evaluations,yes,medium,Multiple evaluation/stat surfaces exist
+search,yes,medium,Admin global search exists
+organization administration,yes,medium,Season and org tools are present
+native placeholder replacement,no,low,Some menu items still route to web-features placeholder

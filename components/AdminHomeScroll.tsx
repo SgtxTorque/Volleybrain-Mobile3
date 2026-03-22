@@ -10,6 +10,7 @@ import {
   StatusBar,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -26,10 +27,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 
 import { useAuth } from '@/lib/auth';
+import { useParentScroll } from '@/lib/parent-scroll-context';
 import { useScrollAnimations } from '@/hooks/useScrollAnimations';
 import { useAdminHomeData } from '@/hooks/useAdminHomeData';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
+import { D_COLORS } from '@/theme/d-system';
 
 import { useResponsive } from '@/lib/responsive';
 
@@ -38,27 +41,52 @@ import NoTeamState from './empty-states/NoTeamState';
 
 import RoleSelector from './RoleSelector';
 import SeasonSelector from './SeasonSelector';
-import WelcomeBriefing from './admin-scroll/WelcomeBriefing';
-import SmartQueueCard from './admin-scroll/SmartQueueCard';
-import TeamHealthTiles from './admin-scroll/TeamHealthTiles';
-import PaymentSnapshot from './admin-scroll/PaymentSnapshot';
-import QuickActionsGrid from './admin-scroll/QuickActionsGrid';
-import TrophyCaseWidget from './TrophyCaseWidget';
+import MissionControlHero from './admin-scroll/MissionControlHero';
+import AdminAttentionStrip from './admin-scroll/AdminAttentionStrip';
+import AdminTeamHealthCards from './admin-scroll/AdminTeamHealthCards';
+import AdminFinancialChart from './admin-scroll/AdminFinancialChart';
+import AdminActionPills from './admin-scroll/AdminActionPills';
+import OrgPulseFeed from './admin-scroll/OrgPulseFeed';
+import OrgHealthChart from './admin-scroll/OrgHealthChart';
+import AdminTrophyBar from './admin-scroll/AdminTrophyBar';
+import AdminAmbientCloser from './admin-scroll/AdminAmbientCloser';
+import SearchPreviewDropdown from './admin-scroll/SearchPreviewDropdown';
+import { useGlobalSearch } from '@/hooks/useGlobalSearch';
+import { Ionicons } from '@expo/vector-icons';
+// TrophyCaseWidget removed from render (shared, file preserved)
 import AchievementCelebrationModal from './AchievementCelebrationModal';
 import { getUnseenRoleAchievements, markAchievementsSeen } from '@/lib/achievement-engine';
 import type { UnseenAchievement } from '@/lib/achievement-types';
-import CoachSection from './admin-scroll/CoachSection';
-import UpcomingEvents from './admin-scroll/UpcomingEvents';
-import ClosingMotivation from './admin-scroll/ClosingMotivation';
-import DayStripCalendar from './parent-scroll/DayStripCalendar';
+// CoachSection, UpcomingEvents, ClosingMotivation, DayStripCalendar removed from render (files preserved)
 
 export default function AdminHomeScroll() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { organization, profile } = useAuth();
-  const { scrollY, scrollHandler } = useScrollAnimations();
+  const parentScroll = useParentScroll();
+  const { scrollY, scrollHandler } = useScrollAnimations({
+    onScrollJS: parentScroll.notifyScroll,
+  });
   const data = useAdminHomeData();
   const { isTabletAny, contentMaxWidth, contentPadding } = useResponsive();
+  const {
+    query: searchQuery,
+    previewResults,
+    handleQueryChange,
+    executeFullSearch,
+    clearSearch,
+    setPreviewResults,
+  } = useGlobalSearch();
+  const [searchFocused, setSearchFocused] = useState(false);
+
+  // Signal to tab bar that this scroll is active
+  useEffect(() => {
+    parentScroll.setParentScrollActive(true);
+    return () => {
+      parentScroll.setParentScrollActive(false);
+      parentScroll.setScrolling(false);
+    };
+  }, []);
 
   // Header interactivity
   const [headerVisible, setHeaderVisible] = React.useState(false);
@@ -72,18 +100,23 @@ export default function AdminHomeScroll() {
     return show;
   });
 
-  // Unseen achievement celebration
+  // Unseen achievement celebration (delayed to avoid overlap with FirstTimeTour)
   const [unseenBadges, setUnseenBadges] = useState<UnseenAchievement[]>([]);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [celebrationReady, setCelebrationReady] = useState(false);
   useEffect(() => {
-    if (!profile?.id) return;
+    const timer = setTimeout(() => setCelebrationReady(true), 3000);
+    return () => clearTimeout(timer);
+  }, []);
+  useEffect(() => {
+    if (!profile?.id || !celebrationReady) return;
     getUnseenRoleAchievements(profile.id).then((unseen) => {
       if (unseen.length > 0) {
         setUnseenBadges(unseen);
         setShowCelebration(true);
       }
     }).catch(() => {});
-  }, [profile?.id]);
+  }, [profile?.id, celebrationReady]);
 
   const onRefresh = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -99,6 +132,14 @@ export default function AdminHomeScroll() {
   }));
 
   const showPaymentCard = data.expected > 0;
+
+  // KNOWN ISSUE: Season selector defaults to active season and only shows seasons.
+  // Admin home should default to "All Org" view (no season filter) with seasons as drill-down.
+  // This requires:
+  // 1. SeasonSelector to include an "All" option
+  // 2. useAdminHomeData to support a null/undefined season (meaning "show everything")
+  // 3. The hero stats grid to aggregate across all seasons when no filter is applied
+  // Tracked for future sprint — season model flexibility spec needed.
 
   // Determine which empty state to show INSIDE the scroll (never early return)
   const emptyState: 'loading' | 'no-org' | 'no-teams' | null =
@@ -144,7 +185,7 @@ export default function AdminHomeScroll() {
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
-          { flexGrow: 1, paddingBottom: 140 },
+          { flexGrow: 1, paddingBottom: 24, minHeight: '110%' },
           isTabletAny && { maxWidth: contentMaxWidth, alignSelf: 'center', width: '100%', paddingHorizontal: contentPadding },
         ]}
         refreshControl={
@@ -157,17 +198,6 @@ export default function AdminHomeScroll() {
       >
         <View style={{ height: insets.top + 16 }} />
 
-        {/* ─── SEASON + ROLE SELECTORS (in-scroll) ────────────── */}
-        <View style={styles.roleRow}>
-          <View style={{ flex: 1 }} />
-          <View style={styles.roleSelectorWrap}>
-            <SeasonSelector />
-          </View>
-          <View style={styles.roleSelectorWrap}>
-            <RoleSelector />
-          </View>
-        </View>
-
         {/* ─── EMPTY STATES (inside scroll, never early return) ── */}
         {emptyState === 'loading' ? (
           <View style={styles.loadingWrap}>
@@ -179,131 +209,120 @@ export default function AdminHomeScroll() {
           <NoTeamState role="admin" />
         ) : (
         <>
-        {/* ─── 1. WELCOME BRIEFING ─────────────────────────── */}
-        <WelcomeBriefing
-          greeting={data.greeting}
+        {/* ─── 1. MISSION CONTROL HERO ─────────────────────── */}
+        <MissionControlHero
           adminName={data.adminName}
+          orgName={data.orgName}
           teamCount={data.teams.length}
           playerCount={data.totalPlayers}
-          overdueCount={data.overdueQueueCount}
-          thisWeekCount={data.thisWeekQueueCount}
-          scrollY={scrollY}
+          coachCount={data.coaches.length}
+          overdueCount={data.overdueCount}
+          collected={data.collected}
+          pendingRegs={data.pendingRegs}
+          paymentPct={data.paymentPct}
+          queueLength={data.queueItems.length}
+          hasGameToday={data.upcomingEvents.some(e => {
+            const today = new Date();
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+            return e.event_date === todayStr && e.event_type === 'game';
+          })}
         />
 
         {/* ─── 2. SEARCH BAR ──────────────────────────────── */}
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={() => router.push('/(tabs)/players' as any)}
-          style={styles.searchBar}
-        >
-          <Text style={styles.searchIcon}>{'\u{1F50D}'}</Text>
-          <Text style={styles.searchPlaceholder}>Search players, families, teams...</Text>
-        </TouchableOpacity>
-
-        {/* ─── 2b. DAY STRIP CALENDAR ─────────────────────── */}
-        <DayStripCalendar scrollY={scrollY} eventDates={data.eventDates} />
-
-        {/* ─── 3. SMART QUEUE ─────────────────────────────── */}
-        {data.queueItems.length > 0 ? (
-          <View style={styles.queueSection}>
-            {data.queueItems.slice(0, 4).map((item, idx) => (
-              <SmartQueueCard key={item.id} item={item} index={idx} />
-            ))}
-            {data.queueItems.length > 4 && (
-              <TouchableOpacity
-                style={styles.viewMoreRow}
-                onPress={() => router.push('/registration-hub' as any)}
-              >
-                <Text style={styles.viewMoreText}>
-                  View {data.queueItems.length - 4} more {'\u203A'}
-                </Text>
+        <View style={{ zIndex: 100, position: 'relative' }}>
+          <View style={styles.searchBar}>
+            <Ionicons name="search" size={16} color={BRAND.textFaint} />
+            <TextInput
+              style={styles.searchInput}
+              value={searchQuery}
+              onChangeText={handleQueryChange}
+              onSubmitEditing={() => {
+                if (searchQuery.trim().length >= 2) {
+                  setPreviewResults([]);
+                  router.push(`/admin-search-results?q=${encodeURIComponent(searchQuery)}` as any);
+                }
+              }}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
+              placeholder="Search players, families, teams..."
+              placeholderTextColor={BRAND.textFaint}
+              returnKeyType="search"
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={clearSearch} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Ionicons name="close-circle" size={18} color={BRAND.textFaint} />
               </TouchableOpacity>
             )}
           </View>
-        ) : (
-          <View style={styles.allClearWrap}>
-            <Text style={styles.allClearIcon}>{'\u2705'}</Text>
-            <Text style={styles.allClearTitle}>All clear!</Text>
-            <Text style={styles.allClearSub}>Nothing needs your attention right now.</Text>
-          </View>
-        )}
+          <SearchPreviewDropdown
+            results={previewResults}
+            query={searchQuery}
+            visible={searchFocused && previewResults.length > 0 && searchQuery.length >= 2}
+            onResultTap={(result) => {
+              clearSearch();
+              if (result.navigateTo) {
+                const params = result.navigateParams || {};
+                const qs = Object.entries(params).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
+                router.push(`${result.navigateTo}${qs ? '?' + qs : ''}` as any);
+              }
+            }}
+            onSeeAll={() => {
+              const q = searchQuery;
+              setPreviewResults([]);
+              router.push(`/admin-search-results?q=${encodeURIComponent(q)}` as any);
+            }}
+            onDismiss={() => setPreviewResults([])}
+          />
+        </View>
 
-        {/* ─── 4. SEASON + TEAM TILES ─────────────────────── */}
-        {data.teams.length > 0 && (
-          <View style={styles.sectionWrap}>
-            <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionHeader}>{data.seasonName.toUpperCase() || 'SEASON'}</Text>
-              <View style={styles.activePill}>
-                <View style={styles.activeDot} />
-                <Text style={styles.activeText}>Active</Text>
-              </View>
-            </View>
-            <TeamHealthTiles teams={data.teams} />
-          </View>
-        )}
+        {/* ─── 3. ATTENTION STRIP ───────────────────────────── */}
+        <AdminAttentionStrip items={data.queueItems} />
 
-        {/* ─── 4b. UPCOMING SEASON PROMPT ────────────────── */}
-        {data.upcomingSeason && (
-          <View style={styles.upcomingSeasonCard}>
-            <View style={styles.upcomingSeasonHeader}>
-              <Text style={styles.upcomingSeasonName}>
-                {data.upcomingSeason.name.toUpperCase()}
-              </Text>
-              <View style={styles.planningPill}>
-                <View style={styles.planningDot} />
-                <Text style={styles.planningText}>Planning</Text>
-              </View>
-            </View>
-            <Text style={styles.upcomingSeasonSub}>
-              Starts {new Date(data.upcomingSeason.start_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-            </Text>
-            <TouchableOpacity
-              activeOpacity={0.7}
-              style={styles.setupBtn}
-              onPress={() => router.push('/season-setup-wizard' as any)}
-            >
-              <Text style={styles.setupBtnText}>Start Setup {'\u203A'}</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* ─── 5. PAYMENT SNAPSHOT ────────────────────────── */}
+        {/* ─── 4. FINANCIAL CHART ───────────────────────────── */}
         {showPaymentCard && (
-          <PaymentSnapshot
+          <AdminFinancialChart
             collected={data.collected}
             expected={data.expected}
             overdueAmount={data.overdueAmount}
             overdueCount={data.overdueCount}
             paymentPct={data.paymentPct}
             seasonName={data.seasonName}
-            sportName={data.sportName}
           />
         )}
 
-        {/* ─── 6. QUICK ACTIONS ──────────────────────────── */}
-        <QuickActionsGrid />
+        {/* ─── 5. TEAM HEALTH CARDS ─────────────────────────── */}
+        <AdminTeamHealthCards teams={data.teams} />
 
-        {/* ─── 7. COACHES ────────────────────────────────── */}
-        {data.coaches.length > 0 && (
-          <CoachSection coaches={data.coaches} />
-        )}
+        {/* ─── 6. ORG HEALTH CHART ─────────────────────────── */}
+        <OrgHealthChart
+          teams={data.teams}
+          totalPlayers={data.totalPlayers}
+          collected={data.collected}
+          expected={data.expected}
+          overdueCount={data.overdueCount}
+          pendingRegs={data.pendingRegs}
+        />
 
-        {/* ─── 7b. TROPHY CASE ─────────────────────────── */}
-        {profile?.id && (
-          <View style={{ marginHorizontal: 16, marginBottom: 16 }}>
-            <TrophyCaseWidget userId={profile.id} userRole="admin" />
-          </View>
-        )}
+        {/* ─── 7. ACTION PILLS ──────────────────────────────── */}
+        <AdminActionPills />
 
-        {/* ─── 8. UPCOMING EVENTS ────────────────────────── */}
-        <UpcomingEvents events={data.upcomingEvents} />
+        {/* ─── 8. ORG PULSE FEED ──────────────────────────── */}
+        <OrgPulseFeed
+          collected={data.collected}
+          pendingRegs={data.pendingRegs}
+          overdueCount={data.overdueCount}
+          upcomingEvents={data.upcomingEvents}
+        />
 
-        {/* ─── 9. CLOSING ────────────────────────────────── */}
-        <ClosingMotivation
+        {/* ─── 9. ADMIN TROPHY BAR ─────────────────────────── */}
+        {profile?.id && <AdminTrophyBar userId={profile.id} />}
+
+        {/* ─── 10. AMBIENT CLOSER ─────────────────────────── */}
+        <AdminAmbientCloser
           adminName={data.adminName}
           teamCount={data.teams.length}
           playerCount={data.totalPlayers}
-          queueTotal={data.queueItems.length}
+          queueCount={data.queueItems.length}
         />
         </>
         )}
@@ -343,7 +362,7 @@ export default function AdminHomeScroll() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: BRAND.offWhite,
+    backgroundColor: D_COLORS.pageBg,
   },
   loadingWrap: {
     flex: 1,
@@ -396,151 +415,29 @@ const styles = StyleSheet.create({
     backgroundColor: BRAND.navy,
     borderRadius: 20,
   },
-  roleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 8,
-    gap: 6,
-  },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 20,
-    backgroundColor: BRAND.warmGray,
+    marginHorizontal: 16,
+    backgroundColor: BRAND.white,
     borderRadius: 16,
-    height: 44,
-    paddingHorizontal: 14,
-    marginBottom: 16,
-    gap: 10,
-  },
-  searchIcon: {
-    fontSize: 16,
-    opacity: 0.4,
-  },
-  searchPlaceholder: {
-    fontSize: 14,
-    color: BRAND.textFaint,
-    fontFamily: FONTS.bodyMedium,
-  },
-  queueSection: {
-    marginBottom: 20,
-    gap: 10,
-  },
-  viewMoreRow: {
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  viewMoreText: {
-    fontSize: 13,
-    fontFamily: FONTS.bodyMedium,
-    color: BRAND.skyBlue,
-  },
-  allClearWrap: {
-    alignItems: 'center',
-    paddingVertical: 24,
-    marginBottom: 20,
-  },
-  allClearIcon: {
-    fontSize: 32,
-    marginBottom: 8,
-  },
-  allClearTitle: {
-    fontSize: 16,
-    fontFamily: FONTS.bodyBold,
-    color: BRAND.success,
-    marginBottom: 4,
-  },
-  allClearSub: {
-    fontSize: 13,
-    fontFamily: FONTS.bodyMedium,
-    color: BRAND.textMuted,
-  },
-  sectionWrap: {
-    marginBottom: 16,
-  },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    marginBottom: 12,
-  },
-  sectionHeader: {
-    fontSize: 10,
-    fontFamily: FONTS.bodyBold,
-    letterSpacing: 1.2,
-    color: BRAND.textMuted,
-  },
-  activePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  activeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: BRAND.success,
-  },
-  activeText: {
-    fontSize: 10,
-    fontFamily: FONTS.bodySemiBold,
-    color: BRAND.success,
-  },
-  upcomingSeasonCard: {
-    backgroundColor: BRAND.attentionBannerBg,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(245,158,11,0.15)',
-    marginHorizontal: 20,
-    padding: 16,
-    marginBottom: 16,
-  },
-  upcomingSeasonHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  upcomingSeasonName: {
-    fontFamily: FONTS.bodyBold,
-    fontSize: 10,
-    letterSpacing: 1.2,
-    color: BRAND.textMuted,
-  },
-  planningPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  planningDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: BRAND.warning,
-  },
-  planningText: {
-    fontSize: 10,
-    fontFamily: FONTS.bodySemiBold,
-    color: BRAND.warning,
-  },
-  upcomingSeasonSub: {
-    fontFamily: FONTS.bodyMedium,
-    fontSize: 13,
-    color: BRAND.textMuted,
-    marginBottom: 12,
-  },
-  setupBtn: {
-    backgroundColor: BRAND.skyBlue,
-    borderRadius: 16,
+    height: 48,
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    alignSelf: 'flex-start',
+    marginBottom: 16,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
-  setupBtnText: {
-    fontFamily: FONTS.bodySemiBold,
-    fontSize: 13,
-    color: BRAND.white,
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: BRAND.textPrimary,
+    fontFamily: FONTS.bodyMedium,
+    padding: 0,
   },
 });

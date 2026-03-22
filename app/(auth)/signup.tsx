@@ -22,7 +22,7 @@ import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 
 const { width: SCREEN_W } = Dimensions.get('window');
-type SelectedRole = 'coach' | 'parent' | 'player' | null;
+type SelectedRole = 'coach' | 'parent' | 'player' | 'team_manager' | null;
 
 // ─── Password strength helper ──────────────────────────
 function getPasswordStrength(pw: string): { level: 'weak' | 'medium' | 'strong'; color: string; width: string } {
@@ -39,6 +39,7 @@ function getPasswordStrength(pw: string): { level: 'weak' | 'medium' | 'strong';
 // ─── Role card config ──────────────────────────────────
 const ROLE_CARDS: { role: SelectedRole; icon: string; title: string; subtitle: string; color: string }[] = [
   { role: 'coach', icon: 'clipboard', title: 'Coach', subtitle: 'I coach a team', color: BRAND.teal },
+  { role: 'team_manager', icon: 'rocket-outline', title: 'I Run a Team', subtitle: 'Set up and manage my own team', color: '#E76F51' },
   { role: 'parent', icon: 'people', title: 'Parent', subtitle: 'My child plays', color: BRAND.skyBlue },
   { role: 'player', icon: 'football', title: 'Player', subtitle: "I'm a player", color: BRAND.goldBrand },
 ];
@@ -60,6 +61,7 @@ export default function SignupScreen() {
 
   // Step 2
   const [selectedRole, setSelectedRole] = useState<SelectedRole>(null);
+  const [coppaConsent, setCoppaConsent] = useState(false);
 
   // Step 3
   const [orgCode, setOrgCode] = useState('');
@@ -101,7 +103,10 @@ export default function SignupScreen() {
   // ── Step 2: role select ──────────────────────────────
   const handleRoleSelect = (role: SelectedRole) => {
     setSelectedRole(role);
-    setTimeout(() => animateToStep(3), 500);
+    setCoppaConsent(false);
+    if (role !== 'parent') {
+      setTimeout(() => animateToStep(3), 500);
+    }
   };
 
   // ── Step 3: validate code ────────────────────────────
@@ -236,6 +241,7 @@ export default function SignupScreen() {
       // Map role
       const roleMap: Record<string, string> = {
         coach: 'head_coach',
+        team_manager: 'team_manager',
         parent: 'parent',
         player: 'player',
       };
@@ -253,11 +259,15 @@ export default function SignupScreen() {
         await supabase.from('profiles').update({
           current_organization_id: organizationId,
           onboarding_completed: true,
+          coppa_consent_given: selectedRole === 'parent' ? true : null,
+          coppa_consent_date: selectedRole === 'parent' ? new Date().toISOString() : null,
         }).eq('id', user.id);
       } else {
         // No org — mark onboarding complete, empty states will guide
         await supabase.from('profiles').update({
           onboarding_completed: true,
+          coppa_consent_given: selectedRole === 'parent' ? true : null,
+          coppa_consent_date: selectedRole === 'parent' ? new Date().toISOString() : null,
         }).eq('id', user.id);
       }
 
@@ -271,6 +281,35 @@ export default function SignupScreen() {
   };
 
   const handleSkip = () => createAccount();
+
+  // ── Team Manager: "Start my own team" creates account then opens wizard ──
+  const handleStartMyOwnTeam = async () => {
+    setSubmitting(true);
+    try {
+      const fullName = `${firstName.trim()} ${lastName.trim()}`;
+      const { error } = await signUp(email.trim().toLowerCase(), password, fullName);
+      if (error) {
+        Alert.alert('Signup Failed', error.message);
+        setSubmitting(false);
+        return;
+      }
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Account created but user not found');
+
+      // Mark onboarding complete (no org yet — wizard will set it up)
+      await supabase.from('profiles').update({
+        onboarding_completed: true,
+      }).eq('id', user.id);
+
+      await refreshProfile();
+      router.replace('/team-manager-setup' as any);
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Account creation failed.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   // ── Step Indicator ───────────────────────────────────
   const StepIndicator = () => (
@@ -433,6 +472,42 @@ export default function SignupScreen() {
                 );
               })}
             </View>
+
+            {selectedRole === 'parent' && (
+              <View style={{ marginTop: 16, padding: 16, backgroundColor: '#F6F8FB', borderRadius: 14 }}>
+                <Text style={{ fontFamily: FONTS.bodySemiBold, fontSize: 14, color: BRAND.navy, marginBottom: 8 }}>
+                  Parent/Guardian Consent
+                </Text>
+                <Text style={{ fontFamily: FONTS.bodyMedium, fontSize: 13, color: BRAND.textMuted, marginBottom: 12, lineHeight: 18 }}>
+                  Lynx collects information about minor children (names, dates of birth, photos, sports performance data) to provide youth sports management services. By checking this box, you consent to the collection and use of your child's information as described in our Privacy Policy.
+                </Text>
+                <TouchableOpacity
+                  style={{ flexDirection: 'row', alignItems: 'center' }}
+                  onPress={() => setCoppaConsent(!coppaConsent)}
+                >
+                  <Ionicons
+                    name={coppaConsent ? 'checkbox' : 'square-outline'}
+                    size={24}
+                    color={coppaConsent ? BRAND.skyBlue : BRAND.textMuted}
+                  />
+                  <Text style={{ fontFamily: FONTS.bodyMedium, fontSize: 13, color: BRAND.navy, marginLeft: 8, flex: 1 }}>
+                    I am the parent or legal guardian and I consent to the collection of my child's information.
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {selectedRole === 'parent' && (
+              <TouchableOpacity
+                style={[s.primaryBtn, !coppaConsent && s.btnDisabled]}
+                onPress={goNext}
+                disabled={!coppaConsent}
+                activeOpacity={0.85}
+              >
+                <Text style={s.primaryBtnText}>Next</Text>
+                <Ionicons name="arrow-forward" size={18} color="#fff" />
+              </TouchableOpacity>
+            )}
           </ScrollView>
 
           {/* ── STEP 3: Connect ── */}
@@ -510,10 +585,41 @@ export default function SignupScreen() {
               <View>
                 <Text style={s.stepTitle}>Connect</Text>
                 <Text style={s.stepSubtitle}>
-                  {selectedRole === 'player'
-                    ? 'Your coach may have given you a code'
-                    : 'Have an invite code?'}
+                  {selectedRole === 'team_manager'
+                    ? 'Get started with your own team'
+                    : selectedRole === 'player'
+                      ? 'Your coach may have given you a code'
+                      : 'Have an invite code?'}
                 </Text>
+
+                {/* Primary "Set Up My Team" CTA for team managers */}
+                {selectedRole === 'team_manager' && (
+                  <View style={{ marginBottom: 20 }}>
+                    <TouchableOpacity
+                      onPress={handleStartMyOwnTeam}
+                      style={{
+                        backgroundColor: '#E76F51',
+                        borderRadius: 14,
+                        paddingVertical: 16,
+                        alignItems: 'center',
+                        marginBottom: 12,
+                      }}
+                      disabled={submitting}
+                      activeOpacity={0.85}
+                    >
+                      {submitting ? (
+                        <ActivityIndicator color="#fff" />
+                      ) : (
+                        <Text style={{ fontFamily: FONTS.bodyBold, fontSize: 16, color: '#fff' }}>
+                          Set Up My Team
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                    <Text style={{ fontFamily: FONTS.bodyMedium, fontSize: 13, color: BRAND.textMuted, textAlign: 'center' }}>
+                      or enter an invite code below to join an existing team
+                    </Text>
+                  </View>
+                )}
 
                 <View style={[s.inputWrap, codeError ? { borderColor: BRAND.coral } : {}]}>
                   <TextInput

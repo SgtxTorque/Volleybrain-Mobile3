@@ -20,7 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 export default function TabLayout() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const { loading, isAdmin, isCoach, isParent, isPlayer, viewAs } = usePermissions();
+  const { loading, isAdmin, isCoach, isTeamManager, isParent, isPlayer, viewAs } = usePermissions();
   const { user, profile } = useAuth();
   const { workingSeason } = useSeason();
   const { openDrawer } = useDrawer();
@@ -43,11 +43,15 @@ export default function TabLayout() {
     });
   }, [user?.id, profile]);
 
+  // TM who is also a coach sees Coach tabs (with Game Day), not TM tabs
+  const isTeamManagerMode = isTeamManager && !isAdmin && !isCoach;
+
   // Detect when the player dashboard is active (dark theme needed)
   const isPlayerMode = (() => {
     if (viewAs === 'player') return true;
     if (isAdmin) return false;
     if (isCoach) return false;
+    if (isTeamManager) return false;
     if (isParent) return false;
     return isPlayer;
   })();
@@ -65,8 +69,8 @@ export default function TabLayout() {
 
   // Tab 2 slot: Admin > Coach > Parent > Player priority
   const showManageTab = isAdmin;
-  // Pure parent (not admin, not coach) gets the parent-schedule tab
-  const isParentOnly = isParent && !isAdmin && !isCoach;
+  // Pure parent (not admin, not coach, not TM) gets the parent-schedule tab
+  const isParentOnly = isParent && !isAdmin && !isCoach && !isTeamManager;
   const [unreadChatCount, setUnreadChatCount] = useState(0);
   const [unreadAlertCount, setUnreadAlertCount] = useState(0);
   // Drawer badge counts for More tab
@@ -237,11 +241,11 @@ export default function TabLayout() {
         }}
       />
 
-      {/* ====== TAB 2b: GAME DAY (Coach / Player — not admin, not parent-only) ====== */}
+      {/* ====== TAB 2b: GAME DAY (Coach / Player — not admin, not parent-only, not TM-only) ====== */}
       <Tabs.Screen
         name="gameday"
         options={{
-          href: (!showManageTab && !isParentOnly) ? undefined : null,
+          href: (!showManageTab && !isParentOnly && !isTeamManagerMode) ? undefined : null,
           title: 'Game Day',
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
@@ -262,6 +266,22 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <Ionicons
               name={focused ? 'calendar' : 'calendar-outline'}
+              size={24}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      {/* ====== TAB 2d: JOURNEY (Player only — not admin, not coach, not parent-only) ====== */}
+      <Tabs.Screen
+        name="journey"
+        options={{
+          href: isPlayerMode ? undefined : null,
+          title: 'Journey',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'map' : 'map-outline'}
               size={24}
               color={color}
             />
@@ -292,7 +312,20 @@ export default function TabLayout() {
       <Tabs.Screen name="parent-chat" options={{ href: null }} />
       <Tabs.Screen name="parent-team-hub" options={{ href: null }} />
       <Tabs.Screen name="parent-my-stuff" options={{ href: null }} />
-      <Tabs.Screen name="coach-schedule" options={{ href: null }} />
+      <Tabs.Screen
+        name="coach-schedule"
+        options={{
+          href: isTeamManagerMode ? undefined : null,
+          title: 'Schedule',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'calendar' : 'calendar-outline'}
+              size={24}
+              color={color}
+            />
+          ),
+        }}
+      />
       <Tabs.Screen name="coach-chat" options={{ href: null }} />
       <Tabs.Screen name="coach-team-hub" options={{ href: null }} />
       <Tabs.Screen name="coach-my-stuff" options={{ href: null }} />
