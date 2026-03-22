@@ -25,6 +25,10 @@ design-reference/
 _archive/
 _legacy/
 
+# Native directories (EAS will prebuild from scratch)
+android/
+ios/
+
 # Large non-build files
 structure.txt
 tmp_diff.txt
