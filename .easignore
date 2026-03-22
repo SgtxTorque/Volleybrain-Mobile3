@@ -1,0 +1,32 @@
+# Audit and spec files
+CC-*.md
+CLAUDE-*.md
+CODEX-*.md
+GPT*.md
+*.sql
+ADMIN_PARITY_AUDIT.md
+COACH_PARITY_AUDIT.md
+PARENT_PARITY_AUDIT.md
+PLAYER_PARITY_AUDIT.md
+PARITY_MANIFEST.MD
+PLATFORM-PARITY.md
+MOBILE-APP-AUDIT.md
+MOBILE-FEATURE-AUDIT.md
+NAVIGATION-MAP.md
+LEGACY-REPLACEMENT-MAP.md
+LYNX-REFERENCE-GUIDE.md
+ENGAGEMENT_*.md
+TEAM_HUB_FIXES_SESSION.md
+BETA-READINESS-REPORT.md
+
+# Reference and design files
+reference/
+design-reference/
+_archive/
+_legacy/
+
+# Large non-build files
+structure.txt
+tmp_diff.txt
+tsc_check_output.txt
+volleybrain-source.zip
