@@ -218,6 +218,7 @@ export default function DashboardRouter() {
         .from('team_staff')
         .select('team_id')
         .eq('user_id', user.id)
+        .eq('is_active', true)
         .limit(1);
       if (staffData && staffData.length > 0) return true;
 

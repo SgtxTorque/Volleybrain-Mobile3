@@ -157,7 +157,8 @@ export default function GamePrepWizardScreen() {
     const { data: staffData } = await supabase
       .from('team_staff')
       .select('team_id')
-      .eq('user_id', user.id);
+      .eq('user_id', user.id)
+      .eq('is_active', true);
 
     let teamIds: string[] = [];
     if (staffData && staffData.length > 0) {

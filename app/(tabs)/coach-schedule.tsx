@@ -183,7 +183,8 @@ export default function CoachScheduleScreen() {
       const { data: allStaffTeams } = await supabase
         .from('team_staff')
         .select('team_id, staff_role, teams (id, name, color, season_id)')
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .eq('is_active', true);
 
       const { data: coachTeams } = await supabase
         .from('team_coaches')

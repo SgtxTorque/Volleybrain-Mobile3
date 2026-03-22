@@ -101,7 +101,8 @@ export function useCoachHomeData() {
       const { data: staffTeams } = await supabase
         .from('team_staff')
         .select('team_id, staff_role, teams ( id, name, season_id )')
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .eq('is_active', true);
 
       // Secondary: coaches → team_coaches (coach_id references coaches.id, NOT auth user id)
       // This matches the web admin pattern: coaches.profile_id → team_coaches.coach_id

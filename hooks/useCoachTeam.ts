@@ -36,7 +36,8 @@ export function useCoachTeam() {
       const { data: staffTeams } = await supabase
         .from('team_staff')
         .select('team_id, teams ( id, name, season_id, seasons ( organization_id ) )')
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .eq('is_active', true);
 
       // Path 2: coaches.profile_id → team_coaches
       const { data: coachRecord } = await supabase

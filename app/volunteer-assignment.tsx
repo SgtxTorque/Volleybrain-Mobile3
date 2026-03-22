@@ -175,7 +175,8 @@ export default function VolunteerAssignmentScreen() {
       const { data: staffData } = await supabase
         .from('team_staff')
         .select('team_id')
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .eq('is_active', true);
 
       const teamIds = (staffData || []).map((s) => s.team_id);
 
