@@ -58,6 +58,7 @@ type MenuItem = {
   label: string;
   route: string;
   webOnly?: boolean;
+  betaHidden?: boolean;
   badgeKey?: keyof DrawerBadges;
 };
 
@@ -110,9 +111,9 @@ const MENU_SECTIONS: MenuSection[] = [
       { icon: 'location-outline', label: 'Venue Manager', route: '/venue-manager' },
       { icon: 'finger-print', label: 'Background Checks', route: '/coach-background-checks' },
       { icon: 'hand-left-outline', label: 'Volunteer Assignment', route: '/volunteer-assignment' },
-      { icon: 'document-text', label: 'Form Builder', route: '/web-features', webOnly: true },
-      { icon: 'shield-checkmark', label: 'Waiver Editor', route: '/web-features', webOnly: true },
-      { icon: 'card-outline', label: 'Payment Gateway', route: '/web-features', webOnly: true },
+      { icon: 'document-text', label: 'Form Builder', route: '/web-features', webOnly: true, betaHidden: true },
+      { icon: 'shield-checkmark', label: 'Waiver Editor', route: '/web-features', webOnly: true, betaHidden: true },
+      { icon: 'card-outline', label: 'Payment Gateway', route: '/web-features', webOnly: true, betaHidden: true },
       { icon: 'add-circle-outline', label: 'Bulk Event Create', route: '/bulk-event-create' },
       { icon: 'settings-outline', label: 'Org Settings', route: '/org-settings' },
     ],
@@ -911,7 +912,7 @@ export default function GestureDrawer() {
                   )}
 
                   {/* Section items */}
-                  {!isCollapsed && section.items.map((item) => (
+                  {!isCollapsed && section.items.filter(item => !item.betaHidden).map((item) => (
                     <TouchableOpacity
                       key={item.label + item.route}
                       style={styles.menuItem}
