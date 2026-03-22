@@ -58,7 +58,8 @@
           "organization": "lynx-mn",
           "project": "react-native"
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "updates": {
       "url": "https://u.expo.dev/6dd38119-0c2b-4886-a2f8-26769b1eb675",
