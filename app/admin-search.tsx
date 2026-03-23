@@ -42,7 +42,7 @@ const RECENT_SEARCHES_KEY = 'admin_recent_searches';
 // ============================================================================
 
 export default function AdminSearchScreen() {
-  const { user } = useAuth();
+  const { user, organization } = useAuth();
   const { isAdmin } = usePermissions();
   const { workingSeason } = useSeason();
   const router = useRouter();
@@ -95,29 +95,29 @@ export default function AdminSearchScreen() {
     const q = `%${term}%`;
 
     try {
-      // Players
-      const { data: players } = await supabase
-        .from('players')
-        .select('id, first_name, last_name, jersey_number')
-        .or(`first_name.ilike.${q},last_name.ilike.${q}`)
-        .limit(5);
-
-      if (players) {
-        for (const p of players) {
-          allResults.push({
-            type: 'player',
-            id: p.id,
-            title: `${p.first_name} ${p.last_name}`,
-            subtitle: p.jersey_number ? `#${p.jersey_number}` : 'Player',
-            icon: 'person',
-            color: BRAND.skyBlue,
-            route: `/child-detail?playerId=${p.id}`,
-          });
-        }
-      }
-
-      // Teams
+      // Teams, Players, Events — scoped to working season
       if (workingSeason?.id) {
+        // Players
+        const { data: players } = await supabase
+          .from('players')
+          .select('id, first_name, last_name, jersey_number')
+          .eq('season_id', workingSeason.id)
+          .or(`first_name.ilike.${q},last_name.ilike.${q}`)
+          .limit(5);
+
+        if (players) {
+          for (const p of players) {
+            allResults.push({
+              type: 'player',
+              id: p.id,
+              title: `${p.first_name} ${p.last_name}`,
+              subtitle: p.jersey_number ? `#${p.jersey_number}` : 'Player',
+              icon: 'person',
+              color: BRAND.skyBlue,
+              route: `/child-detail?playerId=${p.id}`,
+            });
+          }
+        }
         const { data: teams } = await supabase
           .from('teams')
           .select('id, name, color')
@@ -166,6 +166,7 @@ export default function AdminSearchScreen() {
       const { data: profiles } = await supabase
         .from('profiles')
         .select('id, full_name, email, role')
+        .eq('current_organization_id', organization?.id || '')
         .or(`full_name.ilike.${q},email.ilike.${q}`)
         .limit(5);
 
