@@ -137,10 +137,19 @@ async function searchPreview(query: string, orgId: string): Promise<SearchResult
   const results: SearchResult[] = [];
   const searchPattern = `%${query}%`;
 
+  // Load org's season IDs for scoping
+  const { data: orgSeasons } = await supabase
+    .from('seasons')
+    .select('id')
+    .eq('organization_id', orgId);
+  const seasonIds = (orgSeasons || []).map((s: any) => s.id);
+  if (seasonIds.length === 0) return results;
+
   // Players (max 2)
   const { data: players } = await supabase
     .from('players')
     .select('id, first_name, last_name, team_players(team_id, teams(name))')
+    .in('season_id', seasonIds)
     .or(`first_name.ilike.${searchPattern},last_name.ilike.${searchPattern}`)
     .limit(2);
 
@@ -179,6 +188,7 @@ async function searchPreview(query: string, orgId: string): Promise<SearchResult
   const { data: teams } = await supabase
     .from('teams')
     .select('id, name')
+    .in('season_id', seasonIds)
     .ilike('name', searchPattern)
     .limit(1);
 
@@ -229,10 +239,19 @@ async function searchAll(query: string, orgId: string): Promise<SearchResults> {
     totalCount: 0,
   };
 
+  // Load org's season IDs for scoping
+  const { data: orgSeasons } = await supabase
+    .from('seasons')
+    .select('id')
+    .eq('organization_id', orgId);
+  const seasonIds = (orgSeasons || []).map((s: any) => s.id);
+  if (seasonIds.length === 0) return results;
+
   // Players (max 20)
   const { data: players } = await supabase
     .from('players')
     .select('id, first_name, last_name, jersey_number, position, team_players(team_id, teams(name))')
+    .in('season_id', seasonIds)
     .or(`first_name.ilike.${searchPattern},last_name.ilike.${searchPattern}`)
     .limit(20);
 
@@ -268,6 +287,7 @@ async function searchAll(query: string, orgId: string): Promise<SearchResults> {
   const { data: teams } = await supabase
     .from('teams')
     .select('id, name, team_players(count)')
+    .in('season_id', seasonIds)
     .ilike('name', searchPattern)
     .limit(10);
 
@@ -303,6 +323,7 @@ async function searchAll(query: string, orgId: string): Promise<SearchResults> {
   const { data: events } = await supabase
     .from('schedule_events')
     .select('id, title, event_type, event_date, start_time, team_id, teams(name)')
+    .in('season_id', seasonIds)
     .or(`title.ilike.${searchPattern}`)
     .order('event_date', { ascending: false })
     .limit(10);
@@ -321,6 +342,7 @@ async function searchAll(query: string, orgId: string): Promise<SearchResults> {
     const { data: payments } = await supabase
       .from('payments')
       .select('id, amount, status, fee_name, payer_name, player_id, players(first_name, last_name)')
+      .in('season_id', seasonIds)
       .or(`payer_name.ilike.${searchPattern},fee_name.ilike.${searchPattern}`)
       .order('created_at', { ascending: false })
       .limit(10);
