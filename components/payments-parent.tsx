@@ -346,6 +346,7 @@ export default function ParentPaymentsScreen({ hideHeader = false }: Props) {
       const { data: settingsData } = await supabase
         .from('payment_settings')
         .select('*')
+        .eq('organization_id', organization?.id || '')
         .maybeSingle();
 
       const mergedSettings: PaymentSettings = {
