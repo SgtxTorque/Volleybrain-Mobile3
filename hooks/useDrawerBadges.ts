@@ -1,5 +1,6 @@
 import { useAuth } from '@/lib/auth';
 import { usePermissions } from '@/lib/permissions-context';
+import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -24,8 +25,9 @@ const EMPTY_BADGES: DrawerBadges = {
 };
 
 export function useDrawerBadges(isOpen: boolean) {
-  const { user, profile } = useAuth();
+  const { user, profile, organization } = useAuth();
   const { isAdmin, isParent, isTeamManager } = usePermissions();
+  const { workingSeason } = useSeason();
   const [badges, setBadges] = useState<DrawerBadges>(EMPTY_BADGES);
   const [loading, setLoading] = useState(false);
 
@@ -35,33 +37,37 @@ export function useDrawerBadges(isOpen: boolean) {
 
     try {
       // ---- Admin badges ----
-      if (isAdmin) {
+      if (isAdmin && workingSeason?.id && organization?.id) {
         const [regResult, approvalResult, paymentResult, unrosteredResult] =
           await Promise.allSettled([
             // Pending registrations
             supabase
               .from('registrations')
               .select('*', { count: 'exact', head: true })
-              .eq('status', 'new'),
+              .eq('status', 'new')
+              .eq('season_id', workingSeason.id),
 
             // Pending profile approvals
             supabase
               .from('profiles')
               .select('*', { count: 'exact', head: true })
-              .eq('pending_approval', true),
+              .eq('pending_approval', true)
+              .eq('current_organization_id', organization.id),
 
             // Unpaid payments (admin-wide)
             supabase
               .from('payments')
               .select('*', { count: 'exact', head: true })
-              .eq('paid', false),
+              .eq('paid', false)
+              .eq('season_id', workingSeason.id),
 
             // Unrostered players (approved but not assigned to team)
             supabase
               .from('registrations')
               .select('*', { count: 'exact', head: true })
               .in('status', ['approved', 'active'])
-              .is('rostered_at', null),
+              .is('rostered_at', null)
+              .eq('season_id', workingSeason.id),
           ]);
 
         if (regResult.status === 'fulfilled' && regResult.value.count) {
@@ -135,7 +141,7 @@ export function useDrawerBadges(isOpen: boolean) {
 
     setBadges(counts);
     setLoading(false);
-  }, [isAdmin, isParent, user?.email, profile?.id]);
+  }, [isAdmin, isParent, user?.email, profile?.id, workingSeason?.id, organization?.id]);
 
   // Fetch when drawer opens
   useEffect(() => {
