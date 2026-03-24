@@ -269,12 +269,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Check for orphan records (web registrations without account link)
       try {
-        const { data: orphans } = await supabase
+        // Load org's season IDs to scope orphan query
+        const orphanOrgId = roles?.[0]?.organization_id;
+        let orgSeasonIds: string[] = [];
+        if (orphanOrgId) {
+          const { data: orgSeasons } = await supabase
+            .from('seasons')
+            .select('id')
+            .eq('organization_id', orphanOrgId);
+          orgSeasonIds = (orgSeasons || []).map((s: any) => s.id);
+        }
+
+        let orphanQuery = supabase
           .from('players')
           .select('id, first_name, last_name, season_id, family_id')
           .eq('parent_email', session.user.email!)
-          .is('parent_account_id', null)
-          .limit(10);
+          .is('parent_account_id', null);
+
+        if (orgSeasonIds.length > 0) {
+          orphanQuery = orphanQuery.in('season_id', orgSeasonIds);
+        }
+
+        const { data: orphans } = await orphanQuery.limit(10);
 
         if (orphans && orphans.length > 0) {
           setOrphanPlayers(orphans);

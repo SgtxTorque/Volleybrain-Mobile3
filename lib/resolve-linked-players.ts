@@ -25,6 +25,7 @@ import { supabase } from './supabase';
 export async function resolveLinkedPlayerIds(
   userId: string,
   userEmail?: string | null,
+  orgSeasonIds?: string[],
 ): Promise<string[]> {
   const ids = new Set<string>();
 
@@ -60,11 +61,18 @@ export async function resolveLinkedPlayerIds(
   // 4. Orphan email match — only unclaimed players (parent_account_id IS NULL)
   if (userEmail) {
     queries.push(async () => {
-      const { data } = await supabase
+      let query = supabase
         .from('players')
         .select('id')
         .ilike('parent_email', userEmail)
         .is('parent_account_id', null);
+
+      // Scope to org's seasons when available
+      if (orgSeasonIds && orgSeasonIds.length > 0) {
+        query = query.in('season_id', orgSeasonIds);
+      }
+
+      const { data } = await query;
       data?.forEach(r => ids.add(r.id));
     });
   }
