@@ -327,10 +327,18 @@ export default function AchievementsScreen() {
         }
       }
 
-      // Fetch how many players have earned each achievement
-      const { data: countData } = await supabase
-        .from('player_achievements')
-        .select('achievement_id');
+      // Fetch how many players in this org's season have earned each achievement
+      const { data: seasonPlayerIds } = workingSeason?.id
+        ? await supabase.from('players').select('id').eq('season_id', workingSeason.id)
+        : { data: null };
+      const spIds = (seasonPlayerIds || []).map((p: any) => p.id);
+
+      const { data: countData } = spIds.length > 0
+        ? await supabase
+            .from('player_achievements')
+            .select('achievement_id')
+            .in('player_id', spIds)
+        : { data: null };
 
       if (countData) {
         const counts: Record<string, number> = {};
