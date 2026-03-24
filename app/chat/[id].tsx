@@ -2,6 +2,7 @@ import EmojiPicker from '@/components/EmojiPicker';
 import GifPicker from '@/components/GifPicker';
 import { useAuth } from '@/lib/auth';
 import { pickImage, pickVideo, takePhoto, uploadMedia } from '@/lib/media-utils';
+import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
@@ -76,7 +77,8 @@ const getEmojiOnlySize = (text: string): number | null => {
 
 export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const { profile } = useAuth();
+  const { profile, organization } = useAuth();
+  const { workingSeason, allSeasons } = useSeason();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const flatListRef = useRef<FlatList>(null);
@@ -126,6 +128,16 @@ export default function ChatScreen() {
   const fetchChannel = async () => {
     if (!id) return;
     const { data } = await supabase.from('chat_channels').select('id, name, channel_type, avatar_url, season_id').eq('id', id).maybeSingle();
+
+    // Verify channel belongs to current org's seasons
+    if (data?.season_id) {
+      const orgSeasonIds = (allSeasons || []).map(s => s.id);
+      if (orgSeasonIds.length > 0 && !orgSeasonIds.includes(data.season_id)) {
+        setChannel(null);
+        return;
+      }
+    }
+
     setChannel(data);
   };
 
