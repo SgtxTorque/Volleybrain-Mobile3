@@ -1,3 +1,4 @@
+import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -54,6 +55,7 @@ const FEE_TEMPLATES = [
 
 export default function SeasonFeesManager({ seasonId, seasonName }: Props) {
   const { colors } = useTheme();
+  const { workingSeason } = useSeason();
   
   const [loading, setLoading] = useState(true);
   const [fees, setFees] = useState<SeasonFee[]>([]);
@@ -141,6 +143,9 @@ export default function SeasonFeesManager({ seasonId, seasonName }: Props) {
 
     setSaving(true);
 
+    // Guard: ensure seasonId matches current working season
+    if (workingSeason?.id && seasonId !== workingSeason.id) return;
+
     try {
       const feeData = {
         season_id: seasonId,
@@ -155,7 +160,8 @@ export default function SeasonFeesManager({ seasonId, seasonName }: Props) {
         const { error } = await supabase
           .from('season_fees')
           .update(feeData)
-          .eq('id', editingFee.id);
+          .eq('id', editingFee.id)
+          .eq('season_id', seasonId);
 
         if (error) throw error;
       } else {
@@ -191,7 +197,8 @@ export default function SeasonFeesManager({ seasonId, seasonName }: Props) {
               const { error } = await supabase
                 .from('season_fees')
                 .delete()
-                .eq('id', fee.id);
+                .eq('id', fee.id)
+                .eq('season_id', seasonId);
 
               if (error) throw error;
               fetchFees();
