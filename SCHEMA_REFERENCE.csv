@@ -192,6 +192,12 @@ coaches,code_of_conduct_signed,boolean
 coaches,code_of_conduct_signed_at,timestamp with time zone
 coaches,secondary_phone,text
 coaches,preferred_contact,text
+division_thresholds,id,uuid
+division_thresholds,achievement_id,uuid
+division_thresholds,division,text
+division_thresholds,threshold_override,integer
+division_thresholds,max_rarity,text
+division_thresholds,created_at,timestamp with time zone
 email_logs,id,uuid
 email_logs,organization_id,uuid
 email_logs,season_id,uuid
