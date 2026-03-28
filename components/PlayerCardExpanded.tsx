@@ -3,8 +3,10 @@ import { calculateOVR } from '@/lib/evaluations';
 import { getSportDisplay, getPositionInfo } from '@/constants/sport-display';
 import { useAuth } from '@/lib/auth';
 import { usePermissions } from '@/lib/permissions-context';
+import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'expo-router';
+import CoachAwardModal from '@/components/CoachAwardModal';
 import { BRAND } from '@/theme/colors';
 import { D_COLORS } from '@/theme/d-system';
 import { FONTS } from '@/theme/fonts';
@@ -97,7 +99,8 @@ const badgeIcons: Record<string, { icon: string; color: string; name: string }> 
 
 export default function PlayerCardExpanded({ player, visible, onClose, onUpdate }: PlayerCardExpandedProps) {
   const { isAdmin, isCoach } = usePermissions();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const { workingSeason } = useSeason();
   const router = useRouter();
 
   const sportDisplay = useMemo(() => getSportDisplay(player?.sport_name), [player?.sport_name]);
@@ -110,6 +113,7 @@ export default function PlayerCardExpanded({ player, visible, onClose, onUpdate 
   const [badges, setBadges] = useState<PlayerBadge[]>([]);
   const [activeTab, setActiveTab] = useState<'stats' | 'skills' | 'info'>('stats');
   const [showBadgeModal, setShowBadgeModal] = useState(false);
+  const [awardModalVisible, setAwardModalVisible] = useState(false);
   const [showEmergencyModal, setShowEmergencyModal] = useState(false);
   const [uploading, setUploading] = useState(false);
 
@@ -229,25 +233,9 @@ export default function PlayerCardExpanded({ player, visible, onClose, onUpdate 
     }
   };
 
-  const awardBadge = async (badgeType: string) => {
-    if (!player || !user) return;
-
-    try {
-      const { error } = await supabase.from('player_badges').insert({
-        player_id: player.id,
-        badge_type: badgeType,
-        badge_name: badgeIcons[badgeType]?.name || badgeType,
-        awarded_by: user.id,
-      });
-
-      if (error) throw error;
-
-      setShowBadgeModal(false);
-      fetchPlayerData();
-      Alert.alert('Badge Awarded!', `${badgeIcons[badgeType]?.name} badge given to ${player.first_name}`);
-    } catch (error: any) {
-      Alert.alert('Error', error.message);
-    }
+  const handleAwardBadge = () => {
+    setShowBadgeModal(false);
+    setAwardModalVisible(true);
   };
 
   const positionColor = posInfo?.color || D_COLORS.skyBlue;
@@ -363,7 +351,7 @@ export default function PlayerCardExpanded({ player, visible, onClose, onUpdate 
               <View style={s.sectionHeader}>
                 <Text style={s.sectionTitle}>Badges</Text>
                 {(isAdmin || isCoach) && (
-                  <TouchableOpacity style={s.addBadgeBtn} onPress={() => setShowBadgeModal(true)}>
+                  <TouchableOpacity style={s.addBadgeBtn} onPress={handleAwardBadge}>
                     <Ionicons name="add-circle" size={24} color={D_COLORS.skyBlue} />
                   </TouchableOpacity>
                 )}
@@ -481,34 +469,24 @@ export default function PlayerCardExpanded({ player, visible, onClose, onUpdate 
           player={player}
         />
 
-        {/* Badge Award Modal */}
-        <Modal visible={showBadgeModal} animationType="fade" transparent>
-          <View style={s.badgeModalOverlay}>
-            <View style={s.badgeModal}>
-              <View style={s.badgeModalHeader}>
-                <Text style={s.badgeModalTitle}>Award Badge</Text>
-                <TouchableOpacity onPress={() => setShowBadgeModal(false)}>
-                  <Ionicons name="close" size={24} color={D_COLORS.textPrimary} />
-                </TouchableOpacity>
-              </View>
-              <ScrollView style={s.badgeOptions}>
-                {Object.entries(badgeIcons).map(([key, badge]) => (
-                  <TouchableOpacity
-                    key={key}
-                    style={s.badgeOption}
-                    onPress={() => awardBadge(key)}
-                  >
-                    <View style={[s.badgeOptionIcon, { backgroundColor: badge.color + '20' }]}>
-                      <Ionicons name={badge.icon as any} size={28} color={badge.color} />
-                    </View>
-                    <Text style={s.badgeOptionName}>{badge.name}</Text>
-                    <Ionicons name="chevron-forward" size={20} color={D_COLORS.textMuted} />
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          </View>
-        </Modal>
+        {/* Coach Award Modal (V2 engine) */}
+        {(isAdmin || isCoach) && workingSeason && player && (
+          <CoachAwardModal
+            visible={awardModalVisible}
+            onClose={() => setAwardModalVisible(false)}
+            teamId={player.team_id || ''}
+            seasonId={workingSeason.id}
+            organizationId={profile?.current_organization_id || ''}
+            coachProfileId={user?.id || ''}
+            preselectedPlayer={{
+              id: player.id,
+              profileId: '',
+              full_name: `${player.first_name} ${player.last_name}`,
+              avatar_url: player.photo_url,
+            }}
+            onSuccess={fetchPlayerData}
+          />
+        )}
       </View>
     </Modal>
   );

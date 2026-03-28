@@ -1,7 +1,9 @@
+import CoachAwardModal from '@/components/CoachAwardModal';
 import PlayerCard from '@/components/PlayerCard';
 import PlayerCardExpanded, { PlayerCardPlayer } from '@/components/PlayerCardExpanded';
 import PlayerStatBar from '@/components/PlayerStatBar';
 import { displayTextStyle, spacing } from '@/lib/design-tokens';
+import { useAuth } from '@/lib/auth';
 import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
@@ -44,6 +46,7 @@ type ViewMode = 'grid' | 'list';
 export default function PlayersScreen() {
   const { colors } = useTheme();
   const { workingSeason } = useSeason();
+  const { user, profile } = useAuth();
   const { isAdmin, isCoach } = usePermissions();
   const { teamId: paramTeamId } = useLocalSearchParams<{ teamId?: string }>();
 
@@ -56,6 +59,7 @@ export default function PlayersScreen() {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerCardPlayer | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [awardModalVisible, setAwardModalVisible] = useState(false);
 
   const switchViewMode = useCallback((mode: ViewMode) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -249,11 +253,18 @@ export default function PlayersScreen() {
           <Text style={s.title}>PLAYERS</Text>
           <Text style={s.subtitle}>{workingSeason?.name} {'\u00B7'} {players.length} total</Text>
         </View>
-        {isAdmin && (
-          <TouchableOpacity style={s.addBtn} onPress={() => setShowAddModal(true)}>
-            <Ionicons name="add" size={28} color={BRAND.white} />
-          </TouchableOpacity>
-        )}
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          {(isAdmin || isCoach) && (
+            <TouchableOpacity style={[s.addBtn, { backgroundColor: '#FFD700' }]} onPress={() => setAwardModalVisible(true)}>
+              <Ionicons name="ribbon" size={22} color="#000" />
+            </TouchableOpacity>
+          )}
+          {isAdmin && (
+            <TouchableOpacity style={s.addBtn} onPress={() => setShowAddModal(true)}>
+              <Ionicons name="add" size={28} color={BRAND.white} />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {/* Search Bar */}
@@ -361,6 +372,19 @@ export default function PlayersScreen() {
         onClose={() => setSelectedPlayer(null)}
         onUpdate={fetchData}
       />
+
+      {/* Coach Award Modal */}
+      {(isAdmin || isCoach) && workingSeason && (
+        <CoachAwardModal
+          visible={awardModalVisible}
+          onClose={() => setAwardModalVisible(false)}
+          teamId={selectedTeam || teams[0]?.id || ''}
+          seasonId={workingSeason.id}
+          organizationId={profile?.current_organization_id || ''}
+          coachProfileId={user?.id || ''}
+          onSuccess={fetchData}
+        />
+      )}
 
       {/* Add Player Modal */}
       <Modal visible={showAddModal} animationType="slide" transparent>

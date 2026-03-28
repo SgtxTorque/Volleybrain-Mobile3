@@ -16,12 +16,13 @@ type SuggestedPlayer = {
 
 type Props = {
   onGiveShoutout?: () => void;
+  onAwardBadge?: () => void;
   /** Pre-selected player from nudge — opens modal with this player */
   onShoutoutPlayer?: (player: { id: string; full_name: string; avatar_url: string | null; role: string }) => void;
   suggestedPlayer?: SuggestedPlayer | null;
 };
 
-export default function EngagementSection({ onGiveShoutout, suggestedPlayer }: Props) {
+export default function EngagementSection({ onGiveShoutout, onAwardBadge, suggestedPlayer }: Props) {
   const nudgeText = suggestedPlayer
     ? `${suggestedPlayer.name} had ${suggestedPlayer.value} ${suggestedPlayer.stat} — give them a shoutout? \u2192`
     : 'Who\u2019s been putting in work? Give a shoutout. \u2192';
@@ -35,6 +36,15 @@ export default function EngagementSection({ onGiveShoutout, suggestedPlayer }: P
       >
         <Text style={styles.ambientText}>{nudgeText}</Text>
       </TouchableOpacity>
+      {onAwardBadge && (
+        <TouchableOpacity
+          style={styles.nudgeLine}
+          activeOpacity={0.7}
+          onPress={onAwardBadge}
+        >
+          <Text style={styles.ambientText}>Award a badge to a standout player. {'\u2192'}</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
