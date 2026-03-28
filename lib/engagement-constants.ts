@@ -2,31 +2,45 @@
 // Engagement System — Constants
 // =============================================================================
 
-/** XP level thresholds — exponential curve, fast early levels, slower later */
+/** V2 XP level thresholds — 30 levels, exponential curve
+ *  xpRequired = XP needed for THIS level (delta, not cumulative)
+ *  cumulative = total XP to reach this level
+ *  tier = tier name at this level
+ *  See: LYNX-ENGAGEMENT-SYSTEM-V2.md Section 3.3 */
 export const XP_LEVELS = [
-  { level: 1, xpRequired: 0 },
-  { level: 2, xpRequired: 100 },
-  { level: 3, xpRequired: 250 },
-  { level: 4, xpRequired: 500 },
-  { level: 5, xpRequired: 800 },
-  { level: 6, xpRequired: 1200 },
-  { level: 7, xpRequired: 1700 },
-  { level: 8, xpRequired: 2300 },
-  { level: 9, xpRequired: 3000 },
-  { level: 10, xpRequired: 4000 },
-  { level: 11, xpRequired: 5200 },
-  { level: 12, xpRequired: 6500 },
-  { level: 13, xpRequired: 8000 },
-  { level: 14, xpRequired: 10000 },
-  { level: 15, xpRequired: 12500 },
-  { level: 16, xpRequired: 15500 },
-  { level: 17, xpRequired: 19000 },
-  { level: 18, xpRequired: 23000 },
-  { level: 19, xpRequired: 27500 },
-  { level: 20, xpRequired: 33000 },
+  { level: 1,  xpRequired: 0,     cumulative: 0,      tier: 'Rookie' },
+  { level: 2,  xpRequired: 100,   cumulative: 100,    tier: 'Rookie' },
+  { level: 3,  xpRequired: 150,   cumulative: 250,    tier: 'Rookie' },
+  { level: 4,  xpRequired: 200,   cumulative: 450,    tier: 'Rookie' },
+  { level: 5,  xpRequired: 250,   cumulative: 700,    tier: 'Bronze' },
+  { level: 6,  xpRequired: 300,   cumulative: 1000,   tier: 'Bronze' },
+  { level: 7,  xpRequired: 400,   cumulative: 1400,   tier: 'Bronze' },
+  { level: 8,  xpRequired: 500,   cumulative: 1900,   tier: 'Bronze' },
+  { level: 9,  xpRequired: 600,   cumulative: 2500,   tier: 'Silver' },
+  { level: 10, xpRequired: 700,   cumulative: 3200,   tier: 'Silver' },
+  { level: 11, xpRequired: 800,   cumulative: 4000,   tier: 'Silver' },
+  { level: 12, xpRequired: 900,   cumulative: 4900,   tier: 'Silver' },
+  { level: 13, xpRequired: 1100,  cumulative: 6000,   tier: 'Gold' },
+  { level: 14, xpRequired: 1300,  cumulative: 7300,   tier: 'Gold' },
+  { level: 15, xpRequired: 1500,  cumulative: 8800,   tier: 'Gold' },
+  { level: 16, xpRequired: 1700,  cumulative: 10500,  tier: 'Gold' },
+  { level: 17, xpRequired: 2000,  cumulative: 12500,  tier: 'Platinum' },
+  { level: 18, xpRequired: 2300,  cumulative: 14800,  tier: 'Platinum' },
+  { level: 19, xpRequired: 2700,  cumulative: 17500,  tier: 'Platinum' },
+  { level: 20, xpRequired: 3000,  cumulative: 20500,  tier: 'Platinum' },
+  { level: 21, xpRequired: 3500,  cumulative: 24000,  tier: 'Diamond' },
+  { level: 22, xpRequired: 4000,  cumulative: 28000,  tier: 'Diamond' },
+  { level: 23, xpRequired: 4500,  cumulative: 32500,  tier: 'Diamond' },
+  { level: 24, xpRequired: 5000,  cumulative: 37500,  tier: 'Diamond' },
+  { level: 25, xpRequired: 5500,  cumulative: 43000,  tier: 'Legend' },
+  { level: 26, xpRequired: 6000,  cumulative: 49000,  tier: 'Legend' },
+  { level: 27, xpRequired: 7000,  cumulative: 56000,  tier: 'Legend' },
+  { level: 28, xpRequired: 8000,  cumulative: 64000,  tier: 'Legend' },
+  { level: 29, xpRequired: 9000,  cumulative: 73000,  tier: 'Legend' },
+  { level: 30, xpRequired: 10000, cumulative: 83000,  tier: 'Legend' },
 ] as const;
 
-export const MAX_LEVEL = 20;
+export const MAX_LEVEL = 30;
 
 /** XP awarded by rarity tier */
 export const XP_BY_RARITY: Record<string, number> = {
@@ -66,32 +80,51 @@ export const XP_BY_SOURCE: Record<string, number> = {
   daily_login: 2,
 };
 
-/** Level tier colors (1-5 bronze, 6-10 silver, 11-15 gold, 16-20 diamond) */
+/** V2 level tier visual config — 7 tiers */
 export const LEVEL_TIERS = [
-  { min: 1, max: 5, name: 'Bronze', color: '#CD7F32', bgColor: '#CD7F3220' },
-  { min: 6, max: 10, name: 'Silver', color: '#C0C0C0', bgColor: '#C0C0C020' },
-  { min: 11, max: 15, name: 'Gold', color: '#FFD700', bgColor: '#FFD70020' },
-  { min: 16, max: 20, name: 'Diamond', color: '#B9F2FF', bgColor: '#B9F2FF20' },
+  { min: 1,  max: 4,  name: 'Rookie',   color: '#94A3B8', bgColor: '#94A3B820' },
+  { min: 5,  max: 8,  name: 'Bronze',   color: '#CD7F32', bgColor: '#CD7F3220' },
+  { min: 9,  max: 12, name: 'Silver',   color: '#C0C0C0', bgColor: '#C0C0C020' },
+  { min: 13, max: 16, name: 'Gold',     color: '#FFD700', bgColor: '#FFD70020' },
+  { min: 17, max: 20, name: 'Platinum', color: '#E5E4E2', bgColor: '#E5E4E220' },
+  { min: 21, max: 24, name: 'Diamond',  color: '#B9F2FF', bgColor: '#B9F2FF20' },
+  { min: 25, max: 30, name: 'Legend',   color: '#FF6B35', bgColor: '#FF6B3520' },
 ] as const;
 
-/** Calculate level from total XP */
-export function getLevelFromXP(totalXp: number): { level: number; currentXp: number; nextLevelXp: number; progress: number } {
+/** Calculate level info from total XP — SINGLE SOURCE OF TRUTH
+ *  Returns superset of both old shapes so all consumers work. */
+export function getLevelFromXP(totalXp: number): {
+  level: number;
+  currentXp: number;
+  nextLevelXp: number;
+  progress: number;
+  tier: string;
+  xpToNext: number;
+} {
   let currentLevel = 1;
   for (const entry of XP_LEVELS) {
-    if (totalXp >= entry.xpRequired) {
+    if (totalXp >= entry.cumulative) {
       currentLevel = entry.level;
     } else {
       break;
     }
   }
 
-  const currentLevelXp = XP_LEVELS[currentLevel - 1].xpRequired;
-  const nextLevelXp = currentLevel < MAX_LEVEL ? XP_LEVELS[currentLevel].xpRequired : XP_LEVELS[MAX_LEVEL - 1].xpRequired;
-  const xpIntoLevel = totalXp - currentLevelXp;
-  const xpNeeded = nextLevelXp - currentLevelXp;
+  const currentEntry = XP_LEVELS[currentLevel - 1];
+  const nextEntry = currentLevel < MAX_LEVEL ? XP_LEVELS[currentLevel] : null;
+  const nextCumulative = nextEntry ? nextEntry.cumulative : currentEntry.cumulative;
+  const xpIntoLevel = totalXp - currentEntry.cumulative;
+  const xpNeeded = nextCumulative - currentEntry.cumulative;
   const progress = xpNeeded > 0 ? Math.min((xpIntoLevel / xpNeeded) * 100, 100) : 100;
 
-  return { level: currentLevel, currentXp: totalXp, nextLevelXp, progress };
+  return {
+    level: currentLevel,
+    currentXp: totalXp,
+    nextLevelXp: nextCumulative,
+    progress,
+    tier: currentEntry.tier,
+    xpToNext: nextEntry ? nextEntry.cumulative - totalXp : 0,
+  };
 }
 
 /** Get tier config for a given level */
