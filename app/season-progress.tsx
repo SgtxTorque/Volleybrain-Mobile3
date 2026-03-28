@@ -19,6 +19,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import SeasonRankProgressCard from '@/components/player-scroll/SeasonRankProgressCard';
+import SeasonRankHistory from '@/components/player-scroll/SeasonRankHistory';
 import { useSeasonRank } from '@/hooks/useSeasonRank';
 
 // =============================================================================
@@ -291,6 +292,9 @@ export default function SeasonProgressScreen() {
             <SeasonRankProgressCard rankInfo={rankInfo} />
           </View>
         )}
+
+        {/* Past Season History */}
+        {user?.id && <SeasonRankHistory profileId={user.id} />}
 
         {/* Summary Card */}
         {summary && (
