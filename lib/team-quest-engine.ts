@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { getLevelFromXP } from '@/lib/engagement-constants';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -212,8 +213,6 @@ async function awardTeamQuestXp(quest: any) {
     .map((tp: any) => tp.players?.parent_account_id)
     .filter(Boolean);
 
-  const { calculateLevel } = require('@/lib/quest-engine');
-
   for (const pid of profileIds) {
     // Write XP ledger entry
     await supabase.from('xp_ledger').insert({
@@ -234,7 +233,7 @@ async function awardTeamQuestXp(quest: any) {
 
     if (profile) {
       const newTotal = (profile.total_xp || 0) + quest.xp_reward_per_player;
-      const { level, tier, xpToNext } = calculateLevel(newTotal);
+      const { level, tier, xpToNext } = getLevelFromXP(newTotal);
 
       await supabase
         .from('profiles')

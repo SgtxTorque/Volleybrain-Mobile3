@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { createNotification } from '@/lib/notification-engine';
+import { getLevelFromXP } from '@/lib/engagement-constants';
 
 // ─── Check and Create Auto Boosts ───────────────────────────────────────────
 // Called on app open. Checks schedule_events for today and creates boosts.
@@ -127,9 +128,8 @@ export async function checkEarlyBird(
     .maybeSingle();
 
   if (profile) {
-    const { calculateLevel } = require('@/lib/quest-engine');
     const newTotal = (profile.total_xp || 0) + xpAmount;
-    const { level, tier, xpToNext } = calculateLevel(newTotal);
+    const { level, tier, xpToNext } = getLevelFromXP(newTotal);
 
     await supabase
       .from('profiles')

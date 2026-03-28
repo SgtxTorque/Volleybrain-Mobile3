@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { calculateLevel, checkAndCompleteQuests } from '@/lib/quest-engine';
+import { checkAndCompleteQuests } from '@/lib/quest-engine';
+import { getLevelFromXP } from '@/lib/engagement-constants';
 import { recordQualifyingAction } from '@/lib/streak-engine';
 import { emitRefresh } from '@/lib/refresh-bus';
 
@@ -223,7 +224,7 @@ async function awardModuleXp(profileId: string, amount: number, sourceType: stri
     .maybeSingle();
 
   const newTotal = (profile?.total_xp ?? 0) + amount;
-  const { level, tier, xpToNext } = calculateLevel(newTotal);
+  const { level, tier, xpToNext } = getLevelFromXP(newTotal);
 
   await supabase
     .from('profiles')

@@ -181,11 +181,11 @@ async function awardShoutoutXP(
 
     const currentXP = prof?.total_xp || 0;
     const newXP = currentXP + xp_amount;
-    const { level } = getLevelFromXP(newXP);
+    const { level, tier, xpToNext } = getLevelFromXP(newXP);
 
     await supabase
       .from('profiles')
-      .update({ total_xp: newXP, player_level: level })
+      .update({ total_xp: newXP, player_level: level, tier, xp_to_next_level: xpToNext })
       .eq('id', profId);
   }
 }

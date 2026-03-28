@@ -8,7 +8,6 @@ import { useAuth } from '@/lib/auth';
 import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { calculateStreakWithFreeze, checkStreakState, StreakState } from '@/lib/streak-engine';
-import { calculateLevel } from '@/lib/quest-engine';
 import { getLevelFromXP, getLevelTier } from '@/lib/engagement-constants';
 import { checkEarlyBird, checkAndCreateAutoBoosts } from '@/lib/xp-boost-engine';
 import { supabase } from '@/lib/supabase';

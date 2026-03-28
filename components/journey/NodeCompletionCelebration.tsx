@@ -17,7 +17,7 @@ import Animated, {
 import { LinearGradient } from 'expo-linear-gradient';
 
 import { getMascotImage } from '@/lib/mascot-images';
-import { calculateLevel } from '@/lib/quest-engine';
+import { getLevelFromXP } from '@/lib/engagement-constants';
 import { emitRefresh } from '@/lib/refresh-bus';
 import { FONTS } from '@/theme/fonts';
 import { PLAYER_THEME } from '@/theme/player-theme';
@@ -45,8 +45,8 @@ export default function NodeCompletionCelebration({
   streakCount,
   onContinue,
 }: Props) {
-  const prevLevel = calculateLevel(previousTotalXp);
-  const newLevel = calculateLevel(newTotalXp);
+  const prevLevel = getLevelFromXP(previousTotalXp);
+  const newLevel = getLevelFromXP(newTotalXp);
   const didLevelUp = newLevel.level > prevLevel.level;
 
   // XP counter animation
