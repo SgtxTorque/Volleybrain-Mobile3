@@ -29,6 +29,8 @@ import { getPlayerGreeting, type PlayerGreetingContext } from './PlayerLynxGreet
 import { getGreetingMascot, getStreakMascot } from '@/lib/mascot-images';
 import type { LastGameStats, RecentShoutout, PlayerBadge } from '@/hooks/usePlayerHomeData';
 import { getLevelFromXP, getLevelTier } from '@/lib/engagement-constants';
+import type { SeasonRankInfo } from '@/hooks/useSeasonRank';
+import SeasonRankBadge from './SeasonRankBadge';
 
 type Props = {
   firstName: string;
@@ -49,6 +51,7 @@ type Props = {
   challengesAvailable: boolean;
   recentShoutouts: RecentShoutout[];
   scrollY: SharedValue<number>;
+  rankInfo?: SeasonRankInfo | null;
 };
 
 function getLevelTitle(level: number): string {
@@ -59,6 +62,7 @@ export default function PlayerIdentityHero({
   firstName, lastName, photoUrl, teamName, teamColor, position, jerseyNumber,
   level, xpProgress, xpCurrent, xpToNext, attendanceStreak,
   lastGame, nextEvent, badges, challengesAvailable, recentShoutouts, scrollY,
+  rankInfo,
 }: Props) {
   // ─── Animations (all hooks above early returns) ──
   const mascotScale = useSharedValue(1);
@@ -242,16 +246,33 @@ export default function PlayerIdentityHero({
             </View>
           </Animated.View>
           <View style={styles.levelInfo}>
-            <Text style={styles.levelText}>
-              Level {level} {'\u00B7'} {levelTitle}
-            </Text>
+            <View style={styles.levelLabelRow}>
+              <Text style={styles.levelText}>
+                Level {level} {'\u00B7'} {levelTitle}
+              </Text>
+              {rankInfo && (
+                <SeasonRankBadge
+                  rankTier={rankInfo.rankTier}
+                  rankLabel={rankInfo.rankLabel}
+                  rankColor={rankInfo.rankColor}
+                  rankBgColor={rankInfo.rankBgColor}
+                  xpMultiplier={rankInfo.xpMultiplier}
+                  size="small"
+                />
+              )}
+            </View>
             <View style={styles.xpBarTrack}>
               <Animated.View style={[styles.xpBarFill, xpBarStyle]} />
               <Animated.View style={[styles.xpShimmer, xpShimmerStyle]} />
             </View>
-            <Animated.View style={xpBounceStyle}>
-              <Text style={styles.xpText}>{displayXp.toLocaleString()} / {(xpCurrent + xpToNext).toLocaleString()} XP</Text>
-            </Animated.View>
+            <View style={styles.xpRow}>
+              <Animated.View style={xpBounceStyle}>
+                <Text style={styles.xpText}>{displayXp.toLocaleString()} / {(xpCurrent + xpToNext).toLocaleString()} XP</Text>
+              </Animated.View>
+              {rankInfo && rankInfo.xpMultiplier > 1.0 && (
+                <Text style={styles.multiplierText}>{rankInfo.xpMultiplier}x</Text>
+              )}
+            </View>
           </View>
         </View>
 
@@ -380,7 +401,6 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.bodySemiBold,
     fontSize: 12,
     color: PLAYER_THEME.textSecondary,
-    marginBottom: 4,
   },
   xpBarTrack: {
     height: 6,
@@ -404,10 +424,26 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.35)',
     borderRadius: 3,
   },
+  levelLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  xpRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   xpText: {
     fontFamily: FONTS.bodyMedium,
     fontSize: 10,
     color: PLAYER_THEME.textMuted,
+  },
+  multiplierText: {
+    fontFamily: FONTS.bodySemiBold,
+    fontSize: 11,
+    color: '#FFD700',
   },
   mascotWrap: {
     position: 'absolute',
