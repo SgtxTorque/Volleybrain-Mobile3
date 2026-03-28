@@ -27,6 +27,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChallengeDetail } from '@/hooks/useChallenges';
 import { optInToChallenge, updateChallengeProgress } from '@/lib/challenge-service';
 import { useAuth } from '@/lib/auth';
+import { DIFFICULTY_CONFIG, type Difficulty } from '@/lib/challenge-templates';
 import { BRAND } from '@/theme/colors';
 import { FONTS } from '@/theme/fonts';
 
@@ -52,25 +53,6 @@ const PT = {
   success: BRAND.success,
   epic: '#A855F7',
 };
-
-// =============================================================================
-// Difficulty badge colors
-// =============================================================================
-
-const DIFFICULTY_COLORS: Record<string, string> = {
-  easy: PT.success,
-  medium: PT.gold,
-  hard: '#F97316',
-  epic: PT.epic,
-};
-
-function getDifficultyLabel(target: number | null): { label: string; color: string } {
-  if (!target) return { label: 'CHALLENGE', color: PT.teal };
-  if (target <= 5) return { label: 'EASY', color: DIFFICULTY_COLORS.easy };
-  if (target <= 15) return { label: 'MEDIUM', color: DIFFICULTY_COLORS.medium };
-  if (target <= 30) return { label: 'HARD', color: DIFFICULTY_COLORS.hard };
-  return { label: 'EPIC', color: DIFFICULTY_COLORS.epic };
-}
 
 // =============================================================================
 // Avatar initials helper
@@ -208,7 +190,12 @@ export default function ChallengeCTAScreen() {
   // Difficulty
   // ---------------------------------------------------------------------------
 
-  const difficulty = getDifficultyLabel(challenge.target_value);
+  const tierKey = challenge.difficulty as Difficulty | null;
+  const tierCfg = tierKey ? DIFFICULTY_CONFIG[tierKey] : null;
+  const difficulty = {
+    label: tierCfg?.label ?? 'Challenge',
+    color: tierCfg?.color ?? '#6B7280',
+  };
 
   // ---------------------------------------------------------------------------
   // Participant avatars (first 5)
