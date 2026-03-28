@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import { recordQualifyingAction } from '@/lib/streak-engine';
 import { emitRefresh } from '@/lib/refresh-bus';
+import { getLevelFromXP } from './engagement-constants';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -75,55 +76,13 @@ export interface QuestContext {
 }
 
 // ─── XP Level Curve ──────────────────────────────────────────────────────────
+// V2: Single source of truth is now engagement-constants.ts
 
-const LEVEL_THRESHOLDS: { level: number; xpRequired: number; cumulative: number; tier: string }[] = [
-  { level: 1, xpRequired: 0, cumulative: 0, tier: 'Rookie' },
-  { level: 2, xpRequired: 100, cumulative: 100, tier: 'Rookie' },
-  { level: 3, xpRequired: 200, cumulative: 300, tier: 'Rookie' },
-  { level: 4, xpRequired: 300, cumulative: 600, tier: 'Rookie' },
-  { level: 5, xpRequired: 400, cumulative: 800, tier: 'Bronze' },
-  { level: 6, xpRequired: 500, cumulative: 1300, tier: 'Bronze' },
-  { level: 7, xpRequired: 600, cumulative: 1900, tier: 'Bronze' },
-  { level: 8, xpRequired: 700, cumulative: 2500, tier: 'Bronze' },
-  { level: 9, xpRequired: 800, cumulative: 3300, tier: 'Bronze' },
-  { level: 10, xpRequired: 1000, cumulative: 4500, tier: 'Silver' },
-  { level: 11, xpRequired: 1100, cumulative: 5600, tier: 'Silver' },
-  { level: 12, xpRequired: 1200, cumulative: 6800, tier: 'Silver' },
-  { level: 13, xpRequired: 1300, cumulative: 8100, tier: 'Silver' },
-  { level: 14, xpRequired: 1400, cumulative: 9500, tier: 'Silver' },
-  { level: 15, xpRequired: 1500, cumulative: 10000, tier: 'Gold' },
-  { level: 16, xpRequired: 1600, cumulative: 11600, tier: 'Gold' },
-  { level: 17, xpRequired: 1700, cumulative: 13300, tier: 'Gold' },
-  { level: 18, xpRequired: 1800, cumulative: 15100, tier: 'Gold' },
-  { level: 19, xpRequired: 1900, cumulative: 17000, tier: 'Gold' },
-  { level: 20, xpRequired: 2000, cumulative: 18000, tier: 'Platinum' },
-  { level: 21, xpRequired: 2100, cumulative: 20100, tier: 'Platinum' },
-  { level: 22, xpRequired: 2200, cumulative: 22300, tier: 'Platinum' },
-  { level: 23, xpRequired: 2300, cumulative: 24600, tier: 'Platinum' },
-  { level: 24, xpRequired: 2400, cumulative: 27000, tier: 'Platinum' },
-  { level: 25, xpRequired: 2500, cumulative: 28000, tier: 'Diamond' },
-  { level: 26, xpRequired: 2600, cumulative: 30600, tier: 'Diamond' },
-  { level: 27, xpRequired: 2700, cumulative: 33300, tier: 'Diamond' },
-  { level: 28, xpRequired: 2800, cumulative: 36100, tier: 'Diamond' },
-  { level: 29, xpRequired: 2900, cumulative: 39000, tier: 'Diamond' },
-  { level: 30, xpRequired: 3000, cumulative: 40000, tier: 'Legend' },
-];
-
+/** @deprecated Use getLevelFromXP from engagement-constants directly.
+ *  This re-export exists to avoid breaking external consumers during migration. */
 export function calculateLevel(totalXp: number): { level: number; tier: string; xpToNext: number } {
-  let result = { level: 1, tier: 'Rookie', xpToNext: 100 };
-  for (let i = LEVEL_THRESHOLDS.length - 1; i >= 0; i--) {
-    if (totalXp >= LEVEL_THRESHOLDS[i].cumulative) {
-      const current = LEVEL_THRESHOLDS[i];
-      const next = LEVEL_THRESHOLDS[i + 1];
-      result = {
-        level: current.level,
-        tier: current.tier,
-        xpToNext: next ? next.cumulative - totalXp : 0,
-      };
-      break;
-    }
-  }
-  return result;
+  const result = getLevelFromXP(totalXp);
+  return { level: result.level, tier: result.tier, xpToNext: result.xpToNext };
 }
 
 // ─── Date Helpers ────────────────────────────────────────────────────────────
@@ -637,7 +596,7 @@ async function awardXp(
 
   const currentXp = profile?.total_xp || 0;
   const newTotalXp = currentXp + finalAmount;
-  const { level, tier, xpToNext } = calculateLevel(newTotalXp);
+  const { level, tier, xpToNext } = getLevelFromXP(newTotalXp);
 
   // Update profiles
   await supabase
