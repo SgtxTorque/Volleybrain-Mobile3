@@ -1,9 +1,9 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { checkAndCompleteQuests } from '@/lib/quest-engine';
-import { getLevelFromXP } from '@/lib/engagement-constants';
 import { recordQualifyingAction } from '@/lib/streak-engine';
 import { emitRefresh } from '@/lib/refresh-bus';
+import { awardXP } from '@/lib/xp-award-service';
 
 export interface SkillModuleData {
   id: string;
@@ -208,31 +208,11 @@ export function useSkillModule(nodeId: string, skillContentId: string) {
 
 // Private helper: award XP for skill module steps
 async function awardModuleXp(profileId: string, amount: number, sourceType: string) {
-  // Write to xp_ledger
-  await supabase.from('xp_ledger').insert({
-    player_id: profileId,
-    xp_amount: amount,
-    source_type: sourceType,
+  await awardXP({
+    profileId,
+    baseAmount: amount,
+    sourceType,
     description: `Skill module: +${amount} XP`,
+    skipBoostLookup: false, // skill modules should benefit from boosts
   });
-
-  // Update profiles
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('total_xp')
-    .eq('id', profileId)
-    .maybeSingle();
-
-  const newTotal = (profile?.total_xp ?? 0) + amount;
-  const { level, tier, xpToNext } = getLevelFromXP(newTotal);
-
-  await supabase
-    .from('profiles')
-    .update({
-      total_xp: newTotal,
-      player_level: level,
-      tier: tier,
-      xp_to_next_level: xpToNext,
-    })
-    .eq('id', profileId);
 }

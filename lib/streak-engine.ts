@@ -3,6 +3,7 @@
  * and streak freeze/recovery logic.
  */
 import { supabase } from '@/lib/supabase';
+import { awardXP } from '@/lib/xp-award-service';
 
 // =============================================================================
 // STREAK TIERS
@@ -126,13 +127,12 @@ export async function awardStreakMilestoneXP(
   if (tier.xp <= 0) return;
 
   try {
-    await supabase.from('xp_ledger').insert({
-      player_id: playerId,
-      organization_id: null,
-      xp_amount: tier.xp,
-      source_type: 'streak_milestone',
-      source_id: null,
+    await awardXP({
+      profileId: playerId,
+      baseAmount: tier.xp,
+      sourceType: 'streak_milestone',
       description: `${tier.name} streak milestone (${tier.min}+ events)`,
+      skipBoostLookup: true,
     });
   } catch {
     // XP logging is best-effort

@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { awardXP } from '@/lib/xp-award-service';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -272,12 +273,13 @@ export async function processWeeklyLeaderboardReset(
       // Award podium XP
       const podiumXp = PODIUM_XP[rank as keyof typeof PODIUM_XP];
       if (podiumXp) {
-        await supabase.from('xp_ledger').insert({
-          player_id: entry.player_id,
-          xp_amount: podiumXp,
-          source_type: 'leaderboard_bonus',
+        await awardXP({
+          profileId: entry.player_id,
+          baseAmount: podiumXp,
+          sourceType: 'leaderboard_bonus',
+          teamId,
           description: `Weekly leaderboard #${rank}: +${podiumXp} XP`,
-          team_id: teamId,
+          skipBoostLookup: true,
         });
       }
     } else if (

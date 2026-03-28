@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import { getLevelFromXP } from '@/lib/engagement-constants';
+import { awardXP } from '@/lib/xp-award-service';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -214,37 +214,15 @@ async function awardTeamQuestXp(quest: any) {
     .filter(Boolean);
 
   for (const pid of profileIds) {
-    // Write XP ledger entry
-    await supabase.from('xp_ledger').insert({
-      player_id: pid,
-      xp_amount: quest.xp_reward_per_player,
-      source_type: 'team_quest',
-      source_id: quest.id,
+    await awardXP({
+      profileId: pid,
+      baseAmount: quest.xp_reward_per_player,
+      sourceType: 'team_quest',
+      sourceId: quest.id,
+      teamId: quest.team_id,
       description: `Team quest complete: ${quest.title}`,
-      team_id: quest.team_id,
+      skipBoostLookup: true,
     });
-
-    // Update profiles.total_xp
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('total_xp')
-      .eq('id', pid)
-      .maybeSingle();
-
-    if (profile) {
-      const newTotal = (profile.total_xp || 0) + quest.xp_reward_per_player;
-      const { level, tier, xpToNext } = getLevelFromXP(newTotal);
-
-      await supabase
-        .from('profiles')
-        .update({
-          total_xp: newTotal,
-          player_level: level,
-          tier: tier,
-          xp_to_next_level: xpToNext,
-        })
-        .eq('id', pid);
-    }
   }
 }
 

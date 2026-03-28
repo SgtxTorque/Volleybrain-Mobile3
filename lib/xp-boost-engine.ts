@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { createNotification } from '@/lib/notification-engine';
-import { getLevelFromXP } from '@/lib/engagement-constants';
+import { awardXP } from '@/lib/xp-award-service';
 
 // ─── Check and Create Auto Boosts ───────────────────────────────────────────
 // Called on app open. Checks schedule_events for today and creates boosts.
@@ -111,31 +111,15 @@ export async function checkEarlyBird(
     xp_awarded: xpAmount,
   });
 
-  // Award XP
-  await supabase.from('xp_ledger').insert({
-    player_id: playerProfileId,
-    xp_amount: xpAmount,
-    source_type: 'rsvp',
-    source_id: eventId,
+  // Award XP via centralized service
+  await awardXP({
+    profileId: playerProfileId,
+    baseAmount: xpAmount,
+    sourceType: 'rsvp',
+    sourceId: eventId,
     description: `Early Bird #${rsvpOrder}: +${xpAmount} XP`,
+    skipBoostLookup: true, // this IS the boost engine, don't recurse
   });
-
-  // Update profiles
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('total_xp')
-    .eq('id', playerProfileId)
-    .maybeSingle();
-
-  if (profile) {
-    const newTotal = (profile.total_xp || 0) + xpAmount;
-    const { level, tier, xpToNext } = getLevelFromXP(newTotal);
-
-    await supabase
-      .from('profiles')
-      .update({ total_xp: newTotal, player_level: level, tier, xp_to_next_level: xpToNext })
-      .eq('id', playerProfileId);
-  }
 
   return { isEarlyBird: true, rsvpOrder, xpAwarded: xpAmount };
 }
