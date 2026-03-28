@@ -8,6 +8,7 @@ import { getLevelFromXP } from './engagement-constants';
 import { awardXP } from './xp-award-service';
 import { incrementSeasonBadges } from './season-rank-engine';
 import type { AchievementFull, AchievementProgress, UnseenAchievement } from './achievement-types';
+import { resolvePlayerDivision, getEffectiveThreshold, exceedsRarityCap } from './division-utils';
 
 const LAST_SEEN_KEY = 'vb_achievement_last_seen_';
 
@@ -69,6 +70,9 @@ export async function checkAndUnlockAchievements(params: CheckParams): Promise<s
       statsMap[row.player_id] = obj;
     }
 
+    // Resolve division for threshold scaling (all players in one call are same team)
+    const division = await resolvePlayerDivision(playerIds[0], teamId);
+
     // Check each player × each achievement
     const newUnlocks: Array<{
       player_id: string;
@@ -102,19 +106,29 @@ export async function checkAndUnlockAchievements(params: CheckParams): Promise<s
 
         const currentVal = playerStats[ach.stat_key] ?? 0;
 
+        // Division scaling: skip if badge rarity exceeds division cap (stat/season badges)
+        if (ach.engagement_category === 'stat' && ach.cadence === 'season') {
+          if (exceedsRarityCap(ach.rarity, division)) continue;
+        }
+
+        // Get effective threshold (division-scaled for stat/season badges, base for others)
+        const effectiveThreshold = (ach.engagement_category === 'stat' && ach.cadence === 'season')
+          ? await getEffectiveThreshold(ach.id, ach.threshold, division)
+          : ach.threshold;
+
         // Always update progress
         progressRows.push({
           player_id: playerId,
           achievement_id: ach.id,
           current_value: currentVal,
-          target_value: ach.threshold,
+          target_value: effectiveThreshold,
           last_updated_game_id: gameId,
           last_updated_at: now,
         });
 
         // Check for new unlock
         if (earnedSet.has(`${playerId}:${ach.id}`)) continue;
-        if (currentVal >= ach.threshold) {
+        if (currentVal >= effectiveThreshold) {
           newUnlocks.push({
             player_id: playerId,
             achievement_id: ach.id,
@@ -226,6 +240,9 @@ export async function checkAllAchievements(
     // Gather all stats
     const allStats = await gatherAllStats(playerId, seasonId);
 
+    // Resolve division (no teamId available — resolve from team_players)
+    const division = await resolvePlayerDivision(playerId);
+
     const now = new Date().toISOString();
     const newUnlocks: Array<{
       player_id: string;
@@ -259,18 +276,28 @@ export async function checkAllAchievements(
         continue;
       }
 
+      // Division scaling: skip if badge rarity exceeds division cap (stat/season badges)
+      if (ach.engagement_category === 'stat' && ach.cadence === 'season') {
+        if (exceedsRarityCap(ach.rarity, division)) continue;
+      }
+
+      // Get effective threshold (division-scaled for stat/season badges, base for others)
+      const effectiveThreshold = (ach.engagement_category === 'stat' && ach.cadence === 'season')
+        ? await getEffectiveThreshold(ach.id, ach.threshold, division)
+        : ach.threshold;
+
       // Update progress
       progressRows.push({
         player_id: playerId,
         achievement_id: ach.id,
         current_value: currentVal,
-        target_value: ach.threshold,
+        target_value: effectiveThreshold,
         last_updated_at: now,
       });
 
       // Check for new unlock
       if (earnedSet.has(ach.id)) continue;
-      if (currentVal >= ach.threshold) {
+      if (currentVal >= effectiveThreshold) {
         newUnlocks.push({
           player_id: playerId,
           achievement_id: ach.id,
@@ -534,19 +561,28 @@ export async function getTrackedProgress(
 
     if (!tracked) return [];
 
-    return tracked.map((t) => {
+    // Resolve division once for all tracked achievements
+    const division = await resolvePlayerDivision(playerId);
+
+    const results: AchievementProgress[] = [];
+    for (const t of tracked) {
       const ach = t.achievements as unknown as AchievementFull;
-      const target = ach.threshold ?? 1;
+      const baseTarget = ach.threshold ?? 1;
+      // Apply division scaling for stat/season badges
+      const target = (ach.engagement_category === 'stat' && ach.cadence === 'season')
+        ? await getEffectiveThreshold(ach.id, baseTarget, division)
+        : baseTarget;
       const current = ach.stat_key ? (allStats[ach.stat_key] ?? 0) : 0;
       const pct = target > 0 ? Math.min((current / target) * 100, 100) : 0;
-      return {
+      results.push({
         achievement_id: ach.id,
         current_value: current,
         target_value: target,
         pct,
         achievement: ach,
-      };
-    });
+      });
+    }
+    return results;
   } catch (err) {
     if (__DEV__) console.error('getTrackedProgress error:', err);
     return [];
