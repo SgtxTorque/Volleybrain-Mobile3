@@ -5,10 +5,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabase';
 import { XP_BY_SOURCE } from './engagement-constants';
-import { getLevelFromXP } from './engagement-constants';
 import type { ShoutoutCategory } from './engagement-types';
 import { checkAndCompleteQuests } from './quest-engine';
 import { emitRefresh } from './refresh-bus';
+import { awardXP } from './xp-award-service';
 
 const LAST_SEEN_SHOUTOUT_PREFIX = 'LYNX_LAST_SEEN_SHOUTOUT_';
 
@@ -141,52 +141,32 @@ async function awardShoutoutXP(
   const giverXP = XP_BY_SOURCE.shoutout_given;
   const receiverXP = XP_BY_SOURCE.shoutout_received;
 
-  // Insert XP ledger entries
-  const entries = [
-    {
-      player_id: giverId,
-      organization_id: organizationId,
-      xp_amount: giverXP,
-      source_type: 'shoutout_given',
-      source_id: shoutoutId,
+  // Giver: giverId is always a profiles.id
+  const giverProfileId = await resolveProfileId(giverId);
+  if (giverProfileId) {
+    await awardXP({
+      profileId: giverProfileId,
+      baseAmount: giverXP,
+      sourceType: 'shoutout_given',
+      sourceId: shoutoutId,
+      organizationId,
       description: `Gave a shoutout (+${giverXP} XP)`,
-    },
-    {
-      player_id: receiverId,
-      organization_id: organizationId,
-      xp_amount: receiverXP,
-      source_type: 'shoutout_received',
-      source_id: shoutoutId,
+      skipBoostLookup: true,
+    });
+  }
+
+  // Receiver: receiverId may be a players.id
+  const receiverProfileId = await resolveProfileId(receiverId);
+  if (receiverProfileId) {
+    await awardXP({
+      profileId: receiverProfileId,
+      baseAmount: receiverXP,
+      sourceType: 'shoutout_received',
+      sourceId: shoutoutId,
+      organizationId,
       description: `Received a shoutout (+${receiverXP} XP)`,
-    },
-  ];
-
-  const { error: ledgerError } = await supabase.from('xp_ledger').insert(entries);
-  if (__DEV__ && ledgerError) console.error('[ShoutoutService] XP ledger error:', ledgerError);
-
-  // Update total_xp and player_level on profiles
-  // Note: giverId is always a profiles.id, receiverId may be a players.id
-  for (const { userId, xp_amount } of [
-    { userId: giverId, xp_amount: giverXP },
-    { userId: receiverId, xp_amount: receiverXP },
-  ]) {
-    const profId = await resolveProfileId(userId);
-    if (!profId) continue; // Skip if no profile found
-
-    const { data: prof } = await supabase
-      .from('profiles')
-      .select('total_xp')
-      .eq('id', profId)
-      .maybeSingle();
-
-    const currentXP = prof?.total_xp || 0;
-    const newXP = currentXP + xp_amount;
-    const { level, tier, xpToNext } = getLevelFromXP(newXP);
-
-    await supabase
-      .from('profiles')
-      .update({ total_xp: newXP, player_level: level, tier, xp_to_next_level: xpToNext })
-      .eq('id', profId);
+      skipBoostLookup: true,
+    });
   }
 }
 
