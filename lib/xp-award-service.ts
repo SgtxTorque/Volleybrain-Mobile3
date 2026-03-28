@@ -7,6 +7,7 @@
 
 import { supabase } from './supabase';
 import { getLevelFromXP } from './engagement-constants';
+import { quickRankRefresh } from './season-rank-engine';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -165,37 +166,16 @@ export async function awardXP(params: XpAwardParams): Promise<XpAwardResult> {
     })
     .eq('id', profileId);
 
-  // ─── Step 7: Update season_ranks.season_xp (if season known) ────────────
-  if (seasonId) {
+  // ─── Step 7: Update season rank (if season known) ────────────────────────
+  if (seasonId && organizationId) {
     try {
-      // Upsert — create row if first XP in this season, otherwise increment
-      const { data: existing } = await supabase
-        .from('season_ranks')
-        .select('id, season_xp')
-        .eq('player_id', profileId)
-        .eq('season_id', seasonId)
-        .maybeSingle();
-
-      if (existing) {
-        await supabase
-          .from('season_ranks')
-          .update({
-            season_xp: (existing.season_xp || 0) + finalAmount,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', existing.id);
-      } else {
-        await supabase
-          .from('season_ranks')
-          .insert({
-            player_id: profileId,
-            season_id: seasonId,
-            organization_id: organizationId,
-            season_xp: finalAmount,
-          });
+      const rankResult = await quickRankRefresh(profileId, seasonId, organizationId, finalAmount);
+      // If rank changed, the multiplier for future XP awards is now updated on profiles
+      if (__DEV__ && rankResult.rankChanged) {
+        console.log(`[XP Award] Season rank changed to ${rankResult.newRankTier} (${rankResult.newMultiplier}x)`);
       }
     } catch (e) {
-      if (__DEV__) console.warn('[XP Award] Season ranks update failed:', e);
+      if (__DEV__) console.warn('[XP Award] Season rank refresh failed:', e);
     }
   }
 
