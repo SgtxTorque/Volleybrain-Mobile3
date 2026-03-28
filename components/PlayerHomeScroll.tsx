@@ -92,6 +92,10 @@ import TrophyCaseWidget from './TrophyCaseWidget';
 import RoleSelector from './RoleSelector';
 import { fetchActiveChallenges, optInToChallenge, type ChallengeWithParticipants } from '@/lib/challenge-service';
 import { checkMilestoneReached, awardStreakMilestoneXP, type StreakTier } from '@/lib/streak-engine';
+import SeasonRankProgressCard from './player-scroll/SeasonRankProgressCard';
+import SeasonRankUpModal from './SeasonRankUpModal';
+import { useSeasonRank } from '@/hooks/useSeasonRank';
+import { useSeason } from '@/lib/season';
 
 // ─── Player Dark Theme ──────────────────────────────────────────
 import { PLAYER_THEME } from '@/theme/player-theme';
@@ -129,6 +133,11 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
   }, [questEngine.quests, questEngine.bonusEarned]);
   const { isTabletAny, contentMaxWidth, contentPadding } = useResponsive();
   const { unreadCount } = useNotifications(data.engagementProfileId);
+  const { workingSeason } = useSeason();
+  const { rankInfo } = useSeasonRank(
+    data.engagementProfileId || null,
+    workingSeason?.id || null,
+  );
 
   // Signal to tab bar that this scroll is active
   useEffect(() => {
@@ -212,6 +221,34 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
       AsyncStorage.setItem(STREAK_KEY, String(streakCount));
     });
   }, [data.loading, streakCount, playerId]);
+
+  // ─── Season rank-up celebration ──
+  const RANK_STORAGE_KEY = 'lynx_last_season_rank_';
+  const [rankUpModal, setRankUpModal] = useState<{ visible: boolean; oldRank: string; newRank: string; newMultiplier: number }>({
+    visible: false, oldRank: '', newRank: '', newMultiplier: 1.0,
+  });
+
+  useEffect(() => {
+    if (!rankInfo || !data.engagementProfileId) return;
+
+    const checkRankUp = async () => {
+      const key = RANK_STORAGE_KEY + data.engagementProfileId;
+      const storedRank = await AsyncStorage.getItem(key);
+
+      if (storedRank && storedRank !== rankInfo.rankTier && rankInfo.rankTier !== 'unranked') {
+        setRankUpModal({
+          visible: true,
+          oldRank: storedRank,
+          newRank: rankInfo.rankTier,
+          newMultiplier: rankInfo.xpMultiplier,
+        });
+      }
+
+      await AsyncStorage.setItem(key, rankInfo.rankTier);
+    };
+
+    checkRankUp();
+  }, [rankInfo?.rankTier, data.engagementProfileId]);
 
   // ─── Challenge arrival modal ──
   const [showChallengeArrival, setShowChallengeArrival] = useState(false);
@@ -401,7 +438,13 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           challengesAvailable={data.challengesAvailable}
           recentShoutouts={data.recentShoutouts}
           scrollY={scrollY}
+          rankInfo={rankInfo}
         />
+
+        {/* ─── SEASON RANK PROGRESS ────────────────────────────── */}
+        {rankInfo && (
+          <SeasonRankProgressCard rankInfo={rankInfo} />
+        )}
 
         {/* ─── CHILD SWITCHER (multi-child parents only) ─── */}
         {onSwitchChild && (
@@ -588,6 +631,15 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           onDismiss={handleDismissChallenge}
         />
       )}
+
+      {/* ─── SEASON RANK-UP CELEBRATION ─────────────────────────────── */}
+      <SeasonRankUpModal
+        visible={rankUpModal.visible}
+        onDismiss={() => setRankUpModal(prev => ({ ...prev, visible: false }))}
+        oldRank={rankUpModal.oldRank}
+        newRank={rankUpModal.newRank}
+        newMultiplier={rankUpModal.newMultiplier}
+      />
 
       {/* ─── SHOUTOUT RECEIVED CELEBRATION ────────────────────────── */}
       {showReceivedShoutout && unseenShoutouts.length > 0 && (() => {
