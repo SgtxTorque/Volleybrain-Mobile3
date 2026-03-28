@@ -13,7 +13,7 @@ import {
   markAchievementsSeen,
 } from '@/lib/achievement-engine';
 import { useAuth } from '@/lib/auth';
-import { getLevelFromXP, getLevelTier } from '@/lib/engagement-constants';
+import { ENGAGEMENT_CATEGORIES, getLevelFromXP, getLevelTier } from '@/lib/engagement-constants';
 import { usePermissions } from '@/lib/permissions-context';
 import { useSeason } from '@/lib/season';
 import { supabase } from '@/lib/supabase';
@@ -197,6 +197,7 @@ export default function AchievementsScreen() {
   const [allAchievements, setAllAchievements] = useState<Achievement[]>([]);
   const [earnedMap, setEarnedMap] = useState<Record<string, PlayerAchievement>>({});
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [engagementFilter, setEngagementFilter] = useState<string | null>(null);
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [seasonStats, setSeasonStats] = useState<PlayerSeasonStats>({});
   const [earnedCounts, setEarnedCounts] = useState<Record<string, number>>({});
@@ -517,10 +518,15 @@ export default function AchievementsScreen() {
 
   // Derived data
   const filteredAchievements = useMemo(() => {
-    return activeCategory
-      ? allAchievements.filter((a) => a.category === activeCategory)
-      : allAchievements;
-  }, [allAchievements, activeCategory]);
+    let filtered = allAchievements;
+    if (engagementFilter) {
+      filtered = filtered.filter((a) => a.engagement_category === engagementFilter);
+    }
+    if (activeCategory) {
+      filtered = filtered.filter((a) => a.category === activeCategory);
+    }
+    return filtered;
+  }, [allAchievements, activeCategory, engagementFilter]);
 
   const totalEarned = Object.keys(earnedMap).length;
   const completePct =
@@ -871,7 +877,59 @@ export default function AchievementsScreen() {
           </View>
         )}
 
-        {/* Category Filter */}
+        {/* V2 Engagement Category Filter */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={s.categoryScroll}
+          contentContainerStyle={s.categoryScrollContent}
+        >
+          <TouchableOpacity
+            style={[
+              s.categoryChip,
+              !engagementFilter && {
+                backgroundColor: DARK.gold + '25',
+                borderColor: DARK.gold,
+              },
+            ]}
+            onPress={() => setEngagementFilter(null)}
+          >
+            <Text
+              style={[s.categoryChipText, !engagementFilter && { color: DARK.gold }]}
+            >
+              All
+            </Text>
+          </TouchableOpacity>
+          {Object.entries(ENGAGEMENT_CATEGORIES).map(([key, config]) => {
+            const isActive = engagementFilter === key;
+            return (
+              <TouchableOpacity
+                key={key}
+                style={[
+                  s.categoryChip,
+                  isActive && {
+                    backgroundColor: config.color + '25',
+                    borderColor: config.color,
+                  },
+                ]}
+                onPress={() => setEngagementFilter(isActive ? null : key)}
+              >
+                <Ionicons
+                  name={config.icon as keyof typeof Ionicons.glyphMap}
+                  size={14}
+                  color={isActive ? config.color : DARK.textMuted}
+                />
+                <Text
+                  style={[s.categoryChipText, isActive && { color: config.color }]}
+                >
+                  {config.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+
+        {/* Subcategory Filter */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
