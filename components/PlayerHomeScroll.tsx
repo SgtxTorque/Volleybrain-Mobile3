@@ -183,7 +183,11 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
     AsyncStorage.getItem(LEVEL_KEY).then((stored) => {
       const prev = stored ? parseInt(stored, 10) : 0;
       if (prev > 0 && data.level > prev) {
-        setShowLevelUp(true);
+        if (data.level - prev === 1) {
+          // Real level-up — show celebration
+          setShowLevelUp(true);
+        }
+        // delta > 1 = curve migration — silently update stored level
       }
       // Always persist current level
       AsyncStorage.setItem(LEVEL_KEY, String(data.level));
