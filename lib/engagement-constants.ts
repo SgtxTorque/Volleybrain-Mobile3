@@ -213,3 +213,38 @@ export const ACHIEVEMENT_CATEGORIES: Record<string, { label: string; icon: strin
   Operations: { label: 'Operations', icon: 'construct', color: '#64748B' },
   Setup: { label: 'Setup', icon: 'build', color: '#6366F1' },
 };
+
+// =============================================================================
+// Season Rank System — V2
+// =============================================================================
+
+/** Season rank tiers with score thresholds and XP multipliers */
+export const SEASON_RANK_TIERS = [
+  { rank: 'unranked',  label: 'Unranked',  scoreMin: 0,     multiplier: 1.0,   color: '#6B7280', bgColor: '#6B728020' },
+  { rank: 'bronze',    label: 'Bronze',    scoreMin: 300,   multiplier: 1.15,  color: '#CD7F32', bgColor: '#CD7F3220' },
+  { rank: 'silver',    label: 'Silver',    scoreMin: 800,   multiplier: 1.3,   color: '#C0C0C0', bgColor: '#C0C0C020' },
+  { rank: 'gold',      label: 'Gold',      scoreMin: 2000,  multiplier: 1.5,   color: '#FFD700', bgColor: '#FFD70020' },
+  { rank: 'diamond',   label: 'Diamond',   scoreMin: 4000,  multiplier: 1.75,  color: '#B9F2FF', bgColor: '#B9F2FF20' },
+] as const;
+
+export type SeasonRankTier = typeof SEASON_RANK_TIERS[number]['rank'];
+
+/** Season score formula weights */
+export const SEASON_SCORE_WEIGHTS = {
+  xpWeight: 0.5,          // Season XP × 0.5
+  badgeMultiplier: 20,    // Badges earned × 20
+  activityWeight: 0.3,    // Activity score × 0.3
+} as const;
+
+/** Get rank tier from season score */
+export function getSeasonRankFromScore(score: number): typeof SEASON_RANK_TIERS[number] {
+  let currentRank: typeof SEASON_RANK_TIERS[number] = SEASON_RANK_TIERS[0]; // unranked
+  for (const tier of SEASON_RANK_TIERS) {
+    if (score >= tier.scoreMin) {
+      currentRank = tier;
+    } else {
+      break;
+    }
+  }
+  return currentRank;
+}
