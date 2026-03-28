@@ -236,6 +236,47 @@ export const SEASON_SCORE_WEIGHTS = {
   activityWeight: 0.3,    // Activity score × 0.3
 } as const;
 
+// =============================================================================
+// Division Scaling — V2
+// =============================================================================
+
+/** Division configs for stat badge threshold scaling */
+export const DIVISION_CONFIGS = {
+  '10u':      { label: '10U & Under', scaleFactor: 0.25, maxRarity: 'rare',      maxRarityOrder: 3 },
+  '12u':      { label: '12U',         scaleFactor: 0.50, maxRarity: 'epic',       maxRarityOrder: 4 },
+  '14u_plus': { label: '14U+',        scaleFactor: 1.00, maxRarity: 'legendary',  maxRarityOrder: 5 },
+} as const;
+
+export type Division = keyof typeof DIVISION_CONFIGS;
+
+/** Rarity ordering for cap comparison */
+export const RARITY_ORDER: Record<string, number> = {
+  common: 1,
+  uncommon: 2,
+  rare: 3,
+  epic: 4,
+  legendary: 5,
+};
+
+/** Parse an age group name (e.g., "12U", "4th Grade") into a division key */
+export function parseDivisionFromAgeGroup(name: string): Division {
+  if (!name) return '14u_plus';
+  const match = name.match(/(\d+)/);
+  if (!match) return '14u_plus';
+  const num = parseInt(match[1]);
+  // Grade-based: grades 1-4 → 10u, 5-6 → 12u, 7+ → 14u_plus
+  // Age-based: direct mapping
+  if (name.toLowerCase().includes('grade')) {
+    if (num <= 4) return '10u';
+    if (num <= 6) return '12u';
+    return '14u_plus';
+  }
+  // Age-based (e.g., "10U", "12U", "14U")
+  if (num <= 10) return '10u';
+  if (num <= 12) return '12u';
+  return '14u_plus';
+}
+
 /** Get rank tier from season score */
 export function getSeasonRankFromScore(score: number): typeof SEASON_RANK_TIERS[number] {
   let currentRank: typeof SEASON_RANK_TIERS[number] = SEASON_RANK_TIERS[0]; // unranked
