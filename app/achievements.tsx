@@ -196,6 +196,7 @@ export default function AchievementsScreen() {
   const [loading, setLoading] = useState(true);
   const [allAchievements, setAllAchievements] = useState<Achievement[]>([]);
   const [earnedMap, setEarnedMap] = useState<Record<string, PlayerAchievement>>({});
+  const [earnCounts, setEarnCounts] = useState<Record<string, number>>({});
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [engagementFilter, setEngagementFilter] = useState<string | null>(null);
   const [playerId, setPlayerId] = useState<string | null>(null);
@@ -291,10 +292,13 @@ export default function AchievementsScreen() {
 
         if (earned) {
           const map: Record<string, PlayerAchievement> = {};
+          const counts: Record<string, number> = {};
           for (const pa of earned) {
             map[pa.achievement_id] = pa as PlayerAchievement;
+            counts[pa.achievement_id] = (counts[pa.achievement_id] || 0) + 1;
           }
           setEarnedMap(map);
+          setEarnCounts(counts);
         }
 
         // Fetch tracked achievements
@@ -387,8 +391,9 @@ export default function AchievementsScreen() {
       const roleAchievements = await getRoleAchievements(user.id, roleKey);
       setAllAchievements(roleAchievements);
 
-      // Build earned map from roleAchievements
+      // Build earned map and counts from roleAchievements
       const map: Record<string, PlayerAchievement> = {};
+      const counts: Record<string, number> = {};
       for (const ra of roleAchievements) {
         if (ra.earned) {
           map[ra.id] = {
@@ -399,9 +404,11 @@ export default function AchievementsScreen() {
             progress: null,
             achievements: ra,
           };
+          counts[ra.id] = (counts[ra.id] || 0) + 1;
         }
       }
       setEarnedMap(map);
+      setEarnCounts(counts);
       setPlayerId(user.id);
 
       // Fetch XP
@@ -416,6 +423,7 @@ export default function AchievementsScreen() {
         const refreshed = await getRoleAchievements(user.id, roleKey);
         setAllAchievements(refreshed);
         const newMap: Record<string, PlayerAchievement> = {};
+        const newCounts: Record<string, number> = {};
         for (const ra of refreshed) {
           if (ra.earned) {
             newMap[ra.id] = {
@@ -426,9 +434,11 @@ export default function AchievementsScreen() {
               progress: null,
               achievements: ra,
             };
+            newCounts[ra.id] = (newCounts[ra.id] || 0) + 1;
           }
         }
         setEarnedMap(newMap);
+        setEarnCounts(newCounts);
         const xp = await fetchUserXP(user.id);
         setTotalXp(xp.totalXp);
       }
@@ -718,6 +728,12 @@ export default function AchievementsScreen() {
               {item.icon || '\uD83C\uDFC6'}
             </Text>
             {/* Overlay: checkmark, level lock, or regular lock */}
+            {/* Earn count badge for stacking */}
+            {earnCounts[item.id] > 1 && (
+              <View style={s.earnCountBadge}>
+                <Text style={s.earnCountText}>x{earnCounts[item.id]}</Text>
+              </View>
+            )}
             {isEarned ? (
               <View style={s.badgeCheckOverlay}>
                 <Ionicons name="checkmark-circle" size={14} color="#10B981" />
@@ -1873,6 +1889,23 @@ const s = StyleSheet.create({
     backgroundColor: DARK.card,
     borderRadius: 8,
     padding: 1,
+  },
+  earnCountBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: DARK.gold,
+    borderRadius: 8,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    minWidth: 18,
+    alignItems: 'center',
+    zIndex: 2,
+  },
+  earnCountText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#000',
   },
   badgeLockOverlay: {
     position: 'absolute',

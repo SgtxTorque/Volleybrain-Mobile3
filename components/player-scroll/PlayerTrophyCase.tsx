@@ -54,7 +54,7 @@ const LOCKED_PLACEHOLDERS = [
 
 /** Animated badge cell — scroll-triggered pop-in with gold flash for earned */
 function PopBadge({
-  icon, name, earned, rarity, index, entered,
+  icon, name, earned, rarity, index, entered, earnCount,
 }: {
   icon: string;
   name: string;
@@ -62,6 +62,7 @@ function PopBadge({
   rarity: string;
   index: number;
   entered: SharedValue<number>;
+  earnCount?: number;
 }) {
   const scale = useSharedValue(0.8);
   const opacity = useSharedValue(0);
@@ -109,6 +110,12 @@ function PopBadge({
       {earned && (
         <Animated.View style={[styles.goldFlash, flashStyle]} />
       )}
+      {/* Earn count badge for stacking */}
+      {earnCount != null && earnCount > 1 && (
+        <View style={styles.earnCountBadge}>
+          <Text style={styles.earnCountText}>x{earnCount}</Text>
+        </View>
+      )}
     </Animated.View>
   );
 }
@@ -144,17 +151,32 @@ export default function PlayerTrophyCase({ badges, level, xpProgress, xpCurrent,
     width: `${xpBarWidth.value}%` as any,
   }));
 
-  // Build display list
-  const earnedBadges = badges.map((b) => ({
-    icon: b.achievement?.icon || '\u{1F3C6}',
-    name: b.achievement?.name || 'Badge',
-    rarity: b.achievement?.rarity || 'common',
-    earned: true,
-  }));
+  // Build earn counts for stacking display
+  const badgeEarnCounts: Record<string, number> = {};
+  for (const b of badges) {
+    const key = b.achievement?.id || b.id;
+    badgeEarnCounts[key] = (badgeEarnCounts[key] || 0) + 1;
+  }
+
+  // Build display list (de-duplicate by achievement id, keep first occurrence)
+  const seen = new Set<string>();
+  const earnedBadges: Array<{ icon: string; name: string; rarity: string; earned: boolean; achievementId: string }> = [];
+  for (const b of badges) {
+    const achId = b.achievement?.id || b.id;
+    if (seen.has(achId)) continue;
+    seen.add(achId);
+    earnedBadges.push({
+      icon: b.achievement?.icon || '\u{1F3C6}',
+      name: b.achievement?.name || 'Badge',
+      rarity: b.achievement?.rarity || 'common',
+      earned: true,
+      achievementId: achId,
+    });
+  }
 
   const needed = Math.max(0, 8 - earnedBadges.length);
   const lockedBadges = LOCKED_PLACEHOLDERS.slice(0, needed).map((p) => ({
-    icon: p.icon, name: p.name, rarity: p.rarity, earned: false,
+    icon: p.icon, name: p.name, rarity: p.rarity, earned: false, achievementId: '',
   }));
 
   const allBadges = [...earnedBadges.slice(0, 8), ...lockedBadges];
@@ -188,6 +210,7 @@ export default function PlayerTrophyCase({ badges, level, xpProgress, xpCurrent,
               rarity={badge.rarity}
               index={i}
               entered={entered}
+              earnCount={badge.achievementId ? badgeEarnCounts[badge.achievementId] : undefined}
             />
           ))}
         </View>
@@ -318,6 +341,23 @@ const styles = StyleSheet.create({
     bottom: 0,
     backgroundColor: PLAYER_THEME.xpGold,
     borderRadius: D_RADII.badge,
+  },
+  earnCountBadge: {
+    position: 'absolute',
+    top: -3,
+    right: -3,
+    backgroundColor: PLAYER_THEME.xpGold,
+    borderRadius: 7,
+    paddingHorizontal: 3,
+    paddingVertical: 1,
+    minWidth: 16,
+    alignItems: 'center' as const,
+    zIndex: 2,
+  },
+  earnCountText: {
+    fontSize: 8,
+    fontWeight: '800' as const,
+    color: '#000',
   },
   levelRow: {
     flexDirection: 'row',

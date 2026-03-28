@@ -90,11 +90,18 @@ export default function TrophyCaseWidget({ userId, userRole }: Props) {
               activeOpacity={0.7}
               onPress={() => router.push('/achievements')}
             >
-              <RarityGlow rarity={badge.rarity} size={44} earned>
-                <View style={[s.badgeCircle, { backgroundColor: (badge.color_primary || BRAND.gold) + '30' }]}>
-                  <Text style={s.badgeEmoji}>{badge.icon || '\uD83C\uDFC6'}</Text>
-                </View>
-              </RarityGlow>
+              <View>
+                <RarityGlow rarity={badge.rarity} size={44} earned>
+                  <View style={[s.badgeCircle, { backgroundColor: (badge.color_primary || BRAND.gold) + '30' }]}>
+                    <Text style={s.badgeEmoji}>{badge.icon || '\uD83C\uDFC6'}</Text>
+                  </View>
+                </RarityGlow>
+                {badge.earn_count > 1 && (
+                  <View style={s.earnCountBadge}>
+                    <Text style={s.earnCountText}>x{badge.earn_count}</Text>
+                  </View>
+                )}
+              </View>
               <Text style={s.badgeName} numberOfLines={1}>{badge.name}</Text>
             </TouchableOpacity>
           ))}
@@ -179,6 +186,23 @@ const s = StyleSheet.create({
   },
   badgeEmoji: {
     fontSize: 24,
+  },
+  earnCountBadge: {
+    position: 'absolute',
+    top: -3,
+    right: -3,
+    backgroundColor: BRAND.gold,
+    borderRadius: 7,
+    paddingHorizontal: 3,
+    paddingVertical: 1,
+    minWidth: 16,
+    alignItems: 'center' as const,
+    zIndex: 2,
+  },
+  earnCountText: {
+    fontSize: 8,
+    fontWeight: '800' as const,
+    color: '#000',
   },
   badgeName: {
     fontSize: 9,

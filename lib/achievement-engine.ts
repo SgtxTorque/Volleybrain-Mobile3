@@ -1334,6 +1334,7 @@ export async function getUnseenRoleAchievements(userId: string): Promise<UnseenA
 export type RoleAchievementWithStatus = AchievementFull & {
   earned: boolean;
   earned_at: string | null;
+  earn_count: number;
 };
 
 export async function getRoleAchievements(
@@ -1356,14 +1357,17 @@ export async function getRoleAchievements(
 
     if (!achievements) return [];
     const earnedMap: Record<string, string> = {};
+    const earnCountMap: Record<string, number> = {};
     for (const e of earned || []) {
       earnedMap[e.achievement_id] = e.earned_at;
+      earnCountMap[e.achievement_id] = (earnCountMap[e.achievement_id] || 0) + 1;
     }
 
     return (achievements as AchievementFull[]).map((a) => ({
       ...a,
       earned: !!earnedMap[a.id],
       earned_at: earnedMap[a.id] || null,
+      earn_count: earnCountMap[a.id] || 0,
     }));
   } catch (err) {
     if (__DEV__) console.error('getRoleAchievements error:', err);
