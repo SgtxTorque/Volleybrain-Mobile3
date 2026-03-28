@@ -5,6 +5,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabase';
 import { getLevelFromXP } from './engagement-constants';
+import { awardXP } from './xp-award-service';
 import type { AchievementFull, AchievementProgress, UnseenAchievement } from './achievement-types';
 
 const LAST_SEEN_KEY = 'vb_achievement_last_seen_';
@@ -394,34 +395,18 @@ async function awardAchievementXP(playerId: string, achievement: AchievementFull
   const xp = achievement.xp_reward;
   if (!xp || xp <= 0) return;
 
-  // Insert XP ledger entry
-  await supabase.from('xp_ledger').insert({
-    player_id: playerId,
-    organization_id: null,
-    xp_amount: xp,
-    source_type: 'achievement',
-    source_id: achievement.id,
-    description: `Unlocked "${achievement.name}" (+${xp} XP)`,
-  });
-
-  // Resolve to profiles.id for XP update (playerId may be players.id)
+  // Resolve to profiles.id (playerId may be players.id)
   const profileId = await resolveProfileIdFromPlayer(playerId);
   if (!profileId) return;
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('total_xp')
-    .eq('id', profileId)
-    .maybeSingle();
-
-  const currentXP = profile?.total_xp || 0;
-  const newXP = currentXP + xp;
-  const { level, tier, xpToNext } = getLevelFromXP(newXP);
-
-  await supabase
-    .from('profiles')
-    .update({ total_xp: newXP, player_level: level, tier, xp_to_next_level: xpToNext })
-    .eq('id', profileId);
+  await awardXP({
+    profileId,
+    baseAmount: xp,
+    sourceType: 'achievement',
+    sourceId: achievement.id,
+    description: `Unlocked "${achievement.name}" (+${xp} XP)`,
+    skipBoostLookup: true,
+  });
 }
 
 /** Resolve a players.id to its linked profiles.id (via parent_account_id). */
@@ -1151,31 +1136,15 @@ async function awardRoleXP(userId: string, achievement: AchievementFull): Promis
   const xp = achievement.xp_reward;
   if (!xp || xp <= 0) return;
 
-  // Insert XP ledger entry
-  await supabase.from('xp_ledger').insert({
-    player_id: userId,
-    organization_id: null,
-    xp_amount: xp,
-    source_type: 'achievement',
-    source_id: achievement.id,
+  // userId IS profiles.id for non-player roles
+  await awardXP({
+    profileId: userId,
+    baseAmount: xp,
+    sourceType: 'achievement',
+    sourceId: achievement.id,
     description: `Unlocked "${achievement.name}" (+${xp} XP)`,
+    skipBoostLookup: true,
   });
-
-  // Update profile XP directly (userId IS profiles.id for non-player roles)
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('total_xp')
-    .eq('id', userId)
-    .maybeSingle();
-
-  const currentXP = profile?.total_xp || 0;
-  const newXP = currentXP + xp;
-  const { level, tier, xpToNext } = getLevelFromXP(newXP);
-
-  await supabase
-    .from('profiles')
-    .update({ total_xp: newXP, player_level: level, tier, xp_to_next_level: xpToNext })
-    .eq('id', userId);
 }
 
 // =============================================================================
