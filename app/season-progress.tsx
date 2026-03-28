@@ -18,6 +18,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import SeasonRankProgressCard from '@/components/player-scroll/SeasonRankProgressCard';
+import { useSeasonRank } from '@/hooks/useSeasonRank';
 
 // =============================================================================
 // Types
@@ -57,6 +59,12 @@ export default function SeasonProgressScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [summary, setSummary] = useState<SeasonSummary | null>(null);
+
+  // Season rank — use user ID as profile for rank lookup
+  const { rankInfo } = useSeasonRank(
+    user?.id || null,
+    workingSeason?.id || null,
+  );
 
   const s = createStyles(colors);
 
@@ -277,6 +285,13 @@ export default function SeasonProgressScreen() {
         contentContainerStyle={s.scrollContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
+        {/* Season Rank */}
+        {rankInfo && (
+          <View style={{ marginBottom: 16 }}>
+            <SeasonRankProgressCard rankInfo={rankInfo} />
+          </View>
+        )}
+
         {/* Summary Card */}
         {summary && (
           <View style={s.summaryCard}>
@@ -296,6 +311,15 @@ export default function SeasonProgressScreen() {
                 <Text style={s.statValue}>{summary.badgesEarned}</Text>
                 <Text style={s.statLabel}>Badges</Text>
               </View>
+              {rankInfo && rankInfo.rankTier !== 'unranked' && (
+                <>
+                  <View style={s.statDivider} />
+                  <View style={s.statItem}>
+                    <Text style={[s.statValue, { color: rankInfo.rankColor }]}>{rankInfo.rankLabel}</Text>
+                    <Text style={s.statLabel}>Rank</Text>
+                  </View>
+                </>
+              )}
             </View>
           </View>
         )}
