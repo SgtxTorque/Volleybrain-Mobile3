@@ -9,6 +9,8 @@ import { supabase } from '@/lib/supabase';
 import { useTheme } from '@/lib/theme';
 import { FONTS } from '@/theme/fonts';
 import { Ionicons } from '@expo/vector-icons';
+import { getFinalizationPreview, finalizeSeason, type FinalizationPreview, type FinalizationResult } from '@/lib/season-finalization';
+import { SEASON_RANK_TIERS } from '@/lib/engagement-constants';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -43,6 +45,7 @@ type Season = {
   monthly_fee_count: number;
   max_players_per_team: number;
   min_players_per_team: number;
+  organization_id?: string;
 };
 
 type AgeGroup = {
@@ -116,6 +119,12 @@ export default function SeasonSettingsScreen() {
   const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [datePickerField, setDatePickerField] = useState<'start_date' | 'end_date'>('start_date');
   const [tempDate, setTempDate] = useState(new Date());
+
+  // Finalization states
+  const [finPreview, setFinPreview] = useState<FinalizationPreview | null>(null);
+  const [finalizing, setFinalizing] = useState(false);
+  const [finResult, setFinResult] = useState<FinalizationResult | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
 
   // Age group modal states
   const [ageGroupModalVisible, setAgeGroupModalVisible] = useState(false);
@@ -649,6 +658,132 @@ export default function SeasonSettingsScreen() {
             </View>
           )}
         </View>
+
+        {/* Finalize Season — Admin only, active/completed seasons */}
+        {(season.status === 'active' || season.status === 'completed') && (
+          <View style={s.section}>
+            <Text style={s.sectionTitle}>Season Finalization</Text>
+            <View style={s.card}>
+              <View style={{ padding: 16 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <Ionicons name="flag" size={20} color={colors.warning} />
+                  <Text style={{ fontFamily: FONTS.bodySemiBold, fontSize: 15, color: colors.text }}>Finalize Season</Text>
+                </View>
+                <Text style={{ fontFamily: FONTS.bodyMedium, fontSize: 13, color: colors.textSecondary, marginBottom: 16, lineHeight: 18 }}>
+                  Archive season ranks, award prestige, and close the season. This action cannot be undone.
+                </Text>
+
+                {/* Result state */}
+                {finResult && (
+                  <View style={{ backgroundColor: finResult.success ? '#22C55E15' : '#EF444415', borderRadius: 10, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: finResult.success ? '#22C55E40' : '#EF444440' }}>
+                    {finResult.success ? (
+                      <>
+                        <Text style={{ fontFamily: FONTS.bodyBold, fontSize: 14, color: '#22C55E', marginBottom: 4 }}>Season Finalized</Text>
+                        <Text style={{ fontFamily: FONTS.bodyMedium, fontSize: 12, color: colors.textSecondary }}>{finResult.playersFinalized} players archived</Text>
+                        <Text style={{ fontFamily: FONTS.bodyMedium, fontSize: 12, color: colors.textSecondary }}>{finResult.prestigeIncremented} prestige awards given</Text>
+                      </>
+                    ) : (
+                      <Text style={{ fontFamily: FONTS.bodyMedium, fontSize: 13, color: '#EF4444' }}>{finResult.error || 'Finalization failed'}</Text>
+                    )}
+                  </View>
+                )}
+
+                {/* Preview state */}
+                {finPreview && !finResult && (
+                  <View style={{ backgroundColor: colors.background, borderRadius: 10, padding: 14, marginBottom: 12 }}>
+                    <Text style={{ fontFamily: FONTS.bodySemiBold, fontSize: 13, color: colors.text, marginBottom: 8 }}>Preview: {finPreview.seasonName}</Text>
+                    <Text style={{ fontFamily: FONTS.bodyMedium, fontSize: 12, color: colors.textSecondary }}>{finPreview.totalPlayers} total players</Text>
+                    <Text style={{ fontFamily: FONTS.bodyMedium, fontSize: 12, color: colors.textSecondary }}>{finPreview.rankedPlayers} ranked (get prestige +1)</Text>
+                    <Text style={{ fontFamily: FONTS.bodyMedium, fontSize: 12, color: colors.textSecondary }}>{finPreview.unrankedPlayers} unranked</Text>
+                    {Object.keys(finPreview.rankDistribution).length > 0 && (
+                      <View style={{ marginTop: 8, gap: 2 }}>
+                        {Object.entries(finPreview.rankDistribution).map(([tier, count]) => {
+                          const tierConfig = SEASON_RANK_TIERS.find(t => t.rank === tier);
+                          return (
+                            <Text key={tier} style={{ fontFamily: FONTS.bodyMedium, fontSize: 12, color: tierConfig?.color || colors.textSecondary }}>
+                              {tierConfig?.label || tier}: {count}
+                            </Text>
+                          );
+                        })}
+                      </View>
+                    )}
+                  </View>
+                )}
+
+                {/* Action buttons */}
+                {!finResult && !finPreview && (
+                  <TouchableOpacity
+                    style={{ backgroundColor: colors.warning + '20', borderRadius: 10, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.warning + '40' }}
+                    onPress={async () => {
+                      if (!season.id) return;
+                      setLoadingPreview(true);
+                      try {
+                        const preview = await getFinalizationPreview(season.id);
+                        setFinPreview(preview);
+                      } catch {
+                        Alert.alert('Error', 'Could not load finalization preview');
+                      } finally {
+                        setLoadingPreview(false);
+                      }
+                    }}
+                    disabled={loadingPreview}
+                  >
+                    <Text style={{ fontFamily: FONTS.bodySemiBold, fontSize: 14, color: colors.warning }}>
+                      {loadingPreview ? 'Loading Preview...' : 'Preview Finalization'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+
+                {finPreview && !finResult && (
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <TouchableOpacity
+                      style={{ flex: 1, backgroundColor: colors.background, borderRadius: 10, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.border }}
+                      onPress={() => setFinPreview(null)}
+                    >
+                      <Text style={{ fontFamily: FONTS.bodySemiBold, fontSize: 14, color: colors.text }}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={{ flex: 1, backgroundColor: '#EF444420', borderRadius: 10, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: '#EF444440' }}
+                      onPress={() => {
+                        Alert.alert(
+                          'Finalize Season',
+                          `This will archive ranks for ${finPreview.totalPlayers} players and cannot be undone. Continue?`,
+                          [
+                            { text: 'Cancel', style: 'cancel' },
+                            {
+                              text: 'Finalize',
+                              style: 'destructive',
+                              onPress: async () => {
+                                setFinalizing(true);
+                                try {
+                                  const result = await finalizeSeason(season.id, season.organization_id || '');
+                                  setFinResult(result);
+                                  if (result.success) {
+                                    setSeason({ ...season, status: 'completed' });
+                                    await refreshSeasons();
+                                  }
+                                } catch {
+                                  setFinResult({ success: false, playersFinalized: 0, prestigeIncremented: 0, seasonBadgesAwarded: 0, error: 'Unexpected error' });
+                                } finally {
+                                  setFinalizing(false);
+                                }
+                              },
+                            },
+                          ],
+                        );
+                      }}
+                      disabled={finalizing}
+                    >
+                      <Text style={{ fontFamily: FONTS.bodySemiBold, fontSize: 14, color: '#EF4444' }}>
+                        {finalizing ? 'Finalizing...' : 'Finalize Season'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            </View>
+          </View>
+        )}
 
         <View style={{ height: 40 }} />
       </ScrollView>
