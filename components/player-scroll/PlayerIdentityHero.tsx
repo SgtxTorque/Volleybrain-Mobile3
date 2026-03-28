@@ -31,6 +31,7 @@ import type { LastGameStats, RecentShoutout, PlayerBadge } from '@/hooks/usePlay
 import { getLevelFromXP, getLevelTier } from '@/lib/engagement-constants';
 import type { SeasonRankInfo } from '@/hooks/useSeasonRank';
 import SeasonRankBadge from './SeasonRankBadge';
+import PrestigeBadge from './PrestigeBadge';
 
 type Props = {
   firstName: string;
@@ -52,6 +53,7 @@ type Props = {
   recentShoutouts: RecentShoutout[];
   scrollY: SharedValue<number>;
   rankInfo?: SeasonRankInfo | null;
+  prestigeCount?: number;
 };
 
 function getLevelTitle(level: number): string {
@@ -62,7 +64,7 @@ export default function PlayerIdentityHero({
   firstName, lastName, photoUrl, teamName, teamColor, position, jerseyNumber,
   level, xpProgress, xpCurrent, xpToNext, attendanceStreak,
   lastGame, nextEvent, badges, challengesAvailable, recentShoutouts, scrollY,
-  rankInfo,
+  rankInfo, prestigeCount,
 }: Props) {
   // ─── Animations (all hooks above early returns) ──
   const mascotScale = useSharedValue(1);
@@ -247,9 +249,12 @@ export default function PlayerIdentityHero({
           </Animated.View>
           <View style={styles.levelInfo}>
             <View style={styles.levelLabelRow}>
-              <Text style={styles.levelText}>
-                Level {level} {'\u00B7'} {levelTitle}
-              </Text>
+              <View style={styles.levelLabelLeft}>
+                <Text style={styles.levelText}>
+                  Level {level} {'\u00B7'} {levelTitle}
+                </Text>
+                {(prestigeCount ?? 0) > 0 && <PrestigeBadge prestigeCount={prestigeCount!} />}
+              </View>
               {rankInfo && (
                 <SeasonRankBadge
                   rankTier={rankInfo.rankTier}
@@ -429,6 +434,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 4,
+  },
+  levelLabelLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   xpRow: {
     flexDirection: 'row',

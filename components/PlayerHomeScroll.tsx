@@ -439,6 +439,7 @@ export default function PlayerHomeScroll({ playerId, playerName: externalName, o
           recentShoutouts={data.recentShoutouts}
           scrollY={scrollY}
           rankInfo={rankInfo}
+          prestigeCount={data.prestigeCount}
         />
 
         {/* ─── SEASON RANK PROGRESS ────────────────────────────── */}

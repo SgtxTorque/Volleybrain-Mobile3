@@ -172,6 +172,7 @@ export function usePlayerHomeData(playerId: string | null) {
   const [dbLevel, setDbLevel] = useState(1);
   const [dbTier, setDbTier] = useState('Rookie');
   const [dbXpToNext, setDbXpToNext] = useState(100);
+  const [dbPrestige, setDbPrestige] = useState(0);
   const [engagementStreak, setEngagementStreak] = useState<StreakState | null>(null);
   const [engagementProfileId, setEngagementProfileId] = useState<string | undefined>(undefined);
 
@@ -504,7 +505,7 @@ export function usePlayerHomeData(playerId: string | null) {
         try {
           const { data: engData } = await supabase
             .from('profiles')
-            .select('total_xp, player_level, tier, xp_to_next_level')
+            .select('total_xp, player_level, tier, xp_to_next_level, prestige_count')
             .eq('id', engProfileId)
             .maybeSingle();
 
@@ -513,6 +514,7 @@ export function usePlayerHomeData(playerId: string | null) {
             setDbLevel(engData.player_level ?? 1);
             setDbTier(engData.tier ?? 'Rookie');
             setDbXpToNext(engData.xp_to_next_level ?? 100);
+            setDbPrestige(engData.prestige_count ?? 0);
           }
         } catch {
           // DB engagement columns may not exist yet — fall back silently
@@ -626,6 +628,7 @@ export function usePlayerHomeData(playerId: string | null) {
     // Engagement
     engagementStreak,
     engagementProfileId,
+    prestigeCount: dbPrestige,
     // Social
     recentPhotos,
     recentShoutouts,
