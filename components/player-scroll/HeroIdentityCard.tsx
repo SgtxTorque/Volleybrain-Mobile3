@@ -17,6 +17,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FONTS } from '@/theme/fonts';
+import { getLevelFromXP } from '@/lib/engagement-constants';
 
 const PT = {
   bg: '#0D1B3E',
@@ -102,7 +103,10 @@ export default function HeroIdentityCard({
     .filter(Boolean)
     .join(' \u00B7 ');
 
-  const xpDisplay = `${xpCurrent % 1000}/${1000}`;
+  const xpLevelInfo = getLevelFromXP(xpCurrent);
+  const xpDisplay = xpLevelInfo.xpToNext > 0
+    ? `${xpCurrent}/${xpLevelInfo.nextLevelXp}`
+    : `${xpCurrent} XP`;
 
   return (
     <Animated.View style={[styles.outerWrap, cardAnimStyle]}>

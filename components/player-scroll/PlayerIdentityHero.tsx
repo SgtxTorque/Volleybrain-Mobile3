@@ -28,6 +28,7 @@ import { D_RADII } from '@/theme/d-system';
 import { getPlayerGreeting, type PlayerGreetingContext } from './PlayerLynxGreetings';
 import { getGreetingMascot, getStreakMascot } from '@/lib/mascot-images';
 import type { LastGameStats, RecentShoutout, PlayerBadge } from '@/hooks/usePlayerHomeData';
+import { getLevelFromXP, getLevelTier } from '@/lib/engagement-constants';
 
 type Props = {
   firstName: string;
@@ -51,11 +52,7 @@ type Props = {
 };
 
 function getLevelTitle(level: number): string {
-  if (level >= 20) return 'Diamond';
-  if (level >= 15) return 'Platinum';
-  if (level >= 10) return 'Gold';
-  if (level >= 5) return 'Silver';
-  return 'Bronze';
+  return getLevelTier(level).name;
 }
 
 export default function PlayerIdentityHero({
@@ -107,8 +104,8 @@ export default function PlayerIdentityHero({
     // XP shimmer sweep after bar fills (delay 900ms)
     xpShimmerX.value = withDelay(900, withTiming(200, { duration: 400 }));
 
-    // XP count-up from 0 to actual
-    xpCountVal.value = withTiming(xpCurrent % 1000, {
+    // XP count-up from 0 to actual (total XP)
+    xpCountVal.value = withTiming(xpCurrent, {
       duration: 800,
       easing: Easing.out(Easing.ease),
     });
@@ -253,7 +250,7 @@ export default function PlayerIdentityHero({
               <Animated.View style={[styles.xpShimmer, xpShimmerStyle]} />
             </View>
             <Animated.View style={xpBounceStyle}>
-              <Text style={styles.xpText}>{displayXp} / 1,000 XP</Text>
+              <Text style={styles.xpText}>{displayXp.toLocaleString()} / {(xpCurrent + xpToNext).toLocaleString()} XP</Text>
             </Animated.View>
           </View>
         </View>
