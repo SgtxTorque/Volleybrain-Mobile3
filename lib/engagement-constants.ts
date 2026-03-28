@@ -61,6 +61,7 @@ export const XP_BY_SOURCE: Record<string, number> = {
   game_played: 10,
   practice_attended: 5,
   // Coach actions
+  coach_award: 50,            // Default XP for coach-awarded badges (overridden by badge's xp_reward)
   game_stats_entered: 15,
   evaluation_completed: 20,
   challenge_created: 15,
