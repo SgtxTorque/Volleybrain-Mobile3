@@ -9,6 +9,7 @@ export type AchievementFull = {
   description: string | null;
   how_to_earn: string | null;
   category: string;
+  engagement_category: string | null;  // V2 parent category: 'stat' | 'milestone' | 'coach' | 'journey' | 'community'
   type: string | null;
   rarity: string;
   stat_key: string | null;

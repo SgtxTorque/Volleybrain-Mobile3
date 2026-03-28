@@ -153,6 +153,21 @@ export const DEFAULT_SHOUTOUT_CATEGORIES = [
   { name: 'Coachable', emoji: '🧠', color: '#8E44AD', description: 'Listens, applies feedback, grows' },
 ] as const;
 
+/** V2 Engagement Categories — the 5 parent categories for all badges
+ *  See: LYNX-ENGAGEMENT-SYSTEM-V2.md Section 2 */
+export const ENGAGEMENT_CATEGORIES: Record<string, {
+  label: string;
+  icon: string;
+  color: string;
+  description: string;
+}> = {
+  stat:      { label: 'Stat Badges',      icon: 'stats-chart',     color: '#EF4444', description: 'Auto-earned from game performance' },
+  milestone: { label: 'Milestones',        icon: 'ribbon',          color: '#6366F1', description: 'Auto-earned from showing up' },
+  coach:     { label: 'Coach Badges',      icon: 'clipboard',       color: '#F59E0B', description: 'Coach-awarded and challenge completion' },
+  journey:   { label: 'Journey Badges',    icon: 'map',             color: '#10B981', description: 'Earned from skill path progress' },
+  community: { label: 'Community',         icon: 'people-circle',   color: '#EC4899', description: 'Social actions and discovery' },
+};
+
 /** Achievement categories with icons and colors (all roles) */
 export const ACHIEVEMENT_CATEGORIES: Record<string, { label: string; icon: string; color: string }> = {
   // Player categories

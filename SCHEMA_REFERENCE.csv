@@ -40,6 +40,7 @@ achievements,min_level,integer
 achievements,stacks_into,text
 achievements,flavor_text,text
 achievements,cadence,text
+achievements,engagement_category,text,V2 parent category (stat/milestone/coach/journey/community)
 admin_notifications,id,uuid
 admin_notifications,organization_id,uuid
 admin_notifications,type,text
