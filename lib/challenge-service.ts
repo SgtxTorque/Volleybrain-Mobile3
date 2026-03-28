@@ -15,6 +15,7 @@ import {
   notifyChallengeWinner,
 } from './notifications';
 import type { CoachChallenge, ChallengeParticipant } from './engagement-types';
+import { DIFFICULTY_CONFIG, type Difficulty } from './challenge-templates';
 
 // =============================================================================
 // Types
@@ -32,6 +33,7 @@ export type CreateChallengeParams = {
   statKey?: string;
   targetValue: number;
   xpReward: number;
+  difficulty: Difficulty;
   badgeId?: string;
   customRewardText?: string;
   startsAt: string;
@@ -86,7 +88,13 @@ export async function createChallenge(params: CreateChallengeParams): Promise<{
       return { success: false, error: postError.message };
     }
 
-    // 2. Create challenge record
+    // 2. Clamp XP to tier range
+    const tierConfig = DIFFICULTY_CONFIG[params.difficulty];
+    if (tierConfig) {
+      params.xpReward = Math.min(Math.max(params.xpReward, tierConfig.xpMin), tierConfig.xpMax);
+    }
+
+    // 3. Create challenge record
     const { data: challenge, error: challengeError } = await supabase
       .from('coach_challenges')
       .insert({
@@ -100,6 +108,7 @@ export async function createChallenge(params: CreateChallengeParams): Promise<{
         stat_key: params.statKey || null,
         target_value: params.targetValue,
         xp_reward: params.xpReward,
+        difficulty: params.difficulty,
         badge_id: params.badgeId || null,
         custom_reward_text: params.customRewardText || null,
         starts_at: params.startsAt,

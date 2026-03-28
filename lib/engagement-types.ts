@@ -2,6 +2,8 @@
 // Engagement System — TypeScript Types
 // =============================================================================
 
+import type { Difficulty } from './challenge-templates';
+
 /** Shoutout category from shoutout_categories table */
 export type ShoutoutCategory = {
   id: string;
@@ -53,6 +55,7 @@ export type CoachChallenge = {
   stat_key: string | null;
   target_value: number | null;
   xp_reward: number;
+  difficulty: Difficulty | null;  // V2 tier — null for legacy challenges
   badge_id: string | null;
   custom_reward_text: string | null;
   starts_at: string;
