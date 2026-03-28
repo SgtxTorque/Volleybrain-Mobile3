@@ -44,14 +44,22 @@ export async function checkAndUnlockAchievements(params: CheckParams): Promise<s
       .eq('is_active', true);
     if (!achievements || achievements.length === 0) return [];
 
-    // Batch fetch: already-earned for these players
+    // Batch fetch: already-earned for these players (include season_id for cadence-aware check)
     const { data: alreadyEarned } = await supabase
       .from('player_achievements')
-      .select('player_id, achievement_id')
+      .select('player_id, achievement_id, season_id')
       .in('player_id', playerIds);
 
-    const earnedSet = new Set(
+    // Build TWO sets for cadence-aware re-earning:
+    // lifetimeEarned: badges earned ever (for lifetime-cadence badges)
+    // seasonEarned: badges earned THIS season (for season-cadence badges)
+    const lifetimeEarned = new Set(
       (alreadyEarned || []).map((e) => `${e.player_id}:${e.achievement_id}`),
+    );
+    const seasonEarned = new Set(
+      (alreadyEarned || [])
+        .filter((e) => e.season_id === seasonId)
+        .map((e) => `${e.player_id}:${e.achievement_id}`),
     );
 
     // Batch fetch: season stats for all players
@@ -126,8 +134,21 @@ export async function checkAndUnlockAchievements(params: CheckParams): Promise<s
           last_updated_at: now,
         });
 
-        // Check for new unlock
-        if (earnedSet.has(`${playerId}:${ach.id}`)) continue;
+        // Check for new unlock (cadence-aware)
+        const earnKey = `${playerId}:${ach.id}`;
+        // Season-cadence: only skip if earned THIS season (allows re-earning next season)
+        // Lifetime/other: skip if earned ever
+        const alreadyHas = (ach.cadence === 'season')
+          ? seasonEarned.has(earnKey)
+          : lifetimeEarned.has(earnKey);
+        if (alreadyHas) continue;
+
+        // For season-cadence badges, season_id is required
+        if (ach.cadence === 'season' && !seasonId) {
+          if (__DEV__) console.warn(`[Achievement] Cannot award season badge ${ach.name} without seasonId`);
+          continue;
+        }
+
         if (currentVal >= effectiveThreshold) {
           newUnlocks.push({
             player_id: playerId,
@@ -142,11 +163,11 @@ export async function checkAndUnlockAchievements(params: CheckParams): Promise<s
       }
     }
 
-    // Batch upsert new unlocks
+    // Batch insert new unlocks
     if (newUnlocks.length > 0) {
       const { error } = await supabase
         .from('player_achievements')
-        .upsert(newUnlocks, { onConflict: 'player_id,achievement_id', ignoreDuplicates: true });
+        .insert(newUnlocks);
       if (__DEV__ && error) console.error('Achievement unlock error:', error);
 
       // Award XP for new unlocks
@@ -230,12 +251,21 @@ export async function checkAllAchievements(
       .eq('is_active', true);
     if (!achievements || achievements.length === 0) return { newUnlocks: [], allStats: {} };
 
-    // Fetch already-earned
+    // Fetch already-earned (include season_id for cadence-aware check)
     const { data: alreadyEarned } = await supabase
       .from('player_achievements')
-      .select('achievement_id')
+      .select('achievement_id, season_id')
       .eq('player_id', playerId);
-    const earnedSet = new Set((alreadyEarned || []).map((e) => e.achievement_id));
+
+    // Build TWO sets for cadence-aware re-earning
+    const lifetimeEarned = new Set(
+      (alreadyEarned || []).map((e) => e.achievement_id),
+    );
+    const seasonEarned = new Set(
+      (alreadyEarned || [])
+        .filter((e) => seasonId && e.season_id === seasonId)
+        .map((e) => e.achievement_id),
+    );
 
     // Gather all stats
     const allStats = await gatherAllStats(playerId, seasonId);
@@ -295,8 +325,20 @@ export async function checkAllAchievements(
         last_updated_at: now,
       });
 
-      // Check for new unlock
-      if (earnedSet.has(ach.id)) continue;
+      // Check for new unlock (cadence-aware)
+      // Season-cadence: only skip if earned THIS season (allows re-earning next season)
+      // Lifetime/other: skip if earned ever
+      const alreadyHas = (ach.cadence === 'season')
+        ? seasonEarned.has(ach.id)
+        : lifetimeEarned.has(ach.id);
+      if (alreadyHas) continue;
+
+      // For season-cadence badges, season_id is required
+      if (ach.cadence === 'season' && !seasonId) {
+        if (__DEV__) console.warn(`[Achievement] Cannot award season badge ${ach.name} without seasonId`);
+        continue;
+      }
+
       if (currentVal >= effectiveThreshold) {
         newUnlocks.push({
           player_id: playerId,
@@ -308,11 +350,11 @@ export async function checkAllAchievements(
       }
     }
 
-    // Batch upsert new unlocks
+    // Batch insert new unlocks
     if (newUnlocks.length > 0) {
       const { error } = await supabase
         .from('player_achievements')
-        .upsert(newUnlocks, { onConflict: 'player_id,achievement_id', ignoreDuplicates: true });
+        .insert(newUnlocks);
       if (__DEV__ && error) console.error('Achievement unlock error:', error);
 
       // Award XP for new unlocks
@@ -670,12 +712,21 @@ export async function checkRoleAchievements(
       .in('target_role', [userRole, 'all']);
     if (!achievements || achievements.length === 0) return { newUnlocks: [], allStats: {} };
 
-    // Fetch already-earned from user_achievements
+    // Fetch already-earned from user_achievements (include season_id for cadence-aware check)
     const { data: alreadyEarned } = await supabase
       .from('user_achievements')
-      .select('achievement_id')
+      .select('achievement_id, season_id')
       .eq('user_id', userId);
-    const earnedSet = new Set((alreadyEarned || []).map((e) => e.achievement_id));
+
+    // Build TWO sets for cadence-aware re-earning
+    const lifetimeEarned = new Set(
+      (alreadyEarned || []).map((e) => e.achievement_id),
+    );
+    const seasonEarned = new Set(
+      (alreadyEarned || [])
+        .filter((e) => seasonId && e.season_id === seasonId)
+        .map((e) => e.achievement_id),
+    );
 
     // Gather role-specific stats
     let allStats: Record<string, number> = {};
@@ -717,8 +768,18 @@ export async function checkRoleAchievements(
 
       const currentVal = allStats[ach.stat_key] ?? 0;
 
-      // Check for new unlock
-      if (earnedSet.has(ach.id)) continue;
+      // Check for new unlock (cadence-aware)
+      const alreadyHas = (ach.cadence === 'season')
+        ? seasonEarned.has(ach.id)
+        : lifetimeEarned.has(ach.id);
+      if (alreadyHas) continue;
+
+      // For season-cadence badges, season_id is required
+      if (ach.cadence === 'season' && !seasonId) {
+        if (__DEV__) console.warn(`[Achievement] Cannot award season badge ${ach.name} without seasonId`);
+        continue;
+      }
+
       if (currentVal >= ach.threshold) {
         newUnlocks.push({
           user_id: userId,
@@ -734,7 +795,7 @@ export async function checkRoleAchievements(
     if (newUnlocks.length > 0) {
       const { error } = await supabase
         .from('user_achievements')
-        .upsert(newUnlocks, { onConflict: 'user_id,achievement_id', ignoreDuplicates: true });
+        .insert(newUnlocks);
       if (__DEV__ && error) console.error('Role achievement unlock error:', error);
 
       // Award XP for new unlocks
