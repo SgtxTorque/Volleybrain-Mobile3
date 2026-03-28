@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase';
 import { recordQualifyingAction } from '@/lib/streak-engine';
 import { emitRefresh } from '@/lib/refresh-bus';
 import { getLevelFromXP } from './engagement-constants';
+import { awardXP } from './xp-award-service';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -553,63 +554,16 @@ async function awardXp(
   sourceId: string | null,
   teamId: string | null,
 ): Promise<{ newTotalXp: number; newLevel: number; newTier: string }> {
-  // Check for active XP boost
-  let multiplier = 1.0;
-  const now = new Date().toISOString();
-
-  const { data: boosts } = await supabase
-    .from('xp_boost_events')
-    .select('multiplier, applicable_sources')
-    .or(`team_id.is.null,team_id.eq.${teamId}`)
-    .lte('starts_at', now)
-    .gte('ends_at', now);
-
-  if (boosts && boosts.length > 0) {
-    for (const boost of boosts) {
-      // If applicable_sources is null, boost applies to everything
-      // If it's an array, check if our sourceType is in it
-      if (!boost.applicable_sources || boost.applicable_sources.includes(sourceType)) {
-        multiplier = Math.max(multiplier, Number(boost.multiplier));
-      }
-    }
-  }
-
-  const finalAmount = Math.round(amount * multiplier);
-
-  // Write to xp_ledger
-  await supabase.from('xp_ledger').insert({
-    player_id: profileId,
-    xp_amount: finalAmount,
-    source_type: sourceType,
-    source_id: sourceId,
-    description: `Quest reward: ${finalAmount} XP${multiplier > 1 ? ` (${multiplier}x boost)` : ''}`,
-    team_id: teamId,
-    multiplier: multiplier,
+  const result = await awardXP({
+    profileId,
+    baseAmount: amount,
+    sourceType,
+    sourceId,
+    teamId: teamId || null,
+    description: `Quest reward: ${amount} XP`,
+    skipBoostLookup: false, // quest-engine was the one path that applied boosts — now centralized
   });
-
-  // Get current total XP
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('total_xp')
-    .eq('id', profileId)
-    .maybeSingle();
-
-  const currentXp = profile?.total_xp || 0;
-  const newTotalXp = currentXp + finalAmount;
-  const { level, tier, xpToNext } = getLevelFromXP(newTotalXp);
-
-  // Update profiles
-  await supabase
-    .from('profiles')
-    .update({
-      total_xp: newTotalXp,
-      player_level: level,
-      tier: tier,
-      xp_to_next_level: xpToNext,
-    })
-    .eq('id', profileId);
-
-  return { newTotalXp, newLevel: level, newTier: tier };
+  return { newTotalXp: result.newTotalXp, newLevel: result.newLevel, newTier: result.newTier };
 }
 
 // ─── Weekly Quest Context ────────────────────────────────────────────────────
