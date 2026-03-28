@@ -30,7 +30,9 @@ import { createChallenge } from '@/lib/challenge-service';
 import {
   getTemplateById,
   CHALLENGE_CATEGORIES,
+  DIFFICULTY_CONFIG,
   type ChallengeCategory,
+  type Difficulty,
 } from '@/lib/challenge-templates';
 import { useCoachTeam } from '@/hooks/useCoachTeam';
 import { useSeason } from '@/lib/season';
@@ -103,6 +105,7 @@ export default function CreateChallengeScreen() {
   const [customDays, setCustomDays] = useState('');
   const [isCustomDuration, setIsCustomDuration] = useState(false);
 
+  const [difficulty, setDifficulty] = useState<Difficulty>('standard');
   const [xpReward, setXpReward] = useState('50');
   const [customPrize, setCustomPrize] = useState('');
 
@@ -131,6 +134,7 @@ export default function CreateChallengeScreen() {
     }
 
     setTargetValue(String(tpl.defaultTarget));
+    setDifficulty(tpl.difficulty);
     setXpReward(String(tpl.defaultXp));
 
     // Match duration to a preset or set custom
@@ -158,10 +162,12 @@ export default function CreateChallengeScreen() {
     return isNaN(v) || v < 1 ? 0 : v;
   }, [targetValue]);
 
+  const tierConfig = DIFFICULTY_CONFIG[difficulty];
+
   const parsedXp = useMemo(() => {
     const v = parseInt(xpReward, 10);
-    return isNaN(v) ? 50 : Math.min(Math.max(v, 25), 500);
-  }, [xpReward]);
+    return isNaN(v) ? tierConfig.xpDefault : Math.min(Math.max(v, tierConfig.xpMin), tierConfig.xpMax);
+  }, [xpReward, tierConfig]);
 
   const canSubmit = useMemo(() => {
     return (
@@ -195,6 +201,7 @@ export default function CreateChallengeScreen() {
       statKey: metricType === 'stat_based' ? statKey : undefined,
       targetValue: parsedTarget,
       xpReward: parsedXp,
+      difficulty,
       customRewardText: customPrize.trim() || undefined,
       startsAt: now.toISOString(),
       endsAt: endsAt.toISOString(),
@@ -224,6 +231,7 @@ export default function CreateChallengeScreen() {
     statKey,
     parsedTarget,
     parsedXp,
+    difficulty,
     customPrize,
     durationDays,
     router,
@@ -549,8 +557,43 @@ export default function CreateChallengeScreen() {
           <View style={s.section}>
             <Text style={s.sectionTitle}>REWARDS</Text>
 
+            {/* Difficulty Tier */}
+            <Text style={s.label}>Difficulty Tier</Text>
+            <View style={s.pillRow}>
+              {(Object.keys(DIFFICULTY_CONFIG) as Difficulty[]).map((key) => {
+                const cfg = DIFFICULTY_CONFIG[key];
+                const isSelected = difficulty === key;
+                return (
+                  <TouchableOpacity
+                    key={key}
+                    style={[
+                      s.categoryPill,
+                      isSelected && { backgroundColor: cfg.color, borderColor: cfg.color },
+                    ]}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      setDifficulty(key);
+                      setXpReward(String(cfg.xpDefault));
+                    }}
+                  >
+                    <Text
+                      style={[
+                        s.categoryLabel,
+                        isSelected && { color: BRAND.white },
+                      ]}
+                    >
+                      {cfg.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <Text style={[s.charCount, { textAlign: 'left', marginTop: 6 }]}>
+              {tierConfig.description}
+            </Text>
+
             {/* XP Reward */}
-            <Text style={s.label}>XP Reward (25-500)</Text>
+            <Text style={s.label}>{`XP Reward (${tierConfig.xpMin}–${tierConfig.xpMax})`}</Text>
             <TextInput
               style={[s.textInput, s.numericInput]}
               value={xpReward}

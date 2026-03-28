@@ -4,6 +4,7 @@
 
 import { useAuth } from '@/lib/auth';
 import { createChallenge } from '@/lib/challenge-service';
+import { DIFFICULTY_CONFIG, type Difficulty } from '@/lib/challenge-templates';
 import { useTheme } from '@/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import React, { useMemo, useState } from 'react';
@@ -63,10 +64,13 @@ export default function CreateChallengeModal({ visible, teamId, organizationId, 
   const [metricType, setMetricType] = useState<MetricType>('coach_verified');
   const [statKey, setStatKey] = useState('');
   const [targetValue, setTargetValue] = useState('');
+  const [difficulty, setDifficulty] = useState<Difficulty>('standard');
   const [xpReward, setXpReward] = useState('50');
   const [customReward, setCustomReward] = useState('');
   const [durationDays, setDurationDays] = useState('7');
   const [creating, setCreating] = useState(false);
+
+  const tierConfig = DIFFICULTY_CONFIG[difficulty];
 
   const resetForm = () => {
     setTitle('');
@@ -75,6 +79,7 @@ export default function CreateChallengeModal({ visible, teamId, organizationId, 
     setMetricType('coach_verified');
     setStatKey('');
     setTargetValue('');
+    setDifficulty('standard');
     setXpReward('50');
     setCustomReward('');
     setDurationDays('7');
@@ -112,7 +117,8 @@ export default function CreateChallengeModal({ visible, teamId, organizationId, 
         metricType,
         statKey: metricType === 'stat_based' ? statKey : undefined,
         targetValue: Number(targetValue),
-        xpReward: Math.min(Math.max(Number(xpReward) || 50, 25), 500),
+        xpReward: Math.min(Math.max(Number(xpReward) || tierConfig.xpDefault, tierConfig.xpMin), tierConfig.xpMax),
+        difficulty,
         customRewardText: customReward.trim() || undefined,
         startsAt: now.toISOString(),
         endsAt: end.toISOString(),
@@ -270,8 +276,38 @@ export default function CreateChallengeModal({ visible, teamId, organizationId, 
               keyboardType="numeric"
             />
 
+            {/* Difficulty Tier */}
+            <Text style={[s.label, { color: colors.text }]}>Difficulty Tier</Text>
+            <View style={s.optionRow}>
+              {(Object.keys(DIFFICULTY_CONFIG) as Difficulty[]).map((key) => {
+                const cfg = DIFFICULTY_CONFIG[key];
+                const isSelected = difficulty === key;
+                return (
+                  <TouchableOpacity
+                    key={key}
+                    style={[
+                      s.trackingChip,
+                      { borderColor: isSelected ? cfg.color : colors.glassBorder },
+                      isSelected && { backgroundColor: cfg.color + '20' },
+                    ]}
+                    onPress={() => {
+                      setDifficulty(key);
+                      setXpReward(String(cfg.xpDefault));
+                    }}
+                  >
+                    <Text style={[s.trackingText, { color: isSelected ? cfg.color : colors.text }]}>
+                      {cfg.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <Text style={[s.label, { color: colors.textMuted, fontSize: 12, fontWeight: '400', marginTop: 4, marginBottom: 0 }]}>
+              {tierConfig.description}
+            </Text>
+
             {/* XP Reward */}
-            <Text style={[s.label, { color: colors.text }]}>XP Reward (25–500)</Text>
+            <Text style={[s.label, { color: colors.text }]}>{`XP Reward (${tierConfig.xpMin}–${tierConfig.xpMax})`}</Text>
             <View style={s.xpRow}>
               <Ionicons name="star" size={16} color="#FFD700" />
               <TextInput
