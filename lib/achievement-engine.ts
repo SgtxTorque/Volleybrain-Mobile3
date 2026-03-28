@@ -6,6 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabase';
 import { getLevelFromXP } from './engagement-constants';
 import { awardXP } from './xp-award-service';
+import { incrementSeasonBadges } from './season-rank-engine';
 import type { AchievementFull, AchievementProgress, UnseenAchievement } from './achievement-types';
 
 const LAST_SEEN_KEY = 'vb_achievement_last_seen_';
@@ -144,6 +145,26 @@ export async function checkAndUnlockAchievements(params: CheckParams): Promise<s
           awardAchievementXP(unlock.player_id, ach).catch(() => {});
         }
       }
+
+      // Increment season badge counts for rank calculation
+      if (seasonId) {
+        try {
+          const { data: teamRow } = await supabase
+            .from('teams')
+            .select('organization_id')
+            .eq('id', teamId)
+            .maybeSingle();
+          const orgId = teamRow?.organization_id || '';
+          for (const unlock of newUnlocks) {
+            const profileId = await resolveProfileIdFromPlayer(unlock.player_id);
+            if (profileId) {
+              await incrementSeasonBadges(profileId, seasonId, orgId);
+            }
+          }
+        } catch (e) {
+          if (__DEV__) console.warn('[Achievement] Season badge count update failed:', e);
+        }
+      }
     }
 
     // Batch upsert progress
@@ -272,6 +293,20 @@ export async function checkAllAchievements(
         const ach = (achievements as AchievementFull[]).find((a) => a.id === unlock.achievement_id);
         if (ach?.xp_reward) {
           awardAchievementXP(playerId, ach).catch(() => {});
+        }
+      }
+
+      // Increment season badge counts for rank calculation
+      if (seasonId) {
+        try {
+          const profileId = await resolveProfileIdFromPlayer(playerId);
+          if (profileId) {
+            for (const _unlock of newUnlocks) {
+              await incrementSeasonBadges(profileId, seasonId, organizationId || '');
+            }
+          }
+        } catch (e) {
+          if (__DEV__) console.warn('[Achievement] Season badge count update failed:', e);
         }
       }
     }
@@ -671,6 +706,17 @@ export async function checkRoleAchievements(
         const ach = (achievements as AchievementFull[]).find((a) => a.id === unlock.achievement_id);
         if (ach?.xp_reward) {
           await awardRoleXP(userId, ach);
+        }
+      }
+
+      // Increment season badge counts for rank calculation
+      if (seasonId) {
+        try {
+          for (const _unlock of newUnlocks) {
+            await incrementSeasonBadges(userId, seasonId, '');
+          }
+        } catch (e) {
+          if (__DEV__) console.warn('[Achievement] Season badge count update failed:', e);
         }
       }
     }
