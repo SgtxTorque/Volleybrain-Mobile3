@@ -1735,3 +1735,169 @@ xp_ledger,source_type,text
 xp_ledger,source_id,uuid
 xp_ledger,description,text
 xp_ledger,created_at,timestamp with time zone
+daily_quests,id,uuid,NO,Primary key
+daily_quests,player_id,uuid,NO,FK to profiles(id) - the player this quest is for
+daily_quests,quest_type,text,NO,Type of quest (practice_attend/complete_drill/watch_film/log_stats/etc)
+daily_quests,title,text,NO,Display title
+daily_quests,description,text,YES,Quest description
+daily_quests,xp_reward,integer,NO,XP awarded on completion (default 15)
+daily_quests,target_value,integer,NO,Target count to complete (default 1)
+daily_quests,current_value,integer,NO,Current progress count (default 0)
+daily_quests,is_completed,boolean,NO,Whether quest is done (default false)
+daily_quests,completed_at,timestamptz,YES,When completed
+daily_quests,quest_date,date,NO,The date this quest is for
+daily_quests,created_at,timestamptz,NO,Row creation timestamp
+daily_quests,expires_at,timestamptz,YES,When quest expires
+
+weekly_quests,id,uuid,NO,Primary key
+weekly_quests,player_id,uuid,NO,FK to profiles(id)
+weekly_quests,quest_type,text,NO,Type of weekly quest
+weekly_quests,title,text,NO,Display title
+weekly_quests,description,text,YES,Quest description
+weekly_quests,xp_reward,integer,NO,XP awarded on completion (default 30)
+weekly_quests,target_value,integer,NO,Target count
+weekly_quests,current_value,integer,NO,Current progress (default 0)
+weekly_quests,is_completed,boolean,NO,Completion flag (default false)
+weekly_quests,completed_at,timestamptz,YES,When completed
+weekly_quests,week_start,date,NO,Monday of the quest week
+weekly_quests,created_at,timestamptz,NO,Row creation timestamp
+
+quest_bonus_tracking,id,uuid,NO,Primary key
+quest_bonus_tracking,player_id,uuid,NO,FK to profiles(id)
+quest_bonus_tracking,tracking_date,date,NO,Date for daily bonus tracking
+quest_bonus_tracking,daily_quests_completed,integer,NO,Count of daily quests completed today (default 0)
+quest_bonus_tracking,daily_bonus_awarded,boolean,NO,Whether the all-3-complete bonus was given (default false)
+quest_bonus_tracking,weekly_quests_completed,integer,NO,Count of weekly quests completed this week (default 0)
+quest_bonus_tracking,weekly_bonus_awarded,boolean,NO,Whether weekly bonus was given (default false)
+quest_bonus_tracking,created_at,timestamptz,NO,Row creation timestamp
+
+streak_data,id,uuid,NO,Primary key
+streak_data,player_id,uuid,NO,FK to profiles(id) — UNIQUE per player
+streak_data,current_streak,integer,NO,Current consecutive day count (default 0)
+streak_data,longest_streak,integer,NO,All-time longest streak (default 0)
+streak_data,last_activity_date,date,YES,Last date player was active
+streak_data,streak_freezes_available,integer,NO,Freeze tokens available (default 1)
+streak_data,streak_frozen_today,boolean,NO,Whether a freeze was used today (default false)
+streak_data,total_freezes_used,integer,NO,Lifetime freeze count (default 0)
+streak_data,created_at,timestamptz,NO,Row creation timestamp
+streak_data,updated_at,timestamptz,NO,Last update timestamp
+
+streak_milestones,id,uuid,NO,Primary key
+streak_milestones,player_id,uuid,NO,FK to profiles(id)
+streak_milestones,milestone_days,integer,NO,Streak length that triggered this milestone (7/14/30/60/100)
+streak_milestones,xp_awarded,integer,NO,XP given for hitting this milestone
+streak_milestones,freeze_awarded,boolean,NO,Whether a bonus freeze was given (default false)
+streak_milestones,achieved_at,timestamptz,NO,When milestone was reached
+
+skill_categories,id,uuid,NO,Primary key
+skill_categories,sport,text,NO,Sport this category belongs to (default volleyball)
+skill_categories,name,text,NO,Category name (Passing/Serving/Setting/Hitting/Defense/Court IQ)
+skill_categories,description,text,YES,Category description
+skill_categories,icon_emoji,text,YES,Emoji icon for display
+skill_categories,sort_order,integer,NO,Display order (default 0)
+skill_categories,created_at,timestamptz,NO,Row creation timestamp
+
+skill_content,id,uuid,NO,Primary key
+skill_content,category_id,uuid,NO,FK to skill_categories(id)
+skill_content,sport,text,NO,Sport (default volleyball)
+skill_content,difficulty,text,NO,Difficulty level (beginner/intermediate/advanced)
+skill_content,title,text,NO,Skill module title
+skill_content,slug,text,NO,URL-safe unique identifier
+skill_content,tip_text,text,YES,The tip/lesson text content
+skill_content,tip_image_url,text,YES,Image for the tip (mascot demo etc)
+skill_content,drill_title,text,YES,Drill exercise title
+skill_content,drill_instructions,text,YES,How to do the drill
+skill_content,drill_reps,text,YES,Rep count or target description
+skill_content,drill_location,text,YES,Where to do the drill (home/gym/court)
+skill_content,mascot_demo_frames,jsonb,YES,Array of mascot image paths for drill demo
+skill_content,has_quiz,boolean,NO,Whether this module has a quiz (default true)
+skill_content,xp_tip,integer,NO,XP for viewing the tip (default 5)
+skill_content,xp_drill,integer,NO,XP for completing the drill (default 15)
+skill_content,xp_quiz,integer,NO,XP for passing the quiz (default 10)
+skill_content,sort_order,integer,NO,Display order within category (default 0)
+skill_content,created_at,timestamptz,NO,Row creation timestamp
+
+skill_quizzes,id,uuid,NO,Primary key
+skill_quizzes,skill_content_id,uuid,NO,FK to skill_content(id)
+skill_quizzes,question_text,text,NO,The quiz question
+skill_quizzes,question_type,text,NO,Question format (multiple_choice/true_false)
+skill_quizzes,options,jsonb,NO,Array of answer options
+skill_quizzes,correct_option_index,integer,NO,0-based index of correct answer
+skill_quizzes,explanation,text,YES,Explanation shown after answering
+skill_quizzes,sort_order,integer,NO,Order within the skill module (default 0)
+skill_quizzes,created_at,timestamptz,NO,Row creation timestamp
+
+skill_progress,id,uuid,NO,Primary key
+skill_progress,player_id,uuid,NO,FK to profiles(id)
+skill_progress,skill_content_id,uuid,NO,FK to skill_content(id) — UNIQUE per player+content
+skill_progress,tip_viewed,boolean,NO,Whether tip was viewed (default false)
+skill_progress,tip_viewed_at,timestamptz,YES,When tip was viewed
+skill_progress,drill_completed,boolean,NO,Whether drill was completed (default false)
+skill_progress,drill_completed_at,timestamptz,YES,When drill was completed
+skill_progress,quiz_completed,boolean,NO,Whether quiz was passed (default false)
+skill_progress,quiz_score,integer,YES,Quiz score (number correct)
+skill_progress,quiz_completed_at,timestamptz,YES,When quiz was completed
+skill_progress,is_fully_complete,boolean,NO,All 3 steps done (default false)
+skill_progress,completed_at,timestamptz,YES,When fully completed
+skill_progress,created_at,timestamptz,NO,Row creation timestamp
+skill_progress,updated_at,timestamptz,NO,Last update timestamp
+
+journey_chapters,id,uuid,NO,Primary key
+journey_chapters,sport,text,NO,Sport (default volleyball)
+journey_chapters,chapter_number,integer,NO,Chapter sequence number (1-8) — UNIQUE per sport
+journey_chapters,title,text,NO,Chapter display title
+journey_chapters,theme,text,YES,Visual theme key (backyard/gym/beach/arena/etc)
+journey_chapters,description,text,YES,Chapter description
+journey_chapters,required_level,integer,NO,Player level needed to unlock (default 1)
+journey_chapters,badge_id,uuid,YES,Badge awarded on chapter completion
+journey_chapters,node_count,integer,NO,Number of nodes in this chapter (default 0)
+journey_chapters,sort_order,integer,NO,Display order (default 0)
+journey_chapters,is_published,boolean,NO,Whether chapter is live (default true)
+journey_chapters,created_at,timestamptz,NO,Row creation timestamp
+
+journey_nodes,id,uuid,NO,Primary key
+journey_nodes,chapter_id,uuid,NO,FK to journey_chapters(id)
+journey_nodes,node_type,text,NO,Node type (skill/challenge/boss/bonus) — default skill
+journey_nodes,title,text,NO,Node display title
+journey_nodes,description,text,YES,Node description
+journey_nodes,skill_content_id,uuid,YES,FK to skill_content(id) — NULL for challenge/boss nodes
+journey_nodes,challenge_config,jsonb,YES,Config for challenge/boss nodes
+journey_nodes,xp_reward,integer,NO,XP awarded on completion (default 20)
+journey_nodes,sort_order,integer,NO,Order within chapter — UNIQUE per chapter
+journey_nodes,is_boss,boolean,NO,Whether this is a boss node (default false)
+journey_nodes,is_bonus,boolean,NO,Whether this is an optional bonus node (default false)
+journey_nodes,position_offset,text,NO,Visual layout position (left/center/right) — default center
+journey_nodes,icon_emoji,text,YES,Emoji icon for the node
+journey_nodes,created_at,timestamptz,NO,Row creation timestamp
+
+journey_progress,id,uuid,NO,Primary key
+journey_progress,player_id,uuid,NO,FK to profiles(id)
+journey_progress,node_id,uuid,NO,FK to journey_nodes(id) — UNIQUE per player+node
+journey_progress,status,text,NO,Progress state (locked/available/in_progress/completed) — default locked
+journey_progress,started_at,timestamptz,YES,When player started this node
+journey_progress,completed_at,timestamptz,YES,When player completed this node
+journey_progress,attempts,integer,NO,Number of attempts (default 0)
+journey_progress,best_score,jsonb,YES,Best score data for challenge/boss nodes
+journey_progress,xp_earned,integer,NO,Total XP earned from this node (default 0)
+journey_progress,created_at,timestamptz,NO,Row creation timestamp
+journey_progress,updated_at,timestamptz,NO,Last update timestamp
+
+league_standings,id,uuid,NO,Primary key
+league_standings,player_id,uuid,NO,FK to profiles(id)
+league_standings,league_tier,text,NO,Current league (bronze/silver/gold/platinum/diamond)
+league_standings,weekly_xp,integer,NO,XP earned this week (default 0)
+league_standings,rank_in_league,integer,YES,Current rank within league
+league_standings,week_start,date,NO,Monday of the current week
+league_standings,promoted,boolean,NO,Whether promoted this week (default false)
+league_standings,relegated,boolean,NO,Whether relegated this week (default false)
+league_standings,created_at,timestamptz,NO,Row creation timestamp
+league_standings,updated_at,timestamptz,NO,Last update timestamp
+
+xp_boost_events,id,uuid,NO,Primary key
+xp_boost_events,title,text,NO,Event title (Game Day 2x / Weekend Warrior)
+xp_boost_events,multiplier,numeric,NO,XP multiplier (1.5 / 2.0 / etc) — default 1.5
+xp_boost_events,start_at,timestamptz,NO,When the boost starts
+xp_boost_events,end_at,timestamptz,NO,When the boost ends
+xp_boost_events,applies_to,text,YES,What XP sources get boosted (all/quests/drills/etc)
+xp_boost_events,organization_id,uuid,YES,FK to organizations(id) — NULL for global events
+xp_boost_events,created_at,timestamptz,NO,Row creation timestamp
