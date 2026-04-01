@@ -1901,3 +1901,7 @@ xp_boost_events,end_at,timestamptz,NO,When the boost ends
 xp_boost_events,applies_to,text,YES,What XP sources get boosted (all/quests/drills/etc)
 xp_boost_events,organization_id,uuid,YES,FK to organizations(id) — NULL for global events
 xp_boost_events,created_at,timestamptz,NO,Row creation timestamp
+xp_ledger,team_id,uuid,YES,FK to teams(id) — optional team context for the XP event
+xp_ledger,multiplier,numeric,YES,XP multiplier applied (default 1.0)
+profiles,tier,text,YES,Current tier name (Rookie/Bronze/Silver/Gold/Platinum/Diamond/Master)
+profiles,xp_to_next_level,integer,YES,XP remaining until next level
