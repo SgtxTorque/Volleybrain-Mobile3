@@ -459,7 +459,7 @@ function Ch1ImageMap({
   const getAsset = (key: string) => JOURNEY_CH1_ASSETS[key as keyof typeof JOURNEY_CH1_ASSETS];
 
   return (
-    <View style={{ height: scaledMapHeight, overflow: 'hidden' }}>
+    <View style={{ height: scaledMapHeight, overflow: 'hidden', backgroundColor: '#5B8C2A' }}>
       {/* 1. Background — grass tiles */}
       <MapBackground
         mapHeight={config.mapHeight}

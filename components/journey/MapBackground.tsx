@@ -22,6 +22,9 @@ export function MapBackground({ mapHeight, grassTileCount, skyGradient }: MapBac
   const scaledSkyHeight = scaleValue(SKY_HEIGHT);
   const scaledTileHeight = scaleValue(GRASS_TILE_HEIGHT);
 
+  // Overlap each tile by 2px to prevent hairline gaps between images
+  const OVERLAP = 2;
+
   return (
     <View style={[styles.container, { height: scaledMapHeight }]} pointerEvents="none">
       {/* Sky gradient strip at the very top */}
@@ -42,7 +45,7 @@ export function MapBackground({ mapHeight, grassTileCount, skyGradient }: MapBac
         <Image
           key={`grass-mid-${i}`}
           source={JOURNEY_CH1_ASSETS.grassMid}
-          style={[styles.grassTile, { top: scaledSkyHeight + scaledTileHeight * (i + 1) }]}
+          style={[styles.grassTile, { top: scaledSkyHeight + scaledTileHeight * (i + 1) - OVERLAP * (i + 1) }]}
           resizeMode="cover"
         />
       ))}
@@ -50,7 +53,7 @@ export function MapBackground({ mapHeight, grassTileCount, skyGradient }: MapBac
       {/* Grass-warm at the bottom */}
       <Image
         source={JOURNEY_CH1_ASSETS.grassWarm}
-        style={[styles.grassTile, { top: scaledSkyHeight + scaledTileHeight * (grassTileCount + 1) }]}
+        style={[styles.grassTile, { top: scaledSkyHeight + scaledTileHeight * (grassTileCount + 1) - OVERLAP * (grassTileCount + 1) }]}
         resizeMode="cover"
       />
     </View>
@@ -64,6 +67,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 0,
+    backgroundColor: '#5B8C2A',
   },
   sky: {
     position: 'absolute',
