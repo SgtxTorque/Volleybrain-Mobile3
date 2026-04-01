@@ -39,6 +39,13 @@ import WindingPath, { getNodeX, getNodeY } from '@/components/journey/WindingPat
 import JourneyNodeCircle from '@/components/journey/JourneyNodeCircle';
 import PlayerPositionIndicator from '@/components/journey/PlayerPositionIndicator';
 import ChapterZoneGate from '@/components/journey/ChapterZoneGate';
+import Svg, { Path as SvgPath } from 'react-native-svg';
+import { MapBackground } from '@/components/journey/MapBackground';
+import { MapSprite } from '@/components/journey/MapSprite';
+import { MapNode } from '@/components/journey/MapNode';
+import { MapChapterHeader } from '@/components/journey/MapChapterHeader';
+import { getCh1MapConfig, scaleValue, SCALE } from '@/lib/journey-map-config';
+import { JOURNEY_CH1_ASSETS } from '@/assets/images/journey';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const NODE_SPACING = 110;
@@ -186,6 +193,14 @@ export default function JourneyPathScreen() {
                       chapter={chapter}
                       theme={theme}
                       onToggle={() => toggleChapter(chapter.id)}
+                    />
+                  ) : chapter.chapter_number === 1 ? (
+                    <Ch1ImageMap
+                      chapter={chapter}
+                      isCurrent={isCurrent}
+                      onNodeTap={handleNodeTap}
+                      streakCount={streak?.currentStreak ?? 0}
+                      onBackPress={() => router.push('/(tabs)')}
                     />
                   ) : (
                     <ChapterZone
@@ -374,6 +389,191 @@ function ChapterZone({
           />
         </View>
       )}
+    </View>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Chapter 1 — Image-Based Map (sprite-based rendering)
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// STUDY FINDINGS (Step 5A — read before modifying):
+// 1. Chapter loop:     lines ~183–225 — chapters.map((chapter, chapterIdx) => { ... })
+// 2. ChapterEnvironment: rendered inside ChapterZone — sky gradient + ground + env objects
+// 3. JourneyNodeCircle:  rendered per-node inside ChapterZone via chapter.nodes.map()
+// 4. WindingPath:         SVG bezier path rendered inside ChapterZone
+// 5. PlayerPositionIndicator: bouncing mascot at current node, conditional on isCurrent
+// 6. NodeDetailCard:     triggered by `selectedNode` state (setSelectedNode), rendered
+//                        OUTSIDE the ScrollView as an overlay (lines ~230–237)
+// 7. Node press:         handleNodeTap(node) guards locked → setSelectedNode(node)
+//                        NodeDetailCard onStart → handleStartModule → router.push skill-module
+//
+// This component replaces ChapterZone for chapter_number === 1 ONLY.
+// It wires onNodeTap into the SAME handleNodeTap → selectedNode → NodeDetailCard flow.
+// Chapters 2-8 continue to render via the unchanged ChapterZone component.
+//
+
+function Ch1ImageMap({
+  chapter,
+  isCurrent,
+  onNodeTap,
+  streakCount,
+  onBackPress,
+}: {
+  chapter: JourneyChapter;
+  isCurrent: boolean;
+  onNodeTap: (node: JourneyNode) => void;
+  streakCount: number;
+  onBackPress: () => void;
+}) {
+  const config = useMemo(() => getCh1MapConfig(), []);
+  const scaledMapHeight = scaleValue(config.mapHeight);
+
+  // Separate boss and non-boss nodes
+  const nonBossNodes = useMemo(() => chapter.nodes.filter(n => !n.is_boss), [chapter.nodes]);
+  const bossNode = useMemo(() => chapter.nodes.find(n => n.is_boss), [chapter.nodes]);
+
+  // Find current (first available/in_progress) node index in the full nodes array
+  const currentNodeIdx = chapter.nodes.findIndex(
+    n => n.progress.status === 'available' || n.progress.status === 'in_progress',
+  );
+
+  // Determine current node position for the mascot
+  const currentNode = currentNodeIdx >= 0 ? chapter.nodes[currentNodeIdx] : null;
+  let currentPos: { x: number; y: number } | null = null;
+  if (currentNode) {
+    if (currentNode.is_boss) {
+      currentPos = config.bossPosition;
+    } else {
+      const nonBossIdx = nonBossNodes.indexOf(currentNode);
+      if (nonBossIdx >= 0 && nonBossIdx < config.nodePositions.length) {
+        currentPos = config.nodePositions[nonBossIdx];
+      }
+    }
+  }
+
+  // Determine side for mascot offset (opposite side of node)
+  const currentNodeSide: 'left' | 'right' = currentPos && currentPos.x > 195 ? 'right' : 'left';
+
+  // Resolve asset key to image source
+  const getAsset = (key: string) => JOURNEY_CH1_ASSETS[key as keyof typeof JOURNEY_CH1_ASSETS];
+
+  return (
+    <View style={{ height: scaledMapHeight, overflow: 'hidden' }}>
+      {/* 1. Background — grass tiles */}
+      <MapBackground
+        mapHeight={config.mapHeight}
+        grassTileCount={config.grassTileCount}
+        skyGradient={config.skyGradient}
+      />
+
+      {/* 2. Fences (zIndex 1) */}
+      {config.fences.map(({ assetKey, ...rest }, i) => (
+        <MapSprite key={`fence-${i}`} source={getAsset(assetKey)} {...rest} />
+      ))}
+
+      {/* 3. Landmarks (zIndex 2) */}
+      {config.landmarks.map(({ assetKey, ...rest }, i) => (
+        <MapSprite key={`landmark-${i}`} source={getAsset(assetKey)} {...rest} />
+      ))}
+
+      {/* 4. Trees with sway (zIndex 3) */}
+      {config.trees.map(({ assetKey, ...rest }, i) => (
+        <MapSprite key={`tree-${i}`} source={getAsset(assetKey)} {...rest} />
+      ))}
+
+      {/* 5. Bushes (zIndex 3) */}
+      {config.bushes.map(({ assetKey, ...rest }, i) => (
+        <MapSprite key={`bush-${i}`} source={getAsset(assetKey)} {...rest} />
+      ))}
+
+      {/* 6. Props (zIndex 4) */}
+      {config.props.map(({ assetKey, ...rest }, i) => (
+        <MapSprite key={`prop-${i}`} source={getAsset(assetKey)} {...rest} />
+      ))}
+
+      {/* 7. SVG winding path (zIndex 5) */}
+      <View style={[StyleSheet.absoluteFill, { zIndex: 5 }]} pointerEvents="none">
+        <Svg width={SCREEN_WIDTH} height={scaledMapHeight} viewBox={config.pathViewBox}>
+          {/* Wider semi-transparent fill */}
+          <SvgPath
+            d={config.pathD}
+            stroke={config.pathFillColor}
+            strokeWidth={config.pathFillWidth}
+            fill="none"
+            strokeLinecap="round"
+          />
+          {/* Narrower dashed overlay */}
+          <SvgPath
+            d={config.pathD}
+            stroke={config.pathDashColor}
+            strokeWidth={config.pathDashWidth}
+            fill="none"
+            strokeLinecap="round"
+            strokeDasharray={config.pathDashArray}
+          />
+        </Svg>
+      </View>
+
+      {/* 8. Nature / ambient sprites (zIndex 6) */}
+      {config.nature.map(({ assetKey, ...rest }, i) => (
+        <MapSprite key={`nature-${i}`} source={getAsset(assetKey)} {...rest} />
+      ))}
+
+      {/* 9. Non-boss nodes (zIndex 8) */}
+      {nonBossNodes.map((node, idx) => {
+        if (idx >= config.nodePositions.length) return null;
+        const pos = config.nodePositions[idx];
+        const isCurrentNode = chapter.nodes.indexOf(node) === currentNodeIdx;
+        return (
+          <MapNode
+            key={node.id}
+            node={node}
+            position={pos}
+            isCurrent={isCurrentNode}
+            onPress={() => onNodeTap(node)}
+          />
+        );
+      })}
+
+      {/* Boss node */}
+      {bossNode && (
+        <MapNode
+          node={bossNode}
+          position={config.bossPosition}
+          isCurrent={chapter.nodes.indexOf(bossNode) === currentNodeIdx}
+          onPress={() => onNodeTap(bossNode)}
+        />
+      )}
+
+      {/* 10. Player position indicator at current node (zIndex 10) */}
+      {isCurrent && currentPos && (
+        <View
+          style={{
+            position: 'absolute',
+            left: currentPos.x * SCALE - 50,
+            top: currentPos.y * SCALE - 28,
+            width: 100,
+            alignItems: 'center',
+            zIndex: 10,
+          }}
+        >
+          <PlayerPositionIndicator
+            nodeSide={currentNodeSide}
+            glowColor="#4BB9EC"
+          />
+        </View>
+      )}
+
+      {/* Chapter header overlay (zIndex 20) */}
+      <MapChapterHeader
+        chapterNumber={chapter.chapter_number}
+        chapterName={chapter.title}
+        completedCount={chapter.completedNodes}
+        totalCount={chapter.nodes.length}
+        streakCount={streakCount}
+        onBackPress={onBackPress}
+      />
     </View>
   );
 }
